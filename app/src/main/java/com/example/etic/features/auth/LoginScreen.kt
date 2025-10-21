@@ -29,8 +29,8 @@ import kotlin.math.min
 @Composable
 fun LoginScreen(onLogin: (String) -> Unit) {
     // Credenciales “en duro”
-    val VALID_USER = "demo@ejemplo.com"
-    val VALID_PASS = "demo123"
+    val VALID_USER = "admin"
+    val VALID_PASS = "123"
 
     var username by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
@@ -103,7 +103,6 @@ fun LoginScreen(onLogin: (String) -> Unit) {
                         value = username,
                         onValueChange = { username = it },
                         label = { Text("Usuario") },
-                        placeholder = { Text("correo@ejemplo.com") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
                         keyboardOptions = KeyboardOptions(
@@ -118,7 +117,6 @@ fun LoginScreen(onLogin: (String) -> Unit) {
                         value = password,
                         onValueChange = { password = it },
                         label = { Text("Contraseña") },
-                        placeholder = { Text("••••••••") },
                         singleLine = true,
                         visualTransformation = if (passwordVisible)
                             VisualTransformation.None else PasswordVisualTransformation(),
@@ -151,23 +149,17 @@ fun LoginScreen(onLogin: (String) -> Unit) {
 
                     Spacer(Modifier.height(16.dp))
 
+                    val canSubmit = username.isNotBlank() && password.isNotBlank()
                     Button(
                         onClick = { tryLogin() },
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = canSubmit
                     ) {
                         Text("Entrar")
                     }
 
                     Spacer(Modifier.height(8.dp))
 
-                    TextButton(
-                        onClick = {
-                            username = VALID_USER
-                            password = VALID_PASS
-                        }
-                    ) {
-                        Text("Usar datos de prueba")
-                    }
                 }
             }
         }
