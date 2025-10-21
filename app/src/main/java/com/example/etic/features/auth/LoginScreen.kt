@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.*
@@ -24,7 +26,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
-import kotlin.math.min
 
 @Composable
 fun LoginScreen(onLogin: (String) -> Unit) {
@@ -49,7 +50,6 @@ fun LoginScreen(onLogin: (String) -> Unit) {
     // ——— Ancho responsivo del Card ———
     val config = LocalConfiguration.current
     val screenWidthDp = config.screenWidthDp.dp
-    // objetivo “compacto”: 300.dp; si la pantalla es muy angosta, usa (ancho - 48.dp de padding)
     val cardWidth = remember(screenWidthDp) {
         if (screenWidthDp < 460.dp) screenWidthDp - 48.dp else 400.dp
     }
@@ -81,10 +81,11 @@ fun LoginScreen(onLogin: (String) -> Unit) {
         ) {
             // Card angosto y semitransparente
             Card(
-                modifier = Modifier.width(cardWidth), // ⬅️ ahora sí se nota
+                modifier = Modifier.width(cardWidth),
                 elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
                 colors = CardDefaults.cardColors(
-                    containerColor = Color.White.copy(alpha = 0.75f)
+                    //containerColor = Color.White
+                    containerColor = Color.White.copy(alpha = 0.70f)
                 )
             ) {
                 Column(
@@ -93,31 +94,49 @@ fun LoginScreen(onLogin: (String) -> Unit) {
                         .padding(20.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text(
-                        text = "Bienvenido",
-                        style = MaterialTheme.typography.headlineSmall
+                    // 🔹 Sustituimos el texto por el logo
+                    Image(
+                        painter = painterResource(id = R.drawable.etic_logo_login),
+                        contentDescription = "Logo ETIC",
+                        //modifier = Modifier
+                        //    .size(160.dp) // ajusta tamaño según el logo
+                        //    .padding(bottom = 12.dp),
+                        contentScale = ContentScale.Fit
                     )
-                    Spacer(Modifier.height(16.dp))
 
-                    OutlinedTextField(
+                    Spacer(Modifier.height(40.dp))
+
+                    TextField(
                         value = username,
                         onValueChange = { username = it },
                         label = { Text("Usuario") },
                         singleLine = true,
                         modifier = Modifier.fillMaxWidth(),
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Filled.Person,
+                                contentDescription = "Icono usuario"
+                            )
+                        },
                         keyboardOptions = KeyboardOptions(
                             imeAction = ImeAction.Next,
-                            keyboardType = KeyboardType.Email
+                            keyboardType = KeyboardType.Text
                         )
                     )
 
                     Spacer(Modifier.height(12.dp))
 
-                    OutlinedTextField(
+                    TextField(
                         value = password,
                         onValueChange = { password = it },
                         label = { Text("Contraseña") },
                         singleLine = true,
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Filled.Lock,
+                                contentDescription = "Icono candado"
+                            )
+                        },
                         visualTransformation = if (passwordVisible)
                             VisualTransformation.None else PasswordVisualTransformation(),
                         modifier = Modifier.fillMaxWidth(),
@@ -153,13 +172,16 @@ fun LoginScreen(onLogin: (String) -> Unit) {
                     Button(
                         onClick = { tryLogin() },
                         modifier = Modifier.fillMaxWidth(),
-                        enabled = canSubmit
+                        enabled = canSubmit,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF292C57),
+                            contentColor = Color.White
+                        )
                     ) {
-                        Text("Entrar")
+                        Text("Ingresar", color = Color.White)
                     }
 
                     Spacer(Modifier.height(8.dp))
-
                 }
             }
         }
