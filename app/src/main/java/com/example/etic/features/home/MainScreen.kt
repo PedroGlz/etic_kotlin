@@ -6,7 +6,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChecklistRtl
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.HorizontalDivider
@@ -23,7 +22,10 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.example.etic.R
+import com.example.etic.features.inspection.ui.home.InspectionScreen
 import kotlinx.coroutines.launch
+
+private enum class HomeSection { Inspection, Reports }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -35,8 +37,8 @@ fun MainScreen(
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     var showLogoutDialog by rememberSaveable { mutableStateOf(false) }
+    var section by rememberSaveable { mutableStateOf(HomeSection.Inspection) }
 
-    // Paleta del drawer negro
     val drawerItemColors = NavigationDrawerItemDefaults.colors(
         selectedContainerColor = Color(0xFF202327),
         unselectedContainerColor = Color.Transparent,
@@ -52,21 +54,19 @@ fun MainScreen(
             val screenWidth = LocalConfiguration.current.screenWidthDp.dp
             val drawerWidth = remember(screenWidth) {
                 when {
-                    screenWidth < 360.dp -> screenWidth - 24.dp // casi a full en pantallas muy chicas
-                    screenWidth < 600.dp -> 250.dp              // teléfonos promedio
-                    else -> 260.dp                              // tablets / pantallas grandes
+                    screenWidth < 360.dp -> screenWidth - 24.dp
+                    screenWidth < 600.dp -> 250.dp
+                    else -> 260.dp
                 }
             }
 
             ModalDrawerSheet(
-                modifier = Modifier.width(drawerWidth),    // ⬅️ ancho dinámico
+                modifier = Modifier.width(drawerWidth),
                 drawerContainerColor = Color(0xFF202327),
                 drawerContentColor = Color.White
             ) {
                 Column(modifier = Modifier.padding(12.dp)) {
-
                     ListItem(
-
                         headlineContent = { Text("ETIC System", color = Color.White) },
                         supportingContent = { Text("Rafael Garcia", color = Color.LightGray) },
                         leadingContent = {
@@ -76,9 +76,7 @@ fun MainScreen(
                                 modifier = Modifier.size(65.dp)
                             )
                         },
-                        colors = ListItemDefaults.colors(
-                            containerColor = Color.Transparent  // sin color de fondo
-                        )
+                        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
                     )
 
                     Spacer(Modifier.height(4.dp))
@@ -90,22 +88,23 @@ fun MainScreen(
                     )
 
                     NavigationDrawerItem(
-                            label = { Text("Inspección Actual") },
-                            selected = true,
-                            onClick = { scope.launch { drawerState.close() } },
-                            modifier = Modifier.padding(vertical = 4.dp),
-                            icon = {
-                                Icon(
-                                    imageVector = Icons.Filled.ChecklistRtl,
-                                    contentDescription = "Seleccionado"
-                                )
-                            },
-                            colors = drawerItemColors
-                        )
+                        label = { Text("Inspección Actual") },
+                        selected = section == HomeSection.Inspection,
+                        onClick = {
+                            section = HomeSection.Inspection
+                            scope.launch { drawerState.close() }
+                        },
+                        modifier = Modifier.padding(vertical = 4.dp),
+                        icon = { Icon(Icons.Filled.ChecklistRtl, contentDescription = "Seleccionado") },
+                        colors = drawerItemColors
+                    )
                     NavigationDrawerItem(
                         label = { Text("Reportes") },
-                        selected = false,
-                        onClick = { scope.launch { drawerState.close() } },
+                        selected = section == HomeSection.Reports,
+                        onClick = {
+                            section = HomeSection.Reports
+                            scope.launch { drawerState.close() }
+                        },
                         modifier = Modifier.padding(vertical = 4.dp),
                         colors = drawerItemColors
                     )
@@ -135,56 +134,43 @@ fun MainScreen(
                     },
                     actions = {
                         IconButton(onClick = { showLogoutDialog = true }) {
-                            Icon(
-                                imageVector = Icons.Filled.Logout,
-                                contentDescription = "Cerrar sesión"
-                            )
+                            Icon(Icons.Filled.Logout, contentDescription = "Cerrar sesión")
                         }
-                    }
-                    // Si lo quieres oscuro para combinar con el drawer, descomenta:
-                     , colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                         containerColor = Color(0xFF202327),
-                         titleContentColor = Color.White,
-                         navigationIconContentColor = Color.White,
-                         actionIconContentColor = Color.White
-                     )
+                    },
+                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                        containerColor = Color(0xFF202327),
+                        titleContentColor = Color.White,
+                        navigationIconContentColor = Color.White,
+                        actionIconContentColor = Color.White
+                    )
                 )
             },
             modifier = modifier
         ) { innerPadding ->
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-                contentAlignment = Alignment.Center
+                modifier = Modifier.fillMaxSize().padding(innerPadding)
             ) {
-                Text(
-                    text = "Bienvenido, $userName",
-                    style = MaterialTheme.typography.headlineSmall
-                )
+                when (section) {
+                    HomeSection.Inspection -> InspectionScreen()
+                    HomeSection.Reports -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Reportes") }
+                }
             }
         }
     }
 
-    // Diálogo de confirmación de cierre de sesión
     if (showLogoutDialog) {
         AlertDialog(
             onDismissRequest = { showLogoutDialog = false },
             title = { Text("Cerrar sesión") },
             text = { Text("¿Seguro que deseas cerrar sesión?") },
-            dismissButton = {
-                TextButton(onClick = { showLogoutDialog = false }) {
-                    Text("Cancelar")
-                }
-            },
+            dismissButton = { TextButton(onClick = { showLogoutDialog = false }) { Text("Cancelar") } },
             confirmButton = {
                 TextButton(onClick = {
                     showLogoutDialog = false
                     onLogout()
-                }) {
-                    Text("Cerrar sesión")
-                }
+                }) { Text("Cerrar sesión") }
             }
         )
     }
 }
+
