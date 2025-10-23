@@ -2,27 +2,35 @@ package com.example.etic.features.inspection.ui.home
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.ExpandMore
-import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.List
 import androidx.compose.material.icons.outlined.Timeline
 import androidx.compose.material.icons.outlined.Info
-import androidx.compose.material3.*
+import androidx.compose.material3.Divider
+import androidx.compose.material3.DividerDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
@@ -36,8 +44,8 @@ fun InspectionScreen() {
 
 @Composable
 private fun CurrentInspectionSplitView() {
-    var hFrac by rememberSaveable { mutableStateOf(0.6f) }
-    var vFrac by rememberSaveable { mutableStateOf(0.5f) }
+    var hFrac by rememberSaveable { mutableStateOf(0.6f) } // fracción alto del panel superior
+    var vFrac by rememberSaveable { mutableStateOf(0.5f) } // fracción ancho del panel izquierdo
     val minFrac = 0.2f
     val maxFrac = 0.8f
     val handleThickness: Dp = 12.dp
@@ -48,16 +56,24 @@ private fun CurrentInspectionSplitView() {
 
     val borderColor = DividerDefaults.color
 
-    Box(Modifier.fillMaxSize()) {
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        // ✅ Convierte dimensiones del BoxWithConstraints a píxeles de forma segura
+        val density = LocalDensity.current
+        val totalWidthPx = with(density) { maxWidth.value * density.density }
+        val totalHeightPx = with(density) { maxHeight.value * density.density }
+
         Column(Modifier.fillMaxSize()) {
+
             Row(Modifier.weight(hFrac)) {
-                val density = LocalDensity.current
-                // Left (Resumen)
+
+                // Panel izquierdo
                 CellPanel(
                     title = "Resumen",
                     icon = Icons.Outlined.Info,
                     borderColor = borderColor,
-                    modifier = Modifier.weight(vFrac).fillMaxHeight()
+                    modifier = Modifier
+                        .weight(vFrac)
+                        .fillMaxHeight()
                 ) {
                     SimpleTreeView(
                         nodes = nodes,
@@ -68,28 +84,30 @@ private fun CurrentInspectionSplitView() {
                     )
                 }
 
-                // Vertical handle
+                // Handle vertical (más suave)
                 Box(
                     Modifier
                         .width(handleThickness)
                         .fillMaxHeight()
-                        .pointerInput(hFrac, vFrac) {
-                            detectDragGestures { change, dragAmount ->
-                                change.consume()
-                                val widthPx = size.width
-                                vFrac = (vFrac + dragAmount.x / widthPx).coerceIn(minFrac, maxFrac)
+                        .draggable(
+                            orientation = Orientation.Horizontal,
+                            state = rememberDraggableState { deltaPx: Float ->
+                                vFrac = (vFrac + deltaPx / totalWidthPx)
+                                    .coerceIn(minFrac, maxFrac)
                             }
-                        }
+                        )
                         .background(MaterialTheme.colorScheme.surfaceVariant)
                 )
 
-                // Right (Progreso)
+                // Panel derecho
                 val children = findById(selectedId, nodes)?.children ?: emptyList()
                 CellPanel(
                     title = "Progreso",
                     icon = Icons.Outlined.Timeline,
                     borderColor = borderColor,
-                    modifier = Modifier.weight(1f - vFrac).fillMaxHeight()
+                    modifier = Modifier
+                        .weight(1f - vFrac)
+                        .fillMaxHeight()
                 ) {
                     ProgressTable(
                         children = children,
@@ -101,22 +119,22 @@ private fun CurrentInspectionSplitView() {
                 }
             }
 
-            // Horizontal handle
+            // Handle horizontal
             Box(
                 Modifier
                     .fillMaxWidth()
                     .height(handleThickness)
-                    .pointerInput(hFrac, vFrac) {
-                        detectDragGestures { change, dragAmount ->
-                            change.consume()
-                            val heightPx = size.height
-                            hFrac = (hFrac + dragAmount.y / heightPx).coerceIn(minFrac, maxFrac)
+                    .draggable(
+                        orientation = Orientation.Vertical,
+                        state = rememberDraggableState { deltaPx: Float ->
+                            hFrac = (hFrac + deltaPx / totalHeightPx)
+                                .coerceIn(minFrac, maxFrac)
                         }
-                    }
-                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                    )
+                    .background(Color.Red)
             )
 
-            // Bottom (Detalles)
+            // Panel inferior
             CellPanel(
                 title = "Detalles",
                 icon = Icons.Outlined.List,
@@ -139,6 +157,7 @@ private fun CurrentInspectionSplitView() {
     }
 }
 
+
 @Composable
 private fun CellPanel(
     title: String,
@@ -153,15 +172,33 @@ private fun CellPanel(
             .background(MaterialTheme.colorScheme.surface)
             .border(width = 0.5.dp, color = borderColor)
     ) {
-        Column(Modifier.fillMaxSize().padding(12.dp)) {
-            Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))) {
+        Column(
+            Modifier
+                .fillMaxSize()
+                .padding(12.dp)
+        ) {
+            // (Opcional) encabezado visual si lo deseas:
+            // Row(verticalAlignment = Alignment.CenterVertically) {
+            //     Icon(icon, contentDescription = null)
+            //     Spacer(Modifier.width(8.dp))
+            //     Text(title, style = MaterialTheme.typography.titleMedium)
+            // }
+            // Spacer(Modifier.height(8.dp))
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+            ) {
                 content()
             }
         }
     }
 }
 
-// Data model
+// -------------------------
+// Modelo de datos / utilería
+// -------------------------
+
 private data class TreeNode(
     val id: String,
     var title: String,
@@ -355,7 +392,10 @@ private fun generateMockNodes(): List<TreeNode> {
     return out
 }
 
-// Tree view
+// -------------------------
+// TreeView simple
+// -------------------------
+
 private data class FlatNode(val node: TreeNode, val depth: Int, val hasChildren: Boolean, val expanded: Boolean)
 
 @Composable
@@ -376,15 +416,24 @@ private fun SimpleTreeView(
     }
     val flat = remember(nodes, expanded) { mutableListOf<FlatNode>().also { flatten(nodes, 0, it) } }
     val selColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)
+
     LazyColumn(Modifier.fillMaxSize()) {
         items(flat, key = { it.node.id }) { item ->
             val n = item.node
             val isSelected = selectedId == n.id
             Column(Modifier.background(if (isSelected) selColor else Color.Transparent)) {
-                Row(Modifier.fillMaxWidth().padding(start = (item.depth * 16).dp, end = 8.dp)) {
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(start = (item.depth * 16).dp, end = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     if (item.hasChildren) {
                         IconButton(onClick = { onToggle(n.id) }) {
-                            Icon(if (item.expanded) Icons.Filled.ExpandMore else Icons.Filled.ChevronRight, contentDescription = null)
+                            Icon(
+                                if (item.expanded) Icons.Filled.ExpandMore else Icons.Filled.ChevronRight,
+                                contentDescription = null
+                            )
                         }
                     } else {
                         Spacer(Modifier.width(40.dp))
@@ -399,11 +448,19 @@ private fun SimpleTreeView(
     }
 }
 
-// Tables
+// -------------------------
+// Tablas
+// -------------------------
+
 @Composable
 private fun ProgressTable(children: List<TreeNode>, onDelete: (TreeNode) -> Unit) {
     Column(Modifier.fillMaxSize()) {
-        Row(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface).padding(vertical = 8.dp, horizontal = 8.dp)) {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.surface)
+                .padding(vertical = 8.dp, horizontal = 8.dp)
+        ) {
             HeaderCell("Ubicacion", 3)
             HeaderCell("Codigo de barras", 2)
             HeaderCell("Estatus", 2)
@@ -415,13 +472,19 @@ private fun ProgressTable(children: List<TreeNode>, onDelete: (TreeNode) -> Unit
         } else {
             LazyColumn(Modifier.fillMaxSize()) {
                 items(children, key = { it.id }) { n ->
-                    Row(Modifier.fillMaxWidth().padding(vertical = 6.dp, horizontal = 8.dp)) {
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 6.dp, horizontal = 8.dp)
+                    ) {
                         BodyCell(3) { Text(n.title) }
                         BodyCell(2) { Text(n.barcode ?: "-") }
                         BodyCell(2) { Text(if (n.verified) "Verificado" else "Por verificar") }
                         BodyCell(1) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                IconButton(onClick = { onDelete(n) }) { Icon(Icons.Outlined.Delete, contentDescription = "Eliminar") }
+                                IconButton(onClick = { onDelete(n) }) {
+                                    Icon(Icons.Outlined.Delete, contentDescription = "Eliminar")
+                                }
                             }
                         }
                     }
@@ -432,8 +495,12 @@ private fun ProgressTable(children: List<TreeNode>, onDelete: (TreeNode) -> Unit
     }
 }
 
-@Composable private fun RowScope.HeaderCell(text: String, flex: Int) { Box(Modifier.weight(flex.toFloat())) { Text(text, style = MaterialTheme.typography.labelLarge) } }
-@Composable private fun RowScope.BodyCell(flex: Int, content: @Composable () -> Unit) { Box(Modifier.weight(flex.toFloat())) { content() } }
+@Composable private fun RowScope.HeaderCell(text: String, flex: Int) {
+    Box(Modifier.weight(flex.toFloat())) { Text(text, style = MaterialTheme.typography.labelLarge) }
+}
+@Composable private fun RowScope.BodyCell(flex: Int, content: @Composable () -> Unit) {
+    Box(Modifier.weight(flex.toFloat())) { content() }
+}
 
 @Composable
 private fun DetailsTabs(
@@ -444,6 +511,7 @@ private fun DetailsTabs(
     val problems = remember(node) { collectProblems(node) }
     val baselines = remember(node) { collectBaselines(node) }
     var tab by rememberSaveable { mutableStateOf(0) }
+
     Column(Modifier.fillMaxSize()) {
         TabRow(selectedTabIndex = tab) {
             Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text("Listado de problemas") })
@@ -476,9 +544,16 @@ private fun collectBaselines(root: TreeNode?): List<Baseline> {
 @Composable
 private fun ProblemsTable(problems: List<Problem>, onDelete: (Problem) -> Unit) {
     @Composable
-    fun RowScope.cell(flex: Int, content: @Composable () -> Unit) = Box(Modifier.weight(flex.toFloat()), contentAlignment = Alignment.CenterStart) { content() }
+    fun RowScope.cell(flex: Int, content: @Composable () -> Unit) =
+        Box(Modifier.weight(flex.toFloat()), contentAlignment = Alignment.CenterStart) { content() }
+
     Column(Modifier.fillMaxSize()) {
-        Row(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface).padding(vertical = 8.dp, horizontal = 8.dp)) {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.surface)
+                .padding(vertical = 8.dp, horizontal = 8.dp)
+        ) {
             cell(1) { Text("No") }
             cell(2) { Text("Fecha") }
             cell(2) { Text("Num Inspección") }
@@ -498,7 +573,11 @@ private fun ProblemsTable(problems: List<Problem>, onDelete: (Problem) -> Unit) 
         } else {
             LazyColumn(Modifier.fillMaxSize()) {
                 items(problems) { p ->
-                    Row(Modifier.fillMaxWidth().padding(vertical = 6.dp, horizontal = 8.dp)) {
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 6.dp, horizontal = 8.dp)
+                    ) {
                         cell(1) { Text("${p.no}") }
                         cell(2) { Text(p.fecha.toString()) }
                         cell(2) { Text(p.numInspeccion) }
@@ -510,7 +589,11 @@ private fun ProblemsTable(problems: List<Problem>, onDelete: (Problem) -> Unit) 
                         cell(2) { Text(p.severidad) }
                         cell(2) { Text(p.equipo) }
                         cell(3) { Text(p.comentarios, maxLines = 1) }
-                        cell(1) { IconButton(onClick = { onDelete(p) }) { Icon(Icons.Outlined.Delete, contentDescription = "Eliminar") } }
+                        cell(1) {
+                            IconButton(onClick = { onDelete(p) }) {
+                                Icon(Icons.Outlined.Delete, contentDescription = "Eliminar")
+                            }
+                        }
                     }
                     Divider(thickness = 0.5.dp)
                 }
@@ -522,17 +605,24 @@ private fun ProblemsTable(problems: List<Problem>, onDelete: (Problem) -> Unit) 
 @Composable
 private fun BaselineTable(baselines: List<Baseline>, onDelete: (Baseline) -> Unit) {
     @Composable
-    fun RowScope.cell(flex: Int, content: @Composable () -> Unit) = Box(Modifier.weight(flex.toFloat())) { content() }
+    fun RowScope.cell(flex: Int, content: @Composable () -> Unit) =
+        Box(Modifier.weight(flex.toFloat())) { content() }
+
     Column(Modifier.fillMaxSize()) {
-        Row(Modifier.fillMaxWidth().background(MaterialTheme.colorScheme.surface).padding(vertical = 8.dp, horizontal = 8.dp)) {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.surface)
+                .padding(vertical = 8.dp, horizontal = 8.dp)
+        ) {
             cell(2) { Text("No Inpexxión") }
             cell(2) { Text("Equipo") }
             cell(2) { Text("Fecha") }
             cell(1) { Text("MTA °C") }
             cell(1) { Text("Temp °C") }
             cell(1) { Text("Amb °C") }
-            cell(1) { Text("Img R") }
-            cell(1) { Text("Img D") }
+            cell(1) { Icon(Icons.Outlined.Image, contentDescription = null) }
+            cell(1) { Icon(Icons.Outlined.Image, contentDescription = null) }
             cell(3) { Text("Notas") }
             cell(1) { Text("Op") }
         }
@@ -542,17 +632,41 @@ private fun BaselineTable(baselines: List<Baseline>, onDelete: (Baseline) -> Uni
         } else {
             LazyColumn(Modifier.fillMaxSize()) {
                 items(baselines) { b ->
-                    Row(Modifier.fillMaxWidth().padding(vertical = 6.dp, horizontal = 8.dp)) {
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 6.dp, horizontal = 8.dp)
+                    ) {
                         cell(2) { Text(b.numInspeccion) }
                         cell(2) { Text(b.equipo) }
                         cell(2) { Text(b.fecha.toString()) }
                         cell(1) { Text(b.mtaC.toString()) }
                         cell(1) { Text(b.tempC.toString()) }
                         cell(1) { Text(b.ambC.toString()) }
-                        cell(1) { Icon(Icons.Outlined.Image, contentDescription = null, tint = if ((b.imgR ?: "").isEmpty()) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary) }
-                        cell(1) { Icon(Icons.Outlined.Image, contentDescription = null, tint = if ((b.imgD ?: "").isEmpty()) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary) }
+                        cell(1) {
+                            Icon(
+                                Icons.Outlined.Image,
+                                contentDescription = null,
+                                tint = if ((b.imgR ?: "").isEmpty())
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                else MaterialTheme.colorScheme.primary
+                            )
+                        }
+                        cell(1) {
+                            Icon(
+                                Icons.Outlined.Image,
+                                contentDescription = null,
+                                tint = if ((b.imgD ?: "").isEmpty())
+                                    MaterialTheme.colorScheme.onSurfaceVariant
+                                else MaterialTheme.colorScheme.primary
+                            )
+                        }
                         cell(3) { Text(b.notas, maxLines = 1) }
-                        cell(1) { IconButton(onClick = { onDelete(b) }) { Icon(Icons.Outlined.Delete, contentDescription = "Eliminar") } }
+                        cell(1) {
+                            IconButton(onClick = { onDelete(b) }) {
+                                Icon(Icons.Outlined.Delete, contentDescription = "Eliminar")
+                            }
+                        }
                     }
                     Divider(thickness = 0.5.dp)
                 }

@@ -46,7 +46,7 @@ fun ResizableThreePanels(
             Modifier
                 .width(dividerWidth)
                 .fillMaxHeight()
-                .background(MaterialTheme.colorScheme.surfaceVariant)
+                .background(androidx.compose.ui.graphics.Color.Red)
                 .pointerInput(Unit) {
                     detectHorizontalDragGestures { change, dragAmount ->
                         change.consume()
