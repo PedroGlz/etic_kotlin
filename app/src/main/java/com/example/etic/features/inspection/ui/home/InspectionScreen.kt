@@ -48,7 +48,7 @@ private fun CurrentInspectionSplitView() {
     var vFrac by rememberSaveable { mutableStateOf(0.5f) } // fracción ancho del panel izquierdo
     val minFrac = 0.2f
     val maxFrac = 0.8f
-    val handleThickness: Dp = 12.dp
+    val handleThickness: Dp = 2.dp
 
     var nodes by remember { mutableStateOf(generateInitialNodes().toMutableList()) }
     val expanded = remember { mutableStateListOf<String>() }
@@ -131,7 +131,7 @@ private fun CurrentInspectionSplitView() {
                                 .coerceIn(minFrac, maxFrac)
                         }
                     )
-                    .background(Color.Red)
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
             )
 
             // Panel inferior
