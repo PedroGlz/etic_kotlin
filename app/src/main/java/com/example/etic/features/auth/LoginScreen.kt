@@ -20,30 +20,54 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import com.example.etic.data.local.DbProvider
+import kotlinx.coroutines.launch
+import at.favre.lib.crypto.bcrypt.BCrypt
 
 @Composable
 fun LoginScreen(onLogin: (String) -> Unit) {
-    // Credenciales “en duro”
-    val VALID_USER = "admin"
-    val VALID_PASS = "123"
+
+    val ctx = LocalContext.current
+    // Obtenemos el DAO una sola vez
+    val usuarioDao = remember { DbProvider.get(ctx).usuarioDao() }
+    val scope = rememberCoroutineScope()
 
     var username by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
     var passwordVisible by rememberSaveable { mutableStateOf(false) }
     var errorMsg by rememberSaveable { mutableStateOf<String?>(null) }
+    var loading by rememberSaveable { mutableStateOf(false) }
 
     fun tryLogin() {
-        if (username == VALID_USER && password == VALID_PASS) {
-            errorMsg = null
-            onLogin(username)
-        } else {
-            errorMsg = "Usuario o contraseña incorrecto"
+        if (username.isBlank() || password.isBlank()) {
+            errorMsg = "Usuario y contraseña requeridos"
+            return
+        }
+        loading = true
+        errorMsg = null
+        scope.launch {
+            val user = usuarioDao.getByUsuario(username)
+            val ok = user?.password?.let { storedHash ->
+                // storedHash ej: $2y$10$JS8Mhtef4AdF…
+                BCrypt.verifyer()
+                    .verify(password.toCharArray(), storedHash.toCharArray())
+                    .verified
+            } ?: false
+
+            loading = false
+            if (ok) {
+                errorMsg = null
+                onLogin(user?.usuario ?: user?.idUsuario ?: username)
+            } else {
+                errorMsg = "Usuario o contraseña incorrecto"
+            }
         }
     }
 
@@ -55,7 +79,7 @@ fun LoginScreen(onLogin: (String) -> Unit) {
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
-        // Fondo con desenfoque
+        // Fondo con desenfoque (igual que tu diseño)
         Image(
             painter = painterResource(id = R.drawable.termografia),
             contentDescription = null,
@@ -65,26 +89,25 @@ fun LoginScreen(onLogin: (String) -> Unit) {
             contentScale = ContentScale.Crop
         )
 
-        // Leve capa para contraste
+        // Leve capa para contraste (igual)
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(Color.Black.copy(alpha = 0.20f))
         )
 
-        // Contenido centrado
+        // Contenido centrado (igual)
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(24.dp),
             contentAlignment = Alignment.Center
         ) {
-            // Card angosto y semitransparente
+            // Card angosto y semitransparente (igual)
             Card(
                 modifier = Modifier.width(cardWidth),
                 elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
                 colors = CardDefaults.cardColors(
-                    //containerColor = Color.White
                     containerColor = Color.White.copy(alpha = 0.70f)
                 )
             ) {
@@ -94,18 +117,16 @@ fun LoginScreen(onLogin: (String) -> Unit) {
                         .padding(20.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // 🔹 Sustituimos el texto por el logo
+                    // Logo (igual)
                     Image(
                         painter = painterResource(id = R.drawable.etic_logo_login),
                         contentDescription = "Logo ETIC",
-                        //modifier = Modifier
-                        //    .size(160.dp) // ajusta tamaño según el logo
-                        //    .padding(bottom = 12.dp),
                         contentScale = ContentScale.Fit
                     )
 
                     Spacer(Modifier.height(40.dp))
 
+                    // Campo Usuario (igual, con icono)
                     TextField(
                         value = username,
                         onValueChange = { username = it },
@@ -126,6 +147,7 @@ fun LoginScreen(onLogin: (String) -> Unit) {
 
                     Spacer(Modifier.height(12.dp))
 
+                    // Campo Contraseña (igual, con toggle ojo)
                     TextField(
                         value = password,
                         onValueChange = { password = it },
@@ -168,7 +190,7 @@ fun LoginScreen(onLogin: (String) -> Unit) {
 
                     Spacer(Modifier.height(16.dp))
 
-                    val canSubmit = username.isNotBlank() && password.isNotBlank()
+                    val canSubmit = username.isNotBlank() && password.isNotBlank() && !loading
                     Button(
                         onClick = { tryLogin() },
                         modifier = Modifier.fillMaxWidth(),
@@ -178,7 +200,17 @@ fun LoginScreen(onLogin: (String) -> Unit) {
                             contentColor = Color.White
                         )
                     ) {
-                        Text("Ingresar", color = Color.White)
+                        if (loading) {
+                            CircularProgressIndicator(
+                                strokeWidth = 2.dp,
+                                modifier = Modifier.size(18.dp),
+                                color = Color.White
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text("Validando…", color = Color.White)
+                        } else {
+                            Text("Ingresar", color = Color.White)
+                        }
                     }
 
                     Spacer(Modifier.height(8.dp))
