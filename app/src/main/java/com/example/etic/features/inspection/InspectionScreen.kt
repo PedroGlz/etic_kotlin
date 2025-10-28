@@ -519,7 +519,7 @@ private fun DetailsTabs(
         }
         Divider(thickness = 0.5.dp)
         when (tab) {
-            0 -> ProblemsTable(problems = problems, onDelete = onDeleteProblem)
+            0 -> ProblemsTableFromDatabase()
             1 -> BaselineTable(baselines = baselines, onDelete = onDeleteBaseline)
         }
     }
@@ -678,3 +678,41 @@ private fun BaselineTable(baselines: List<Baseline>, onDelete: (Baseline) -> Uni
 @Preview(widthDp = 1200, heightDp = 800)
 @Composable
 private fun PreviewInspection() { EticTheme { InspectionScreen() } }
+
+// -------------------------
+// DB-backed Problems table
+// -------------------------
+
+@Composable
+private fun ProblemsTableFromDatabase() {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val dao = remember { com.example.etic.data.local.DbProvider.get(ctx).problemaDao() }
+
+    val uiProblems by produceState(initialValue = emptyList<Problem>()) {
+        val rows = try { dao.getAll() } catch (_: Exception) { emptyList() }
+        value = rows.map { r ->
+            val fecha = runCatching {
+                val raw = r.fechaCreacion?.takeIf { it.isNotBlank() }
+                    ?: r.irFileDate?.takeIf { it.isNotBlank() }
+                val onlyDate = raw?.take(10)
+                if (onlyDate != null) java.time.LocalDate.parse(onlyDate) else java.time.LocalDate.now()
+            }.getOrDefault(java.time.LocalDate.now())
+
+            Problem(
+                no = r.numeroProblema ?: 0,
+                fecha = fecha,
+                numInspeccion = r.idInspeccion ?: "",
+                tipo = r.idTipoInspeccion ?: "",
+                estatus = r.estatusProblema ?: "",
+                cronico = (r.esCronico ?: "").equals("SI", ignoreCase = true),
+                tempC = r.problemTemperature ?: 0.0,
+                deltaTC = r.aumentoTemperatura ?: 0.0,
+                severidad = r.idSeveridad ?: "",
+                equipo = r.idEquipo ?: "",
+                comentarios = r.componentComment ?: ""
+            )
+        }
+    }
+
+    ProblemsTable(problems = uiProblems, onDelete = { /* no-op: from DB */ })
+}

@@ -13,8 +13,10 @@ object DbProvider {
                 AppDatabase::class.java,
                 "etic.db"
             )
-                .createFromAsset("databases/etic.db") // 👈 tu archivo real en assets/databases/
+                .createFromAsset("databases/etic.db")
+                .addMigrations(MIGRATION_1_2)
                 .build()
                 .also { INSTANCE = it }
         }
 }
+
