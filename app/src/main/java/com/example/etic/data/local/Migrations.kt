@@ -70,3 +70,31 @@ val MIGRATION_1_2 = object : Migration(1, 2) {
     }
 }
 
+val MIGRATION_2_3 = object : Migration(2, 3) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS linea_base (
+                Id_Linea_Base TEXT NOT NULL,
+                Id_Sitio TEXT DEFAULT 'flag_export',
+                Id_Ubicacion TEXT,
+                Id_Inspeccion TEXT,
+                Id_Inspeccion_Det TEXT,
+                MTA REAL,
+                Temp_max REAL,
+                Temp_amb REAL,
+                Notas TEXT,
+                Archivo_IR TEXT,
+                Archivo_ID TEXT,
+                Ruta TEXT,
+                Estatus TEXT,
+                Creado_Por TEXT,
+                Fecha_Creacion TEXT,
+                Modificado_Por TEXT,
+                Fecha_Mod TEXT,
+                PRIMARY KEY(Id_Linea_Base)
+            )
+            """
+        )
+    }
+}

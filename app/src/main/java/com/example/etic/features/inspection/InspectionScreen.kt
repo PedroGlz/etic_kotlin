@@ -520,7 +520,7 @@ private fun DetailsTabs(
         Divider(thickness = 0.5.dp)
         when (tab) {
             0 -> ProblemsTableFromDatabase()
-            1 -> BaselineTable(baselines = baselines, onDelete = onDeleteBaseline)
+            1 -> BaselineTableFromDatabase()
         }
     }
 }
@@ -715,4 +715,39 @@ private fun ProblemsTableFromDatabase() {
     }
 
     ProblemsTable(problems = uiProblems, onDelete = { /* no-op: from DB */ })
+}
+
+// -------------------------
+// DB-backed Baseline table
+// -------------------------
+
+@Composable
+private fun BaselineTableFromDatabase() {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val dao = remember { com.example.etic.data.local.DbProvider.get(ctx).lineaBaseDao() }
+
+    val uiBaselines by produceState(initialValue = emptyList<Baseline>()) {
+        val rows = try { dao.getAll() } catch (_: Exception) { emptyList() }
+        value = rows.map { r ->
+            val fecha = runCatching {
+                val raw = r.fechaCreacion?.takeIf { it.isNotBlank() }
+                val onlyDate = raw?.take(10)
+                if (onlyDate != null) java.time.LocalDate.parse(onlyDate) else java.time.LocalDate.now()
+            }.getOrDefault(java.time.LocalDate.now())
+
+            Baseline(
+                numInspeccion = r.idInspeccion ?: "",
+                equipo = r.idUbicacion ?: "", // no hay columna Equipo; usamos ubicacion como referencia
+                fecha = fecha,
+                mtaC = r.mta ?: 0.0,
+                tempC = r.tempMax ?: 0.0,
+                ambC = r.tempAmb ?: 0.0,
+                imgR = r.archivoIr,
+                imgD = r.archivoId,
+                notas = r.notas ?: ""
+            )
+        }
+    }
+
+    BaselineTable(baselines = uiBaselines, onDelete = { /* no-op: from DB */ })
 }
