@@ -1,6 +1,8 @@
 package com.example.etic.features.inspection.ui.home
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
@@ -35,6 +37,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.etic.ui.theme.EticTheme
@@ -58,6 +61,10 @@ private val TREE_TOGGLE_SIZE: Dp = 20.dp   // Tamaño del ícono de expandir/col
 private val TREE_ICON_SIZE: Dp = 18.dp     // Tamaño del ícono del nodo
 private val TREE_SPACING: Dp = 4.dp        // Espaciado horizontal pequeño
 private val TREE_INDENT: Dp = 12.dp        // Indentación por nivel
+// Ancho mínimo para que la tabla de Progreso no se comprima; habilita scroll horizontal si el panel es más angosto
+private val PROGRESS_TABLE_MIN_WIDTH: Dp = 900.dp
+
+// Nota: la tabla de Progreso ocupa siempre todo el ancho del panel
 
 @Composable
 fun InspectionScreen() {
@@ -315,14 +322,15 @@ private fun SimpleTreeView(
     val flat = remember(nodes, expanded) { mutableListOf<FlatNode>().also { flatten(nodes, 0, it) } }
     val selColor = MaterialTheme.colorScheme.primary.copy(alpha = SELECT_ALPHA)
 
-    LazyColumn(Modifier.fillMaxSize()) {
-        items(flat, key = { it.node.id }) { item ->
-            val n = item.node
-            val isSelected = selectedId == n.id
-            Column(Modifier.background(if (isSelected) selColor else Color.Transparent)) {
+    val hScroll = rememberScrollState()
+    Box(Modifier.fillMaxSize().horizontalScroll(hScroll)) {
+        LazyColumn(Modifier.fillMaxHeight()) {
+            items(flat, key = { it.node.id }) { item ->
+                val n = item.node
+                val isSelected = selectedId == n.id
+                Column(Modifier.background(if (isSelected) selColor else Color.Transparent)) {
                 Row(
                     Modifier
-                        .fillMaxWidth()
                         .padding(start = (item.depth * TREE_INDENT.value).dp, end = TREE_SPACING),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -348,57 +356,67 @@ private fun SimpleTreeView(
                     Text(
                         n.title,
                         color = Color.Black,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.clickable { onSelect(n.id) }
                     )
                 }
                 Divider(thickness = DIVIDER_THICKNESS)
+                }
             }
         }
     }
 }
-
 // -------------------------
 // Tablas
 // -------------------------
 
 @Composable
 private fun ProgressTable(children: List<TreeNode>, onDelete: (TreeNode) -> Unit) {
-    Column(Modifier.fillMaxSize()) {
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.surface)
-                .padding(vertical = 8.dp, horizontal = 8.dp)
-        ) {
-            HeaderCell("Ubicacion", 3)
-            HeaderCell("Codigo de barras", 2)
-            HeaderCell("Estatus", 2)
-            HeaderCell("Op", 1)
-        }
-        Divider(thickness = DIVIDER_THICKNESS)
-        
-        if (children.isEmpty()) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Sin elementos") }
-        } else {
-            LazyColumn(Modifier.fillMaxSize()) {
-                items(children, key = { it.id }) { n ->
-                    Row(
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 6.dp, horizontal = 8.dp)
-                    ) {
-                        BodyCell(3) { Text(n.title) }
-                        BodyCell(2) { Text(n.barcode ?: "-") }
-                        BodyCell(2) { Text(if (n.verified) "Verificado" else "Por verificar") }
-                        BodyCell(1) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                IconButton(onClick = { onDelete(n) }) {
-                                    Icon(Icons.Outlined.Delete, contentDescription = "Eliminar")
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        val hScroll = rememberScrollState()
+        val minWidth = PROGRESS_TABLE_MIN_WIDTH
+        val tableWidth = if (maxWidth < minWidth) minWidth else maxWidth
+
+        Box(Modifier.fillMaxSize().horizontalScroll(hScroll)) {
+            Column(Modifier.width(tableWidth).fillMaxHeight()) {
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .background(MaterialTheme.colorScheme.surface)
+                        .padding(vertical = 8.dp, horizontal = 8.dp)
+                ) {
+                    HeaderCell("Ubicacion", 3)
+                    HeaderCell("Codigo de barras", 2)
+                    HeaderCell("Estatus", 2)
+                    HeaderCell("Op", 1)
+                }
+                Divider(thickness = DIVIDER_THICKNESS)
+
+                if (children.isEmpty()) {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Sin elementos") }
+                } else {
+                    LazyColumn(Modifier.fillMaxHeight()) {
+                        items(children, key = { it.id }) { n ->
+                            Row(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 6.dp, horizontal = 8.dp)
+                            ) {
+                                BodyCell(3) { Text(n.title) }
+                                BodyCell(2) { Text(n.barcode ?: "-") }
+                                BodyCell(2) { Text(if (n.verified) "Verificado" else "Por verificar") }
+                                BodyCell(1) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        IconButton(onClick = { onDelete(n) }) {
+                                            Icon(Icons.Outlined.Delete, contentDescription = "Eliminar")
+                                        }
+                                    }
                                 }
                             }
+                            Divider(thickness = DIVIDER_THICKNESS)
                         }
                     }
-                    Divider(thickness = DIVIDER_THICKNESS)
                 }
             }
         }
