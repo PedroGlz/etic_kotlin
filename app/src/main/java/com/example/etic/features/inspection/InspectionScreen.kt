@@ -5,6 +5,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -12,7 +13,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.Folder
+import androidx.compose.material.icons.outlined.DragIndicator
+import androidx.compose.material.icons.outlined.Traffic
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.List
 import androidx.compose.material.icons.outlined.Timeline
@@ -37,6 +39,26 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.etic.ui.theme.EticTheme
 
+// Centralizamos algunos "magic numbers" para facilitar ajuste futuro
+private const val MIN_FRAC: Float = 0.2f     // Límite inferior de los splitters
+private const val MAX_FRAC: Float = 0.8f     // Límite superior de los splitters
+private const val H_INIT_FRAC: Float = 0.6f  // Fracción inicial del panel superior
+private const val V_INIT_FRAC: Float = 0.5f  // Fracción inicial del panel izquierdo
+
+private val HANDLE_THICKNESS: Dp = 2.dp      // Grosor de los handles de split
+private val DIVIDER_THICKNESS: Dp = 0.5.dp   // Grosor estándar de divisores/bordes
+private val PANEL_PADDING: Dp = 12.dp        // Padding interno de cada panel
+private const val SURFACE_VARIANT_ALPHA: Float = 0.4f
+private const val SELECT_ALPHA: Float = 0.10f
+private val ICON_EQUIPO_COLOR: Color = Color(0xFFFFC107)     // Amarillo (Traffic)
+private val ICON_NO_EQUIPO_COLOR: Color = Color(0xFF4CAF50)  // Verde (DragIndicator)
+
+// Ajustes de compacidad para filas del árbol
+private val TREE_TOGGLE_SIZE: Dp = 20.dp   // Tamaño del ícono de expandir/colapsar
+private val TREE_ICON_SIZE: Dp = 18.dp     // Tamaño del ícono del nodo
+private val TREE_SPACING: Dp = 4.dp        // Espaciado horizontal pequeño
+private val TREE_INDENT: Dp = 12.dp        // Indentación por nivel
+
 @Composable
 fun InspectionScreen() {
     CurrentInspectionSplitView()
@@ -44,13 +66,17 @@ fun InspectionScreen() {
 
 @Composable
 private fun CurrentInspectionSplitView() {
-    var hFrac by rememberSaveable { mutableStateOf(0.6f) } // fracción alto del panel superior
-    var vFrac by rememberSaveable { mutableStateOf(0.5f) } // fracción ancho del panel izquierdo
-    val minFrac = 0.2f
-    val maxFrac = 0.8f
-    val handleThickness: Dp = 2.dp
+    // Usamos constantes para evitar números mágicos in-line
+    var hFrac by rememberSaveable { mutableStateOf(H_INIT_FRAC) } // fracción alto del panel superior
+    var vFrac by rememberSaveable { mutableStateOf(V_INIT_FRAC) } // fracción ancho del panel izquierdo
 
-    var nodes by remember { mutableStateOf(generateInitialNodes().toMutableList()) }
+    var nodes by remember { mutableStateOf<List<TreeNode>>(emptyList()) }
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val ubicacionDao = remember { com.example.etic.data.local.DbProvider.get(ctx).ubicacionDao() }
+    LaunchedEffect(Unit) {
+        val rows = runCatching { ubicacionDao.getAll() }.getOrElse { emptyList() }
+        nodes = buildTreeFromUbicaciones(rows)
+    }
     val expanded = remember { mutableStateListOf<String>() }
     var selectedId by remember { mutableStateOf<String?>(null) }
 
@@ -75,25 +101,30 @@ private fun CurrentInspectionSplitView() {
                         .weight(vFrac)
                         .fillMaxHeight()
                 ) {
-                    SimpleTreeView(
-                        nodes = nodes,
-                        expanded = expanded.toSet(),
-                        selectedId = selectedId,
-                        onToggle = { id -> if (!expanded.remove(id)) expanded.add(id) },
-                        onSelect = { id -> selectedId = id }
-                    )
+                    if (nodes.isNotEmpty()) {
+                        SimpleTreeView(
+                            nodes = nodes,
+                            expanded = expanded.toSet(),
+                            selectedId = selectedId,
+                            onToggle = { id -> if (!expanded.remove(id)) expanded.add(id) },
+                            onSelect = { id -> selectedId = id }
+                        )
+                    } else {
+                        // Fallback: lista plana desde BD para mostrar algo
+                        UbicacionesFlatListFromDatabase()
+                    }
                 }
 
                 // Handle vertical (más suave)
                 Box(
                     Modifier
-                        .width(handleThickness)
+                        .width(HANDLE_THICKNESS)
                         .fillMaxHeight()
                         .draggable(
                             orientation = Orientation.Horizontal,
                             state = rememberDraggableState { deltaPx: Float ->
                                 vFrac = (vFrac + deltaPx / totalWidthPx)
-                                    .coerceIn(minFrac, maxFrac)
+                                    .coerceIn(MIN_FRAC, MAX_FRAC)
                             }
                         )
                         .background(MaterialTheme.colorScheme.surfaceVariant)
@@ -123,12 +154,12 @@ private fun CurrentInspectionSplitView() {
             Box(
                 Modifier
                     .fillMaxWidth()
-                    .height(handleThickness)
+                    .height(HANDLE_THICKNESS)
                     .draggable(
                         orientation = Orientation.Vertical,
                         state = rememberDraggableState { deltaPx: Float ->
                             hFrac = (hFrac + deltaPx / totalHeightPx)
-                                .coerceIn(minFrac, maxFrac)
+                                .coerceIn(MIN_FRAC, MAX_FRAC)
                         }
                     )
                     .background(MaterialTheme.colorScheme.surfaceVariant)
@@ -170,24 +201,24 @@ private fun CellPanel(
         modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.surface)
-            .border(width = 0.5.dp, color = borderColor)
+            .border(width = DIVIDER_THICKNESS, color = borderColor)
     ) {
         Column(
             Modifier
                 .fillMaxSize()
-                .padding(12.dp)
+                .padding(PANEL_PADDING)
         ) {
-            // (Opcional) encabezado visual si lo deseas:
-            // Row(verticalAlignment = Alignment.CenterVertically) {
-            //     Icon(icon, contentDescription = null)
-            //     Spacer(Modifier.width(8.dp))
-            //     Text(title, style = MaterialTheme.typography.titleMedium)
-            // }
-            // Spacer(Modifier.height(8.dp))
+            // Encabezado visual del panel: activa el uso de title/icon
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(icon, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text(title, style = MaterialTheme.typography.titleMedium)
+            }
+            Spacer(Modifier.height(8.dp))
             Box(
                 Modifier
                     .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f))
+                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = SURFACE_VARIANT_ALPHA))
             ) {
                 content()
             }
@@ -259,139 +290,6 @@ private fun removeById(id: String, list: MutableList<TreeNode>): Boolean {
     return false
 }
 
-private fun generateInitialNodes(): List<TreeNode> {
-    val now = java.time.LocalDate.now()
-    val nodes = mutableListOf(
-        TreeNode(
-            id = "i001",
-            title = "SUBESCTACION 001",
-            children = mutableListOf(
-                TreeNode(
-                    id = "i001-siteA",
-                    title = "Sitio: Planta A",
-                    children = mutableListOf(
-                        TreeNode(
-                            id = "i001-a1",
-                            title = "Area 1",
-                            barcode = "A1-0001",
-                            verified = true,
-                            problems = mutableListOf(
-                                Problem(1, now, "INS-001", "Térmica", "Abierto", false, 65.0, 12.3, "Media", "Motor A", "Vibración leve detectada"),
-                                Problem(2, now, "INS-001", "Eléctrica", "Cerrado", true, 72.2, 15.0, "Alta", "Tablero 1", "Ajuste de terminales")
-                            ),
-                            baselines = mutableListOf(
-                                Baseline("INS-BASE-01", "Motor A", now, 40.0, 42.5, 22.0, null, null, "Valores dentro de rango")
-                            )
-                        ),
-                        TreeNode(
-                            id = "i001-a2",
-                            title = "Area 2",
-                            barcode = "A2-0002",
-                            verified = false,
-                            problems = mutableListOf(
-                                Problem(1, now, "INS-002", "Mecánica", "En progreso", false, 50.5, 5.5, "Baja", "Bomba B", "Requiere seguimiento")
-                            ),
-                            baselines = mutableListOf(
-                                Baseline("INS-BASE-02", "Bomba B", now, 38.0, 39.1, 23.0, null, null, "OK")
-                            )
-                        )
-                    )
-                ),
-                TreeNode(
-                    id = "i001-findings",
-                    title = "Hallazgos",
-                    children = mutableListOf(
-                        TreeNode(id = "i001-sec", title = "Seguridad", barcode = "SEC-001", verified = false),
-                        TreeNode(id = "i001-mant", title = "Mantenimiento", barcode = "MAN-002", verified = true)
-                    )
-                )
-            )
-        ),
-        TreeNode(
-            id = "i002",
-            title = "SUBESTACION 002",
-            children = mutableListOf(
-                TreeNode(id = "i002-siteB", title = "Sitio: Planta B", barcode = "PB-0001", verified = false),
-                TreeNode(id = "i002-findings", title = "Hallazgos", barcode = "HAL-0001", verified = false)
-            )
-        )
-    )
-    nodes.addAll(generateMockNodes())
-    return nodes
-}
-
-private fun generateMockNodes(): List<TreeNode> {
-    val out = mutableListOf<TreeNode>()
-    val now = java.time.LocalDate.now()
-    val inspections = 4
-    val sitesPerInspection = 10
-    val areasPerSite = 10
-    val equiposPerArea = 9
-    for (i in 1..inspections) {
-        val insId = i.toString().padStart(3, '0')
-        val inspection = TreeNode(id = "ins$insId", title = "SUBESTACION $insId")
-        for (s in 1..sitesPerInspection) {
-            val site = TreeNode(
-                id = "ins$insId-site$s",
-                title = "Sitio: Planta ${('A' + (s - 1) % 26)}",
-                barcode = "S$insId-${s.toString().padStart(3, '0')}",
-                verified = s % 2 == 0
-            )
-            for (a in 1..areasPerSite) {
-                val area = TreeNode(
-                    id = "ins$insId-site$s-area$a",
-                    title = "Area $a",
-                    barcode = "A$insId-$s-$a",
-                    verified = a % 3 == 0
-                )
-                for (e in 1..equiposPerArea) {
-                    val equipo = TreeNode(
-                        id = "ins$insId-site$s-area$a-e$e",
-                        title = "Equipo $e",
-                        barcode = "EQ$insId-$s-$a-$e",
-                        verified = e % 4 == 0
-                    )
-                    if (e == 1) {
-                        area.problems.add(
-                            Problem(
-                                no = a * 10 + e,
-                                fecha = now,
-                                numInspeccion = "INS-$insId",
-                                tipo = "Termica",
-                                estatus = if (a % 2 == 0) "Abierto" else "Cerrado",
-                                cronico = a % 4 == 0,
-                                tempC = 40.0 + (e % 10),
-                                deltaTC = 5.0 + (e % 5),
-                                severidad = if (a % 3 == 0) "Alta" else "Media",
-                                equipo = "Equipo $e",
-                                comentarios = "Mock generado"
-                            )
-                        )
-                        area.baselines.add(
-                            Baseline(
-                                numInspeccion = "INS-BASE-$insId",
-                                equipo = "Equipo $e",
-                                fecha = now,
-                                mtaC = 38.0,
-                                tempC = 39.0 + (e % 3),
-                                ambC = 23.0,
-                                imgR = null,
-                                imgD = null,
-                                notas = "OK"
-                            )
-                        )
-                    }
-                    area.children.add(equipo)
-                }
-                site.children.add(area)
-            }
-            inspection.children.add(site)
-        }
-        out.add(inspection)
-    }
-    return out
-}
-
 // -------------------------
 // TreeView simple
 // -------------------------
@@ -415,7 +313,7 @@ private fun SimpleTreeView(
         }
     }
     val flat = remember(nodes, expanded) { mutableListOf<FlatNode>().also { flatten(nodes, 0, it) } }
-    val selColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.10f)
+    val selColor = MaterialTheme.colorScheme.primary.copy(alpha = SELECT_ALPHA)
 
     LazyColumn(Modifier.fillMaxSize()) {
         items(flat, key = { it.node.id }) { item ->
@@ -425,24 +323,35 @@ private fun SimpleTreeView(
                 Row(
                     Modifier
                         .fillMaxWidth()
-                        .padding(start = (item.depth * 16).dp, end = 8.dp),
+                        .padding(start = (item.depth * TREE_INDENT.value).dp, end = TREE_SPACING),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     if (item.hasChildren) {
-                        IconButton(onClick = { onToggle(n.id) }) {
-                            Icon(
-                                if (item.expanded) Icons.Filled.ExpandMore else Icons.Filled.ChevronRight,
-                                contentDescription = null
-                            )
-                        }
+                        Icon(
+                            imageVector = if (item.expanded) Icons.Filled.ExpandMore else Icons.Filled.ChevronRight,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .size(TREE_TOGGLE_SIZE)
+                                .clickable { onToggle(n.id) }
+                        )
                     } else {
-                        Spacer(Modifier.width(40.dp))
+                        Spacer(Modifier.width(TREE_TOGGLE_SIZE))
                     }
-                    Icon(Icons.Outlined.Folder, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    TextButton(onClick = { onSelect(n.id) }) { Text(n.title) }
+                    // Icono según esEquipo (mapeado en 'verified' desde BD)
+                    val (nodeIcon, tintColor) = if (n.verified) {
+                        Icons.Outlined.Traffic to ICON_EQUIPO_COLOR
+                    } else {
+                        Icons.Outlined.DragIndicator to ICON_NO_EQUIPO_COLOR
+                    }
+                    Icon(nodeIcon, contentDescription = null, tint = tintColor, modifier = Modifier.size(TREE_ICON_SIZE))
+                    Spacer(Modifier.width(TREE_SPACING))
+                    Text(
+                        n.title,
+                        color = Color.Black,
+                        modifier = Modifier.clickable { onSelect(n.id) }
+                    )
                 }
-                Divider(thickness = 0.5.dp)
+                Divider(thickness = DIVIDER_THICKNESS)
             }
         }
     }
@@ -466,7 +375,8 @@ private fun ProgressTable(children: List<TreeNode>, onDelete: (TreeNode) -> Unit
             HeaderCell("Estatus", 2)
             HeaderCell("Op", 1)
         }
-        Divider(thickness = 0.5.dp)
+        Divider(thickness = DIVIDER_THICKNESS)
+        
         if (children.isEmpty()) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Sin elementos") }
         } else {
@@ -488,7 +398,7 @@ private fun ProgressTable(children: List<TreeNode>, onDelete: (TreeNode) -> Unit
                             }
                         }
                     }
-                    Divider(thickness = 0.5.dp)
+                    Divider(thickness = DIVIDER_THICKNESS)
                 }
             }
         }
@@ -508,8 +418,7 @@ private fun DetailsTabs(
     onDeleteProblem: (Problem) -> Unit,
     onDeleteBaseline: (Baseline) -> Unit
 ) {
-    val problems = remember(node) { collectProblems(node) }
-    val baselines = remember(node) { collectBaselines(node) }
+    // Nota: mostramos versiones ligadas a BD; no usamos listas calculadas por nodo aquí
     var tab by rememberSaveable { mutableStateOf(0) }
 
     Column(Modifier.fillMaxSize()) {
@@ -517,12 +426,47 @@ private fun DetailsTabs(
             Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text("Listado de problemas") })
             Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text("Listado Base Line") })
         }
-        Divider(thickness = 0.5.dp)
+        Divider(thickness = DIVIDER_THICKNESS)
         when (tab) {
             0 -> ProblemsTableFromDatabase()
             1 -> BaselineTableFromDatabase()
         }
     }
+}
+
+private fun buildTreeFromUbicaciones(rows: List<com.example.etic.data.local.entities.Ubicacion>): MutableList<TreeNode> {
+    val byId = mutableMapOf<String, TreeNode>()
+    val roots = mutableListOf<TreeNode>()
+
+    rows.forEach { r ->
+        val node = TreeNode(
+            id = r.idUbicacion,
+            title = r.ubicacion ?: "(Sin nombre)",
+            barcode = r.codigoBarras,
+            verified = (r.esEquipo ?: "").equals("SI", ignoreCase = true)
+        )
+        byId[r.idUbicacion] = node
+    }
+
+    rows.forEach { r ->
+        val node = byId[r.idUbicacion] ?: return@forEach
+        val parentId = r.idUbicacionPadre?.takeIf { it.isNotBlank() }
+        if (parentId != null) {
+            val parent = byId[parentId]
+            if (parent != null) parent.children.add(node) else roots.add(node)
+        } else {
+            roots.add(node)
+        }
+    }
+
+    fun sortRec(n: TreeNode) {
+        n.children.sortBy { it.title }
+        n.children.forEach { sortRec(it) }
+    }
+    roots.sortBy { it.title }
+    roots.forEach { sortRec(it) }
+
+    return roots
 }
 
 private fun collectProblems(root: TreeNode?): List<Problem> {
@@ -567,7 +511,7 @@ private fun ProblemsTable(problems: List<Problem>, onDelete: (Problem) -> Unit) 
             cell(3) { Text("Comentarios") }
             cell(1) { Text("Op") }
         }
-        Divider(thickness = 0.5.dp)
+        Divider(thickness = DIVIDER_THICKNESS)
         if (problems.isEmpty()) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Sin problemas") }
         } else {
@@ -595,7 +539,7 @@ private fun ProblemsTable(problems: List<Problem>, onDelete: (Problem) -> Unit) 
                             }
                         }
                     }
-                    Divider(thickness = 0.5.dp)
+                    Divider(thickness = DIVIDER_THICKNESS)
                 }
             }
         }
@@ -626,7 +570,7 @@ private fun BaselineTable(baselines: List<Baseline>, onDelete: (Baseline) -> Uni
             cell(3) { Text("Notas") }
             cell(1) { Text("Op") }
         }
-        Divider(thickness = 0.5.dp)
+        Divider(thickness = DIVIDER_THICKNESS)
         if (baselines.isEmpty()) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Sin base line") }
         } else {
@@ -668,7 +612,7 @@ private fun BaselineTable(baselines: List<Baseline>, onDelete: (Baseline) -> Uni
                             }
                         }
                     }
-                    Divider(thickness = 0.5.dp)
+                    Divider(thickness = DIVIDER_THICKNESS)
                 }
             }
         }
@@ -750,4 +694,37 @@ private fun BaselineTableFromDatabase() {
     }
 
     BaselineTable(baselines = uiBaselines, onDelete = { /* no-op: from DB */ })
+}
+
+// -------------------------
+// DB-backed Ubicaciones flat list (fallback)
+// -------------------------
+
+@Composable
+private fun UbicacionesFlatListFromDatabase() {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val dao = remember { com.example.etic.data.local.DbProvider.get(ctx).ubicacionDao() }
+    val ubicaciones by produceState(initialValue = emptyList<com.example.etic.data.local.entities.Ubicacion>()) {
+        value = try { dao.getAll() } catch (_: Exception) { emptyList() }
+    }
+
+    if (ubicaciones.isEmpty()) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text("Sin ubicaciones en BD")
+        }
+    } else {
+        LazyColumn(Modifier.fillMaxSize()) {
+            items(ubicaciones, key = { it.idUbicacion }) { u ->
+                Column(Modifier.fillMaxWidth().padding(vertical = 8.dp, horizontal = 8.dp)) {
+                    Text(u.ubicacion ?: u.descripcion ?: "(Sin nombre)", style = MaterialTheme.typography.bodyLarge)
+                    val sub = listOfNotNull(
+                        u.codigoBarras?.takeIf { it.isNotBlank() }?.let { "CB: $it" },
+                        u.idUbicacionPadre?.takeIf { it.isNotBlank() }?.let { "Padre: $it" }
+                    ).joinToString("  •  ")
+                    if (sub.isNotEmpty()) Text(sub, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                    Divider(thickness = DIVIDER_THICKNESS)
+            }
+        }
+    }
 }

@@ -98,3 +98,36 @@ val MIGRATION_2_3 = object : Migration(2, 3) {
         )
     }
 }
+
+val MIGRATION_3_4 = object : Migration(3, 4) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // No-op if table already exists in the prepackaged DB. Create it otherwise.
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS ubicaciones (
+                Id_Ubicacion TEXT NOT NULL,
+                Id_Sitio TEXT,
+                Id_Ubicacion_padre TEXT,
+                Id_Tipo_Prioridad TEXT,
+                Id_Tipo_Inspeccion TEXT,
+                Ubicacion TEXT,
+                Descripcion TEXT,
+                Es_Equipo TEXT,
+                Codigo_Barras TEXT,
+                Nivel_arbol INTEGER,
+                LIMITE REAL,
+                Fabricante TEXT,
+                Nombre_Foto TEXT,
+                Ruta TEXT,
+                Estatus TEXT,
+                Creado_Por TEXT,
+                Fecha_Creacion TEXT,
+                Modificado_Por TEXT,
+                Fecha_Mod TEXT,
+                Id_Inspeccion TEXT,
+                PRIMARY KEY(Id_Ubicacion)
+            )
+            """
+        )
+    }
+}
