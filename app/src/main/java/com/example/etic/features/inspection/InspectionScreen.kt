@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.DragIndicator
 import androidx.compose.material.icons.outlined.Traffic
+import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.List
 import androidx.compose.material.icons.outlined.Timeline
@@ -25,6 +26,11 @@ import androidx.compose.material3.Divider
 import androidx.compose.material3.DividerDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
@@ -32,15 +38,21 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.etic.ui.theme.EticTheme
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 // Centralizamos algunos "magic numbers" para facilitar ajuste futuro
 private const val MIN_FRAC: Float = 0.2f     // Límite inferior de los splitters
@@ -63,6 +75,7 @@ private val TREE_SPACING: Dp = 4.dp        // Espaciado horizontal pequeño
 private val TREE_INDENT: Dp = 12.dp        // Indentación por nivel
 // Ancho mínimo para que la tabla de Progreso no se comprima; habilita scroll horizontal si el panel es más angosto
 private val PROGRESS_TABLE_MIN_WIDTH: Dp = 900.dp
+private val HEADER_ACTION_SPACING: Dp = 8.dp
 
 // Nota: la tabla de Progreso ocupa siempre todo el ancho del panel
 
@@ -86,6 +99,7 @@ private fun CurrentInspectionSplitView() {
     }
     val expanded = remember { mutableStateListOf<String>() }
     var selectedId by remember { mutableStateOf<String?>(null) }
+    var highlightedId by remember { mutableStateOf<String?>(null) }
 
     val borderColor = DividerDefaults.color
 
@@ -113,6 +127,7 @@ private fun CurrentInspectionSplitView() {
                             nodes = nodes,
                             expanded = expanded.toSet(),
                             selectedId = selectedId,
+                            highlightedId = highlightedId,
                             onToggle = { id -> if (!expanded.remove(id)) expanded.add(id) },
                             onSelect = { id -> selectedId = id }
                         )
@@ -145,7 +160,80 @@ private fun CurrentInspectionSplitView() {
                     borderColor = borderColor,
                     modifier = Modifier
                         .weight(1f - vFrac)
-                        .fillMaxHeight()
+                        .fillMaxHeight(),
+                    headerContent = {
+                        // Acciones alineadas a la derecha en el encabezado de Progreso
+                        var barcode by rememberSaveable { mutableStateOf("") }
+                        var statusMenuExpanded by remember { mutableStateOf(false) }
+                        var selectedStatus by rememberSaveable { mutableStateOf("Todos") }
+                        var searchMessage by remember { mutableStateOf<String?>(null) }
+                        val scope = rememberCoroutineScope()
+
+                        fun triggerSearch() {
+                            searchMessage = null
+                            val code = barcode.trim()
+                            if (code.isEmpty()) return
+                            val path = findPathByBarcode(nodes, code)
+                            if (path == null) {
+                                searchMessage = "No hay elementos con ese codigo de barras"
+                            } else {
+                                // expandir ancestros y seleccionar objetivo
+                                path.dropLast(1).forEach { id -> if (!expanded.contains(id)) expanded.add(id) }
+                                val targetId = path.last()
+                                selectedId = targetId
+                                highlightedId = targetId
+                                scope.launch {
+                                    delay(3000)
+                                    if (highlightedId == targetId) highlightedId = null
+                                }
+                            }
+                        }
+
+                        Column(Modifier.fillMaxWidth()) {
+                            Row(
+                                Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.End,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                OutlinedTextField(
+                                    value = barcode,
+                                    onValueChange = { barcode = it },
+                                    singleLine = true,
+                                    leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null) },
+                                    label = { Text("Codigo de barras") },
+                                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                                    keyboardActions = KeyboardActions(onSearch = { triggerSearch() })
+                                )
+                                Spacer(Modifier.width(HEADER_ACTION_SPACING))
+
+                                // Listado de estatus de elementos (dropdown simple)
+                                Box {
+                                    TextButton(onClick = { statusMenuExpanded = true }) { Text(selectedStatus) }
+                                    DropdownMenu(expanded = statusMenuExpanded, onDismissRequest = { statusMenuExpanded = false }) {
+                                        listOf("Todos", "Verificado", "Por verificar").forEach { opt ->
+                                            DropdownMenuItem(
+                                                text = { Text(opt) },
+                                                onClick = {
+                                                    selectedStatus = opt
+                                                    statusMenuExpanded = false
+                                                }
+                                            )
+                                        }
+                                    }
+                                }
+                                Spacer(Modifier.width(HEADER_ACTION_SPACING))
+
+                                Button(
+                                    onClick = { /* TODO: acción para nueva ubicación */ },
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))
+                                ) { Text("Nueva ubicacion", color = Color.White) }
+                            }
+                            if (searchMessage != null) {
+                                Spacer(Modifier.height(4.dp))
+                                Text(searchMessage!!, color = MaterialTheme.colorScheme.error)
+                            }
+                        }
+                    }
                 ) {
                     ProgressTable(
                         children = children,
@@ -202,6 +290,7 @@ private fun CellPanel(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     borderColor: Color,
     modifier: Modifier = Modifier,
+    headerContent: (@Composable () -> Unit)? = null,
     content: @Composable () -> Unit
 ) {
     Box(
@@ -216,10 +305,14 @@ private fun CellPanel(
                 .padding(PANEL_PADDING)
         ) {
             // Encabezado visual del panel: activa el uso de title/icon
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(icon, contentDescription = null)
-                Spacer(Modifier.width(8.dp))
-                Text(title, style = MaterialTheme.typography.titleMedium)
+            if (headerContent == null) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(icon, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text(title, style = MaterialTheme.typography.titleMedium)
+                }
+            } else {
+                headerContent()
             }
             Spacer(Modifier.height(8.dp))
             Box(
@@ -308,6 +401,7 @@ private fun SimpleTreeView(
     nodes: List<TreeNode>,
     expanded: Set<String>,
     selectedId: String?,
+    highlightedId: String?,
     onToggle: (String) -> Unit,
     onSelect: (String) -> Unit
 ) {
@@ -355,7 +449,7 @@ private fun SimpleTreeView(
                     Spacer(Modifier.width(TREE_SPACING))
                     Text(
                         n.title,
-                        color = Color.Black,
+                        color = if (n.id == highlightedId) Color.Red else Color.Black,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.clickable { onSelect(n.id) }
@@ -450,6 +544,23 @@ private fun DetailsTabs(
             1 -> BaselineTableFromDatabase()
         }
     }
+}
+
+// Encuentra el camino (ids) desde la raíz hasta el nodo cuyo codigo de barras coincide exactamente
+private fun findPathByBarcode(list: List<TreeNode>, barcode: String): List<String>? {
+    fun dfs(n: TreeNode, path: List<String>): List<String>? {
+        if ((n.barcode ?: "") == barcode) return path + n.id
+        for (c in n.children) {
+            val found = dfs(c, path + n.id)
+            if (found != null) return found
+        }
+        return null
+    }
+    for (root in list) {
+        val res = dfs(root, emptyList())
+        if (res != null) return res
+    }
+    return null
 }
 
 private fun buildTreeFromUbicaciones(rows: List<com.example.etic.data.local.entities.Ubicacion>): MutableList<TreeNode> {
