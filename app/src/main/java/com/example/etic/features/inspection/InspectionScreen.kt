@@ -272,7 +272,7 @@ private fun CurrentInspectionSplitView() {
                     .fillMaxWidth()
                     .fillMaxHeight(),
             ) {
-                DetailsTabs(
+                ListTabs(
                     node = findById(selectedId, nodes),
                     onDeleteProblem = { p ->
                         val cur = findById(selectedId, nodes)
@@ -515,7 +515,7 @@ private fun DetailsTable(children: List<TreeNode>,modifier: Modifier = Modifier,
 }
 
 @Composable
-private fun DetailsTabs(
+private fun ListTabs(
     node: TreeNode?,
     onDeleteProblem: (Problem) -> Unit,
     onDeleteBaseline: (Baseline) -> Unit,
