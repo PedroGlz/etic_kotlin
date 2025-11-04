@@ -20,8 +20,6 @@ import androidx.compose.material.icons.outlined.DragIndicator
 import androidx.compose.material.icons.outlined.Traffic
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Image
-import androidx.compose.material.icons.outlined.List
-import androidx.compose.material.icons.outlined.Timeline
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.Divider
 import androidx.compose.material3.DividerDefaults
@@ -39,7 +37,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.foundation.text.KeyboardActions
@@ -48,6 +45,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.text.input.ImeAction
@@ -190,13 +188,10 @@ private fun CurrentInspectionSplitView() {
 
                 // Panel izquierdo
                 CellPanel(
-                    title = "Resumen",
-                    icon = Icons.Outlined.Info,
                     borderColor = borderColor,
                     modifier = Modifier
                         .weight(vFrac)
                         .fillMaxHeight(),
-                    showHeader = false // ← oculta título e icono
                 ) {
                     if (nodes.isNotEmpty()) {
                         SimpleTreeView(
@@ -237,13 +232,10 @@ private fun CurrentInspectionSplitView() {
                 }
 
                 CellPanel(
-                    title = "",                       // no se usa al ocultar header
-                    icon = Icons.Outlined.Info,       // no se usa al ocultar header
                     borderColor = borderColor,
                     modifier = Modifier
                         .weight(weightRight)
                         .fillMaxHeight(),
-                    showHeader = false
                 ) {
                     DetailsTable(
                         children = children,
@@ -274,14 +266,11 @@ private fun CurrentInspectionSplitView() {
 
             // Panel inferior
             CellPanel(
-                title = "Detalles",              // se ignora si showHeader = false
-                icon = Icons.Outlined.List,
                 borderColor = borderColor,
                 modifier = Modifier
                     .weight(1f - hFrac)
                     .fillMaxWidth()
                     .fillMaxHeight(),
-                showHeader = false               // ← quita título e ícono
             ) {
                 DetailsTabs(
                     node = findById(selectedId, nodes),
@@ -303,12 +292,8 @@ private fun CurrentInspectionSplitView() {
 
 @Composable
 private fun CellPanel(
-    title: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
     borderColor: Color,
     modifier: Modifier = Modifier,
-    showHeader: Boolean = true,                     // ← NUEVO
-    headerContent: (@Composable () -> Unit)? = null,
     content: @Composable () -> Unit
 ) {
     Box(
@@ -317,40 +302,15 @@ private fun CellPanel(
             .background(MaterialTheme.colorScheme.surface)
             .border(width = DIVIDER_THICKNESS, color = borderColor)
     ) {
-        Column(
+        Box(
             Modifier
                 .fillMaxSize()
                 .padding(PANEL_PADDING)
+                .background(
+                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = SURFACE_VARIANT_ALPHA)
+                )
         ) {
-            val drewHeader = when {
-                headerContent != null -> {
-                    headerContent()
-                    true
-                }
-                showHeader -> {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(icon, contentDescription = null)
-                        Spacer(Modifier.width(8.dp))
-                        Text(title, style = MaterialTheme.typography.titleMedium)
-                    }
-                    true
-                }
-                else -> false
-            }
-
-            if (drewHeader) {
-                Spacer(Modifier.height(8.dp))         // ← solo si hubo header
-            }
-
-            Box(
-                Modifier
-                    .fillMaxSize()
-                    .background(
-                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = SURFACE_VARIANT_ALPHA)
-                    )
-            ) {
-                content()
-            }
+            content()
         }
     }
 }
