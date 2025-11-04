@@ -11,6 +11,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.ExpandMore
@@ -26,11 +27,14 @@ import androidx.compose.material3.Divider
 import androidx.compose.material3.DividerDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.TextField
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
@@ -74,7 +78,7 @@ private val TREE_ICON_SIZE: Dp = 18.dp     // Tamaño del ícono del nodo
 private val TREE_SPACING: Dp = 4.dp        // Espaciado horizontal pequeño
 private val TREE_INDENT: Dp = 12.dp        // Indentación por nivel
 // Ancho mínimo para que la tabla de Progreso no se comprima; habilita scroll horizontal si el panel es más angosto
-private val PROGRESS_TABLE_MIN_WIDTH: Dp = 900.dp
+private val DETAILS_TABLE_MIN_WIDTH: Dp = 900.dp
 private val HEADER_ACTION_SPACING: Dp = 8.dp
 
 // Nota: la tabla de Progreso ocupa siempre todo el ancho del panel
@@ -85,6 +89,7 @@ fun InspectionScreen() {
 }
 
 @Composable
+@OptIn(ExperimentalMaterial3Api::class)
 private fun CurrentInspectionSplitView() {
     // Usamos constantes para evitar números mágicos in-line
     var hFrac by rememberSaveable { mutableStateOf(H_INIT_FRAC) } // fracción alto del panel superior
@@ -145,7 +150,7 @@ private fun CurrentInspectionSplitView() {
                 horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                OutlinedTextField(
+                TextField(
                     value = barcode,
                     onValueChange = { barcode = it },
                     singleLine = true,
@@ -154,20 +159,14 @@ private fun CurrentInspectionSplitView() {
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                     keyboardActions = KeyboardActions(onSearch = { triggerSearch() })
                 )
-                Spacer(Modifier.width(HEADER_ACTION_SPACING))
-
-                // Listado de estatus de elementos (dropdown simple)
-                Box {
-                    TextButton(onClick = { statusMenuExpanded = true }) { Text(selectedStatus) }
+                Spacer(Modifier.width(HEADER_ACTION_SPACING))                // Estatus como ExposedDropdownMenuBox
+                ExposedDropdownMenuBox(expanded = statusMenuExpanded, onExpandedChange = { statusMenuExpanded = !statusMenuExpanded }) {
+                    TextField(value = selectedStatus, onValueChange = {}, readOnly = true, label = { Text("Estatus") },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = statusMenuExpanded) },
+                        modifier = Modifier.menuAnchor())
                     DropdownMenu(expanded = statusMenuExpanded, onDismissRequest = { statusMenuExpanded = false }) {
                         listOf("Todos", "Verificado", "Por verificar").forEach { opt ->
-                            DropdownMenuItem(
-                                text = { Text(opt) },
-                                onClick = {
-                                    selectedStatus = opt
-                                    statusMenuExpanded = false
-                                }
-                            )
+                            DropdownMenuItem(text = { Text(opt) }, onClick = { selectedStatus = opt; statusMenuExpanded = false })
                         }
                     }
                 }
@@ -175,8 +174,12 @@ private fun CurrentInspectionSplitView() {
 
                 Button(
                     onClick = { /* TODO: acción para nueva ubicación */ },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))
-                ) { Text("Nueva ubicacion", color = Color.White) }
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),
+                    shape = RoundedCornerShape(8.dp) // Bordes ligeramente redondeados (casi cuadrado)
+                ) {
+                    Text("Nueva ubicación", color = Color.White)
+                }
+
             }
             if (searchMessage != null) {
                 Text(searchMessage!!, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(horizontal = 12.dp))
@@ -192,7 +195,8 @@ private fun CurrentInspectionSplitView() {
                     borderColor = borderColor,
                     modifier = Modifier
                         .weight(vFrac)
-                        .fillMaxHeight()
+                        .fillMaxHeight(),
+                    showHeader = false // ← oculta título e icono
                 ) {
                     if (nodes.isNotEmpty()) {
                         SimpleTreeView(
@@ -201,11 +205,13 @@ private fun CurrentInspectionSplitView() {
                             selectedId = selectedId,
                             highlightedId = highlightedId,
                             onToggle = { id -> if (!expanded.remove(id)) expanded.add(id) },
-                            onSelect = { id -> selectedId = id }
+                            onSelect = { id -> selectedId = id },
+                            modifier = Modifier.fillMaxSize() // ← ocupa todo el panel
                         )
                     } else {
-                        // Fallback: lista plana desde BD para mostrar algo
-                        UbicacionesFlatListFromDatabase()
+                        UbicacionesFlatListFromDatabase(
+                            modifier = Modifier.fillMaxSize() // ← ocupa todo el panel
+                        )
                     }
                 }
 
@@ -225,23 +231,30 @@ private fun CurrentInspectionSplitView() {
                 )
 
                 // Panel derecho
-                val children = findById(selectedId, nodes)?.children ?: emptyList()
+                val weightRight = (1f - vFrac).coerceIn(0.05f, 0.95f) // evita 0 o negativos
+                val children = remember(selectedId, nodes) {
+                    findById(selectedId, nodes)?.children ?: emptyList()
+                }
+
                 CellPanel(
-                    title = "Progreso",
-                    icon = Icons.Outlined.Timeline,
+                    title = "",                       // no se usa al ocultar header
+                    icon = Icons.Outlined.Info,       // no se usa al ocultar header
                     borderColor = borderColor,
                     modifier = Modifier
-                        .weight(1f - vFrac)
-                        .fillMaxHeight()
+                        .weight(weightRight)
+                        .fillMaxHeight(),
+                    showHeader = false
                 ) {
-                    ProgressTable(
+                    DetailsTable(
                         children = children,
+                        modifier = Modifier.fillMaxSize(),
                         onDelete = { node ->
                             if (selectedId == node.id) selectedId = null
                             nodes = nodes.toMutableList().also { removeById(node.id, it) }
                         }
                     )
                 }
+
             }
 
             // Handle horizontal
@@ -261,10 +274,14 @@ private fun CurrentInspectionSplitView() {
 
             // Panel inferior
             CellPanel(
-                title = "Detalles",
+                title = "Detalles",              // se ignora si showHeader = false
                 icon = Icons.Outlined.List,
                 borderColor = borderColor,
-                modifier = Modifier.weight(1f - hFrac)
+                modifier = Modifier
+                    .weight(1f - hFrac)
+                    .fillMaxWidth()
+                    .fillMaxHeight(),
+                showHeader = false               // ← quita título e ícono
             ) {
                 DetailsTabs(
                     node = findById(selectedId, nodes),
@@ -275,7 +292,8 @@ private fun CurrentInspectionSplitView() {
                     onDeleteBaseline = { b ->
                         val cur = findById(selectedId, nodes)
                         cur?.baselines?.remove(b)
-                    }
+                    },
+                    modifier = Modifier.fillMaxSize()  // ← asegura ocupar todo el espacio
                 )
             }
         }
@@ -289,6 +307,7 @@ private fun CellPanel(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     borderColor: Color,
     modifier: Modifier = Modifier,
+    showHeader: Boolean = true,                     // ← NUEVO
     headerContent: (@Composable () -> Unit)? = null,
     content: @Composable () -> Unit
 ) {
@@ -303,21 +322,32 @@ private fun CellPanel(
                 .fillMaxSize()
                 .padding(PANEL_PADDING)
         ) {
-            // Encabezado visual del panel: activa el uso de title/icon
-            if (headerContent == null) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(icon, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text(title, style = MaterialTheme.typography.titleMedium)
+            val drewHeader = when {
+                headerContent != null -> {
+                    headerContent()
+                    true
                 }
-            } else {
-                headerContent()
+                showHeader -> {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(icon, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text(title, style = MaterialTheme.typography.titleMedium)
+                    }
+                    true
+                }
+                else -> false
             }
-            Spacer(Modifier.height(8.dp))
+
+            if (drewHeader) {
+                Spacer(Modifier.height(8.dp))         // ← solo si hubo header
+            }
+
             Box(
                 Modifier
                     .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = SURFACE_VARIANT_ALPHA))
+                    .background(
+                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = SURFACE_VARIANT_ALPHA)
+                    )
             ) {
                 content()
             }
@@ -402,7 +432,8 @@ private fun SimpleTreeView(
     selectedId: String?,
     highlightedId: String?,
     onToggle: (String) -> Unit,
-    onSelect: (String) -> Unit
+    onSelect: (String) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     fun flatten(list: List<TreeNode>, depth: Int, out: MutableList<FlatNode>) {
         for (n in list) {
@@ -465,10 +496,10 @@ private fun SimpleTreeView(
 // -------------------------
 
 @Composable
-private fun ProgressTable(children: List<TreeNode>, onDelete: (TreeNode) -> Unit) {
+private fun DetailsTable(children: List<TreeNode>,modifier: Modifier = Modifier, onDelete: (TreeNode) -> Unit) {
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val hScroll = rememberScrollState()
-        val minWidth = PROGRESS_TABLE_MIN_WIDTH
+        val minWidth = DETAILS_TABLE_MIN_WIDTH
         val tableWidth = if (maxWidth < minWidth) minWidth else maxWidth
 
         Box(Modifier.fillMaxSize().horizontalScroll(hScroll)) {
@@ -527,7 +558,8 @@ private fun ProgressTable(children: List<TreeNode>, onDelete: (TreeNode) -> Unit
 private fun DetailsTabs(
     node: TreeNode?,
     onDeleteProblem: (Problem) -> Unit,
-    onDeleteBaseline: (Baseline) -> Unit
+    onDeleteBaseline: (Baseline) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     // Nota: mostramos versiones ligadas a BD; no usamos listas calculadas por nodo aquí
     var tab by rememberSaveable { mutableStateOf(0) }
@@ -829,7 +861,7 @@ private fun BaselineTableFromDatabase() {
 // -------------------------
 
 @Composable
-private fun UbicacionesFlatListFromDatabase() {
+private fun UbicacionesFlatListFromDatabase(modifier: Modifier = Modifier) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val dao = remember { com.example.etic.data.local.DbProvider.get(ctx).ubicacionDao() }
     val ubicaciones by produceState(initialValue = emptyList<com.example.etic.data.local.entities.Ubicacion>()) {
@@ -856,3 +888,5 @@ private fun UbicacionesFlatListFromDatabase() {
         }
     }
 }
+
+
