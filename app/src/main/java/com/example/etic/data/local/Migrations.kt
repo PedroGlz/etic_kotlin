@@ -131,3 +131,29 @@ val MIGRATION_3_4 = object : Migration(3, 4) {
         )
     }
 }
+package com.example.etic.data.local
+
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
+
+val MIGRATION_4_5 = object : Migration(4, 5) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS estatus_inspeccion_det (
+                Id_Status_Inspeccion_Det TEXT NOT NULL,
+                Estatus_Inspeccion_Det   TEXT DEFAULT NULL,
+                Desc_Estatus_Det         TEXT DEFAULT NULL,
+                Estatus                  TEXT CHECK (Estatus IN ('Activo', 'Inactivo') ) DEFAULT 'Activo',
+                Creado_Por               TEXT DEFAULT NULL,
+                Fecha_Creacion           TEXT DEFAULT NULL,
+                Modificado_Por           TEXT DEFAULT NULL,
+                Fecha_Mod                TEXT DEFAULT NULL,
+                Id_Inspeccion            TEXT DEFAULT 'flag_export',
+                Id_Sitio                 TEXT DEFAULT 'flag_export',
+                PRIMARY KEY (Id_Status_Inspeccion_Det)
+            )
+            """
+        )
+    }
+}
