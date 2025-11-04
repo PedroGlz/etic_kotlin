@@ -111,6 +111,78 @@ private fun CurrentInspectionSplitView() {
 
         Column(Modifier.fillMaxSize()) {
 
+            // Controles superiores (fuera de los paneles)
+            var barcode by rememberSaveable { mutableStateOf("") }
+            var statusMenuExpanded by remember { mutableStateOf(false) }
+            var selectedStatus by rememberSaveable { mutableStateOf("Todos") }
+            var searchMessage by remember { mutableStateOf<String?>(null) }
+            val scope = rememberCoroutineScope()
+
+            fun triggerSearch() {
+                searchMessage = null
+                val code = barcode.trim()
+                if (code.isEmpty()) return
+                val path = findPathByBarcode(nodes, code)
+                if (path == null) {
+                    searchMessage = "No hay elementos con ese codigo de barras"
+                } else {
+                    // expandir ancestros y seleccionar objetivo
+                    path.dropLast(1).forEach { id -> if (!expanded.contains(id)) expanded.add(id) }
+                    val targetId = path.last()
+                    selectedId = targetId
+                    highlightedId = targetId
+                    scope.launch {
+                        delay(3000)
+                        if (highlightedId == targetId) highlightedId = null
+                    }
+                }
+            }
+
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                OutlinedTextField(
+                    value = barcode,
+                    onValueChange = { barcode = it },
+                    singleLine = true,
+                    leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null) },
+                    label = { Text("Codigo de barras") },
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                    keyboardActions = KeyboardActions(onSearch = { triggerSearch() })
+                )
+                Spacer(Modifier.width(HEADER_ACTION_SPACING))
+
+                // Listado de estatus de elementos (dropdown simple)
+                Box {
+                    TextButton(onClick = { statusMenuExpanded = true }) { Text(selectedStatus) }
+                    DropdownMenu(expanded = statusMenuExpanded, onDismissRequest = { statusMenuExpanded = false }) {
+                        listOf("Todos", "Verificado", "Por verificar").forEach { opt ->
+                            DropdownMenuItem(
+                                text = { Text(opt) },
+                                onClick = {
+                                    selectedStatus = opt
+                                    statusMenuExpanded = false
+                                }
+                            )
+                        }
+                    }
+                }
+                Spacer(Modifier.width(HEADER_ACTION_SPACING))
+
+                Button(
+                    onClick = { /* TODO: acción para nueva ubicación */ },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))
+                ) { Text("Nueva ubicacion", color = Color.White) }
+            }
+            if (searchMessage != null) {
+                Text(searchMessage!!, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(horizontal = 12.dp))
+            }
+            Divider(thickness = DIVIDER_THICKNESS)
+
             Row(Modifier.weight(hFrac)) {
 
                 // Panel izquierdo
@@ -160,80 +232,7 @@ private fun CurrentInspectionSplitView() {
                     borderColor = borderColor,
                     modifier = Modifier
                         .weight(1f - vFrac)
-                        .fillMaxHeight(),
-                    headerContent = {
-                        // Acciones alineadas a la derecha en el encabezado de Progreso
-                        var barcode by rememberSaveable { mutableStateOf("") }
-                        var statusMenuExpanded by remember { mutableStateOf(false) }
-                        var selectedStatus by rememberSaveable { mutableStateOf("Todos") }
-                        var searchMessage by remember { mutableStateOf<String?>(null) }
-                        val scope = rememberCoroutineScope()
-
-                        fun triggerSearch() {
-                            searchMessage = null
-                            val code = barcode.trim()
-                            if (code.isEmpty()) return
-                            val path = findPathByBarcode(nodes, code)
-                            if (path == null) {
-                                searchMessage = "No hay elementos con ese codigo de barras"
-                            } else {
-                                // expandir ancestros y seleccionar objetivo
-                                path.dropLast(1).forEach { id -> if (!expanded.contains(id)) expanded.add(id) }
-                                val targetId = path.last()
-                                selectedId = targetId
-                                highlightedId = targetId
-                                scope.launch {
-                                    delay(3000)
-                                    if (highlightedId == targetId) highlightedId = null
-                                }
-                            }
-                        }
-
-                        Column(Modifier.fillMaxWidth()) {
-                            Row(
-                                Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.End,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                OutlinedTextField(
-                                    value = barcode,
-                                    onValueChange = { barcode = it },
-                                    singleLine = true,
-                                    leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null) },
-                                    label = { Text("Codigo de barras") },
-                                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                                    keyboardActions = KeyboardActions(onSearch = { triggerSearch() })
-                                )
-                                Spacer(Modifier.width(HEADER_ACTION_SPACING))
-
-                                // Listado de estatus de elementos (dropdown simple)
-                                Box {
-                                    TextButton(onClick = { statusMenuExpanded = true }) { Text(selectedStatus) }
-                                    DropdownMenu(expanded = statusMenuExpanded, onDismissRequest = { statusMenuExpanded = false }) {
-                                        listOf("Todos", "Verificado", "Por verificar").forEach { opt ->
-                                            DropdownMenuItem(
-                                                text = { Text(opt) },
-                                                onClick = {
-                                                    selectedStatus = opt
-                                                    statusMenuExpanded = false
-                                                }
-                                            )
-                                        }
-                                    }
-                                }
-                                Spacer(Modifier.width(HEADER_ACTION_SPACING))
-
-                                Button(
-                                    onClick = { /* TODO: acción para nueva ubicación */ },
-                                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))
-                                ) { Text("Nueva ubicacion", color = Color.White) }
-                            }
-                            if (searchMessage != null) {
-                                Spacer(Modifier.height(4.dp))
-                                Text(searchMessage!!, color = MaterialTheme.colorScheme.error)
-                            }
-                        }
-                    }
+                        .fillMaxHeight()
                 ) {
                     ProgressTable(
                         children = children,
