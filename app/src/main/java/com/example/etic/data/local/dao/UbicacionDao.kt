@@ -1,6 +1,8 @@
 package com.example.etic.data.local.dao
 
 import androidx.room.Dao
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.example.etic.data.local.entities.Ubicacion
 
@@ -12,5 +14,7 @@ interface UbicacionDao {
 
     @Query("SELECT * FROM ubicaciones")
     suspend fun getAll(): List<Ubicacion>
-}
 
+    @Insert(onConflict = OnConflictStrategy.ABORT)
+    suspend fun insert(ubicacion: Ubicacion)
+}

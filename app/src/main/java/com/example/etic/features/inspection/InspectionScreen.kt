@@ -36,6 +36,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Switch
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.foundation.text.KeyboardActions
@@ -124,6 +126,11 @@ private fun CurrentInspectionSplitView() {
                 statusOptions = runCatching { estatusDao.getAll() }.getOrElse { emptyList() }
             }
             var searchMessage by remember { mutableStateOf<String?>(null) }
+            var showNewUbDialog by remember { mutableStateOf(false) }
+            var newUbName by rememberSaveable { mutableStateOf("") }
+            var newUbBarcode by rememberSaveable { mutableStateOf("") }
+            var newUbEsEquipo by rememberSaveable { mutableStateOf(false) }
+            var newUbError by remember { mutableStateOf<String?>(null) }
             val scope = rememberCoroutineScope()
 
             fun triggerSearch() {
@@ -192,7 +199,7 @@ private fun CurrentInspectionSplitView() {
                 Spacer(Modifier.width(HEADER_ACTION_SPACING))
 
                 Button(
-                    onClick = { /* TODO: acción para nueva ubicación */ },
+                    onClick = { showNewUbDialog = true },
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),
                     shape = RoundedCornerShape(8.dp) // Bordes ligeramente redondeados (casi cuadrado)
                 ) {
@@ -204,6 +211,76 @@ private fun CurrentInspectionSplitView() {
                 Text(searchMessage!!, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(horizontal = 12.dp))
             }
             Divider(thickness = DIVIDER_THICKNESS)
+
+            if (showNewUbDialog) {
+                AlertDialog(
+                    onDismissRequest = { showNewUbDialog = false },
+                    confirmButton = {
+                        Button(onClick = {
+                            val name = newUbName.trim()
+                            if (name.isEmpty()) {
+                                newUbError = "El nombre es obligatorio"
+                                return@Button
+                            }
+                            val id = java.util.UUID.randomUUID().toString()
+                            val nueva = com.example.etic.data.local.entities.Ubicacion(
+                                idUbicacion = id,
+                                idUbicacionPadre = selectedId,
+                                ubicacion = name,
+                                codigoBarras = newUbBarcode.trim().ifBlank { null },
+                                esEquipo = if (newUbEsEquipo) "SI" else "NO",
+                                estatus = "Activo"
+                            )
+                            scope.launch {
+                                val ok = runCatching { ubicacionDao.insert(nueva) }.isSuccess
+                                if (ok) {
+                                    val rows = runCatching { ubicacionDao.getAll() }.getOrElse { emptyList() }
+                                    nodes = buildTreeFromUbicaciones(rows)
+                                    newUbName = ""
+                                    newUbBarcode = ""
+                                    newUbEsEquipo = false
+                                    newUbError = null
+                                    showNewUbDialog = false
+                                    selectedId?.let { pid -> if (!expanded.contains(pid)) expanded.add(pid) }
+                                } else {
+                                    newUbError = "No se pudo guardar la ubicación"
+                                }
+                            }
+                        }) { Text("Guardar") }
+                    },
+                    dismissButton = {
+                        Button(onClick = {
+                            showNewUbDialog = false
+                            newUbError = null
+                        }) { Text("Cancelar") }
+                    },
+                    title = { Text("Nueva ubicación") },
+                    text = {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            TextField(
+                                value = newUbName,
+                                onValueChange = { newUbName = it },
+                                singleLine = true,
+                                label = { Text("Nombre") }
+                            )
+                            TextField(
+                                value = newUbBarcode,
+                                onValueChange = { newUbBarcode = it },
+                                singleLine = true,
+                                label = { Text("Código de barras (opcional)") }
+                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text("Es equipo")
+                                Spacer(Modifier.width(12.dp))
+                                Switch(checked = newUbEsEquipo, onCheckedChange = { newUbEsEquipo = it })
+                            }
+                            if (newUbError != null) {
+                                Text(newUbError!!, color = MaterialTheme.colorScheme.error)
+                            }
+                        }
+                    }
+                )
+            }
 
             Row(Modifier.weight(hFrac)) {
 
