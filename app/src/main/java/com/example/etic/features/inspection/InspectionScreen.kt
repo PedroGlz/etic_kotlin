@@ -442,7 +442,7 @@ private fun CurrentInspectionSplitView() {
                                 }
                             }
                             // Es equipo
-                            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text("Es equipo")
                                 Spacer(Modifier.width(12.dp))
                                 Switch(checked = newUbEsEquipo, onCheckedChange = { newUbEsEquipo = it })
