@@ -1165,12 +1165,14 @@ private fun ProblemsTableFromDatabase() {
     val inspDao = remember { com.example.etic.data.local.DbProvider.get(ctx).inspeccionDao() }
     val sevDao = remember { com.example.etic.data.local.DbProvider.get(ctx).severidadDao() }
     val eqDao = remember { com.example.etic.data.local.DbProvider.get(ctx).equipoDao() }
+    val tipoInspDao = remember { com.example.etic.data.local.DbProvider.get(ctx).tipoInspeccionDao() }
 
     val uiProblems by produceState(initialValue = emptyList<Problem>()) {
         val rows = try { dao.getAll() } catch (_: Exception) { emptyList() }
         val inspMap = try { inspDao.getAll().associateBy { it.idInspeccion } } catch (_: Exception) { emptyMap() }
         val sevMap = try { sevDao.getAll().associateBy { it.idSeveridad } } catch (_: Exception) { emptyMap() }
         val eqMap = try { eqDao.getAll().associateBy { it.idEquipo } } catch (_: Exception) { emptyMap() }
+        val tipoMap = try { tipoInspDao.getAll().associateBy { it.idTipoInspeccion } } catch (_: Exception) { emptyMap() }
         value = rows.map { r ->
             val fecha = runCatching {
                 val raw = r.fechaCreacion?.takeIf { it.isNotBlank() }
@@ -1182,12 +1184,13 @@ private fun ProblemsTableFromDatabase() {
             val numInspDisplay = r.idInspeccion?.let { inspMap[it]?.noInspeccion?.toString() } ?: ""
             val severidadDisplay = r.idSeveridad?.let { sevMap[it]?.severidad } ?: (r.idSeveridad ?: "")
             val equipoDisplay = r.idEquipo?.let { eqMap[it]?.equipo } ?: (r.idEquipo ?: "")
+            val tipoDisplay = r.idTipoInspeccion?.let { tipoMap[it]?.tipoInspeccion } ?: (r.idTipoInspeccion ?: "")
 
             Problem(
                 no = r.numeroProblema ?: 0,
                 fecha = fecha,
                 numInspeccion = numInspDisplay,
-                tipo = r.idTipoInspeccion ?: "",
+                tipo = tipoDisplay,
                 estatus = r.estatusProblema ?: "",
                 cronico = (r.esCronico ?: "").equals("SI", ignoreCase = true),
                 tempC = r.problemTemperature ?: 0.0,
