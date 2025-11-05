@@ -194,3 +194,29 @@ val MIGRATION_5_6 = object : Migration(5, 6) {
         )
     }
 }
+
+val MIGRATION_6_7 = object : Migration(6, 7) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS inspecciones_det (
+                Id_Inspeccion_Det        TEXT NOT NULL,
+                Id_Inspeccion            TEXT DEFAULT NULL,
+                Id_Ubicacion             TEXT DEFAULT NULL,
+                Id_Status_Inspeccion_Det TEXT DEFAULT NULL,
+                Notas_Inspeccion         TEXT DEFAULT NULL,
+                Estatus                  TEXT CHECK (Estatus IN ('Activo', 'Inactivo') ) NOT NULL DEFAULT 'Activo',
+                Id_Estatus_Color_Text    INTEGER DEFAULT 1,
+                expanded                 TEXT CHECK (expanded IN ('1', '0') ) DEFAULT '0',
+                selected                 TEXT CHECK (selected IN ('1', '0') ) DEFAULT '0',
+                Creado_Por               TEXT DEFAULT NULL,
+                Fecha_Creacion           TEXT DEFAULT NULL,
+                Modificado_Por           TEXT DEFAULT NULL,
+                Fecha_Mod                TEXT DEFAULT NULL,
+                Id_Sitio                 TEXT DEFAULT 'flag_export',
+                PRIMARY KEY (Id_Inspeccion_Det)
+            )
+            """
+        )
+    }
+}

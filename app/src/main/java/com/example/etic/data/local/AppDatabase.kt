@@ -9,6 +9,7 @@ import com.example.etic.data.local.dao.UbicacionDao
 import com.example.etic.data.local.dao.TipoPrioridadDao
 import com.example.etic.data.local.dao.FabricanteDao
 import com.example.etic.data.local.dao.EstatusInspeccionDetDao
+import com.example.etic.data.local.dao.InspeccionDetDao
 import com.example.etic.data.local.entities.Usuario
 import com.example.etic.data.local.entities.Problema
 import com.example.etic.data.local.entities.LineaBase
@@ -16,6 +17,7 @@ import com.example.etic.data.local.entities.Ubicacion
 import com.example.etic.data.local.entities.TipoPrioridad
 import com.example.etic.data.local.entities.Fabricante
 import com.example.etic.data.local.entities.EstatusInspeccionDet
+import com.example.etic.data.local.entities.InspeccionDet
 
 @Database(
     entities = [
@@ -25,9 +27,10 @@ import com.example.etic.data.local.entities.EstatusInspeccionDet
         Ubicacion::class,
         EstatusInspeccionDet::class,
         TipoPrioridad::class,
-        Fabricante::class
+        Fabricante::class,
+        InspeccionDet::class
     ],
-    version = 6,
+    version = 7,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -38,4 +41,5 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun estatusInspeccionDetDao(): EstatusInspeccionDetDao
     abstract fun tipoPrioridadDao(): TipoPrioridadDao
     abstract fun fabricanteDao(): FabricanteDao
+    abstract fun inspeccionDetDao(): InspeccionDetDao
 }

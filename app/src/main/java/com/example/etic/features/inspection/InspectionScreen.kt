@@ -56,6 +56,9 @@ import com.example.etic.ui.theme.EticTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import com.example.etic.data.local.entities.EstatusInspeccionDet
+import kotlinx.coroutines.flow.first
+import com.example.etic.core.session.SessionManager
+import com.example.etic.core.session.sessionDataStore
 
 // Centralizamos algunos "magic numbers" para facilitar ajuste futuro
 private const val MIN_FRAC: Float = 0.2f     // Límite inferior de los splitters
@@ -97,6 +100,8 @@ private fun CurrentInspectionSplitView() {
     var nodes by remember { mutableStateOf<List<TreeNode>>(emptyList()) }
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val ubicacionDao = remember { com.example.etic.data.local.DbProvider.get(ctx).ubicacionDao() }
+    val usuarioDao = remember { com.example.etic.data.local.DbProvider.get(ctx).usuarioDao() }
+    val inspeccionDetDao = remember { com.example.etic.data.local.DbProvider.get(ctx).inspeccionDetDao() }
     LaunchedEffect(Unit) {
         val rows = runCatching { ubicacionDao.getAll() }.getOrElse { emptyList() }
         nodes = buildTreeFromUbicaciones(rows)
@@ -143,12 +148,15 @@ private fun CurrentInspectionSplitView() {
             var newUbStatusExpanded by remember { mutableStateOf(false) }
             var newUbStatusLabel by rememberSaveable { mutableStateOf("") }
             var newUbStatusId by rememberSaveable { mutableStateOf<String?>(null) }
+            var newUbBarcode by rememberSaveable { mutableStateOf("") }
             var newUbPrioridadExpanded by remember { mutableStateOf(false) }
             var newUbPrioridadLabel by rememberSaveable { mutableStateOf("") }
             var newUbPrioridadId by rememberSaveable { mutableStateOf<String?>(null) }
             var newUbFabricanteExpanded by remember { mutableStateOf(false) }
             var newUbFabricanteLabel by rememberSaveable { mutableStateOf("") }
             var newUbFabricanteId by rememberSaveable { mutableStateOf<String?>(null) }
+            var currentUserId by remember { mutableStateOf<String?>(null) }
+            var currentSitioId by remember { mutableStateOf<String?>(null) }
             val scope = rememberCoroutineScope()
 
             // Preseleccionar estatus por defecto al abrir el diálogo
@@ -162,6 +170,14 @@ private fun CurrentInspectionSplitView() {
                     } else {
                         newUbStatusId = null
                         newUbStatusLabel = ""
+                    }
+                    // Obtener usuario de sesión y su sitio
+                    val session = SessionManager(ctx.sessionDataStore)
+                    val username = runCatching { session.username.first() }.getOrNull()
+                    if (!username.isNullOrBlank()) {
+                        val usr = runCatching { usuarioDao.getByUsuario(username) }.getOrNull()
+                        currentUserId = usr?.idUsuario
+                        currentSitioId = usr?.idSitio
                     }
                 }
             }
@@ -256,19 +272,51 @@ private fun CurrentInspectionSplitView() {
                                 return@Button
                             }
                             val id = java.util.UUID.randomUUID().toString()
+                            // Nivel del árbol: si hay padre, nivel del padre + 1, sino 0
+                            val nivel = selectedId?.let { parentId -> depthOfId(nodes, parentId) + 1 } ?: 0
+                            // Ruta: path de títulos del padre + nombre
+                            val ruta = selectedId?.let { parentId ->
+                                val titles = titlePathForId(nodes, parentId)
+                                if (titles.isNotEmpty()) titles.joinToString(" / ") + " / " + name else name
+                            } ?: name
                             val nueva = com.example.etic.data.local.entities.Ubicacion(
                                 idUbicacion = id,
                                 idUbicacionPadre = selectedId,
+                                idSitio = currentSitioId,
+                                nivelArbol = nivel,
                                 ubicacion = name,
                                 descripcion = newUbDesc.trim().ifBlank { null },
                                 esEquipo = if (newUbEsEquipo) "SI" else "NO",
+                                codigoBarras = newUbBarcode.trim().ifBlank { null },
+                                fabricante = newUbFabricanteId,
+                                ruta = ruta,
                                 estatus = "Activo",
+                                creadoPor = currentUserId,
+                                fechaCreacion = java.time.LocalDateTime.now().toString(),
                                 idTipoPrioridad = newUbPrioridadId,
-                                fabricante = newUbFabricanteId
+                                idInspeccion = null
                             )
                             scope.launch {
-                                val ok = runCatching { ubicacionDao.insert(nueva) }.isSuccess
-                                if (ok) {
+                                val okUb = runCatching { ubicacionDao.insert(nueva) }.isSuccess
+                                if (okUb) {
+                                    // Crear inspecciones_det ligada a la nueva ubicación
+                                    val detId = java.util.UUID.randomUUID().toString()
+                                    val inspId = java.util.UUID.randomUUID().toString()
+                                    val det = com.example.etic.data.local.entities.InspeccionDet(
+                                        idInspeccionDet = detId,
+                                        idInspeccion = inspId,
+                                        idUbicacion = id,
+                                        idStatusInspeccionDet = newUbStatusId,
+                                        notasInspeccion = null,
+                                        estatus = "Activo",
+                                        idEstatusColorText = 1,
+                                        expanded = "0",
+                                        selected = "0",
+                                        creadoPor = currentUserId,
+                                        fechaCreacion = java.time.LocalDateTime.now().toString(),
+                                        idSitio = currentSitioId
+                                    )
+                                    val okDet = runCatching { inspeccionDetDao.insert(det) }.isSuccess
                                     val rows = runCatching { ubicacionDao.getAll() }.getOrElse { emptyList() }
                                     nodes = buildTreeFromUbicaciones(rows)
                                     newUbName = ""
@@ -277,6 +325,7 @@ private fun CurrentInspectionSplitView() {
                                     newUbError = null
                                     newUbStatusId = null
                                     newUbStatusLabel = ""
+                                    newUbBarcode = ""
                                     newUbPrioridadId = null
                                     newUbPrioridadLabel = ""
                                     newUbFabricanteId = null
@@ -408,9 +457,14 @@ private fun CurrentInspectionSplitView() {
                                 singleLine = false,
                                 label = { Text("Descripción") }
                             )
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                // espacio final
-                            }
+                            // Código de barras
+                            TextField(
+                                value = newUbBarcode,
+                                onValueChange = { newUbBarcode = it },
+                                singleLine = true,
+                                label = { Text("Código de barras") }
+                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) { }
                             if (newUbError != null) {
                                 Text(newUbError!!, color = MaterialTheme.colorScheme.error)
                             }
@@ -822,6 +876,41 @@ private fun buildTreeFromUbicaciones(rows: List<com.example.etic.data.local.enti
     roots.forEach { sortRec(it) }
 
     return roots
+}
+
+// Profundidad del nodo por id (0 = raíz). Si no se encuentra, devuelve 0
+private fun depthOfId(list: List<TreeNode>, targetId: String): Int {
+    fun dfs(n: TreeNode, depth: Int): Int? {
+        if (n.id == targetId) return depth
+        for (c in n.children) {
+            val d = dfs(c, depth + 1)
+            if (d != null) return d
+        }
+        return null
+    }
+    for (root in list) {
+        val d = dfs(root, 0)
+        if (d != null) return d
+    }
+    return 0
+}
+
+// Ruta de títulos desde la raíz hasta el nodo indicado
+private fun titlePathForId(list: List<TreeNode>, targetId: String): List<String> {
+    fun dfs(n: TreeNode, path: List<String>): List<String>? {
+        val newPath = path + n.title
+        if (n.id == targetId) return newPath
+        for (c in n.children) {
+            val res = dfs(c, newPath)
+            if (res != null) return res
+        }
+        return null
+    }
+    for (root in list) {
+        val res = dfs(root, emptyList())
+        if (res != null) return res
+    }
+    return emptyList()
 }
 
 private fun collectProblems(root: TreeNode?): List<Problem> {

@@ -17,4 +17,7 @@ interface UbicacionDao {
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insert(ubicacion: Ubicacion)
+
+    @Query("SELECT * FROM ubicaciones WHERE Id_Ubicacion = :id LIMIT 1")
+    suspend fun getById(id: String): Ubicacion?
 }
