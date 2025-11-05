@@ -52,6 +52,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogProperties
 import com.example.etic.ui.theme.EticTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -264,88 +265,91 @@ private fun CurrentInspectionSplitView() {
             if (showNewUbDialog) {
                 AlertDialog(
                     onDismissRequest = { showNewUbDialog = false },
+                    properties = DialogProperties(usePlatformDefaultWidth = false),
                     confirmButton = {
-                        Button(onClick = {
-                            val name = newUbName.trim()
-                            if (name.isEmpty()) {
-                                newUbError = "El nombre es obligatorio"
-                                return@Button
-                            }
-                            val id = java.util.UUID.randomUUID().toString()
-                            // Nivel del árbol: si hay padre, nivel del padre + 1, sino 0
-                            val nivel = selectedId?.let { parentId -> depthOfId(nodes, parentId) + 1 } ?: 0
-                            // Ruta: path de títulos del padre + nombre
-                            val ruta = selectedId?.let { parentId ->
-                                val titles = titlePathForId(nodes, parentId)
-                                if (titles.isNotEmpty()) titles.joinToString(" / ") + " / " + name else name
-                            } ?: name
-                            val nueva = com.example.etic.data.local.entities.Ubicacion(
-                                idUbicacion = id,
-                                idUbicacionPadre = selectedId,
-                                idSitio = currentSitioId,
-                                nivelArbol = nivel,
-                                ubicacion = name,
-                                descripcion = newUbDesc.trim().ifBlank { null },
-                                esEquipo = if (newUbEsEquipo) "SI" else "NO",
-                                codigoBarras = newUbBarcode.trim().ifBlank { null },
-                                fabricante = newUbFabricanteId,
-                                ruta = ruta,
-                                estatus = "Activo",
-                                creadoPor = currentUserId,
-                                fechaCreacion = java.time.LocalDateTime.now().toString(),
-                                idTipoPrioridad = newUbPrioridadId,
-                                idInspeccion = null
-                            )
-                            scope.launch {
-                                val okUb = runCatching { ubicacionDao.insert(nueva) }.isSuccess
-                                if (okUb) {
-                                    // Crear inspecciones_det ligada a la nueva ubicación
-                                    val detId = java.util.UUID.randomUUID().toString()
-                                    val inspId = java.util.UUID.randomUUID().toString()
-                                    val det = com.example.etic.data.local.entities.InspeccionDet(
-                                        idInspeccionDet = detId,
-                                        idInspeccion = inspId,
-                                        idUbicacion = id,
-                                        idStatusInspeccionDet = newUbStatusId,
-                                        notasInspeccion = null,
-                                        estatus = "Activo",
-                                        idEstatusColorText = 1,
-                                        expanded = "0",
-                                        selected = "0",
-                                        creadoPor = currentUserId,
-                                        fechaCreacion = java.time.LocalDateTime.now().toString(),
-                                        idSitio = currentSitioId
-                                    )
-                                    val okDet = runCatching { inspeccionDetDao.insert(det) }.isSuccess
-                                    val rows = runCatching { ubicacionDao.getAll() }.getOrElse { emptyList() }
-                                    nodes = buildTreeFromUbicaciones(rows)
-                                    newUbName = ""
-                                    newUbDesc = ""
-                                    newUbEsEquipo = false
-                                    newUbError = null
-                                    newUbStatusId = null
-                                    newUbStatusLabel = ""
-                                    newUbBarcode = ""
-                                    newUbPrioridadId = null
-                                    newUbPrioridadLabel = ""
-                                    newUbFabricanteId = null
-                                    newUbFabricanteLabel = ""
-                                    showNewUbDialog = false
-                                    selectedId?.let { pid -> if (!expanded.contains(pid)) expanded.add(pid) }
-                                } else {
-                                    newUbError = "No se pudo guardar la ubicación"
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Button(onClick = {
+                                showNewUbDialog = false
+                                newUbError = null
+                            }) { Text("Cancelar") }
+                            Button(onClick = {
+                                val name = newUbName.trim()
+                                if (name.isEmpty()) {
+                                    newUbError = "El nombre es obligatorio"
+                                    return@Button
                                 }
-                            }
-                        }) { Text("Guardar") }
+                                val id = java.util.UUID.randomUUID().toString()
+                                // Nivel del árbol: si hay padre, nivel del padre + 1, sino 0
+                                val nivel = selectedId?.let { parentId -> depthOfId(nodes, parentId) + 1 } ?: 0
+                                // Ruta: path de títulos del padre + nombre
+                                val ruta = selectedId?.let { parentId ->
+                                    val titles = titlePathForId(nodes, parentId)
+                                    if (titles.isNotEmpty()) titles.joinToString(" / ") + " / " + name else name
+                                } ?: name
+                                val nueva = com.example.etic.data.local.entities.Ubicacion(
+                                    idUbicacion = id,
+                                    idUbicacionPadre = selectedId,
+                                    idSitio = currentSitioId,
+                                    nivelArbol = nivel,
+                                    ubicacion = name,
+                                    descripcion = newUbDesc.trim().ifBlank { null },
+                                    esEquipo = if (newUbEsEquipo) "SI" else "NO",
+                                    codigoBarras = newUbBarcode.trim().ifBlank { null },
+                                    fabricante = newUbFabricanteId,
+                                    ruta = ruta,
+                                    estatus = "Activo",
+                                    creadoPor = currentUserId,
+                                    fechaCreacion = java.time.LocalDateTime.now().toString(),
+                                    idTipoPrioridad = newUbPrioridadId,
+                                    idInspeccion = null
+                                )
+                                scope.launch {
+                                    val okUb = runCatching { ubicacionDao.insert(nueva) }.isSuccess
+                                    if (okUb) {
+                                        // Crear inspecciones_det ligada a la nueva ubicación
+                                        val detId = java.util.UUID.randomUUID().toString()
+                                        val inspId = java.util.UUID.randomUUID().toString()
+                                        val det = com.example.etic.data.local.entities.InspeccionDet(
+                                            idInspeccionDet = detId,
+                                            idInspeccion = inspId,
+                                            idUbicacion = id,
+                                            idStatusInspeccionDet = newUbStatusId,
+                                            notasInspeccion = null,
+                                            estatus = "Activo",
+                                            idEstatusColorText = 1,
+                                            expanded = "0",
+                                            selected = "0",
+                                            creadoPor = currentUserId,
+                                            fechaCreacion = java.time.LocalDateTime.now().toString(),
+                                            idSitio = currentSitioId
+                                        )
+                                        val okDet = runCatching { inspeccionDetDao.insert(det) }.isSuccess
+                                        val rows = runCatching { ubicacionDao.getAll() }.getOrElse { emptyList() }
+                                        nodes = buildTreeFromUbicaciones(rows)
+                                        newUbName = ""
+                                        newUbDesc = ""
+                                        newUbEsEquipo = false
+                                        newUbError = null
+                                        newUbStatusId = null
+                                        newUbStatusLabel = ""
+                                        newUbBarcode = ""
+                                        newUbPrioridadId = null
+                                        newUbPrioridadLabel = ""
+                                        newUbFabricanteId = null
+                                        newUbFabricanteLabel = ""
+                                        showNewUbDialog = false
+                                        selectedId?.let { pid -> if (!expanded.contains(pid)) expanded.add(pid) }
+                                    } else {
+                                        newUbError = "No se pudo guardar la ubicación"
+                                    }
+                                }
+                            }) { Text("Guardar") }
+                        }
                     },
-                    dismissButton = {
-                        Button(onClick = {
-                            showNewUbDialog = false
-                            newUbError = null
-                        }) { Text("Cancelar") }
-                    },
+                    dismissButton = { },
                     title = { Text("Nueva ubicación") },
                     text = {
+                        Box(Modifier.fillMaxWidth().widthIn(min = 520.dp)) {
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                             // Estatus (lista de opciones)
                             ExposedDropdownMenuBox(
@@ -358,7 +362,7 @@ private fun CurrentInspectionSplitView() {
                                     readOnly = true,
                                     label = { Text("Estatus de inspección") },
                                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = newUbStatusExpanded) },
-                                    modifier = Modifier.menuAnchor()
+                                    modifier = Modifier.menuAnchor().fillMaxWidth()
                                 )
                                 DropdownMenu(
                                     expanded = newUbStatusExpanded,
@@ -388,7 +392,7 @@ private fun CurrentInspectionSplitView() {
                                     readOnly = true,
                                     label = { Text("Tipo de prioridad") },
                                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = newUbPrioridadExpanded) },
-                                    modifier = Modifier.menuAnchor()
+                                    modifier = Modifier.menuAnchor().fillMaxWidth()
                                 )
                                 DropdownMenu(
                                     expanded = newUbPrioridadExpanded,
@@ -418,7 +422,7 @@ private fun CurrentInspectionSplitView() {
                                     readOnly = true,
                                     label = { Text("Fabricante") },
                                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = newUbFabricanteExpanded) },
-                                    modifier = Modifier.menuAnchor()
+                                    modifier = Modifier.menuAnchor().fillMaxWidth()
                                 )
                                 DropdownMenu(
                                     expanded = newUbFabricanteExpanded,
@@ -438,7 +442,7 @@ private fun CurrentInspectionSplitView() {
                                 }
                             }
                             // Es equipo
-                            Row(verticalAlignment = Alignment.CenterVertically) {
+                            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
                                 Text("Es equipo")
                                 Spacer(Modifier.width(12.dp))
                                 Switch(checked = newUbEsEquipo, onCheckedChange = { newUbEsEquipo = it })
@@ -448,26 +452,30 @@ private fun CurrentInspectionSplitView() {
                                 value = newUbName,
                                 onValueChange = { newUbName = it },
                                 singleLine = true,
-                                label = { Text("Nombre de la ubicación") }
+                                label = { Text("Nombre de la ubicación") },
+                                modifier = Modifier.fillMaxWidth()
                             )
                             // Descripción
                             TextField(
                                 value = newUbDesc,
                                 onValueChange = { newUbDesc = it },
                                 singleLine = false,
-                                label = { Text("Descripción") }
+                                label = { Text("Descripción") },
+                                modifier = Modifier.fillMaxWidth()
                             )
                             // Código de barras
                             TextField(
                                 value = newUbBarcode,
                                 onValueChange = { newUbBarcode = it },
                                 singleLine = true,
-                                label = { Text("Código de barras") }
+                                label = { Text("Código de barras") },
+                                modifier = Modifier.fillMaxWidth()
                             )
                             Row(verticalAlignment = Alignment.CenterVertically) { }
                             if (newUbError != null) {
                                 Text(newUbError!!, color = MaterialTheme.colorScheme.error)
                             }
+                        }
                         }
                     }
                 )
