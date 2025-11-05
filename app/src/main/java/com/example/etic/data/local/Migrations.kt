@@ -153,3 +153,44 @@ val MIGRATION_4_5 = object : Migration(4, 5) {
         )
     }
 }
+
+val MIGRATION_5_6 = object : Migration(5, 6) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // Ensure tables exist if not present in the prepackaged DB
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS tipo_prioridades (
+                Id_Tipo_Prioridad TEXT NOT NULL,
+                Tipo_Prioridad    TEXT DEFAULT NULL,
+                Desc_Prioridad    TEXT DEFAULT NULL,
+                Estatus           TEXT CHECK (Estatus IN ('Activo', 'Inactivo') ) DEFAULT 'Activo',
+                Creado_Por        TEXT DEFAULT NULL,
+                Fecha_Creacion    TEXT DEFAULT NULL,
+                Modificado_Por    TEXT DEFAULT NULL,
+                Fecha_Mod         TEXT DEFAULT NULL,
+                Id_Inspeccion     TEXT DEFAULT 'flag_export',
+                Id_Sitio          TEXT DEFAULT 'flag_export',
+                PRIMARY KEY (Id_Tipo_Prioridad)
+            )
+            """
+        )
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS fabricantes (
+                Id_Fabricante      TEXT NOT NULL,
+                Id_Tipo_Inspeccion TEXT DEFAULT NULL,
+                Fabricante         TEXT DEFAULT NULL,
+                Desc_Fabricante    TEXT DEFAULT NULL,
+                Estatus            TEXT CHECK (Estatus IN ('Activo', 'Inactivo') ) DEFAULT 'Activo',
+                Creado_Por         TEXT DEFAULT NULL,
+                Fecha_Creacion     TEXT DEFAULT NULL,
+                Modificado_Por     TEXT DEFAULT NULL,
+                Fecha_Mod          TEXT DEFAULT NULL,
+                Id_Inspeccion      TEXT DEFAULT 'flag_export',
+                Id_Sitio           TEXT DEFAULT 'flag_export',
+                PRIMARY KEY (Id_Fabricante)
+            )
+            """
+        )
+    }
+}

@@ -125,6 +125,15 @@ private fun CurrentInspectionSplitView() {
             LaunchedEffect(Unit) {
                 statusOptions = runCatching { estatusDao.getAll() }.getOrElse { emptyList() }
             }
+            // Tipo de prioridad y fabricantes
+            var prioridadOptions by remember { mutableStateOf<List<com.example.etic.data.local.entities.TipoPrioridad>>(emptyList()) }
+            var fabricanteOptions by remember { mutableStateOf<List<com.example.etic.data.local.entities.Fabricante>>(emptyList()) }
+            val prioridadDao = remember { com.example.etic.data.local.DbProvider.get(ctx).tipoPrioridadDao() }
+            val fabricanteDao = remember { com.example.etic.data.local.DbProvider.get(ctx).fabricanteDao() }
+            LaunchedEffect(Unit) {
+                prioridadOptions = runCatching { prioridadDao.getAllActivas() }.getOrElse { emptyList() }
+                fabricanteOptions = runCatching { fabricanteDao.getAllActivos() }.getOrElse { emptyList() }
+            }
             var searchMessage by remember { mutableStateOf<String?>(null) }
             var showNewUbDialog by remember { mutableStateOf(false) }
             var newUbName by rememberSaveable { mutableStateOf("") }
@@ -134,6 +143,12 @@ private fun CurrentInspectionSplitView() {
             var newUbStatusExpanded by remember { mutableStateOf(false) }
             var newUbStatusLabel by rememberSaveable { mutableStateOf("") }
             var newUbStatusId by rememberSaveable { mutableStateOf<String?>(null) }
+            var newUbPrioridadExpanded by remember { mutableStateOf(false) }
+            var newUbPrioridadLabel by rememberSaveable { mutableStateOf("") }
+            var newUbPrioridadId by rememberSaveable { mutableStateOf<String?>(null) }
+            var newUbFabricanteExpanded by remember { mutableStateOf(false) }
+            var newUbFabricanteLabel by rememberSaveable { mutableStateOf("") }
+            var newUbFabricanteId by rememberSaveable { mutableStateOf<String?>(null) }
             val scope = rememberCoroutineScope()
 
             // Preseleccionar estatus por defecto al abrir el diálogo
@@ -247,7 +262,9 @@ private fun CurrentInspectionSplitView() {
                                 ubicacion = name,
                                 descripcion = newUbDesc.trim().ifBlank { null },
                                 esEquipo = if (newUbEsEquipo) "SI" else "NO",
-                                estatus = "Activo"
+                                estatus = "Activo",
+                                idTipoPrioridad = newUbPrioridadId,
+                                fabricante = newUbFabricanteId
                             )
                             scope.launch {
                                 val ok = runCatching { ubicacionDao.insert(nueva) }.isSuccess
@@ -260,6 +277,10 @@ private fun CurrentInspectionSplitView() {
                                     newUbError = null
                                     newUbStatusId = null
                                     newUbStatusLabel = ""
+                                    newUbPrioridadId = null
+                                    newUbPrioridadLabel = ""
+                                    newUbFabricanteId = null
+                                    newUbFabricanteLabel = ""
                                     showNewUbDialog = false
                                     selectedId?.let { pid -> if (!expanded.contains(pid)) expanded.add(pid) }
                                 } else {
@@ -302,6 +323,66 @@ private fun CurrentInspectionSplitView() {
                                                 newUbStatusLabel = label
                                                 newUbStatusId = opt.idStatusInspeccionDet
                                                 newUbStatusExpanded = false
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                            // Tipo de prioridad
+                            ExposedDropdownMenuBox(
+                                expanded = newUbPrioridadExpanded,
+                                onExpandedChange = { newUbPrioridadExpanded = !newUbPrioridadExpanded }
+                            ) {
+                                TextField(
+                                    value = if (newUbPrioridadLabel.isNotBlank()) newUbPrioridadLabel else "Seleccionar prioridad",
+                                    onValueChange = {},
+                                    readOnly = true,
+                                    label = { Text("Tipo de prioridad") },
+                                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = newUbPrioridadExpanded) },
+                                    modifier = Modifier.menuAnchor()
+                                )
+                                DropdownMenu(
+                                    expanded = newUbPrioridadExpanded,
+                                    onDismissRequest = { newUbPrioridadExpanded = false }
+                                ) {
+                                    prioridadOptions.forEach { opt ->
+                                        val label = opt.tipoPrioridad ?: opt.idTipoPrioridad
+                                        DropdownMenuItem(
+                                            text = { Text(label) },
+                                            onClick = {
+                                                newUbPrioridadLabel = label
+                                                newUbPrioridadId = opt.idTipoPrioridad
+                                                newUbPrioridadExpanded = false
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                            // Fabricante
+                            ExposedDropdownMenuBox(
+                                expanded = newUbFabricanteExpanded,
+                                onExpandedChange = { newUbFabricanteExpanded = !newUbFabricanteExpanded }
+                            ) {
+                                TextField(
+                                    value = if (newUbFabricanteLabel.isNotBlank()) newUbFabricanteLabel else "Seleccionar fabricante",
+                                    onValueChange = {},
+                                    readOnly = true,
+                                    label = { Text("Fabricante") },
+                                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = newUbFabricanteExpanded) },
+                                    modifier = Modifier.menuAnchor()
+                                )
+                                DropdownMenu(
+                                    expanded = newUbFabricanteExpanded,
+                                    onDismissRequest = { newUbFabricanteExpanded = false }
+                                ) {
+                                    fabricanteOptions.forEach { opt ->
+                                        val label = opt.fabricante ?: opt.idFabricante
+                                        DropdownMenuItem(
+                                            text = { Text(label) },
+                                            onClick = {
+                                                newUbFabricanteLabel = label
+                                                newUbFabricanteId = opt.idFabricante
+                                                newUbFabricanteExpanded = false
                                             }
                                         )
                                     }
