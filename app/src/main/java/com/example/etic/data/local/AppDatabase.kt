@@ -9,6 +9,9 @@ import com.example.etic.data.local.dao.UbicacionDao
 import com.example.etic.data.local.dao.TipoPrioridadDao
 import com.example.etic.data.local.dao.FabricanteDao
 import com.example.etic.data.local.dao.EstatusInspeccionDetDao
+import com.example.etic.data.local.dao.InspeccionDao
+import com.example.etic.data.local.dao.SeveridadDao
+import com.example.etic.data.local.dao.EquipoDao
 import com.example.etic.data.local.dao.InspeccionDetDao
 import com.example.etic.data.local.entities.Usuario
 import com.example.etic.data.local.entities.Problema
@@ -17,6 +20,9 @@ import com.example.etic.data.local.entities.Ubicacion
 import com.example.etic.data.local.entities.TipoPrioridad
 import com.example.etic.data.local.entities.Fabricante
 import com.example.etic.data.local.entities.EstatusInspeccionDet
+import com.example.etic.data.local.entities.Inspeccion
+import com.example.etic.data.local.entities.Severidad
+import com.example.etic.data.local.entities.Equipo
 import com.example.etic.data.local.entities.InspeccionDet
 
 @Database(
@@ -28,9 +34,12 @@ import com.example.etic.data.local.entities.InspeccionDet
         EstatusInspeccionDet::class,
         TipoPrioridad::class,
         Fabricante::class,
-        InspeccionDet::class
+        InspeccionDet::class,
+        Inspeccion::class,
+        Severidad::class,
+        Equipo::class
     ],
-    version = 7,
+    version = 8,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -42,4 +51,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun tipoPrioridadDao(): TipoPrioridadDao
     abstract fun fabricanteDao(): FabricanteDao
     abstract fun inspeccionDetDao(): InspeccionDetDao
+    abstract fun inspeccionDao(): InspeccionDao
+    abstract fun severidadDao(): SeveridadDao
+    abstract fun equipoDao(): EquipoDao
 }

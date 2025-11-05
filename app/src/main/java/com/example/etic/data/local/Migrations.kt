@@ -220,3 +220,63 @@ val MIGRATION_6_7 = object : Migration(6, 7) {
         )
     }
 }
+
+val MIGRATION_7_8 = object : Migration(7, 8) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS inspecciones (
+                Id_Inspeccion        TEXT NOT NULL,
+                Id_Sitio             TEXT,
+                Id_Grupo_Sitios      TEXT,
+                Id_Cliente           TEXT,
+                Id_Status_Inspeccion TEXT,
+                Fecha_Inicio         TEXT,
+                Fecha_Fin            TEXT,
+                Fotos_Ruta           TEXT,
+                IR_Imagen_Inicial    TEXT,
+                DIG_Imagen_Inicial   TEXT,
+                No_Dias              INTEGER,
+                Unidad_Temp          TEXT,
+                No_Inspeccion        INTEGER,
+                No_Inspeccion_Ant    INTEGER,
+                Estatus              TEXT,
+                Creado_Por           TEXT,
+                Fecha_Creacion       TEXT,
+                Modificado_Por       TEXT,
+                Fecha_Mod            TEXT,
+                PRIMARY KEY (Id_Inspeccion)
+            )
+            """
+        )
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS severidades (
+                Id_Severidad  TEXT NOT NULL,
+                Severidad     TEXT,
+                Descripcion   TEXT,
+                Id_Inspeccion TEXT DEFAULT 'flag_export',
+                Id_Sitio      TEXT DEFAULT 'flag_export',
+                PRIMARY KEY (Id_Severidad)
+            )
+            """
+        )
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS equipos (
+                Id_Equipo      TEXT NOT NULL,
+                Equipo         TEXT,
+                Descr_equipo   TEXT,
+                Estatus        TEXT,
+                Creado_Por     TEXT,
+                Fecha_Creacion TEXT,
+                Modificado_Por TEXT,
+                Fecha_Mod      TEXT,
+                Id_Inspeccion  TEXT DEFAULT 'flag_export',
+                Id_Sitio       TEXT DEFAULT 'flag_export',
+                PRIMARY KEY (Id_Equipo)
+            )
+            """
+        )
+    }
+}
