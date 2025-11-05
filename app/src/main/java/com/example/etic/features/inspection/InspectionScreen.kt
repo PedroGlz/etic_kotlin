@@ -728,7 +728,7 @@ private fun SimpleTreeView(
                     Spacer(Modifier.width(TREE_SPACING))
                     Text(
                         n.title,
-                        color = if (n.id == highlightedId) Color.Red else Color.Black,
+                        color = if (n.id == highlightedId) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.clickable { onSelect(n.id) }
@@ -745,6 +745,7 @@ private fun SimpleTreeView(
 // -------------------------
 
 @Composable
+@OptIn(ExperimentalMaterial3Api::class)
 private fun DetailsTable(children: List<TreeNode>,modifier: Modifier = Modifier, onDelete: (TreeNode) -> Unit) {
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val hScroll = rememberScrollState()
@@ -757,7 +758,7 @@ private fun DetailsTable(children: List<TreeNode>,modifier: Modifier = Modifier,
                     Modifier
                         .fillMaxWidth()
                         .background(MaterialTheme.colorScheme.surface)
-                        .padding(vertical = 8.dp, horizontal = 8.dp)
+                        .padding(vertical = 4.dp, horizontal = 8.dp)
                 ) {
                     HeaderCell("Ubicacion", 3)
                     HeaderCell("Codigo de barras", 2)
@@ -774,15 +775,23 @@ private fun DetailsTable(children: List<TreeNode>,modifier: Modifier = Modifier,
                             Row(
                                 Modifier
                                     .fillMaxWidth()
-                                    .padding(vertical = 6.dp, horizontal = 8.dp)
+                                    .padding(vertical = 2.dp, horizontal = 8.dp)
                             ) {
                                 BodyCell(3) { Text(n.title) }
                                 BodyCell(2) { Text(n.barcode ?: "-") }
                                 BodyCell(2) { Text(if (n.verified) "Verificado" else "Por verificar") }
                                 BodyCell(1) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
-                                        IconButton(onClick = { onDelete(n) }) {
-                                            Icon(Icons.Outlined.Delete, contentDescription = "Eliminar")
+                                        androidx.compose.runtime.CompositionLocalProvider(
+                                            androidx.compose.material3.LocalMinimumInteractiveComponentEnforcement provides false
+                                        ) {
+                                            IconButton(onClick = { onDelete(n) }, modifier = Modifier.size(28.dp)) {
+                                                Icon(
+                                                    Icons.Outlined.Delete,
+                                                    contentDescription = "Eliminar",
+                                                    modifier = Modifier.size(18.dp)
+                                                )
+                                            }
                                         }
                                     }
                                 }
