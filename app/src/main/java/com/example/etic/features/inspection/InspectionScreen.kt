@@ -20,7 +20,6 @@ import androidx.compose.material.icons.outlined.DragIndicator
 import androidx.compose.material.icons.outlined.Traffic
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Image
-import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.Divider
 import androidx.compose.material3.DividerDefaults
 import androidx.compose.material3.Icon
@@ -45,7 +44,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.text.input.ImeAction
@@ -55,6 +53,7 @@ import androidx.compose.ui.unit.dp
 import com.example.etic.ui.theme.EticTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import com.example.etic.data.local.entities.EstatusInspeccionDet
 
 // Centralizamos algunos "magic numbers" para facilitar ajuste futuro
 private const val MIN_FRAC: Float = 0.2f     // Límite inferior de los splitters
@@ -117,7 +116,13 @@ private fun CurrentInspectionSplitView() {
             // Controles superiores (fuera de los paneles)
             var barcode by rememberSaveable { mutableStateOf("") }
             var statusMenuExpanded by remember { mutableStateOf(false) }
-            var selectedStatus by rememberSaveable { mutableStateOf("Todos") }
+            var selectedStatusLabel by rememberSaveable { mutableStateOf("Todos") }
+            var selectedStatusId by rememberSaveable { mutableStateOf<String?>(null) }
+            var statusOptions by remember { mutableStateOf<List<EstatusInspeccionDet>>(emptyList()) }
+            val estatusDao = remember { com.example.etic.data.local.DbProvider.get(ctx).estatusInspeccionDetDao() }
+            LaunchedEffect(Unit) {
+                statusOptions = runCatching { estatusDao.getAll() }.getOrElse { emptyList() }
+            }
             var searchMessage by remember { mutableStateOf<String?>(null) }
             val scope = rememberCoroutineScope()
 
@@ -159,12 +164,28 @@ private fun CurrentInspectionSplitView() {
                 )
                 Spacer(Modifier.width(HEADER_ACTION_SPACING))                // Estatus como ExposedDropdownMenuBox
                 ExposedDropdownMenuBox(expanded = statusMenuExpanded, onExpandedChange = { statusMenuExpanded = !statusMenuExpanded }) {
-                    TextField(value = selectedStatus, onValueChange = {}, readOnly = true, label = { Text("Estatus") },
+                    TextField(value = selectedStatusLabel, onValueChange = {}, readOnly = true, label = { Text("Estatus") },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = statusMenuExpanded) },
                         modifier = Modifier.menuAnchor())
                     DropdownMenu(expanded = statusMenuExpanded, onDismissRequest = { statusMenuExpanded = false }) {
-                        listOf("Todos", "Verificado", "Por verificar").forEach { opt ->
-                            DropdownMenuItem(text = { Text(opt) }, onClick = { selectedStatus = opt; statusMenuExpanded = false })
+                        DropdownMenuItem(
+                            text = { Text("Todos") },
+                            onClick = {
+                                selectedStatusLabel = "Todos"
+                                selectedStatusId = null
+                                statusMenuExpanded = false
+                            }
+                        )
+                        statusOptions.forEach { opt ->
+                            val label = opt.estatusInspeccionDet ?: opt.idStatusInspeccionDet
+                            DropdownMenuItem(
+                                text = { Text(label) },
+                                onClick = {
+                                    selectedStatusLabel = label
+                                    selectedStatusId = opt.idStatusInspeccionDet
+                                    statusMenuExpanded = false
+                                }
+                            )
                         }
                     }
                 }
