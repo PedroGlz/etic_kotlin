@@ -128,10 +128,28 @@ private fun CurrentInspectionSplitView() {
             var searchMessage by remember { mutableStateOf<String?>(null) }
             var showNewUbDialog by remember { mutableStateOf(false) }
             var newUbName by rememberSaveable { mutableStateOf("") }
-            var newUbBarcode by rememberSaveable { mutableStateOf("") }
             var newUbEsEquipo by rememberSaveable { mutableStateOf(false) }
             var newUbError by remember { mutableStateOf<String?>(null) }
+            var newUbDesc by rememberSaveable { mutableStateOf("") }
+            var newUbStatusExpanded by remember { mutableStateOf(false) }
+            var newUbStatusLabel by rememberSaveable { mutableStateOf("") }
+            var newUbStatusId by rememberSaveable { mutableStateOf<String?>(null) }
             val scope = rememberCoroutineScope()
+
+            // Preseleccionar estatus por defecto al abrir el diálogo
+            LaunchedEffect(showNewUbDialog) {
+                if (showNewUbDialog) {
+                    val defaultId = "568798D1-76BB-11D3-82BF-00104BC75DC2"
+                    val match = statusOptions.firstOrNull { it.idStatusInspeccionDet.equals(defaultId, true) }
+                    if (match != null) {
+                        newUbStatusId = match.idStatusInspeccionDet
+                        newUbStatusLabel = match.estatusInspeccionDet ?: match.idStatusInspeccionDet
+                    } else {
+                        newUbStatusId = null
+                        newUbStatusLabel = ""
+                    }
+                }
+            }
 
             fun triggerSearch() {
                 searchMessage = null
@@ -227,7 +245,7 @@ private fun CurrentInspectionSplitView() {
                                 idUbicacion = id,
                                 idUbicacionPadre = selectedId,
                                 ubicacion = name,
-                                codigoBarras = newUbBarcode.trim().ifBlank { null },
+                                descripcion = newUbDesc.trim().ifBlank { null },
                                 esEquipo = if (newUbEsEquipo) "SI" else "NO",
                                 estatus = "Activo"
                             )
@@ -237,9 +255,11 @@ private fun CurrentInspectionSplitView() {
                                     val rows = runCatching { ubicacionDao.getAll() }.getOrElse { emptyList() }
                                     nodes = buildTreeFromUbicaciones(rows)
                                     newUbName = ""
-                                    newUbBarcode = ""
+                                    newUbDesc = ""
                                     newUbEsEquipo = false
                                     newUbError = null
+                                    newUbStatusId = null
+                                    newUbStatusLabel = ""
                                     showNewUbDialog = false
                                     selectedId?.let { pid -> if (!expanded.contains(pid)) expanded.add(pid) }
                                 } else {
@@ -257,22 +277,58 @@ private fun CurrentInspectionSplitView() {
                     title = { Text("Nueva ubicación") },
                     text = {
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            TextField(
-                                value = newUbName,
-                                onValueChange = { newUbName = it },
-                                singleLine = true,
-                                label = { Text("Nombre") }
-                            )
-                            TextField(
-                                value = newUbBarcode,
-                                onValueChange = { newUbBarcode = it },
-                                singleLine = true,
-                                label = { Text("Código de barras (opcional)") }
-                            )
+                            // Estatus (lista de opciones)
+                            ExposedDropdownMenuBox(
+                                expanded = newUbStatusExpanded,
+                                onExpandedChange = { newUbStatusExpanded = !newUbStatusExpanded }
+                            ) {
+                                TextField(
+                                    value = if (newUbStatusLabel.isNotBlank()) newUbStatusLabel else "Seleccionar estatus",
+                                    onValueChange = {},
+                                    readOnly = true,
+                                    label = { Text("Estatus de inspección") },
+                                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = newUbStatusExpanded) },
+                                    modifier = Modifier.menuAnchor()
+                                )
+                                DropdownMenu(
+                                    expanded = newUbStatusExpanded,
+                                    onDismissRequest = { newUbStatusExpanded = false }
+                                ) {
+                                    statusOptions.forEach { opt ->
+                                        val label = opt.estatusInspeccionDet ?: opt.idStatusInspeccionDet
+                                        DropdownMenuItem(
+                                            text = { Text(label) },
+                                            onClick = {
+                                                newUbStatusLabel = label
+                                                newUbStatusId = opt.idStatusInspeccionDet
+                                                newUbStatusExpanded = false
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                            // Es equipo
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text("Es equipo")
                                 Spacer(Modifier.width(12.dp))
                                 Switch(checked = newUbEsEquipo, onCheckedChange = { newUbEsEquipo = it })
+                            }
+                            // Nombre
+                            TextField(
+                                value = newUbName,
+                                onValueChange = { newUbName = it },
+                                singleLine = true,
+                                label = { Text("Nombre de la ubicación") }
+                            )
+                            // Descripción
+                            TextField(
+                                value = newUbDesc,
+                                onValueChange = { newUbDesc = it },
+                                singleLine = false,
+                                label = { Text("Descripción") }
+                            )
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                // espacio final
                             }
                             if (newUbError != null) {
                                 Text(newUbError!!, color = MaterialTheme.colorScheme.error)
