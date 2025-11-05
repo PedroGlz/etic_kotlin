@@ -272,7 +272,7 @@ private fun CurrentInspectionSplitView() {
                                 showNewUbDialog = false
                                 newUbError = null
                             }) { Text("Cancelar") }
-                            Button(onClick = {
+                            Button(enabled = newUbName.isNotBlank(), onClick = {
                                 val name = newUbName.trim()
                                 if (name.isEmpty()) {
                                     newUbError = "El nombre es obligatorio"
@@ -452,7 +452,13 @@ private fun CurrentInspectionSplitView() {
                                 value = newUbName,
                                 onValueChange = { newUbName = it },
                                 singleLine = true,
-                                label = { Text("Nombre de la ubicación") },
+                                label = {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text("Nombre de la ubicación")
+                                        Text(" *", color = MaterialTheme.colorScheme.error)
+                                    }
+                                },
+                                isError = newUbError != null,
                                 modifier = Modifier.fillMaxWidth()
                             )
                             // Descripción
