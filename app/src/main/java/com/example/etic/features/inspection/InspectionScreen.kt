@@ -1058,7 +1058,7 @@ private fun ProblemsTable(problems: List<Problem>, onDelete: (Problem) -> Unit) 
                         cell(2) { Text(p.numInspeccion) }
                         cell(2) { Text(p.tipo) }
                         cell(2) { Text(p.estatus) }
-                        cell(1) { Text(if (p.cronico) "●" else "○") }
+                        cell(1) { Text(if (p.cronico) "SI" else "NO") }
                         cell(1) { Text(p.tempC.toString()) }
                         cell(1) { Text(p.deltaTC.toString()) }
                         cell(2) { Text(p.severidad) }
@@ -1272,5 +1272,6 @@ private fun UbicacionesFlatListFromDatabase(modifier: Modifier = Modifier) {
         }
     }
 }
+
 
 
