@@ -3,6 +3,7 @@ package com.example.etic.data.local.dao
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
+import androidx.room.Update
 import androidx.room.Query
 import com.example.etic.data.local.entities.Ubicacion
 
@@ -20,4 +21,7 @@ interface UbicacionDao {
 
     @Query("SELECT * FROM ubicaciones WHERE Id_Ubicacion = :id LIMIT 1")
     suspend fun getById(id: String): Ubicacion?
+
+    @Update
+    suspend fun update(ubicacion: Ubicacion)
 }

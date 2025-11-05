@@ -7,6 +7,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -158,6 +160,10 @@ private fun CurrentInspectionSplitView() {
             var newUbFabricanteId by rememberSaveable { mutableStateOf<String?>(null) }
             var currentUserId by remember { mutableStateOf<String?>(null) }
             var currentSitioId by remember { mutableStateOf<String?>(null) }
+            var editingUbId by remember { mutableStateOf<String?>(null) }
+            var editingParentId by remember { mutableStateOf<String?>(null) }
+            var editingDetId by remember { mutableStateOf<String?>(null) }
+            var editingInspId by remember { mutableStateOf<String?>(null) }
             val scope = rememberCoroutineScope()
 
             // Preseleccionar estatus por defecto al abrir el diálogo
@@ -278,17 +284,19 @@ private fun CurrentInspectionSplitView() {
                                     newUbError = "El nombre es obligatorio"
                                     return@Button
                                 }
-                                val id = java.util.UUID.randomUUID().toString()
+                                val isEdit = editingUbId != null
+                                val id = editingUbId ?: java.util.UUID.randomUUID().toString()
+                                val parentForCalc = if (isEdit) editingParentId else selectedId
                                 // Nivel del árbol: si hay padre, nivel del padre + 1, sino 0
-                                val nivel = selectedId?.let { parentId -> depthOfId(nodes, parentId) + 1 } ?: 0
+                                val nivel = parentForCalc?.let { parentId -> depthOfId(nodes, parentId) + 1 } ?: 0
                                 // Ruta: path de títulos del padre + nombre
-                                val ruta = selectedId?.let { parentId ->
+                                val ruta = parentForCalc?.let { parentId ->
                                     val titles = titlePathForId(nodes, parentId)
                                     if (titles.isNotEmpty()) titles.joinToString(" / ") + " / " + name else name
                                 } ?: name
                                 val nueva = com.example.etic.data.local.entities.Ubicacion(
                                     idUbicacion = id,
-                                    idUbicacionPadre = selectedId,
+                                    idUbicacionPadre = parentForCalc,
                                     idSitio = currentSitioId,
                                     nivelArbol = nivel,
                                     ubicacion = name,
@@ -304,26 +312,44 @@ private fun CurrentInspectionSplitView() {
                                     idInspeccion = null
                                 )
                                 scope.launch {
-                                    val okUb = runCatching { ubicacionDao.insert(nueva) }.isSuccess
+                                    val okUb = runCatching { if (isEdit) ubicacionDao.update(nueva) else ubicacionDao.insert(nueva) }.isSuccess
                                     if (okUb) {
-                                        // Crear inspecciones_det ligada a la nueva ubicación
-                                        val detId = java.util.UUID.randomUUID().toString()
-                                        val inspId = java.util.UUID.randomUUID().toString()
-                                        val det = com.example.etic.data.local.entities.InspeccionDet(
-                                            idInspeccionDet = detId,
-                                            idInspeccion = inspId,
-                                            idUbicacion = id,
-                                            idStatusInspeccionDet = newUbStatusId,
-                                            notasInspeccion = null,
-                                            estatus = "Activo",
-                                            idEstatusColorText = 1,
-                                            expanded = "0",
-                                            selected = "0",
-                                            creadoPor = currentUserId,
-                                            fechaCreacion = java.time.LocalDateTime.now().toString(),
-                                            idSitio = currentSitioId
-                                        )
-                                        val okDet = runCatching { inspeccionDetDao.insert(det) }.isSuccess
+                                        // Crear/actualizar inspecciones_det ligada a la ubicación
+                                        if (isEdit && editingDetId != null) {
+                                            val det = com.example.etic.data.local.entities.InspeccionDet(
+                                                idInspeccionDet = editingDetId!!,
+                                                idInspeccion = editingInspId,
+                                                idUbicacion = id,
+                                                idStatusInspeccionDet = newUbStatusId,
+                                                notasInspeccion = null,
+                                                estatus = "Activo",
+                                                idEstatusColorText = 1,
+                                                expanded = "0",
+                                                selected = "0",
+                                                creadoPor = currentUserId,
+                                                fechaCreacion = java.time.LocalDateTime.now().toString(),
+                                                idSitio = currentSitioId
+                                            )
+                                            runCatching { inspeccionDetDao.update(det) }
+                                        } else {
+                                            val detId = java.util.UUID.randomUUID().toString()
+                                            val inspId = java.util.UUID.randomUUID().toString()
+                                            val det = com.example.etic.data.local.entities.InspeccionDet(
+                                                idInspeccionDet = detId,
+                                                idInspeccion = inspId,
+                                                idUbicacion = id,
+                                                idStatusInspeccionDet = newUbStatusId,
+                                                notasInspeccion = null,
+                                                estatus = "Activo",
+                                                idEstatusColorText = 1,
+                                                expanded = "0",
+                                                selected = "0",
+                                                creadoPor = currentUserId,
+                                                fechaCreacion = java.time.LocalDateTime.now().toString(),
+                                                idSitio = currentSitioId
+                                            )
+                                            runCatching { inspeccionDetDao.insert(det) }
+                                        }
                                         val rows = runCatching { ubicacionDao.getAll() }.getOrElse { emptyList() }
                                         nodes = buildTreeFromUbicaciones(rows)
                                         newUbName = ""
@@ -337,6 +363,10 @@ private fun CurrentInspectionSplitView() {
                                         newUbPrioridadLabel = ""
                                         newUbFabricanteId = null
                                         newUbFabricanteLabel = ""
+                                        editingUbId = null
+                                        editingParentId = null
+                                        editingDetId = null
+                                        editingInspId = null
                                         showNewUbDialog = false
                                         selectedId?.let { pid -> if (!expanded.contains(pid)) expanded.add(pid) }
                                     } else {
@@ -546,6 +576,37 @@ private fun CurrentInspectionSplitView() {
                         onDelete = { node ->
                             if (selectedId == node.id) selectedId = null
                             nodes = nodes.toMutableList().also { removeById(node.id, it) }
+                        },
+                        onEdit = { node ->
+                            // Abrir diálogo en modo edición y precargar datos desde BD
+                            newUbError = null
+                            editingUbId = node.id
+                            showNewUbDialog = true
+                            scope.launch {
+                                val ub = runCatching { ubicacionDao.getById(node.id) }.getOrNull()
+                                if (ub != null) {
+                                    newUbName = ub.ubicacion ?: ""
+                                    newUbDesc = ub.descripcion ?: ""
+                                    newUbEsEquipo = (ub.esEquipo ?: "").equals("SI", ignoreCase = true)
+                                    newUbBarcode = ub.codigoBarras ?: ""
+                                    editingParentId = ub.idUbicacionPadre
+                                    newUbPrioridadId = ub.idTipoPrioridad
+                                    newUbPrioridadLabel = prioridadOptions.firstOrNull { it.idTipoPrioridad == ub.idTipoPrioridad }?.tipoPrioridad
+                                        ?: (ub.idTipoPrioridad ?: "")
+                                    newUbFabricanteId = ub.fabricante
+                                    newUbFabricanteLabel = fabricanteOptions.firstOrNull { it.idFabricante == ub.fabricante }?.fabricante
+                                        ?: (ub.fabricante ?: "")
+                                }
+                                val det = runCatching { inspeccionDetDao.getByUbicacion(node.id).firstOrNull() }.getOrNull()
+                                editingDetId = det?.idInspeccionDet
+                                editingInspId = det?.idInspeccion
+                                val statusId = det?.idStatusInspeccionDet
+                                if (!statusId.isNullOrBlank()) {
+                                    newUbStatusId = statusId
+                                    newUbStatusLabel = statusOptions.firstOrNull { it.idStatusInspeccionDet == statusId }?.estatusInspeccionDet
+                                        ?: statusId
+                                }
+                            }
                         }
                     )
                 }
@@ -760,7 +821,7 @@ private fun SimpleTreeView(
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
-private fun DetailsTable(children: List<TreeNode>,modifier: Modifier = Modifier, onDelete: (TreeNode) -> Unit) {
+private fun DetailsTable(children: List<TreeNode>,modifier: Modifier = Modifier, onDelete: (TreeNode) -> Unit, onEdit: (TreeNode) -> Unit) {
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val hScroll = rememberScrollState()
         val minWidth = DETAILS_TABLE_MIN_WIDTH
@@ -790,6 +851,9 @@ private fun DetailsTable(children: List<TreeNode>,modifier: Modifier = Modifier,
                                 Modifier
                                     .fillMaxWidth()
                                     .padding(vertical = 2.dp, horizontal = 8.dp)
+                                    .pointerInput(n.id) {
+                                        detectTapGestures(onDoubleTap = { onEdit(n) })
+                                    }
                             ) {
                                 BodyCell(3) { Text(n.title) }
                                 BodyCell(2) { Text(n.barcode ?: "-") }
