@@ -122,7 +122,19 @@ fun MainScreen(
         Scaffold(
             topBar = {
                 CenterAlignedTopAppBar(
-                    title = { Text("Pantalla principal") },
+                    title = {
+                        val ctx = androidx.compose.ui.platform.LocalContext.current
+                        val db = remember { com.example.etic.data.local.DbProvider.get(ctx) }
+                        val current by produceState(initialValue = null as com.example.etic.data.local.queries.CurrentInspectionInfo?) {
+                            value = runCatching { com.example.etic.data.local.queries.getCurrentInspectionInfo(db) }.getOrNull()
+                        }
+                        val titleText = current?.let { info ->
+                            val no = info.noInspeccion?.toString() ?: "-"
+                            val cliente = info.nombreCliente?.takeIf { it.isNotBlank() } ?: (info.idCliente ?: "-")
+                            "No. Inspeccion Actual: $no - Cliente: $cliente"
+                        } ?: "Pantalla principal"
+                        Text(titleText)
+                    },
                     navigationIcon = {
                         IconButton(onClick = {
                             scope.launch {

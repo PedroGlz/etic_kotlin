@@ -907,8 +907,8 @@ private fun ListTabs(
         }
         Divider(thickness = DIVIDER_THICKNESS)
         when (tab) {
-            0 -> ProblemsTableFromDatabase()
-            1 -> BaselineTableFromDatabase()
+            0 -> ProblemsTableFromDatabase(selectedId = node?.id)
+            1 -> BaselineTableFromDatabase(selectedId = node?.id)
         }
     }
 }
@@ -998,6 +998,26 @@ private fun titlePathForId(list: List<TreeNode>, targetId: String): List<String>
         if (res != null) return res
     }
     return emptyList()
+}
+
+// Retorna el conjunto de Id_Ubicacion del nodo seleccionado y todos sus descendientes
+private fun descendantIds(
+    all: List<com.example.etic.data.local.entities.Ubicacion>,
+    rootId: String
+): Set<String> {
+    val childrenMap: Map<String?, List<com.example.etic.data.local.entities.Ubicacion>> =
+        all.groupBy { it.idUbicacionPadre }
+    val out = mutableSetOf<String>()
+    val stack = ArrayDeque<String>()
+    stack.add(rootId)
+    while (stack.isNotEmpty()) {
+        val id = stack.removeLast()
+        if (out.add(id)) {
+            val children = childrenMap[id].orEmpty()
+            children.forEach { stack.add(it.idUbicacion) }
+        }
+    }
+    return out
 }
 
 private fun collectProblems(root: TreeNode?): List<Problem> {
@@ -1159,21 +1179,27 @@ private fun PreviewInspection() { EticTheme { InspectionScreen() } }
 // -------------------------
 
 @Composable
-private fun ProblemsTableFromDatabase() {
+private fun ProblemsTableFromDatabase(selectedId: String?) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val dao = remember { com.example.etic.data.local.DbProvider.get(ctx).problemaDao() }
+    val ubicacionDao = remember { com.example.etic.data.local.DbProvider.get(ctx).ubicacionDao() }
     val inspDao = remember { com.example.etic.data.local.DbProvider.get(ctx).inspeccionDao() }
     val sevDao = remember { com.example.etic.data.local.DbProvider.get(ctx).severidadDao() }
     val eqDao = remember { com.example.etic.data.local.DbProvider.get(ctx).equipoDao() }
     val tipoInspDao = remember { com.example.etic.data.local.DbProvider.get(ctx).tipoInspeccionDao() }
 
-    val uiProblems by produceState(initialValue = emptyList<Problem>()) {
+    val uiProblems by produceState(initialValue = emptyList<Problem>(), selectedId) {
         val rows = try { dao.getAll() } catch (_: Exception) { emptyList() }
+        val ubicaciones = try { ubicacionDao.getAll() } catch (_: Exception) { emptyList() }
+        val filteredRows = selectedId?.let { rootId ->
+            val allowed = descendantIds(ubicaciones, rootId)
+            rows.filter { r -> r.idUbicacion != null && allowed.contains(r.idUbicacion!!) }
+        } ?: rows
         val inspMap = try { inspDao.getAll().associateBy { it.idInspeccion } } catch (_: Exception) { emptyMap() }
         val sevMap = try { sevDao.getAll().associateBy { it.idSeveridad } } catch (_: Exception) { emptyMap() }
         val eqMap = try { eqDao.getAll().associateBy { it.idEquipo } } catch (_: Exception) { emptyMap() }
         val tipoMap = try { tipoInspDao.getAll().associateBy { it.idTipoInspeccion } } catch (_: Exception) { emptyMap() }
-        value = rows.map { r ->
+        value = filteredRows.map { r ->
             val fecha = runCatching {
                 val raw = r.fechaCreacion?.takeIf { it.isNotBlank() }
                     ?: r.irFileDate?.takeIf { it.isNotBlank() }
@@ -1210,13 +1236,19 @@ private fun ProblemsTableFromDatabase() {
 // -------------------------
 
 @Composable
-private fun BaselineTableFromDatabase() {
+private fun BaselineTableFromDatabase(selectedId: String?) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val dao = remember { com.example.etic.data.local.DbProvider.get(ctx).lineaBaseDao() }
+    val ubicacionDao = remember { com.example.etic.data.local.DbProvider.get(ctx).ubicacionDao() }
 
-    val uiBaselines by produceState(initialValue = emptyList<Baseline>()) {
+    val uiBaselines by produceState(initialValue = emptyList<Baseline>(), selectedId) {
         val rows = try { dao.getAll() } catch (_: Exception) { emptyList() }
-        value = rows.map { r ->
+        val ubicaciones = try { ubicacionDao.getAll() } catch (_: Exception) { emptyList() }
+        val filteredRows = selectedId?.let { rootId ->
+            val allowed = descendantIds(ubicaciones, rootId)
+            rows.filter { r -> r.idUbicacion != null && allowed.contains(r.idUbicacion!!) }
+        } ?: rows
+        value = filteredRows.map { r ->
             val fecha = runCatching {
                 val raw = r.fechaCreacion?.takeIf { it.isNotBlank() }
                 val onlyDate = raw?.take(10)
