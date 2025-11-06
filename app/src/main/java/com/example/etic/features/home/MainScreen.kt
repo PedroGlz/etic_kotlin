@@ -23,6 +23,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.example.etic.R
 import com.example.etic.features.inspection.ui.home.InspectionScreen
+import com.example.etic.core.current.LocalCurrentInspection
+import com.example.etic.core.current.ProvideCurrentInspection
 import kotlinx.coroutines.launch
 
 private enum class HomeSection { Inspection, Reports }
@@ -119,16 +121,13 @@ fun MainScreen(
             }
         }
     ) {
+        ProvideCurrentInspection {
         Scaffold(
             topBar = {
                 CenterAlignedTopAppBar(
                     title = {
-                        val ctx = androidx.compose.ui.platform.LocalContext.current
-                        val db = remember { com.example.etic.data.local.DbProvider.get(ctx) }
-                        val current by produceState(initialValue = null as com.example.etic.data.local.queries.CurrentInspectionInfo?) {
-                            value = runCatching { com.example.etic.data.local.queries.getCurrentInspectionInfo(db) }.getOrNull()
-                        }
-                        val titleText = current?.let { info ->
+                        val info = LocalCurrentInspection.current
+                        val titleText = info?.let { info ->
                             val no = info.noInspeccion?.toString() ?: "-"
                             val cliente = info.nombreCliente?.takeIf { it.isNotBlank() } ?: (info.idCliente ?: "-")
                             "No. Inspeccion Actual: $no - Cliente: $cliente"
@@ -167,6 +166,7 @@ fun MainScreen(
                     HomeSection.Reports -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Reportes") }
                 }
             }
+        }
         }
     }
 
