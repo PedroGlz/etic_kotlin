@@ -25,6 +25,11 @@ import com.example.etic.R
 import com.example.etic.features.inspection.ui.home.InspectionScreen
 import com.example.etic.core.current.LocalCurrentInspection
 import com.example.etic.core.current.ProvideCurrentInspection
+import com.example.etic.core.export.exportRoomDbToDownloads
+import android.widget.Toast
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.launch
 
 private enum class HomeSection { Inspection, Reports }
@@ -38,6 +43,7 @@ fun MainScreen(
 ) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+    val appContext = LocalContext.current
     var showLogoutDialog by rememberSaveable { mutableStateOf(false) }
     var section by rememberSaveable { mutableStateOf(HomeSection.Inspection) }
 
@@ -106,6 +112,20 @@ fun MainScreen(
                         onClick = {
                             section = HomeSection.Reports
                             scope.launch { drawerState.close() }
+                        },
+                        modifier = Modifier.padding(vertical = 4.dp),
+                        colors = drawerItemColors
+                    )
+
+                    NavigationDrawerItem(
+                        label = { Text("Exportar DB") },
+                        selected = false,
+                        onClick = {
+                            scope.launch {
+                                val result = withContext(Dispatchers.IO) { exportRoomDbToDownloads(appContext) }
+                                Toast.makeText(appContext, if (result.success) result.message else "Fallo: ${result.message}", Toast.LENGTH_LONG).show()
+                                drawerState.close()
+                            }
                         },
                         modifier = Modifier.padding(vertical = 4.dp),
                         colors = drawerItemColors
