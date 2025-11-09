@@ -1,3 +1,31 @@
 <resources>
     <string name="app_name">etic</string>
+    <string name="label_codigo_barras">Código de barras</string>
+    <string name="label_estatus">Estatus</string>
+    <string name="btn_nueva_ubicacion">Nueva ubicación</string>
+    <string name="dlg_nueva_ubicacion">Nueva ubicación</string>
+    <string name="msg_sel_ubicacion_arbol">Selecciona una ubicación en el árbol</string>
+    <string name="msg_no_se_pudo_guardar_ubicacion">No se pudo guardar la ubicación</string>
+    <string name="label_estatus_inspeccion">Estatus de inspección</string>
+    <string name="label_nombre_ubicacion">Nombre de la ubicación</string>
+    <string name="label_descripcion">Descripción</string>
+    <string name="col_numero">No</string>
+    <string name="col_fecha">Fecha</string>
+    <string name="col_num_inspeccion">Num Inspección</string>
+    <string name="col_tipo">Tipo</string>
+    <string name="col_estatus">Estatus</string>
+    <string name="col_cronico">Crónico</string>
+    <string name="col_temp_c">Temp °C</string>
+    <string name="col_delta_t_c">Delta T °C</string>
+    <string name="col_severidad">Severidad</string>
+    <string name="col_equipo">Equipo</string>
+    <string name="col_comentarios">Comentarios</string>
+    <string name="col_op">Op</string>
+    <string name="tab_problemas">Listado de problemas</string>
+    <string name="tab_baseline">Listado Base Line</string>
+    <string name="msg_sin_problemas">Sin problemas</string>
+    <string name="msg_sin_baseline">Sin base line</string>
+    <string name="col_no_inspeccion">No Inspección</string>
+    <string name="col_mta_c">MTA °C</string>
+    <string name="col_amb_c">Amb °C</string>
 </resources>

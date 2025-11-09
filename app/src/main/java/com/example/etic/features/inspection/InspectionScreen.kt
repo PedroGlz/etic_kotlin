@@ -50,6 +50,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -65,25 +66,25 @@ import com.example.etic.core.session.sessionDataStore
 import com.example.etic.core.current.LocalCurrentInspection
 
 // Centralizamos algunos "magic numbers" para facilitar ajuste futuro
-private const val MIN_FRAC: Float = 0.2f     // LÃ­mite inferior de los splitters
-private const val MAX_FRAC: Float = 0.8f     // LÃ­mite superior de los splitters
-private const val H_INIT_FRAC: Float = 0.6f  // FracciÃ³n inicial del panel superior
-private const val V_INIT_FRAC: Float = 0.5f  // FracciÃ³n inicial del panel izquierdo
+private const val MIN_FRAC: Float = 0.2f     // Límite inferior de los splitters
+private const val MAX_FRAC: Float = 0.8f     // Límite superior de los splitters
+private const val H_INIT_FRAC: Float = 0.6f  // Fracción inicial del panel superior
+private const val V_INIT_FRAC: Float = 0.5f  // Fracción inicial del panel izquierdo
 
 private val HANDLE_THICKNESS: Dp = 2.dp      // Grosor de los handles de split
-private val DIVIDER_THICKNESS: Dp = 0.5.dp   // Grosor estÃ¡ndar de divisores/bordes
+private val DIVIDER_THICKNESS: Dp = 0.5.dp   // Grosor estándar de divisores/bordes
 private val PANEL_PADDING: Dp = 12.dp        // Padding interno de cada panel
 private const val SURFACE_VARIANT_ALPHA: Float = 0.4f
 private const val SELECT_ALPHA: Float = 0.10f
 private val ICON_EQUIPO_COLOR: Color = Color(0xFFFFC107)     // Amarillo (Traffic)
 private val ICON_NO_EQUIPO_COLOR: Color = Color(0xFF4CAF50)  // Verde (DragIndicator)
 
-// Ajustes de compacidad para filas del Ã¡rbol
-private val TREE_TOGGLE_SIZE: Dp = 20.dp   // TamaÃ±o del Ã­cono de expandir/colapsar
-private val TREE_ICON_SIZE: Dp = 18.dp     // TamaÃ±o del Ã­cono del nodo
-private val TREE_SPACING: Dp = 4.dp        // Espaciado horizontal pequeÃ±o
-private val TREE_INDENT: Dp = 12.dp        // IndentaciÃ³n por nivel
-// Ancho mÃ­nimo para que la tabla de Progreso no se comprima; habilita scroll horizontal si el panel es mÃ¡s angosto
+// Ajustes de compacidad para filas del árbol
+private val TREE_TOGGLE_SIZE: Dp = 20.dp   // Tamaño del ícono de expandir/colapsar
+private val TREE_ICON_SIZE: Dp = 18.dp     // Tamaño del ícono del nodo
+private val TREE_SPACING: Dp = 4.dp        // Espaciado horizontal pequeño
+private val TREE_INDENT: Dp = 12.dp        // Indentación por nivel
+// Ancho mínimo para que la tabla de Progreso no se comprima; habilita scroll horizontal si el panel es más angosto
 private val DETAILS_TABLE_MIN_WIDTH: Dp = 900.dp
 private val HEADER_ACTION_SPACING: Dp = 8.dp
 
@@ -97,9 +98,9 @@ fun InspectionScreen() {
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
 private fun CurrentInspectionSplitView() {
-    // Usamos constantes para evitar nÃºmeros mÃ¡gicos in-line
-    var hFrac by rememberSaveable { mutableStateOf(H_INIT_FRAC) } // fracciÃ³n alto del panel superior
-    var vFrac by rememberSaveable { mutableStateOf(V_INIT_FRAC) } // fracciÃ³n ancho del panel izquierdo
+    // Usamos constantes para evitar número magicos in-line
+    var hFrac by rememberSaveable { mutableStateOf(H_INIT_FRAC) } // fracción alto del panel superior
+    var vFrac by rememberSaveable { mutableStateOf(V_INIT_FRAC) } // fracción ancho del panel izquierdo
 
     var nodes by remember { mutableStateOf<List<TreeNode>>(emptyList()) }
     val ctx = androidx.compose.ui.platform.LocalContext.current
@@ -110,7 +111,7 @@ private fun CurrentInspectionSplitView() {
     val rootTitle = currentInspection?.nombreSitio ?: "Sitio"
     val rootId = remember(currentInspection?.idSitio) { (currentInspection?.idSitio?.let { "root:$it" } ?: "root:site") }
     val expanded = remember { mutableStateListOf<String>() }
-    // Reconstruir el árbol cuando llegue/ cambie la inspección actual
+    // Reconstruir el árbol cuando llegue/ cambie la Inspección actual
     LaunchedEffect(rootId, rootTitle) {
         val rows = runCatching { ubicacionDao.getAll() }.getOrElse { emptyList() }
         val roots = buildTreeFromUbicaciones(rows)
@@ -125,7 +126,7 @@ private fun CurrentInspectionSplitView() {
     val borderColor = DividerDefaults.color
 
     BoxWithConstraints(Modifier.fillMaxSize()) {
-        // âœ… Convierte dimensiones del BoxWithConstraints a pÃ­xeles de forma segura
+        // Convierte dimensiones del BoxWithConstraints a píxeles de forma segura
         val density = LocalDensity.current
         val totalWidthPx = with(density) { maxWidth.value * density.density }
         val totalHeightPx = with(density) { maxHeight.value * density.density }
@@ -175,7 +176,7 @@ private fun CurrentInspectionSplitView() {
             var editingInspId by remember { mutableStateOf<String?>(null) }
             val scope = rememberCoroutineScope()
 
-            // Preseleccionar estatus por defecto al abrir el diÃ¡logo
+            // Preseleccionar estatus por defecto al abrir el diálogo
             LaunchedEffect(showNewUbDialog) {
                 if (showNewUbDialog) {
                     val defaultId = "568798D1-76BB-11D3-82BF-00104BC75DC2"
@@ -187,7 +188,7 @@ private fun CurrentInspectionSplitView() {
                         newUbStatusId = null
                         newUbStatusLabel = ""
                     }
-                    // Obtener usuario de sesiÃ³n y su sitio
+                    // Obtener usuario de sesión y su sitio
                     val session = SessionManager(ctx.sessionDataStore)
                     val username = runCatching { session.username.first() }.getOrNull()
                     if (!username.isNullOrBlank()) {
@@ -204,7 +205,7 @@ private fun CurrentInspectionSplitView() {
                 if (code.isEmpty()) return
                 val path = findPathByBarcode(nodes, code)
                 if (path == null) {
-                    searchMessage = "No hay elementos con ese codigo de barras"
+                    searchMessage = "No hay elementos con ese Código de barras"
                 } else {
                     // expandir ancestros y seleccionar objetivo
                     path.dropLast(1).forEach { id -> if (!expanded.contains(id)) expanded.add(id) }
@@ -230,16 +231,28 @@ private fun CurrentInspectionSplitView() {
                     onValueChange = { barcode = it },
                     singleLine = true,
                     leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null) },
-                    label = { Text("Codigo de barras") },
+                    label = { Text(stringResource(com.example.etic.R.string.label_codigo_barras)) },
                     keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                     keyboardActions = KeyboardActions(onSearch = { triggerSearch() })
                 )
-                Spacer(Modifier.width(HEADER_ACTION_SPACING))                // Estatus como ExposedDropdownMenuBox
-                ExposedDropdownMenuBox(expanded = statusMenuExpanded, onExpandedChange = { statusMenuExpanded = !statusMenuExpanded }) {
-                    TextField(value = selectedStatusLabel, onValueChange = {}, readOnly = true, label = { Text("Estatus") },
+                Spacer(Modifier.width(HEADER_ACTION_SPACING))
+                // Estatus como ExposedDropdownMenuBox
+                ExposedDropdownMenuBox(
+                    expanded = statusMenuExpanded,
+                    onExpandedChange = { statusMenuExpanded = !statusMenuExpanded }
+                ) {
+                    TextField(
+                        value = selectedStatusLabel,
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text(stringResource(com.example.etic.R.string.label_estatus)) },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = statusMenuExpanded) },
-                        modifier = Modifier.menuAnchor())
-                    DropdownMenu(expanded = statusMenuExpanded, onDismissRequest = { statusMenuExpanded = false }) {
+                        modifier = Modifier.menuAnchor()
+                    )
+                    DropdownMenu(
+                        expanded = statusMenuExpanded,
+                        onDismissRequest = { statusMenuExpanded = false }
+                    ) {
                         DropdownMenuItem(
                             text = { Text("Todos") },
                             onClick = {
@@ -268,12 +281,16 @@ private fun CurrentInspectionSplitView() {
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),
                     shape = RoundedCornerShape(8.dp) // Bordes ligeramente redondeados (casi cuadrado)
                 ) {
-                    Text("Nueva ubicaciÃ³n", color = Color.White)
+                    Text(stringResource(com.example.etic.R.string.btn_nueva_ubicacion), color = Color.White)
                 }
-
             }
+
             if (searchMessage != null) {
-                Text(searchMessage!!, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(horizontal = 12.dp))
+                Text(
+                    searchMessage!!,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(horizontal = 12.dp)
+                )
             }
             Divider(thickness = DIVIDER_THICKNESS)
 
@@ -282,253 +299,264 @@ private fun CurrentInspectionSplitView() {
                     onDismissRequest = { showNewUbDialog = false },
                     properties = DialogProperties(usePlatformDefaultWidth = false),
                     confirmButton = {
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
                             Button(onClick = {
                                 showNewUbDialog = false
                                 newUbError = null
                             }) { Text("Cancelar") }
-                            Button(enabled = newUbName.isNotBlank(), onClick = {
-                                val name = newUbName.trim()
-                                if (name.isEmpty()) {
-                                    newUbError = "El nombre es obligatorio"
-                                    return@Button
-                                }
-                                val isEdit = editingUbId != null
-                                val id = editingUbId ?: java.util.UUID.randomUUID().toString()
-                                if (!isEdit && selectedId == null) {
-                                    newUbError = "Selecciona una ubicación en el árbol"
-                                    return@Button
-                                }
-                                val parentForCalc = if (isEdit) editingParentId else selectedId?.takeUnless { it == rootId }
-                                // Nivel del Ã¡rbol: si hay padre, nivel del padre + 1, sino 0
-                                val nivel = parentForCalc?.let { parentId -> depthOfId(nodes, parentId) + 1 } ?: 0
-                                // Ruta: path de tÃ­tulos del padre + nombre
-                                val ruta = parentForCalc?.let { parentId ->
-                                    val titles = titlePathForId(nodes, parentId)
-                                    if (titles.isNotEmpty()) titles.joinToString(" / ") + " / " + name else name
-                                } ?: name
-                                val nueva = com.example.etic.data.local.entities.Ubicacion(
-                                    idUbicacion = id,
-                                    idUbicacionPadre = parentForCalc,
-                                    idSitio = currentSitioId,
-                                    nivelArbol = nivel,
-                                    ubicacion = name,
-                                    descripcion = newUbDesc.trim().ifBlank { null },
-                                    esEquipo = if (newUbEsEquipo) "SI" else "NO",
-                                    codigoBarras = newUbBarcode.trim().ifBlank { null },
-                                    fabricante = newUbFabricanteId,
-                                    ruta = ruta,
-                                    estatus = "Activo",
-                                    creadoPor = currentUserId,
-                                    fechaCreacion = java.time.LocalDateTime.now().toString(),
-                                    idTipoPrioridad = newUbPrioridadId,
-                                    idInspeccion = null
-                                )
-                                scope.launch {
-                                    val okUb = runCatching { if (isEdit) ubicacionDao.update(nueva) else ubicacionDao.insert(nueva) }.isSuccess
-                                    if (okUb) {
-                                        // Crear/actualizar inspecciones_det ligada a la ubicaciÃ³n
-                                        if (isEdit && editingDetId != null) {
-                                            val det = com.example.etic.data.local.entities.InspeccionDet(
-                                                idInspeccionDet = editingDetId!!,
-                                                idInspeccion = editingInspId,
-                                                idUbicacion = id,
-                                                idStatusInspeccionDet = newUbStatusId,
-                                                notasInspeccion = null,
-                                                estatus = "Activo",
-                                                idEstatusColorText = 1,
-                                                expanded = "0",
-                                                selected = "0",
-                                                creadoPor = currentUserId,
-                                                fechaCreacion = java.time.LocalDateTime.now().toString(),
-                                                idSitio = currentSitioId
-                                            )
-                                            runCatching { inspeccionDetDao.update(det) }
+                            Button(
+                                enabled = newUbName.isNotBlank(),
+                                onClick = {
+                                    val name = newUbName.trim()
+                                    if (name.isEmpty()) {
+                                        newUbError = "El nombre es obligatorio"
+                                        return@Button
+                                    }
+                                    val isEdit = editingUbId != null
+                                    val id = editingUbId ?: java.util.UUID.randomUUID().toString()
+                                    if (!isEdit && selectedId == null) {
+                                        newUbError = "Selecciona una ubicacion en el arbol"
+                                        return@Button
+                                    }
+                                    val parentForCalc =
+                                        if (isEdit) editingParentId else selectedId?.takeUnless { it == rootId }
+                                    // Nivel del árbol: si hay padre, nivel del padre + 1, sino 0
+                                    val nivel = parentForCalc?.let { parentId ->
+                                        depthOfId(nodes, parentId) + 1
+                                    } ?: 0
+                                    // Ruta: path de títulos del padre + nombre
+                                    val ruta = parentForCalc?.let { parentId ->
+                                        val titles = titlePathForId(nodes, parentId)
+                                        if (titles.isNotEmpty()) titles.joinToString(" / ") + " / " + name else name
+                                    } ?: name
+                                    val nueva = com.example.etic.data.local.entities.Ubicacion(
+                                        idUbicacion = id,
+                                        idUbicacionPadre = parentForCalc,
+                                        idSitio = currentSitioId,
+                                        nivelArbol = nivel,
+                                        ubicacion = name,
+                                        descripcion = newUbDesc.trim().ifBlank { null },
+                                        esEquipo = if (newUbEsEquipo) "SI" else "NO",
+                                        codigoBarras = newUbBarcode.trim().ifBlank { null },
+                                        fabricante = newUbFabricanteId,
+                                        ruta = ruta,
+                                        estatus = "Activo",
+                                        creadoPor = currentUserId,
+                                        fechaCreacion = java.time.LocalDateTime.now().toString(),
+                                        idTipoPrioridad = newUbPrioridadId,
+                                        idInspeccion = null
+                                    )
+                                    scope.launch {
+                                        val okUb = runCatching {
+                                            if (isEdit) ubicacionDao.update(nueva) else ubicacionDao.insert(nueva)
+                                        }.isSuccess
+                                        if (okUb) {
+                                            // Crear/actualizar Inspecciónes_det ligada a la ubicacion
+                                            if (isEdit && editingDetId != null) {
+                                                val det = com.example.etic.data.local.entities.InspeccionDet(
+                                                    idInspeccionDet = editingDetId!!,
+                                                    idInspeccion = editingInspId,
+                                                    idUbicacion = id,
+                                                    idStatusInspeccionDet = newUbStatusId,
+                                                    notasInspeccion = null,
+                                                    estatus = "Activo",
+                                                    idEstatusColorText = 1,
+                                                    expanded = "0",
+                                                    selected = "0",
+                                                    creadoPor = currentUserId,
+                                                    fechaCreacion = java.time.LocalDateTime.now().toString(),
+                                                    idSitio = currentSitioId
+                                                )
+                                                runCatching { inspeccionDetDao.update(det) }
+                                            } else {
+                                                val detId = java.util.UUID.randomUUID().toString()
+                                                val inspId = java.util.UUID.randomUUID().toString()
+                                                val det = com.example.etic.data.local.entities.InspeccionDet(
+                                                    idInspeccionDet = detId,
+                                                    idInspeccion = inspId,
+                                                    idUbicacion = id,
+                                                    idStatusInspeccionDet = newUbStatusId,
+                                                    notasInspeccion = null,
+                                                    estatus = "Activo",
+                                                    idEstatusColorText = 1,
+                                                    expanded = "0",
+                                                    selected = "0",
+                                                    creadoPor = currentUserId,
+                                                    fechaCreacion = java.time.LocalDateTime.now().toString(),
+                                                    idSitio = currentSitioId
+                                                )
+                                                runCatching { inspeccionDetDao.insert(det) }
+                                            }
+                                            val rows = runCatching { ubicacionDao.getAll() }.getOrElse { emptyList() }
+                                            val roots = buildTreeFromUbicaciones(rows)
+                                            val siteRoot = TreeNode(id = rootId, title = rootTitle)
+                                            siteRoot.children.addAll(roots)
+                                            nodes = listOf(siteRoot)
+                                            if (!expanded.contains(rootId)) expanded.add(rootId)
+                                            newUbName = ""
+                                            newUbDesc = ""
+                                            newUbEsEquipo = false
+                                            newUbError = null
+                                            newUbStatusId = null
+                                            newUbStatusLabel = ""
+                                            newUbBarcode = ""
+                                            newUbPrioridadId = null
+                                            newUbPrioridadLabel = ""
+                                            newUbFabricanteId = null
+                                            newUbFabricanteLabel = ""
+                                            editingUbId = null
+                                            editingParentId = null
+                                            editingDetId = null
+                                            editingInspId = null
+                                            showNewUbDialog = false
+                                            selectedId?.let { pid -> if (!expanded.contains(pid)) expanded.add(pid) }
                                         } else {
-                                            val detId = java.util.UUID.randomUUID().toString()
-                                            val inspId = java.util.UUID.randomUUID().toString()
-                                            val det = com.example.etic.data.local.entities.InspeccionDet(
-                                                idInspeccionDet = detId,
-                                                idInspeccion = inspId,
-                                                idUbicacion = id,
-                                                idStatusInspeccionDet = newUbStatusId,
-                                                notasInspeccion = null,
-                                                estatus = "Activo",
-                                                idEstatusColorText = 1,
-                                                expanded = "0",
-                                                selected = "0",
-                                                creadoPor = currentUserId,
-                                                fechaCreacion = java.time.LocalDateTime.now().toString(),
-                                                idSitio = currentSitioId
-                                            )
-                                            runCatching { inspeccionDetDao.insert(det) }
+                                            newUbError = "No se pudo guardar la ubicacion"
                                         }
-                                        val rows = runCatching { ubicacionDao.getAll() }.getOrElse { emptyList() }
-                                        val roots = buildTreeFromUbicaciones(rows)
-                                        val siteRoot = TreeNode(id = rootId, title = rootTitle)
-                                        siteRoot.children.addAll(roots)
-                                        nodes = listOf(siteRoot)
-                                        if (!expanded.contains(rootId)) expanded.add(rootId)
-                                        newUbName = ""
-                                        newUbDesc = ""
-                                        newUbEsEquipo = false
-                                        newUbError = null
-                                        newUbStatusId = null
-                                        newUbStatusLabel = ""
-                                        newUbBarcode = ""
-                                        newUbPrioridadId = null
-                                        newUbPrioridadLabel = ""
-                                        newUbFabricanteId = null
-                                        newUbFabricanteLabel = ""
-                                        editingUbId = null
-                                        editingParentId = null
-                                        editingDetId = null
-                                        editingInspId = null
-                                        showNewUbDialog = false
-                                        selectedId?.let { pid -> if (!expanded.contains(pid)) expanded.add(pid) }
-                                    } else {
-                                        newUbError = "No se pudo guardar la ubicaciÃ³n"
                                     }
                                 }
-                            }) { Text("Guardar") }
+                            ) { Text("Guardar") }
                         }
                     },
                     dismissButton = { },
-                    title = { Text("Nueva ubicaciÃ³n") },
+                    title = { Text(stringResource(com.example.etic.R.string.dlg_nueva_ubicacion)) },
                     text = {
                         Box(Modifier.fillMaxWidth().widthIn(min = 520.dp)) {
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            // Estatus (lista de opciones)
-                            ExposedDropdownMenuBox(
-                                expanded = newUbStatusExpanded,
-                                onExpandedChange = { newUbStatusExpanded = !newUbStatusExpanded }
-                            ) {
-                                TextField(
-                                    value = if (newUbStatusLabel.isNotBlank()) newUbStatusLabel else "Seleccionar estatus",
-                                    onValueChange = {},
-                                    readOnly = true,
-                                    label = { Text("Estatus de inspecciÃ³n") },
-                                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = newUbStatusExpanded) },
-                                    modifier = Modifier.menuAnchor().fillMaxWidth()
-                                )
-                                DropdownMenu(
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                // Estatus (lista de opciones)
+                                ExposedDropdownMenuBox(
                                     expanded = newUbStatusExpanded,
-                                    onDismissRequest = { newUbStatusExpanded = false }
+                                    onExpandedChange = { newUbStatusExpanded = !newUbStatusExpanded }
                                 ) {
-                                    statusOptions.forEach { opt ->
-                                        val label = opt.estatusInspeccionDet ?: opt.idStatusInspeccionDet
-                                        DropdownMenuItem(
-                                            text = { Text(label) },
-                                            onClick = {
-                                                newUbStatusLabel = label
-                                                newUbStatusId = opt.idStatusInspeccionDet
-                                                newUbStatusExpanded = false
-                                            }
-                                        )
+                                    TextField(
+                                        value = if (newUbStatusLabel.isNotBlank()) newUbStatusLabel else "Seleccionar estatus",
+                                        onValueChange = {},
+                                        readOnly = true,
+                                        label = { Text(stringResource(com.example.etic.R.string.label_estatus_inspeccion)) },
+                                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = newUbStatusExpanded) },
+                                        modifier = Modifier.menuAnchor().fillMaxWidth()
+                                    )
+                                    DropdownMenu(
+                                        expanded = newUbStatusExpanded,
+                                        onDismissRequest = { newUbStatusExpanded = false }
+                                    ) {
+                                        statusOptions.forEach { opt ->
+                                            val label = opt.estatusInspeccionDet ?: opt.idStatusInspeccionDet
+                                            DropdownMenuItem(
+                                                text = { Text(label) },
+                                                onClick = {
+                                                    newUbStatusLabel = label
+                                                    newUbStatusId = opt.idStatusInspeccionDet
+                                                    newUbStatusExpanded = false
+                                                }
+                                            )
+                                        }
                                     }
                                 }
-                            }
-                            // Tipo de prioridad
-                            ExposedDropdownMenuBox(
-                                expanded = newUbPrioridadExpanded,
-                                onExpandedChange = { newUbPrioridadExpanded = !newUbPrioridadExpanded }
-                            ) {
-                                TextField(
-                                    value = if (newUbPrioridadLabel.isNotBlank()) newUbPrioridadLabel else "Seleccionar prioridad",
-                                    onValueChange = {},
-                                    readOnly = true,
-                                    label = { Text("Tipo de prioridad") },
-                                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = newUbPrioridadExpanded) },
-                                    modifier = Modifier.menuAnchor().fillMaxWidth()
-                                )
-                                DropdownMenu(
+                                // Tipo de prioridad
+                                ExposedDropdownMenuBox(
                                     expanded = newUbPrioridadExpanded,
-                                    onDismissRequest = { newUbPrioridadExpanded = false }
+                                    onExpandedChange = { newUbPrioridadExpanded = !newUbPrioridadExpanded }
                                 ) {
-                                    prioridadOptions.forEach { opt ->
-                                        val label = opt.tipoPrioridad ?: opt.idTipoPrioridad
-                                        DropdownMenuItem(
-                                            text = { Text(label) },
-                                            onClick = {
-                                                newUbPrioridadLabel = label
-                                                newUbPrioridadId = opt.idTipoPrioridad
-                                                newUbPrioridadExpanded = false
-                                            }
-                                        )
+                                    TextField(
+                                        value = if (newUbPrioridadLabel.isNotBlank()) newUbPrioridadLabel else "Seleccionar prioridad",
+                                        onValueChange = {},
+                                        readOnly = true,
+                                        label = { Text("Tipo de prioridad") },
+                                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = newUbPrioridadExpanded) },
+                                        modifier = Modifier.menuAnchor().fillMaxWidth()
+                                    )
+                                    DropdownMenu(
+                                        expanded = newUbPrioridadExpanded,
+                                        onDismissRequest = { newUbPrioridadExpanded = false }
+                                    ) {
+                                        prioridadOptions.forEach { opt ->
+                                            val label = opt.tipoPrioridad ?: opt.idTipoPrioridad
+                                            DropdownMenuItem(
+                                                text = { Text(label) },
+                                                onClick = {
+                                                    newUbPrioridadLabel = label
+                                                    newUbPrioridadId = opt.idTipoPrioridad
+                                                    newUbPrioridadExpanded = false
+                                                }
+                                            )
+                                        }
                                     }
                                 }
-                            }
-                            // Fabricante
-                            ExposedDropdownMenuBox(
-                                expanded = newUbFabricanteExpanded,
-                                onExpandedChange = { newUbFabricanteExpanded = !newUbFabricanteExpanded }
-                            ) {
-                                TextField(
-                                    value = if (newUbFabricanteLabel.isNotBlank()) newUbFabricanteLabel else "Seleccionar fabricante",
-                                    onValueChange = {},
-                                    readOnly = true,
-                                    label = { Text("Fabricante") },
-                                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = newUbFabricanteExpanded) },
-                                    modifier = Modifier.menuAnchor().fillMaxWidth()
-                                )
-                                DropdownMenu(
+                                // Fabricante
+                                ExposedDropdownMenuBox(
                                     expanded = newUbFabricanteExpanded,
-                                    onDismissRequest = { newUbFabricanteExpanded = false }
+                                    onExpandedChange = { newUbFabricanteExpanded = !newUbFabricanteExpanded }
                                 ) {
-                                    fabricanteOptions.forEach { opt ->
-                                        val label = opt.fabricante ?: opt.idFabricante
-                                        DropdownMenuItem(
-                                            text = { Text(label) },
-                                            onClick = {
-                                                newUbFabricanteLabel = label
-                                                newUbFabricanteId = opt.idFabricante
-                                                newUbFabricanteExpanded = false
-                                            }
-                                        )
+                                    TextField(
+                                        value = if (newUbFabricanteLabel.isNotBlank()) newUbFabricanteLabel else "Seleccionar fabricante",
+                                        onValueChange = {},
+                                        readOnly = true,
+                                        label = { Text("Fabricante") },
+                                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = newUbFabricanteExpanded) },
+                                        modifier = Modifier.menuAnchor().fillMaxWidth()
+                                    )
+                                    DropdownMenu(
+                                        expanded = newUbFabricanteExpanded,
+                                        onDismissRequest = { newUbFabricanteExpanded = false }
+                                    ) {
+                                        fabricanteOptions.forEach { opt ->
+                                            val label = opt.fabricante ?: opt.idFabricante
+                                            DropdownMenuItem(
+                                                text = { Text(label) },
+                                                onClick = {
+                                                    newUbFabricanteLabel = label
+                                                    newUbFabricanteId = opt.idFabricante
+                                                    newUbFabricanteExpanded = false
+                                                }
+                                            )
+                                        }
                                     }
                                 }
+                                // Es equipo
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text("Es equipo")
+                                    Spacer(Modifier.width(12.dp))
+                                    Switch(checked = newUbEsEquipo, onCheckedChange = { newUbEsEquipo = it })
+                                }
+                                // Nombre
+                                TextField(
+                                    value = newUbName,
+                                    onValueChange = { newUbName = it },
+                                    singleLine = true,
+                                    label = {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text(stringResource(com.example.etic.R.string.label_nombre_ubicacion))
+                                            Text(" *", color = MaterialTheme.colorScheme.error)
+                                        }
+                                    },
+                                    isError = newUbError != null,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                // descripcion
+                                TextField(
+                                    value = newUbDesc,
+                                    onValueChange = { newUbDesc = it },
+                                    singleLine = false,
+                                    label = { Text(stringResource(com.example.etic.R.string.label_descripcion)) },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                // Código de barras
+                                TextField(
+                                    value = newUbBarcode,
+                                    onValueChange = { newUbBarcode = it },
+                                    singleLine = true,
+                                    label = { Text(stringResource(com.example.etic.R.string.label_codigo_barras)) },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                Row(verticalAlignment = Alignment.CenterVertically) { }
+                                if (newUbError != null) {
+                                    Text(newUbError!!, color = MaterialTheme.colorScheme.error)
+                                }
                             }
-                            // Es equipo
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text("Es equipo")
-                                Spacer(Modifier.width(12.dp))
-                                Switch(checked = newUbEsEquipo, onCheckedChange = { newUbEsEquipo = it })
-                            }
-                            // Nombre
-                            TextField(
-                                value = newUbName,
-                                onValueChange = { newUbName = it },
-                                singleLine = true,
-                                label = {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text("Nombre de la ubicaciÃ³n")
-                                        Text(" *", color = MaterialTheme.colorScheme.error)
-                                    }
-                                },
-                                isError = newUbError != null,
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                            // DescripciÃ³n
-                            TextField(
-                                value = newUbDesc,
-                                onValueChange = { newUbDesc = it },
-                                singleLine = false,
-                                label = { Text("DescripciÃ³n") },
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                            // CÃ³digo de barras
-                            TextField(
-                                value = newUbBarcode,
-                                onValueChange = { newUbBarcode = it },
-                                singleLine = true,
-                                label = { Text("CÃ³digo de barras") },
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                            Row(verticalAlignment = Alignment.CenterVertically) { }
-                            if (newUbError != null) {
-                                Text(newUbError!!, color = MaterialTheme.colorScheme.error)
-                            }
-                        }
                         }
                     }
                 )
@@ -551,16 +579,16 @@ private fun CurrentInspectionSplitView() {
                             highlightedId = highlightedId,
                             onToggle = { id -> if (!expanded.remove(id)) expanded.add(id) },
                             onSelect = { id -> selectedId = id },
-                            modifier = Modifier.fillMaxSize() // â† ocupa todo el panel
+                            modifier = Modifier.fillMaxSize() // ← ocupa todo el panel
                         )
                     } else {
                         UbicacionesFlatListFromDatabase(
-                            modifier = Modifier.fillMaxSize() // â† ocupa todo el panel
+                            modifier = Modifier.fillMaxSize() // ← ocupa todo el panel
                         )
                     }
                 }
 
-                // Handle vertical (mÃ¡s suave)
+                // Handle vertical (más suave)
                 Box(
                     Modifier
                         .width(HANDLE_THICKNESS)
@@ -595,7 +623,7 @@ private fun CurrentInspectionSplitView() {
                             nodes = nodes.toMutableList().also { removeById(node.id, it) }
                         },
                         onEdit = { node ->
-                            // Abrir diÃ¡logo en modo ediciÃ³n y precargar datos desde BD
+                            // Abrir diálogo en modo edición y precargar datos desde BD
                             newUbError = null
                             editingUbId = node.id
                             showNewUbDialog = true
@@ -627,7 +655,6 @@ private fun CurrentInspectionSplitView() {
                         }
                     )
                 }
-
             }
 
             // Handle horizontal
@@ -663,13 +690,12 @@ private fun CurrentInspectionSplitView() {
                         val cur = findById(selectedId, nodes)
                         cur?.baselines?.remove(b)
                     },
-                    modifier = Modifier.fillMaxSize()  // â† asegura ocupar todo el espacio
+                    modifier = Modifier.fillMaxSize()  // ← asegura ocupar todo el espacio
                 )
             }
         }
     }
 }
-
 
 @Composable
 private fun CellPanel(
@@ -697,7 +723,7 @@ private fun CellPanel(
 }
 
 // -------------------------
-// Modelo de datos / utilerÃ­a
+// Modelo de datos / utilería
 // -------------------------
 
 private data class TreeNode(
@@ -794,51 +820,57 @@ private fun SimpleTreeView(
                 val n = item.node
                 val isSelected = selectedId == n.id
                 Column(Modifier.background(if (isSelected) selColor else Color.Transparent)) {
-                Row(
-                    Modifier
-                        .padding(start = (item.depth * TREE_INDENT.value).dp, end = TREE_SPACING),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    if (item.hasChildren) {
-                        Icon(
-                            imageVector = if (item.expanded) Icons.Filled.ExpandMore else Icons.Filled.ChevronRight,
-                            contentDescription = null,
-                            modifier = Modifier
-                                .size(TREE_TOGGLE_SIZE)
-                                .clickable { onToggle(n.id) }
+                    Row(
+                        Modifier
+                            .padding(start = (item.depth * TREE_INDENT.value).dp, end = TREE_SPACING),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (item.hasChildren) {
+                            Icon(
+                                imageVector = if (item.expanded) Icons.Filled.ExpandMore else Icons.Filled.ChevronRight,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .size(TREE_TOGGLE_SIZE)
+                                    .clickable { onToggle(n.id) }
+                            )
+                        } else {
+                            Spacer(Modifier.width(TREE_TOGGLE_SIZE))
+                        }
+                        // Icono según esEquipo (mapeado en 'verified' desde BD)
+                        val (nodeIcon, tintColor) = if (n.verified) {
+                            Icons.Outlined.Traffic to ICON_EQUIPO_COLOR
+                        } else {
+                            Icons.Outlined.DragIndicator to ICON_NO_EQUIPO_COLOR
+                        }
+                        Icon(nodeIcon, contentDescription = null, tint = tintColor, modifier = Modifier.size(TREE_ICON_SIZE))
+                        Spacer(Modifier.width(TREE_SPACING))
+                        Text(
+                            n.title,
+                            color = if (n.id == highlightedId) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.clickable { onSelect(n.id) }
                         )
-                    } else {
-                        Spacer(Modifier.width(TREE_TOGGLE_SIZE))
                     }
-                    // Icono segÃºn esEquipo (mapeado en 'verified' desde BD)
-                    val (nodeIcon, tintColor) = if (n.verified) {
-                        Icons.Outlined.Traffic to ICON_EQUIPO_COLOR
-                    } else {
-                        Icons.Outlined.DragIndicator to ICON_NO_EQUIPO_COLOR
-                    }
-                    Icon(nodeIcon, contentDescription = null, tint = tintColor, modifier = Modifier.size(TREE_ICON_SIZE))
-                    Spacer(Modifier.width(TREE_SPACING))
-                    Text(
-                        n.title,
-                        color = if (n.id == highlightedId) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.clickable { onSelect(n.id) }
-                    )
-                }
-                Divider(thickness = DIVIDER_THICKNESS)
+                    Divider(thickness = DIVIDER_THICKNESS)
                 }
             }
         }
     }
 }
+
 // -------------------------
 // Tablas
 // -------------------------
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
-private fun DetailsTable(children: List<TreeNode>,modifier: Modifier = Modifier, onDelete: (TreeNode) -> Unit, onEdit: (TreeNode) -> Unit) {
+private fun DetailsTable(
+    children: List<TreeNode>,
+    modifier: Modifier = Modifier,
+    onDelete: (TreeNode) -> Unit,
+    onEdit: (TreeNode) -> Unit
+) {
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val hScroll = rememberScrollState()
         val minWidth = DETAILS_TABLE_MIN_WIDTH
@@ -852,8 +884,8 @@ private fun DetailsTable(children: List<TreeNode>,modifier: Modifier = Modifier,
                         .background(MaterialTheme.colorScheme.surface)
                         .padding(vertical = 4.dp, horizontal = 8.dp)
                 ) {
-                    HeaderCell("Ubicacion", 3)
-                    HeaderCell("Codigo de barras", 2)
+                    HeaderCell("ubicacion", 3)
+                    HeaderCell("Código de barras", 2)
                     HeaderCell("Estatus", 2)
                     HeaderCell("Op", 1)
                 }
@@ -914,13 +946,13 @@ private fun ListTabs(
     onDeleteBaseline: (Baseline) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // Nota: mostramos versiones ligadas a BD; no usamos listas calculadas por nodo aquÃ­
+    // Nota: mostramos versiones ligadas a BD; no usamos listas calculadas por nodo aquí
     var tab by rememberSaveable { mutableStateOf(0) }
 
     Column(Modifier.fillMaxSize()) {
         TabRow(selectedTabIndex = tab) {
-            Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text("Listado de problemas") })
-            Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text("Listado Base Line") })
+            Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text(stringResource(com.example.etic.R.string.tab_problemas)) })
+            Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text(stringResource(com.example.etic.R.string.tab_baseline)) })
         }
         Divider(thickness = DIVIDER_THICKNESS)
         when (tab) {
@@ -930,7 +962,7 @@ private fun ListTabs(
     }
 }
 
-// Encuentra el camino (ids) desde la raÃ­z hasta el nodo cuyo codigo de barras coincide exactamente
+// Encuentra el camino (ids) desde la raíz hasta el nodo cuyo Código de barras coincide exactamente
 private fun findPathByBarcode(list: List<TreeNode>, barcode: String): List<String>? {
     fun dfs(n: TreeNode, path: List<String>): List<String>? {
         if ((n.barcode ?: "") == barcode) return path + n.id
@@ -978,7 +1010,7 @@ private fun buildTreeFromUbicaciones(rows: List<com.example.etic.data.local.enti
     return roots
 }
 
-// Profundidad del nodo por id (0 = raÃ­z). Si no se encuentra, devuelve 0
+// Profundidad del nodo por id (0 = raíz). Si no se encuentra, devuelve 0
 private fun depthOfId(list: List<TreeNode>, targetId: String): Int {
     fun dfs(n: TreeNode, depth: Int): Int? {
         if (n.id == targetId) return depth
@@ -995,7 +1027,7 @@ private fun depthOfId(list: List<TreeNode>, targetId: String): Int {
     return 0
 }
 
-// Ruta de tÃ­tulos desde la raÃ­z hasta el nodo indicado
+// Ruta de títulos desde la raíz hasta el nodo indicado
 private fun titlePathForId(list: List<TreeNode>, targetId: String): List<String> {
     fun dfs(n: TreeNode, path: List<String>): List<String>? {
         val newPath = path + n.title
@@ -1013,7 +1045,7 @@ private fun titlePathForId(list: List<TreeNode>, targetId: String): List<String>
     return emptyList()
 }
 
-// Retorna el conjunto de Id_Ubicacion del nodo seleccionado y todos sus descendientes
+// Retorna el conjunto de Id_ubicacion del nodo seleccionado y todos sus descendientes
 private fun descendantIds(
     all: List<com.example.etic.data.local.entities.Ubicacion>,
     rootId: String
@@ -1062,22 +1094,22 @@ private fun ProblemsTable(problems: List<Problem>, onDelete: (Problem) -> Unit) 
                 .background(MaterialTheme.colorScheme.surface)
                 .padding(vertical = 8.dp, horizontal = 8.dp)
         ) {
-            cell(1) { Text("No") }
-            cell(2) { Text("Fecha") }
-            cell(2) { Text("Num InspecciÃ³n") }
-            cell(2) { Text("Tipo") }
-            cell(2) { Text("Estatus") }
-            cell(1) { Text("Cronico") }
-            cell(1) { Text("Temp Â°C") }
-            cell(1) { Text("Delta T Â°C") }
-            cell(2) { Text("Severidad") }
-            cell(2) { Text("Equipo") }
-            cell(3) { Text("Comentarios") }
-            cell(1) { Text("Op") }
+            cell(1) { Text(stringResource(com.example.etic.R.string.col_numero)) }
+            cell(2) { Text(stringResource(com.example.etic.R.string.col_fecha)) }
+            cell(2) { Text(stringResource(com.example.etic.R.string.col_num_inspeccion)) }
+            cell(2) { Text(stringResource(com.example.etic.R.string.col_tipo)) }
+            cell(2) { Text(stringResource(com.example.etic.R.string.col_estatus)) }
+            cell(1) { Text(stringResource(com.example.etic.R.string.col_cronico)) }
+            cell(1) { Text(stringResource(com.example.etic.R.string.col_temp_c)) }
+            cell(1) { Text(stringResource(com.example.etic.R.string.col_delta_t_c)) }
+            cell(2) { Text(stringResource(com.example.etic.R.string.col_severidad)) }
+            cell(2) { Text(stringResource(com.example.etic.R.string.col_equipo)) }
+            cell(3) { Text(stringResource(com.example.etic.R.string.col_comentarios)) }
+            cell(1) { Text(stringResource(com.example.etic.R.string.col_op)) }
         }
         Divider(thickness = DIVIDER_THICKNESS)
         if (problems.isEmpty()) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Sin problemas") }
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(stringResource(com.example.etic.R.string.msg_sin_problemas)) }
         } else {
             LazyColumn(Modifier.fillMaxSize()) {
                 items(problems) { p ->
@@ -1123,20 +1155,20 @@ private fun BaselineTable(baselines: List<Baseline>, onDelete: (Baseline) -> Uni
                 .background(MaterialTheme.colorScheme.surface)
                 .padding(vertical = 8.dp, horizontal = 8.dp)
         ) {
-            cell(2) { Text("No InpexxiÃ³n") }
-            cell(2) { Text("Equipo") }
-            cell(2) { Text("Fecha") }
-            cell(1) { Text("MTA Â°C") }
-            cell(1) { Text("Temp Â°C") }
-            cell(1) { Text("Amb Â°C") }
+            cell(2) { Text(stringResource(com.example.etic.R.string.col_no_inspeccion)) }
+            cell(2) { Text(stringResource(com.example.etic.R.string.col_equipo)) }
+            cell(2) { Text(stringResource(com.example.etic.R.string.col_fecha)) }
+            cell(1) { Text(stringResource(com.example.etic.R.string.col_mta_c)) }
+            cell(1) { Text(stringResource(com.example.etic.R.string.col_temp_c)) }
+            cell(1) { Text(stringResource(com.example.etic.R.string.col_amb_c)) }
             cell(1) { Icon(Icons.Outlined.Image, contentDescription = null) }
             cell(1) { Icon(Icons.Outlined.Image, contentDescription = null) }
             cell(3) { Text("Notas") }
-            cell(1) { Text("Op") }
+            cell(1) { Text(stringResource(com.example.etic.R.string.col_op)) }
         }
         Divider(thickness = DIVIDER_THICKNESS)
         if (baselines.isEmpty()) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Sin base line") }
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(stringResource(com.example.etic.R.string.msg_sin_baseline)) }
         } else {
             LazyColumn(Modifier.fillMaxSize()) {
                 items(baselines) { b ->
@@ -1286,7 +1318,7 @@ private fun BaselineTableFromDatabase(selectedId: String?) {
 }
 
 // -------------------------
-// DB-backed Ubicaciones flat list (fallback)
+// DB-backed ubicaciones flat list (fallback)
 // -------------------------
 
 @Composable
@@ -1309,15 +1341,11 @@ private fun UbicacionesFlatListFromDatabase(modifier: Modifier = Modifier) {
                     val sub = listOfNotNull(
                         u.codigoBarras?.takeIf { it.isNotBlank() }?.let { "CB: $it" },
                         u.idUbicacionPadre?.takeIf { it.isNotBlank() }?.let { "Padre: $it" }
-                    ).joinToString("  â€¢  ")
+                    ).joinToString("  •  ")
                     if (sub.isNotEmpty()) Text(sub, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                    Divider(thickness = DIVIDER_THICKNESS)
+                Divider(thickness = DIVIDER_THICKNESS)
             }
         }
     }
 }
-
-
-
-
