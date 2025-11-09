@@ -336,7 +336,8 @@ private fun CurrentInspectionSplitView() {
                                         return@Button
                                     }
                                     val isEdit = editingUbId != null
-                                    val id = editingUbId ?: java.util.UUID.randomUUID().toString()
+                                    // ID aleatorio en mayúsculas y único por su naturaleza (UUID)
+                                    val id = editingUbId ?: java.util.UUID.randomUUID().toString().uppercase()
                                     if (!isEdit && selectedId == null) {
                                         newUbError = "Selecciona una ubicacion en el arbol"
                                         return@Button
@@ -356,10 +357,14 @@ private fun CurrentInspectionSplitView() {
                                         depthOfId(nodes, parentId) + 1
                                     } ?: 0
                                     // Ruta: path de títulos del padre + nombre
-                                    val ruta = parentForCalc?.let { parentId ->
-                                        val titles = titlePathForId(nodes, parentId)
-                                        if (titles.isNotEmpty()) titles.joinToString(" / ") + " / " + name else name
-                                    } ?: name
+                                    val ruta = when {
+                                        parentForCalc == "0" -> "$rootTitle / $name"
+                                        parentForCalc != null -> {
+                                            val titles = titlePathForId(nodes, parentForCalc)
+                                            if (titles.isNotEmpty()) titles.joinToString(" / ") + " / " + name else name
+                                        }
+                                        else -> "$rootTitle / $name"
+                                    }
                                     scope.launch {
                                         val nowTs = java.time.LocalDateTime.now()
                                             .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
@@ -368,7 +373,8 @@ private fun CurrentInspectionSplitView() {
                                         val nueva = com.example.etic.data.local.entities.Ubicacion(
                                             idUbicacion = id,
                                             idUbicacionPadre = parentForCalc,
-                                            idSitio = currentSitioId,
+                                            // Siempre tomar Id_Sitio de la inspección actual
+                                            idSitio = currentInspection?.idSitio,
                                             nivelArbol = nivel,
                                             ubicacion = name,
                                             descripcion = newUbDesc.trim().ifBlank { null },
@@ -403,12 +409,13 @@ private fun CurrentInspectionSplitView() {
                                                     selected = "0",
                                                     creadoPor = currentUserId,
                                                     fechaCreacion = java.time.LocalDateTime.now().toString(),
-                                                    idSitio = currentSitioId
+                                                    // Id_Sitio desde datos globales de la inspección
+                                                    idSitio = currentInspection?.idSitio
                                                 )
                                                 runCatching { inspeccionDetDao.update(det) }
                                             } else {
-                                                val detId = java.util.UUID.randomUUID().toString()
-                                                val inspId = java.util.UUID.randomUUID().toString()
+                                                val detId = java.util.UUID.randomUUID().toString().uppercase()
+                                                val inspId = java.util.UUID.randomUUID().toString().uppercase()
                                                 val det = com.example.etic.data.local.entities.InspeccionDet(
                                                     idInspeccionDet = detId,
                                                     idInspeccion = inspId,
@@ -421,7 +428,8 @@ private fun CurrentInspectionSplitView() {
                                                     selected = "0",
                                                     creadoPor = currentUserId,
                                                     fechaCreacion = java.time.LocalDateTime.now().toString(),
-                                                    idSitio = currentSitioId
+                                                    // Id_Sitio desde datos globales de la inspección
+                                                    idSitio = currentInspection?.idSitio
                                                 )
                                                 runCatching { inspeccionDetDao.insert(det) }
                                             }
