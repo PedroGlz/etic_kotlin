@@ -332,24 +332,31 @@ private fun CurrentInspectionSplitView() {
                                         val titles = titlePathForId(nodes, parentId)
                                         if (titles.isNotEmpty()) titles.joinToString(" / ") + " / " + name else name
                                     } ?: name
-                                    val nueva = com.example.etic.data.local.entities.Ubicacion(
-                                        idUbicacion = id,
-                                        idUbicacionPadre = parentForCalc,
-                                        idSitio = currentSitioId,
-                                        nivelArbol = nivel,
-                                        ubicacion = name,
-                                        descripcion = newUbDesc.trim().ifBlank { null },
-                                        esEquipo = if (newUbEsEquipo) "SI" else "NO",
-                                        codigoBarras = newUbBarcode.trim().ifBlank { null },
-                                        fabricante = newUbFabricanteId,
-                                        ruta = ruta,
-                                        estatus = "Activo",
-                                        creadoPor = currentUserId,
-                                        fechaCreacion = java.time.LocalDateTime.now().toString(),
-                                        idTipoPrioridad = newUbPrioridadId,
-                                        idInspeccion = null
-                                    )
                                     scope.launch {
+                                        val nowTs = java.time.LocalDateTime.now()
+                                            .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+                                        val existing = if (isEdit) runCatching { ubicacionDao.getById(id) }.getOrNull() else null
+
+                                        val nueva = com.example.etic.data.local.entities.Ubicacion(
+                                            idUbicacion = id,
+                                            idUbicacionPadre = parentForCalc,
+                                            idSitio = currentSitioId,
+                                            nivelArbol = nivel,
+                                            ubicacion = name,
+                                            descripcion = newUbDesc.trim().ifBlank { null },
+                                            esEquipo = if (newUbEsEquipo) "SI" else "NO",
+                                            codigoBarras = newUbBarcode.trim().ifBlank { null },
+                                            fabricante = newUbFabricanteId,
+                                            ruta = ruta,
+                                            estatus = "Activo",
+                                            creadoPor = currentUserId,
+                                            fechaCreacion = existing?.fechaCreacion ?: nowTs,
+                                            modificadoPor = if (isEdit) currentUserId else null,
+                                            fechaMod = if (isEdit) nowTs else null,
+                                            idTipoPrioridad = newUbPrioridadId,
+                                            idInspeccion = null
+                                        )
+
                                         val okUb = runCatching {
                                             if (isEdit) ubicacionDao.update(nueva) else ubicacionDao.insert(nueva)
                                         }.isSuccess

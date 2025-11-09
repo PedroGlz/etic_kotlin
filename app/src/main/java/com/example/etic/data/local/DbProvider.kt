@@ -18,4 +18,11 @@ object DbProvider {
                 .build()
                 .also { INSTANCE = it }
         }
+
+    fun closeAndReset() {
+        synchronized(this) {
+            try { INSTANCE?.close() } catch (_: Exception) { }
+            INSTANCE = null
+        }
+    }
 }
