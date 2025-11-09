@@ -1,4 +1,4 @@
-package com.example.etic.features.inspection.ui.home
+﻿package com.example.etic.features.inspection.ui.home
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
@@ -62,27 +62,28 @@ import com.example.etic.data.local.entities.EstatusInspeccionDet
 import kotlinx.coroutines.flow.first
 import com.example.etic.core.session.SessionManager
 import com.example.etic.core.session.sessionDataStore
+import com.example.etic.core.current.LocalCurrentInspection
 
 // Centralizamos algunos "magic numbers" para facilitar ajuste futuro
-private const val MIN_FRAC: Float = 0.2f     // Límite inferior de los splitters
-private const val MAX_FRAC: Float = 0.8f     // Límite superior de los splitters
-private const val H_INIT_FRAC: Float = 0.6f  // Fracción inicial del panel superior
-private const val V_INIT_FRAC: Float = 0.5f  // Fracción inicial del panel izquierdo
+private const val MIN_FRAC: Float = 0.2f     // LÃ­mite inferior de los splitters
+private const val MAX_FRAC: Float = 0.8f     // LÃ­mite superior de los splitters
+private const val H_INIT_FRAC: Float = 0.6f  // FracciÃ³n inicial del panel superior
+private const val V_INIT_FRAC: Float = 0.5f  // FracciÃ³n inicial del panel izquierdo
 
 private val HANDLE_THICKNESS: Dp = 2.dp      // Grosor de los handles de split
-private val DIVIDER_THICKNESS: Dp = 0.5.dp   // Grosor estándar de divisores/bordes
+private val DIVIDER_THICKNESS: Dp = 0.5.dp   // Grosor estÃ¡ndar de divisores/bordes
 private val PANEL_PADDING: Dp = 12.dp        // Padding interno de cada panel
 private const val SURFACE_VARIANT_ALPHA: Float = 0.4f
 private const val SELECT_ALPHA: Float = 0.10f
 private val ICON_EQUIPO_COLOR: Color = Color(0xFFFFC107)     // Amarillo (Traffic)
 private val ICON_NO_EQUIPO_COLOR: Color = Color(0xFF4CAF50)  // Verde (DragIndicator)
 
-// Ajustes de compacidad para filas del árbol
-private val TREE_TOGGLE_SIZE: Dp = 20.dp   // Tamaño del ícono de expandir/colapsar
-private val TREE_ICON_SIZE: Dp = 18.dp     // Tamaño del ícono del nodo
-private val TREE_SPACING: Dp = 4.dp        // Espaciado horizontal pequeño
-private val TREE_INDENT: Dp = 12.dp        // Indentación por nivel
-// Ancho mínimo para que la tabla de Progreso no se comprima; habilita scroll horizontal si el panel es más angosto
+// Ajustes de compacidad para filas del Ã¡rbol
+private val TREE_TOGGLE_SIZE: Dp = 20.dp   // TamaÃ±o del Ã­cono de expandir/colapsar
+private val TREE_ICON_SIZE: Dp = 18.dp     // TamaÃ±o del Ã­cono del nodo
+private val TREE_SPACING: Dp = 4.dp        // Espaciado horizontal pequeÃ±o
+private val TREE_INDENT: Dp = 12.dp        // IndentaciÃ³n por nivel
+// Ancho mÃ­nimo para que la tabla de Progreso no se comprima; habilita scroll horizontal si el panel es mÃ¡s angosto
 private val DETAILS_TABLE_MIN_WIDTH: Dp = 900.dp
 private val HEADER_ACTION_SPACING: Dp = 8.dp
 
@@ -96,27 +97,35 @@ fun InspectionScreen() {
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
 private fun CurrentInspectionSplitView() {
-    // Usamos constantes para evitar números mágicos in-line
-    var hFrac by rememberSaveable { mutableStateOf(H_INIT_FRAC) } // fracción alto del panel superior
-    var vFrac by rememberSaveable { mutableStateOf(V_INIT_FRAC) } // fracción ancho del panel izquierdo
+    // Usamos constantes para evitar nÃºmeros mÃ¡gicos in-line
+    var hFrac by rememberSaveable { mutableStateOf(H_INIT_FRAC) } // fracciÃ³n alto del panel superior
+    var vFrac by rememberSaveable { mutableStateOf(V_INIT_FRAC) } // fracciÃ³n ancho del panel izquierdo
 
     var nodes by remember { mutableStateOf<List<TreeNode>>(emptyList()) }
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val ubicacionDao = remember { com.example.etic.data.local.DbProvider.get(ctx).ubicacionDao() }
     val usuarioDao = remember { com.example.etic.data.local.DbProvider.get(ctx).usuarioDao() }
     val inspeccionDetDao = remember { com.example.etic.data.local.DbProvider.get(ctx).inspeccionDetDao() }
-    LaunchedEffect(Unit) {
-        val rows = runCatching { ubicacionDao.getAll() }.getOrElse { emptyList() }
-        nodes = buildTreeFromUbicaciones(rows)
-    }
+    val currentInspection = LocalCurrentInspection.current
+    val rootTitle = currentInspection?.nombreSitio ?: "Sitio"
+    val rootId = remember(currentInspection?.idSitio) { (currentInspection?.idSitio?.let { "root:$it" } ?: "root:site") }
     val expanded = remember { mutableStateListOf<String>() }
+    // Reconstruir el árbol cuando llegue/ cambie la inspección actual
+    LaunchedEffect(rootId, rootTitle) {
+        val rows = runCatching { ubicacionDao.getAll() }.getOrElse { emptyList() }
+        val roots = buildTreeFromUbicaciones(rows)
+        val siteRoot = TreeNode(id = rootId, title = rootTitle)
+        siteRoot.children.addAll(roots)
+        nodes = listOf(siteRoot)
+        if (!expanded.contains(rootId)) expanded.add(rootId)
+    }
     var selectedId by remember { mutableStateOf<String?>(null) }
     var highlightedId by remember { mutableStateOf<String?>(null) }
 
     val borderColor = DividerDefaults.color
 
     BoxWithConstraints(Modifier.fillMaxSize()) {
-        // ✅ Convierte dimensiones del BoxWithConstraints a píxeles de forma segura
+        // âœ… Convierte dimensiones del BoxWithConstraints a pÃ­xeles de forma segura
         val density = LocalDensity.current
         val totalWidthPx = with(density) { maxWidth.value * density.density }
         val totalHeightPx = with(density) { maxHeight.value * density.density }
@@ -166,7 +175,7 @@ private fun CurrentInspectionSplitView() {
             var editingInspId by remember { mutableStateOf<String?>(null) }
             val scope = rememberCoroutineScope()
 
-            // Preseleccionar estatus por defecto al abrir el diálogo
+            // Preseleccionar estatus por defecto al abrir el diÃ¡logo
             LaunchedEffect(showNewUbDialog) {
                 if (showNewUbDialog) {
                     val defaultId = "568798D1-76BB-11D3-82BF-00104BC75DC2"
@@ -178,7 +187,7 @@ private fun CurrentInspectionSplitView() {
                         newUbStatusId = null
                         newUbStatusLabel = ""
                     }
-                    // Obtener usuario de sesión y su sitio
+                    // Obtener usuario de sesiÃ³n y su sitio
                     val session = SessionManager(ctx.sessionDataStore)
                     val username = runCatching { session.username.first() }.getOrNull()
                     if (!username.isNullOrBlank()) {
@@ -259,7 +268,7 @@ private fun CurrentInspectionSplitView() {
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),
                     shape = RoundedCornerShape(8.dp) // Bordes ligeramente redondeados (casi cuadrado)
                 ) {
-                    Text("Nueva ubicación", color = Color.White)
+                    Text("Nueva ubicaciÃ³n", color = Color.White)
                 }
 
             }
@@ -286,10 +295,14 @@ private fun CurrentInspectionSplitView() {
                                 }
                                 val isEdit = editingUbId != null
                                 val id = editingUbId ?: java.util.UUID.randomUUID().toString()
-                                val parentForCalc = if (isEdit) editingParentId else selectedId
-                                // Nivel del árbol: si hay padre, nivel del padre + 1, sino 0
+                                if (!isEdit && selectedId == null) {
+                                    newUbError = "Selecciona una ubicación en el árbol"
+                                    return@Button
+                                }
+                                val parentForCalc = if (isEdit) editingParentId else selectedId?.takeUnless { it == rootId }
+                                // Nivel del Ã¡rbol: si hay padre, nivel del padre + 1, sino 0
                                 val nivel = parentForCalc?.let { parentId -> depthOfId(nodes, parentId) + 1 } ?: 0
-                                // Ruta: path de títulos del padre + nombre
+                                // Ruta: path de tÃ­tulos del padre + nombre
                                 val ruta = parentForCalc?.let { parentId ->
                                     val titles = titlePathForId(nodes, parentId)
                                     if (titles.isNotEmpty()) titles.joinToString(" / ") + " / " + name else name
@@ -314,7 +327,7 @@ private fun CurrentInspectionSplitView() {
                                 scope.launch {
                                     val okUb = runCatching { if (isEdit) ubicacionDao.update(nueva) else ubicacionDao.insert(nueva) }.isSuccess
                                     if (okUb) {
-                                        // Crear/actualizar inspecciones_det ligada a la ubicación
+                                        // Crear/actualizar inspecciones_det ligada a la ubicaciÃ³n
                                         if (isEdit && editingDetId != null) {
                                             val det = com.example.etic.data.local.entities.InspeccionDet(
                                                 idInspeccionDet = editingDetId!!,
@@ -351,7 +364,11 @@ private fun CurrentInspectionSplitView() {
                                             runCatching { inspeccionDetDao.insert(det) }
                                         }
                                         val rows = runCatching { ubicacionDao.getAll() }.getOrElse { emptyList() }
-                                        nodes = buildTreeFromUbicaciones(rows)
+                                        val roots = buildTreeFromUbicaciones(rows)
+                                        val siteRoot = TreeNode(id = rootId, title = rootTitle)
+                                        siteRoot.children.addAll(roots)
+                                        nodes = listOf(siteRoot)
+                                        if (!expanded.contains(rootId)) expanded.add(rootId)
                                         newUbName = ""
                                         newUbDesc = ""
                                         newUbEsEquipo = false
@@ -370,14 +387,14 @@ private fun CurrentInspectionSplitView() {
                                         showNewUbDialog = false
                                         selectedId?.let { pid -> if (!expanded.contains(pid)) expanded.add(pid) }
                                     } else {
-                                        newUbError = "No se pudo guardar la ubicación"
+                                        newUbError = "No se pudo guardar la ubicaciÃ³n"
                                     }
                                 }
                             }) { Text("Guardar") }
                         }
                     },
                     dismissButton = { },
-                    title = { Text("Nueva ubicación") },
+                    title = { Text("Nueva ubicaciÃ³n") },
                     text = {
                         Box(Modifier.fillMaxWidth().widthIn(min = 520.dp)) {
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -390,7 +407,7 @@ private fun CurrentInspectionSplitView() {
                                     value = if (newUbStatusLabel.isNotBlank()) newUbStatusLabel else "Seleccionar estatus",
                                     onValueChange = {},
                                     readOnly = true,
-                                    label = { Text("Estatus de inspección") },
+                                    label = { Text("Estatus de inspecciÃ³n") },
                                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = newUbStatusExpanded) },
                                     modifier = Modifier.menuAnchor().fillMaxWidth()
                                 )
@@ -484,27 +501,27 @@ private fun CurrentInspectionSplitView() {
                                 singleLine = true,
                                 label = {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text("Nombre de la ubicación")
+                                        Text("Nombre de la ubicaciÃ³n")
                                         Text(" *", color = MaterialTheme.colorScheme.error)
                                     }
                                 },
                                 isError = newUbError != null,
                                 modifier = Modifier.fillMaxWidth()
                             )
-                            // Descripción
+                            // DescripciÃ³n
                             TextField(
                                 value = newUbDesc,
                                 onValueChange = { newUbDesc = it },
                                 singleLine = false,
-                                label = { Text("Descripción") },
+                                label = { Text("DescripciÃ³n") },
                                 modifier = Modifier.fillMaxWidth()
                             )
-                            // Código de barras
+                            // CÃ³digo de barras
                             TextField(
                                 value = newUbBarcode,
                                 onValueChange = { newUbBarcode = it },
                                 singleLine = true,
-                                label = { Text("Código de barras") },
+                                label = { Text("CÃ³digo de barras") },
                                 modifier = Modifier.fillMaxWidth()
                             )
                             Row(verticalAlignment = Alignment.CenterVertically) { }
@@ -534,16 +551,16 @@ private fun CurrentInspectionSplitView() {
                             highlightedId = highlightedId,
                             onToggle = { id -> if (!expanded.remove(id)) expanded.add(id) },
                             onSelect = { id -> selectedId = id },
-                            modifier = Modifier.fillMaxSize() // ← ocupa todo el panel
+                            modifier = Modifier.fillMaxSize() // â† ocupa todo el panel
                         )
                     } else {
                         UbicacionesFlatListFromDatabase(
-                            modifier = Modifier.fillMaxSize() // ← ocupa todo el panel
+                            modifier = Modifier.fillMaxSize() // â† ocupa todo el panel
                         )
                     }
                 }
 
-                // Handle vertical (más suave)
+                // Handle vertical (mÃ¡s suave)
                 Box(
                     Modifier
                         .width(HANDLE_THICKNESS)
@@ -578,7 +595,7 @@ private fun CurrentInspectionSplitView() {
                             nodes = nodes.toMutableList().also { removeById(node.id, it) }
                         },
                         onEdit = { node ->
-                            // Abrir diálogo en modo edición y precargar datos desde BD
+                            // Abrir diÃ¡logo en modo ediciÃ³n y precargar datos desde BD
                             newUbError = null
                             editingUbId = node.id
                             showNewUbDialog = true
@@ -646,7 +663,7 @@ private fun CurrentInspectionSplitView() {
                         val cur = findById(selectedId, nodes)
                         cur?.baselines?.remove(b)
                     },
-                    modifier = Modifier.fillMaxSize()  // ← asegura ocupar todo el espacio
+                    modifier = Modifier.fillMaxSize()  // â† asegura ocupar todo el espacio
                 )
             }
         }
@@ -680,7 +697,7 @@ private fun CellPanel(
 }
 
 // -------------------------
-// Modelo de datos / utilería
+// Modelo de datos / utilerÃ­a
 // -------------------------
 
 private data class TreeNode(
@@ -793,7 +810,7 @@ private fun SimpleTreeView(
                     } else {
                         Spacer(Modifier.width(TREE_TOGGLE_SIZE))
                     }
-                    // Icono según esEquipo (mapeado en 'verified' desde BD)
+                    // Icono segÃºn esEquipo (mapeado en 'verified' desde BD)
                     val (nodeIcon, tintColor) = if (n.verified) {
                         Icons.Outlined.Traffic to ICON_EQUIPO_COLOR
                     } else {
@@ -897,7 +914,7 @@ private fun ListTabs(
     onDeleteBaseline: (Baseline) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    // Nota: mostramos versiones ligadas a BD; no usamos listas calculadas por nodo aquí
+    // Nota: mostramos versiones ligadas a BD; no usamos listas calculadas por nodo aquÃ­
     var tab by rememberSaveable { mutableStateOf(0) }
 
     Column(Modifier.fillMaxSize()) {
@@ -913,7 +930,7 @@ private fun ListTabs(
     }
 }
 
-// Encuentra el camino (ids) desde la raíz hasta el nodo cuyo codigo de barras coincide exactamente
+// Encuentra el camino (ids) desde la raÃ­z hasta el nodo cuyo codigo de barras coincide exactamente
 private fun findPathByBarcode(list: List<TreeNode>, barcode: String): List<String>? {
     fun dfs(n: TreeNode, path: List<String>): List<String>? {
         if ((n.barcode ?: "") == barcode) return path + n.id
@@ -955,17 +972,13 @@ private fun buildTreeFromUbicaciones(rows: List<com.example.etic.data.local.enti
         }
     }
 
-    fun sortRec(n: TreeNode) {
-        n.children.sortBy { it.title }
-        n.children.forEach { sortRec(it) }
-    }
-    roots.sortBy { it.title }
-    roots.forEach { sortRec(it) }
+    // Importante: no reordenar aquí; 'rows' ya viene ordenado por Fecha_Creacion ASC desde el DAO.
+    // Mantener el orden de inserción garantiza que raíces e hijos respeten ese orden.
 
     return roots
 }
 
-// Profundidad del nodo por id (0 = raíz). Si no se encuentra, devuelve 0
+// Profundidad del nodo por id (0 = raÃ­z). Si no se encuentra, devuelve 0
 private fun depthOfId(list: List<TreeNode>, targetId: String): Int {
     fun dfs(n: TreeNode, depth: Int): Int? {
         if (n.id == targetId) return depth
@@ -982,7 +995,7 @@ private fun depthOfId(list: List<TreeNode>, targetId: String): Int {
     return 0
 }
 
-// Ruta de títulos desde la raíz hasta el nodo indicado
+// Ruta de tÃ­tulos desde la raÃ­z hasta el nodo indicado
 private fun titlePathForId(list: List<TreeNode>, targetId: String): List<String> {
     fun dfs(n: TreeNode, path: List<String>): List<String>? {
         val newPath = path + n.title
@@ -1051,12 +1064,12 @@ private fun ProblemsTable(problems: List<Problem>, onDelete: (Problem) -> Unit) 
         ) {
             cell(1) { Text("No") }
             cell(2) { Text("Fecha") }
-            cell(2) { Text("Num Inspección") }
+            cell(2) { Text("Num InspecciÃ³n") }
             cell(2) { Text("Tipo") }
             cell(2) { Text("Estatus") }
             cell(1) { Text("Cronico") }
-            cell(1) { Text("Temp °C") }
-            cell(1) { Text("Delta T °C") }
+            cell(1) { Text("Temp Â°C") }
+            cell(1) { Text("Delta T Â°C") }
             cell(2) { Text("Severidad") }
             cell(2) { Text("Equipo") }
             cell(3) { Text("Comentarios") }
@@ -1110,12 +1123,12 @@ private fun BaselineTable(baselines: List<Baseline>, onDelete: (Baseline) -> Uni
                 .background(MaterialTheme.colorScheme.surface)
                 .padding(vertical = 8.dp, horizontal = 8.dp)
         ) {
-            cell(2) { Text("No Inpexxión") }
+            cell(2) { Text("No InpexxiÃ³n") }
             cell(2) { Text("Equipo") }
             cell(2) { Text("Fecha") }
-            cell(1) { Text("MTA °C") }
-            cell(1) { Text("Temp °C") }
-            cell(1) { Text("Amb °C") }
+            cell(1) { Text("MTA Â°C") }
+            cell(1) { Text("Temp Â°C") }
+            cell(1) { Text("Amb Â°C") }
             cell(1) { Icon(Icons.Outlined.Image, contentDescription = null) }
             cell(1) { Icon(Icons.Outlined.Image, contentDescription = null) }
             cell(3) { Text("Notas") }
@@ -1296,7 +1309,7 @@ private fun UbicacionesFlatListFromDatabase(modifier: Modifier = Modifier) {
                     val sub = listOfNotNull(
                         u.codigoBarras?.takeIf { it.isNotBlank() }?.let { "CB: $it" },
                         u.idUbicacionPadre?.takeIf { it.isNotBlank() }?.let { "Padre: $it" }
-                    ).joinToString("  •  ")
+                    ).joinToString("  â€¢  ")
                     if (sub.isNotEmpty()) Text(sub, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                     Divider(thickness = DIVIDER_THICKNESS)
@@ -1304,6 +1317,7 @@ private fun UbicacionesFlatListFromDatabase(modifier: Modifier = Modifier) {
         }
     }
 }
+
 
 
 

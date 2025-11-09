@@ -10,10 +10,10 @@ import com.example.etic.data.local.entities.Ubicacion
 @Dao
 interface UbicacionDao {
 
-    @Query("SELECT * FROM ubicaciones WHERE Estatus = 'Activo'")
+    @Query("SELECT * FROM ubicaciones WHERE Estatus = 'Activo' ORDER BY Fecha_Creacion ASC")
     suspend fun getAllActivas(): List<Ubicacion>
 
-    @Query("SELECT * FROM ubicaciones")
+    @Query("SELECT * FROM ubicaciones ORDER BY Fecha_Creacion ASC")
     suspend fun getAll(): List<Ubicacion>
 
     @Insert(onConflict = OnConflictStrategy.ABORT)
