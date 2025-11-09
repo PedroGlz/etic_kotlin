@@ -152,7 +152,8 @@ private fun CurrentInspectionSplitView() {
                 prioridadOptions = runCatching { prioridadDao.getAllActivas() }.getOrElse { emptyList() }
                 fabricanteOptions = runCatching { fabricanteDao.getAllActivos() }.getOrElse { emptyList() }
             }
-            var searchMessage by remember { mutableStateOf<String?>(null) }
+    var searchMessage by remember { mutableStateOf<String?>(null) }
+    var showNoSelectionDialog by rememberSaveable { mutableStateOf(false) }
             var showNewUbDialog by remember { mutableStateOf(false) }
             var newUbName by rememberSaveable { mutableStateOf("") }
             var newUbEsEquipo by rememberSaveable { mutableStateOf(false) }
@@ -277,7 +278,14 @@ private fun CurrentInspectionSplitView() {
                 Spacer(Modifier.width(HEADER_ACTION_SPACING))
 
                 Button(
-                    onClick = { showNewUbDialog = true },
+                    onClick = {
+                        if (selectedId == null) {
+                            showNoSelectionDialog = true
+                        } else {
+                            searchMessage = null
+                            showNewUbDialog = true
+                        }
+                    },
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),
                     shape = RoundedCornerShape(8.dp) // Bordes ligeramente redondeados (casi cuadrado)
                 ) {
@@ -293,6 +301,18 @@ private fun CurrentInspectionSplitView() {
                 )
             }
             Divider(thickness = DIVIDER_THICKNESS)
+
+            // Diálogo cuando no hay ubicación seleccionada
+            if (showNoSelectionDialog) {
+                AlertDialog(
+                    onDismissRequest = { showNoSelectionDialog = false },
+                    confirmButton = {
+                        Button(onClick = { showNoSelectionDialog = false }) { Text("Aceptar") }
+                    },
+                    title = { Text("Información") },
+                    text = { Text("Debes seleccionar una ubicación para agregar un nuevo elemento.") }
+                )
+            }
 
             if (showNewUbDialog) {
                 AlertDialog(
