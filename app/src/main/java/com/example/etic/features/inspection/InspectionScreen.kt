@@ -342,7 +342,15 @@ private fun CurrentInspectionSplitView() {
                                         return@Button
                                     }
                                     val parentForCalc =
-                                        if (isEdit) editingParentId else selectedId?.takeUnless { it == rootId }
+                                        if (isEdit) {
+                                            editingParentId
+                                        } else {
+                                            when (selectedId) {
+                                                null -> null // ya controlado arriba
+                                                rootId -> "0"
+                                                else -> selectedId
+                                            }
+                                        }
                                     // Nivel del árbol: si hay padre, nivel del padre + 1, sino 0
                                     val nivel = parentForCalc?.let { parentId ->
                                         depthOfId(nodes, parentId) + 1
