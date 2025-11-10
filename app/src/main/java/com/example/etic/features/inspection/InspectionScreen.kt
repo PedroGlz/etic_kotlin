@@ -23,6 +23,7 @@ import androidx.compose.material.icons.outlined.Factory
 import androidx.compose.material.icons.outlined.Traffic
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Image
+import androidx.compose.material.icons.filled.DragIndicator
 import androidx.compose.material3.Divider
 import androidx.compose.material3.DividerDefaults
 import androidx.compose.material3.Icon
@@ -398,6 +399,9 @@ private fun CurrentInspectionSplitView() {
                                         if (okUb) {
                                             // Crear/actualizar Inspecciónes_det ligada a la ubicacion
                                             if (isEdit && editingDetId != null) {
+                                                val existingDet = runCatching {
+                                                    inspeccionDetDao.getByUbicacion(id)
+                                                }.getOrElse { emptyList() }.firstOrNull { it.idInspeccionDet == editingDetId }
                                                 val det = com.example.etic.data.local.entities.InspeccionDet(
                                                     idInspeccionDet = editingDetId!!,
                                                     idInspeccion = editingInspId,
@@ -408,8 +412,10 @@ private fun CurrentInspectionSplitView() {
                                                     idEstatusColorText = 1,
                                                     expanded = "0",
                                                     selected = "0",
-                                                    creadoPor = currentUserId,
-                                                    fechaCreacion = nowTs,
+                                                    creadoPor = existingDet?.creadoPor ?: currentUserId,
+                                                    fechaCreacion = existingDet?.fechaCreacion ?: nowTs,
+                                                    modificadoPor = currentUserId,
+                                                    fechaMod = nowTs,
                                                     // Id_Sitio desde datos globales de la inspección
                                                     idSitio = currentInspection?.idSitio
                                                 )
@@ -429,6 +435,8 @@ private fun CurrentInspectionSplitView() {
                                                     selected = "0",
                                                     creadoPor = currentUserId,
                                                     fechaCreacion = nowTs,
+                                                    modificadoPor = null,
+                                                    fechaMod = null,
                                                     // Id_Sitio desde datos globales de la inspección
                                                     idSitio = currentInspection?.idSitio
                                                 )
@@ -884,7 +892,7 @@ private fun SimpleTreeView(
                         val nodeIcon = when {
                             item.depth == 0 -> Icons.Outlined.Factory
                             n.verified -> Icons.Outlined.Traffic
-                            else -> Icons.Outlined.Image
+                            else -> Icons.Filled.DragIndicator
                         }
                         val tintColor = if (item.depth == 0) ICON_NO_EQUIPO_COLOR else if (n.verified) ICON_EQUIPO_COLOR else ICON_NO_EQUIPO_COLOR
                         Icon(nodeIcon, contentDescription = null, tint = tintColor, modifier = Modifier.size(TREE_ICON_SIZE))
