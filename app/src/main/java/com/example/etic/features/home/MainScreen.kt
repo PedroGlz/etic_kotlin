@@ -25,6 +25,7 @@ import com.example.etic.R
 import com.example.etic.features.inspection.ui.home.InspectionScreen
 import com.example.etic.core.current.LocalCurrentInspection
 import com.example.etic.core.current.ProvideCurrentInspection
+import com.example.etic.core.current.ProvideCurrentUser
 import com.example.etic.core.export.exportRoomDbToDownloads
 import android.widget.Toast
 import kotlinx.coroutines.Dispatchers
@@ -141,6 +142,7 @@ fun MainScreen(
             }
         }
     ) {
+        ProvideCurrentUser {
         ProvideCurrentInspection {
         Scaffold(
             topBar = {
@@ -186,6 +188,7 @@ fun MainScreen(
                     HomeSection.Reports -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Reportes") }
                 }
             }
+        }
         }
         }
     }

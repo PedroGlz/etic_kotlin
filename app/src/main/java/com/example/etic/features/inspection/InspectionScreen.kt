@@ -66,6 +66,7 @@ import kotlinx.coroutines.flow.first
 import com.example.etic.core.session.SessionManager
 import com.example.etic.core.session.sessionDataStore
 import com.example.etic.core.current.LocalCurrentInspection
+import com.example.etic.core.current.LocalCurrentUser
 
 // Centralizamos algunos "magic numbers" para facilitar ajuste futuro
 private const val MIN_FRAC: Float = 0.2f     // Límite inferior de los splitters
@@ -178,6 +179,8 @@ private fun CurrentInspectionSplitView() {
             var editingDetId by remember { mutableStateOf<String?>(null) }
             var editingInspId by remember { mutableStateOf<String?>(null) }
             val scope = rememberCoroutineScope()
+            // Lee el usuario actual del CompositionLocal en contexto @Composable
+            val currentUser = LocalCurrentUser.current
 
             // Preseleccionar estatus por defecto al abrir el diálogo
             LaunchedEffect(showNewUbDialog) {
@@ -191,14 +194,8 @@ private fun CurrentInspectionSplitView() {
                         newUbStatusId = null
                         newUbStatusLabel = ""
                     }
-                    // Obtener usuario de sesión y su sitio
-                    val session = SessionManager(ctx.sessionDataStore)
-                    val username = runCatching { session.username.first() }.getOrNull()
-                    if (!username.isNullOrBlank()) {
-                        val usr = runCatching { usuarioDao.getByUsuario(username) }.getOrNull()
-                        currentUserId = usr?.idUsuario
-                        currentSitioId = usr?.idSitio
-                    }
+                    // Fijar usuario actual leído en composición
+                    currentUserId = currentUser?.idUsuario
                 }
             }
 
@@ -385,7 +382,7 @@ private fun CurrentInspectionSplitView() {
                                             fabricante = newUbFabricanteId,
                                             ruta = ruta,
                                             estatus = "Activo",
-                                            creadoPor = currentUserId,
+                                            creadoPor = existing?.creadoPor ?: currentUserId,
                                             fechaCreacion = existing?.fechaCreacion ?: nowTs,
                                             modificadoPor = if (isEdit) currentUserId else null,
                                             fechaMod = if (isEdit) nowTs else null,
