@@ -18,7 +18,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.DragIndicator
+
+import androidx.compose.material.icons.outlined.Factory
 import androidx.compose.material.icons.outlined.Traffic
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Image
@@ -408,7 +409,7 @@ private fun CurrentInspectionSplitView() {
                                                     expanded = "0",
                                                     selected = "0",
                                                     creadoPor = currentUserId,
-                                                    fechaCreacion = java.time.LocalDateTime.now().toString(),
+                                                    fechaCreacion = nowTs,
                                                     // Id_Sitio desde datos globales de la inspección
                                                     idSitio = currentInspection?.idSitio
                                                 )
@@ -427,7 +428,7 @@ private fun CurrentInspectionSplitView() {
                                                     expanded = "0",
                                                     selected = "0",
                                                     creadoPor = currentUserId,
-                                                    fechaCreacion = java.time.LocalDateTime.now().toString(),
+                                                    fechaCreacion = nowTs,
                                                     // Id_Sitio desde datos globales de la inspección
                                                     idSitio = currentInspection?.idSitio
                                                 )
@@ -622,11 +623,11 @@ private fun CurrentInspectionSplitView() {
                             highlightedId = highlightedId,
                             onToggle = { id -> if (!expanded.remove(id)) expanded.add(id) },
                             onSelect = { id -> selectedId = id },
-                            modifier = Modifier.fillMaxSize() // ← ocupa todo el panel
+                            modifier = Modifier.fillMaxSize() // ? ocupa todo el panel
                         )
                     } else {
                         UbicacionesFlatListFromDatabase(
-                            modifier = Modifier.fillMaxSize() // ← ocupa todo el panel
+                            modifier = Modifier.fillMaxSize() // ? ocupa todo el panel
                         )
                     }
                 }
@@ -733,7 +734,7 @@ private fun CurrentInspectionSplitView() {
                         val cur = findById(selectedId, nodes)
                         cur?.baselines?.remove(b)
                     },
-                    modifier = Modifier.fillMaxSize()  // ← asegura ocupar todo el espacio
+                    modifier = Modifier.fillMaxSize()  // ? asegura ocupar todo el espacio
                 )
             }
         }
@@ -879,12 +880,13 @@ private fun SimpleTreeView(
                         } else {
                             Spacer(Modifier.width(TREE_TOGGLE_SIZE))
                         }
-                        // Icono según esEquipo (mapeado en 'verified' desde BD)
-                        val (nodeIcon, tintColor) = if (n.verified) {
-                            Icons.Outlined.Traffic to ICON_EQUIPO_COLOR
-                        } else {
-                            Icons.Outlined.DragIndicator to ICON_NO_EQUIPO_COLOR
+                        // Icono: nodo raíz (sitio) usa Factory; demás según esEquipo
+                        val nodeIcon = when {
+                            item.depth == 0 -> Icons.Outlined.Factory
+                            n.verified -> Icons.Outlined.Traffic
+                            else -> Icons.Outlined.Image
                         }
+                        val tintColor = if (item.depth == 0) ICON_NO_EQUIPO_COLOR else if (n.verified) ICON_EQUIPO_COLOR else ICON_NO_EQUIPO_COLOR
                         Icon(nodeIcon, contentDescription = null, tint = tintColor, modifier = Modifier.size(TREE_ICON_SIZE))
                         Spacer(Modifier.width(TREE_SPACING))
                         Text(
@@ -1392,3 +1394,6 @@ private fun UbicacionesFlatListFromDatabase(modifier: Modifier = Modifier) {
         }
     }
 }
+
+
+
