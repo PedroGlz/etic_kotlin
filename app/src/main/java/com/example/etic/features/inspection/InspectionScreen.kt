@@ -67,6 +67,9 @@ import com.example.etic.core.session.SessionManager
 import com.example.etic.core.session.sessionDataStore
 import com.example.etic.core.current.LocalCurrentInspection
 import com.example.etic.core.current.LocalCurrentUser
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+
 
 // Centralizamos algunos "magic numbers" para facilitar ajuste futuro
 private const val MIN_FRAC: Float = 0.2f     // Límite inferior de los splitters
@@ -621,27 +624,43 @@ private fun CurrentInspectionSplitView() {
             }
             // -------------------------------------------------------------------------------
 
-            // ------------------ DIÁLOGO: EDITAR UBICACIÓN (3 TABS, Guardar SOLO en Tab1) ------------------
+            // ------------------ DIÁLOGO: EDITAR UBICACIÓN (NUEVO con 3 TABS) ------------------
             if (showEditUbDialog) {
-                AlertDialog(
-                    onDismissRequest = { showEditUbDialog = false },
-                    properties = DialogProperties(usePlatformDefaultWidth = false),
-                    confirmButton = { /* sin botones en el pie */ },
-                    dismissButton = { /* sin botones en el pie */ },
-                    text = {
-                        Column(Modifier.fillMaxWidth().widthIn(min = 520.dp)) {
-                            TabRow(selectedTabIndex = editTab) {
-                                Tab(selected = editTab == 0, onClick = { editTab = 0 }, text = { Text("Ubicación") })
-                                Tab(selected = editTab == 1, onClick = { editTab = 1 }, text = { Text("Base Line") })
-                                Tab(selected = editTab == 2, onClick = { editTab = 2 }, text = { Text("Histórico") })
-                            }
+                androidx.compose.material3.BasicAlertDialog(
+                    onDismissRequest = { showEditUbDialog = false }
+                ) {
+                    androidx.compose.material3.Card(
+                        modifier = Modifier
+                            .widthIn(min = 720.dp, max = 1040.dp)
+                            .heightIn(min = 480.dp, max = 760.dp),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        // Cabecera del diálogo
+                        Column(Modifier.fillMaxSize().padding(16.dp)) {
+                            Text("Editar ubicación", style = MaterialTheme.typography.titleLarge)
                             Spacer(Modifier.height(8.dp))
 
+                            // Tabs
+                            TabRow(selectedTabIndex = editTab) {
+                                Tab(selected = editTab == 0, onClick = { editTab = 0 }, text = { Text("Ubicación") })
+                                Tab(selected = editTab == 1, onClick = { editTab = 1 }, text = { Text("Baseline") })
+                                Tab(selected = editTab == 2, onClick = { editTab = 2 }, text = { Text("Histórico") })
+                            }
+
+                            Spacer(Modifier.height(8.dp))
+
+                            // Contenido de los tabs ocupa el resto del espacio y es scrolleable
                             when (editTab) {
+                                // ====== TAB 1: Formulario edición + botón Guardar dentro del tab ======
                                 0 -> {
-                                    // ====== TAB 1: Formulario de edición + BOTÓN GUARDAR ======
-                                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        // Estatus
+                                    val scroll = rememberScrollState()
+                                    Column(
+                                        Modifier
+                                            .fillMaxSize()
+                                            .verticalScroll(scroll),
+                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        // --- formulario (igual que antes) ---
                                         ExposedDropdownMenuBox(
                                             expanded = newUbStatusExpanded,
                                             onExpandedChange = { newUbStatusExpanded = !newUbStatusExpanded }
@@ -652,9 +671,7 @@ private fun CurrentInspectionSplitView() {
                                                 readOnly = true,
                                                 label = { Text(stringResource(com.example.etic.R.string.label_estatus_inspeccion)) },
                                                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = newUbStatusExpanded) },
-                                                modifier = Modifier
-                                                    .menuAnchor()
-                                                    .fillMaxWidth()
+                                                modifier = Modifier.menuAnchor().fillMaxWidth()
                                             )
                                             DropdownMenu(
                                                 expanded = newUbStatusExpanded,
@@ -674,7 +691,6 @@ private fun CurrentInspectionSplitView() {
                                             }
                                         }
 
-                                        // Prioridad
                                         ExposedDropdownMenuBox(
                                             expanded = newUbPrioridadExpanded,
                                             onExpandedChange = { newUbPrioridadExpanded = !newUbPrioridadExpanded }
@@ -685,9 +701,7 @@ private fun CurrentInspectionSplitView() {
                                                 readOnly = true,
                                                 label = { Text("Tipo de prioridad") },
                                                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = newUbPrioridadExpanded) },
-                                                modifier = Modifier
-                                                    .menuAnchor()
-                                                    .fillMaxWidth()
+                                                modifier = Modifier.menuAnchor().fillMaxWidth()
                                             )
                                             DropdownMenu(
                                                 expanded = newUbPrioridadExpanded,
@@ -707,7 +721,6 @@ private fun CurrentInspectionSplitView() {
                                             }
                                         }
 
-                                        // Fabricante
                                         ExposedDropdownMenuBox(
                                             expanded = newUbFabricanteExpanded,
                                             onExpandedChange = { newUbFabricanteExpanded = !newUbFabricanteExpanded }
@@ -718,9 +731,7 @@ private fun CurrentInspectionSplitView() {
                                                 readOnly = true,
                                                 label = { Text("Fabricante") },
                                                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = newUbFabricanteExpanded) },
-                                                modifier = Modifier
-                                                    .menuAnchor()
-                                                    .fillMaxWidth()
+                                                modifier = Modifier.menuAnchor().fillMaxWidth()
                                             )
                                             DropdownMenu(
                                                 expanded = newUbFabricanteExpanded,
@@ -740,14 +751,12 @@ private fun CurrentInspectionSplitView() {
                                             }
                                         }
 
-                                        // Es equipo
                                         Row(verticalAlignment = Alignment.CenterVertically) {
                                             Text("Es equipo")
                                             Spacer(Modifier.width(12.dp))
                                             Switch(checked = newUbEsEquipo, onCheckedChange = { newUbEsEquipo = it })
                                         }
 
-                                        // Nombre
                                         TextField(
                                             value = newUbName,
                                             onValueChange = { newUbName = it },
@@ -762,7 +771,6 @@ private fun CurrentInspectionSplitView() {
                                             modifier = Modifier.fillMaxWidth()
                                         )
 
-                                        // Descripción
                                         TextField(
                                             value = newUbDesc,
                                             onValueChange = { newUbDesc = it },
@@ -771,7 +779,6 @@ private fun CurrentInspectionSplitView() {
                                             modifier = Modifier.fillMaxWidth()
                                         )
 
-                                        // Código de barras
                                         TextField(
                                             value = newUbBarcode,
                                             onValueChange = { newUbBarcode = it },
@@ -784,40 +791,34 @@ private fun CurrentInspectionSplitView() {
                                             Text(newUbError!!, color = MaterialTheme.colorScheme.error)
                                         }
 
-                                        // -------- Botón GUARDAR sólo en TAB 1 --------
+                                        // Botonera propia del TAB 1 (no en el footer del diálogo)
                                         Row(
-                                            Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.End
-                                        ) {
+                                             Modifier.fillMaxWidth(),
+                                             horizontalArrangement = Arrangement.End
+                                         ) {
                                             Button(
                                                 enabled = newUbName.isNotBlank(),
                                                 onClick = {
-                                                    // Guardar edición (misma lógica que antes)
                                                     val name = newUbName.trim()
                                                     if (name.isEmpty()) {
                                                         newUbError = "El nombre es obligatorio"
                                                         return@Button
                                                     }
                                                     val id = editingUbId ?: return@Button
-
                                                     val parentForCalc = editingParentId
-                                                    val nivel = parentForCalc?.let { parentId ->
-                                                        depthOfId(nodes, parentId) + 1
-                                                    } ?: 0
+                                                    val nivel = parentForCalc?.let { parentId -> depthOfId(nodes, parentId) + 1 } ?: 0
                                                     val ruta = when {
-                                                        parentForCalc == "0" -> "$rootTitle / $name"
+                                                        parentForCalc == "0" -> "${rootTitle} / $name"
                                                         parentForCalc != null -> {
                                                             val titles = titlePathForId(nodes, parentForCalc)
                                                             if (titles.isNotEmpty()) titles.joinToString(" / ") + " / " + name else name
                                                         }
-                                                        else -> "$rootTitle / $name"
+                                                        else -> "${rootTitle} / $name"
                                                     }
-
                                                     scope.launch {
                                                         val nowTs = java.time.LocalDateTime.now()
                                                             .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
                                                         val existing = runCatching { ubicacionDao.getById(id) }.getOrNull()
-
                                                         val nueva = com.example.etic.data.local.entities.Ubicacion(
                                                             idUbicacion = id,
                                                             idUbicacionPadre = parentForCalc,
@@ -837,7 +838,6 @@ private fun CurrentInspectionSplitView() {
                                                             idTipoPrioridad = newUbPrioridadId,
                                                             idInspeccion = existing?.idInspeccion
                                                         )
-
                                                         val okUb = runCatching { ubicacionDao.update(nueva) }.isSuccess
                                                         if (okUb) {
                                                             if (editingDetId != null) {
@@ -869,9 +869,10 @@ private fun CurrentInspectionSplitView() {
                                                             siteRoot.children.addAll(roots)
                                                             nodes = listOf(siteRoot)
                                                             if (!expanded.contains(rootId)) expanded.add(rootId)
-
                                                             newUbError = null
-                                                            showEditUbDialog = false
+                                                            // no cierro para permitir seguir editando si quieres,
+                                                            // si prefieres cerrar:
+                                                            // showEditUbDialog = false
                                                         } else {
                                                             newUbError = "No se pudo guardar la ubicación"
                                                         }
@@ -879,11 +880,11 @@ private fun CurrentInspectionSplitView() {
                                                 }
                                             ) { Text("Guardar") }
                                         }
-                                        // ---------------------------------------------
                                     }
                                 }
+
+                                // ====== TAB 2: Baseline (botón visible arriba) ======
                                 1 -> {
-                                    // ====== TAB 2 ======
                                     val lineaBaseDao = remember { com.example.etic.data.local.DbProvider.get(ctx).lineaBaseDao() }
                                     val inspDao = remember { com.example.etic.data.local.DbProvider.get(ctx).inspeccionDao() }
                                     var showNewBaseline by remember { mutableStateOf(false) }
@@ -923,18 +924,73 @@ private fun CurrentInspectionSplitView() {
                                             }
                                     }
 
-                                    Column(Modifier.fillMaxWidth().padding(8.dp)) {
-                                        BaselineTable(baselines = tableData, onDelete = { /* no delete here */ })
-                                        Spacer(Modifier.height(8.dp))
-                                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                                    // Layout con cabecera fija (botón siempre visible) + cuerpo con tabla personalizada
+                                    Column(Modifier.fillMaxSize()) {
+                                        Row(
+                                            Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.End,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
                                             Button(onClick = { showNewBaseline = true }) {
                                                 Icon(Icons.Filled.Add, contentDescription = null)
                                                 Spacer(Modifier.width(8.dp))
                                                 Text("Nuevo Baseline")
                                             }
                                         }
+                                        Spacer(Modifier.height(8.dp))
+
+                                        @Composable
+                                        fun RowScope.cell(flex: Int, content: @Composable () -> Unit) =
+                                            Box(Modifier.weight(flex.toFloat()), contentAlignment = Alignment.CenterStart) { content() }
+
+                                        // Encabezados requeridos para Tab2
+                                        Row(
+                                            Modifier
+                                                .fillMaxWidth()
+                                                .background(MaterialTheme.colorScheme.surface)
+                                                .padding(vertical = 8.dp, horizontal = 8.dp)
+                                        ) {
+                                            cell(2) { Text("No. Insp") }
+                                            cell(2) { Text("Fecha") }
+                                            cell(1) { Text("MTA °C") }
+                                            cell(1) { Text("Temp °C") }
+                                            cell(1) { Text("Amb °C") }
+                                            cell(1) { Text("IR") }
+                                            cell(1) { Text("ID") }
+                                            cell(3) { Text("Notas") }
+                                            cell(1) { Text("Op") }
+                                        }
+                                        Divider(thickness = DIVIDER_THICKNESS)
+
+                                        if (tableData.isEmpty()) {
+                                            Box(Modifier.fillMaxWidth().padding(8.dp), contentAlignment = Alignment.CenterStart) {
+                                                Text(stringResource(com.example.etic.R.string.msg_sin_baseline))
+                                            }
+                                        } else {
+                                            LazyColumn(Modifier.fillMaxSize()) {
+                                                items(tableData) { b ->
+                                                    Row(
+                                                        Modifier
+                                                            .fillMaxWidth()
+                                                            .padding(vertical = 6.dp, horizontal = 8.dp)
+                                                    ) {
+                                                        cell(2) { Text(b.numInspeccion) }
+                                                        cell(2) { Text(b.fecha.toString()) }
+                                                        cell(1) { Text(b.mtaC.toString()) }
+                                                        cell(1) { Text(b.tempC.toString()) }
+                                                        cell(1) { Text(b.ambC.toString()) }
+                                                        cell(1) { Text(b.imgR ?: "") }
+                                                        cell(1) { Text(b.imgD ?: "") }
+                                                        cell(3) { Text(b.notas) }
+                                                        cell(1) { }
+                                                    }
+                                                    Divider(thickness = DIVIDER_THICKNESS)
+                                                }
+                                            }
+                                        }
                                     }
 
+                                    // Diálogo de "Nuevo Baseline"
                                     if (showNewBaseline) {
                                         var mta by remember { mutableStateOf("") }
                                         var tempMax by remember { mutableStateOf("") }
@@ -996,8 +1052,8 @@ private fun CurrentInspectionSplitView() {
                                                     TextField(value = mta, onValueChange = { mta = it }, label = { Text("MTA C") })
                                                     TextField(value = tempMax, onValueChange = { tempMax = it }, label = { Text("Temp C") })
                                                     TextField(value = tempAmb, onValueChange = { tempAmb = it }, label = { Text("Amb C") })
-                                                    TextField(value = imgIr, onValueChange = { imgIr = it }, label = { Text("IR") })
-                                                    TextField(value = imgId, onValueChange = { imgId = it }, label = { Text("ID") })
+                                                    TextField(value = imgIr, onValueChange = { imgIr = it }, label = { Text("IR (ruta/archivo)") })
+                                                    TextField(value = imgId, onValueChange = { imgId = it }, label = { Text("ID (ruta/archivo)") })
                                                     TextField(value = notas, onValueChange = { notas = it }, label = { Text("Notas") })
                                                     if (error != null) { Text(error!!, color = MaterialTheme.colorScheme.error) }
                                                 }
@@ -1005,16 +1061,20 @@ private fun CurrentInspectionSplitView() {
                                         )
                                     }
                                 }
+
+                                // ====== TAB 3 ======
                                 2 -> {
-                                    // ====== TAB 3 ======
-                                    Box(Modifier.fillMaxWidth().padding(8.dp)) {
-                                        Text("Contenido de Histórico")
+                                    val scroll = rememberScrollState()
+                                    Column(
+                                        Modifier.fillMaxSize().verticalScroll(scroll)
+                                    ) {
+                                        Text("Contenido de Tab 3 (Histórico)")
                                     }
                                 }
                             }
                         }
                     }
-                )
+                }
             }
             // -------------------------------------------------------------------------------
 
