@@ -1227,14 +1227,22 @@ private fun CurrentInspectionSplitView() {
                                                                     Icon(Icons.Outlined.PhotoCamera, contentDescription = null)
                                                                 }
                                                             }
-                                                            if (irPreview != null || imgIr.isNotBlank()) {
-                                                                Spacer(Modifier.height(4.dp))
-                                                                val bmp = irPreview ?: run {
+                                                            Spacer(Modifier.height(4.dp))
+                                                            val bmp = irPreview ?: run {
+                                                                if (imgIr.isNotBlank()) {
                                                                     val file = java.io.File(androidx.compose.ui.platform.LocalContext.current.filesDir, "Imagenes/${'$'}imgIr")
                                                                     if (file.exists()) android.graphics.BitmapFactory.decodeFile(file.absolutePath) else null
-                                                                }
-                                                                if (bmp != null) {
-                                                                    androidx.compose.foundation.Image(bmp.asImageBitmap(), contentDescription = null, modifier = Modifier.height(120.dp))
+                                                                } else null
+                                                            }
+                                                            if (bmp != null) {
+                                                                androidx.compose.foundation.Image(
+                                                                    bmp.asImageBitmap(),
+                                                                    contentDescription = null,
+                                                                    modifier = Modifier.fillMaxWidth().height(200.dp)
+                                                                )
+                                                            } else {
+                                                                Box(Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+                                                                    Icon(Icons.Outlined.Image, contentDescription = "Imagen no encontrada", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                                                                 }
                                                             }
                                                         }
@@ -1251,14 +1259,22 @@ private fun CurrentInspectionSplitView() {
                                                                     Icon(Icons.Outlined.PhotoCamera, contentDescription = null)
                                                                 }
                                                             }
-                                                            if (idPreview != null || imgId.isNotBlank()) {
-                                                                Spacer(Modifier.height(4.dp))
-                                                                val bmp = idPreview ?: run {
+                                                            Spacer(Modifier.height(4.dp))
+                                                            val bmp2 = idPreview ?: run {
+                                                                if (imgId.isNotBlank()) {
                                                                     val file = java.io.File(androidx.compose.ui.platform.LocalContext.current.filesDir, "Imagenes/${'$'}imgId")
                                                                     if (file.exists()) android.graphics.BitmapFactory.decodeFile(file.absolutePath) else null
-                                                                }
-                                                                if (bmp != null) {
-                                                                    androidx.compose.foundation.Image(bmp.asImageBitmap(), contentDescription = null, modifier = Modifier.height(120.dp))
+                                                                } else null
+                                                            }
+                                                            if (bmp2 != null) {
+                                                                androidx.compose.foundation.Image(
+                                                                    bmp2.asImageBitmap(),
+                                                                    contentDescription = null,
+                                                                    modifier = Modifier.fillMaxWidth().height(200.dp)
+                                                                )
+                                                            } else {
+                                                                Box(Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+                                                                    Icon(Icons.Outlined.Image, contentDescription = "Imagen no encontrada", tint = MaterialTheme.colorScheme.onSurfaceVariant)
                                                                 }
                                                             }
                                                         }
