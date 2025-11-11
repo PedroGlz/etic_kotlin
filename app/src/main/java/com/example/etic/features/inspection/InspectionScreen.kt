@@ -1118,30 +1118,31 @@ private fun CurrentInspectionSplitView() {
                                                         error = "Falta Ubicación o Inspección"
                                                         return@Button
                                                     }
-                                                    val nowTs = java.time.LocalDateTime.now()
-                                                        .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
-                                                    val item = com.example.etic.data.local.entities.LineaBase(
-                                                        idLineaBase = baselineToEdit?.id ?: java.util.UUID.randomUUID().toString().uppercase(),
-                                                        idSitio = currentInspection?.idSitio,
-                                                        idUbicacion = idUb,
-                                                        idInspeccion = idInsp,
-                                                        idInspeccionDet = null,
-                                                        mta = mta.toDoubleOrNull(),
-                                                        tempMax = tempMax.toDoubleOrNull(),
-                                                        tempAmb = tempAmb.toDoubleOrNull(),
-                                                        notas = notas.ifBlank { null },
-                                                        archivoIr = imgIr.ifBlank { null },
-                                                        archivoId = imgId.ifBlank { null },
-                                                        ruta = null,
-                                                        estatus = "Activo",
-                                                        creadoPor = currentUserId,
-                                                        fechaCreacion = nowTs,
-                                                        modificadoPor = null,
-                                                        fechaMod = null
-                                                    )
                                                     scope.launch {
+                                                        val nowTs = java.time.LocalDateTime.now()
+                                                            .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+                                                        val detId = try { inspeccionDetDao.getByUbicacion(idUb).firstOrNull()?.idInspeccionDet } catch (_: Exception) { null }
+                                                        val item = com.example.etic.data.local.entities.LineaBase(
+                                                            idLineaBase = baselineToEdit?.id ?: java.util.UUID.randomUUID().toString().uppercase(),
+                                                            idSitio = currentInspection?.idSitio,
+                                                            idUbicacion = idUb,
+                                                            idInspeccion = idInsp,
+                                                            idInspeccionDet = detId,
+                                                            mta = mta.toDoubleOrNull(),
+                                                            tempMax = tempMax.toDoubleOrNull(),
+                                                            tempAmb = tempAmb.toDoubleOrNull(),
+                                                            notas = notas.ifBlank { null },
+                                                            archivoIr = imgIr.ifBlank { null },
+                                                            archivoId = imgId.ifBlank { null },
+                                                            ruta = null,
+                                                            estatus = "Activo",
+                                                            creadoPor = currentUserId,
+                                                            fechaCreacion = nowTs,
+                                                            modificadoPor = null,
+                                                            fechaMod = null
+                                                        )
                                                         if (baselineToEdit == null) {
-                                                            val exists = runCatching { lineaBaseDao.existsActiveByUbicacion(idUb) }.getOrDefault(false)
+                                                            val exists = runCatching { lineaBaseDao.existsActiveByUbicacionOrDet(idUb, detId) }.getOrDefault(false)
                                                             if (exists) {
                                                                 error = "Ya existe un baseline para esta ubicacion"
                                                                 return@launch

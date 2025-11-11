@@ -31,6 +31,19 @@ interface LineaBaseDao {
     @Query("SELECT EXISTS(SELECT 1 FROM linea_base WHERE Id_Ubicacion = :idUbicacion AND Estatus = 'Activo' LIMIT 1)")
     suspend fun existsActiveByUbicacion(idUbicacion: String): Boolean
 
+    @Query("""
+        SELECT EXISTS(
+            SELECT 1 FROM linea_base
+            WHERE Estatus = 'Activo'
+              AND (
+                    Id_Ubicacion = :idUbicacion
+                 OR (:idInspeccionDet IS NOT NULL AND Id_Inspeccion_Det = :idInspeccionDet)
+              )
+            LIMIT 1
+        )
+    """)
+    suspend fun existsActiveByUbicacionOrDet(idUbicacion: String, idInspeccionDet: String?): Boolean
+
     @Query("DELETE FROM linea_base WHERE Id_Linea_Base = :id")
     suspend fun deleteById(id: String)
 }
