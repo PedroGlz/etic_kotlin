@@ -25,6 +25,7 @@ import androidx.compose.material.icons.outlined.Traffic
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.filled.DragIndicator
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -620,126 +621,25 @@ private fun CurrentInspectionSplitView() {
             }
             // -------------------------------------------------------------------------------
 
-            // ------------------ DIÁLOGO: EDITAR UBICACIÓN (NUEVO con 3 TABS) ------------------
+            // ------------------ DIÁLOGO: EDITAR UBICACIÓN (3 TABS, Guardar SOLO en Tab1) ------------------
             if (showEditUbDialog) {
                 AlertDialog(
                     onDismissRequest = { showEditUbDialog = false },
                     properties = DialogProperties(usePlatformDefaultWidth = false),
-                    confirmButton = {
-                        Row(
-                            Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Button(onClick = {
-                                showEditUbDialog = false
-                                newUbError = null
-                            }) { Text("Cancelar") }
-
-                            Button(
-                                enabled = newUbName.isNotBlank(),
-                                onClick = {
-                                    // Guardar edición (misma lógica que en crear, pero asegurando update)
-                                    val name = newUbName.trim()
-                                    if (name.isEmpty()) {
-                                        newUbError = "El nombre es obligatorio"
-                                        return@Button
-                                    }
-                                    val id = editingUbId ?: return@Button
-
-                                    val parentForCalc = editingParentId
-                                    val nivel = parentForCalc?.let { parentId ->
-                                        depthOfId(nodes, parentId) + 1
-                                    } ?: 0
-                                    val ruta = when {
-                                        parentForCalc == "0" -> "$rootTitle / $name"
-                                        parentForCalc != null -> {
-                                            val titles = titlePathForId(nodes, parentForCalc)
-                                            if (titles.isNotEmpty()) titles.joinToString(" / ") + " / " + name else name
-                                        }
-                                        else -> "$rootTitle / $name"
-                                    }
-
-                                    scope.launch {
-                                        val nowTs = java.time.LocalDateTime.now()
-                                            .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
-                                        val existing = runCatching { ubicacionDao.getById(id) }.getOrNull()
-
-                                        val nueva = com.example.etic.data.local.entities.Ubicacion(
-                                            idUbicacion = id,
-                                            idUbicacionPadre = parentForCalc,
-                                            idSitio = currentInspection?.idSitio,
-                                            nivelArbol = nivel,
-                                            ubicacion = name,
-                                            descripcion = newUbDesc.trim().ifBlank { null },
-                                            esEquipo = if (newUbEsEquipo) "SI" else "NO",
-                                            codigoBarras = newUbBarcode.trim().ifBlank { null },
-                                            fabricante = newUbFabricanteId,
-                                            ruta = ruta,
-                                            estatus = "Activo",
-                                            creadoPor = existing?.creadoPor ?: currentUserId,
-                                            fechaCreacion = existing?.fechaCreacion,
-                                            modificadoPor = currentUserId,
-                                            fechaMod = nowTs,
-                                            idTipoPrioridad = newUbPrioridadId,
-                                            idInspeccion = existing?.idInspeccion
-                                        )
-
-                                        val okUb = runCatching { ubicacionDao.update(nueva) }.isSuccess
-                                        if (okUb) {
-                                            if (editingDetId != null) {
-                                                val existingDet = runCatching {
-                                                    inspeccionDetDao.getByUbicacion(id)
-                                                }.getOrElse { emptyList() }.firstOrNull { it.idInspeccionDet == editingDetId }
-                                                val det = com.example.etic.data.local.entities.InspeccionDet(
-                                                    idInspeccionDet = editingDetId!!,
-                                                    idInspeccion = editingInspId ?: existingDet?.idInspeccion,
-                                                    idUbicacion = id,
-                                                    idStatusInspeccionDet = newUbStatusId,
-                                                    notasInspeccion = existingDet?.notasInspeccion,
-                                                    estatus = "Activo",
-                                                    idEstatusColorText = existingDet?.idEstatusColorText ?: 1,
-                                                    expanded = existingDet?.expanded ?: "0",
-                                                    selected = existingDet?.selected ?: "0",
-                                                    creadoPor = existingDet?.creadoPor ?: currentUserId,
-                                                    fechaCreacion = existingDet?.fechaCreacion,
-                                                    modificadoPor = currentUserId,
-                                                    fechaMod = nowTs,
-                                                    idSitio = currentInspection?.idSitio
-                                                )
-                                                runCatching { inspeccionDetDao.update(det) }
-                                            }
-                                            // refrescar árbol
-                                            val rows = runCatching { ubicacionDao.getAllActivas() }.getOrElse { emptyList() }
-                                            val roots = buildTreeFromUbicaciones(rows)
-                                            val siteRoot = TreeNode(id = rootId, title = rootTitle)
-                                            siteRoot.children.addAll(roots)
-                                            nodes = listOf(siteRoot)
-                                            if (!expanded.contains(rootId)) expanded.add(rootId)
-
-                                            newUbError = null
-                                            showEditUbDialog = false
-                                        } else {
-                                            newUbError = "No se pudo guardar la ubicación"
-                                        }
-                                    }
-                                }
-                            ) { Text("Guardar") }
-                        }
-                    },
-                    dismissButton = { /* vacío */ },
-                    //title = { Text("Editar ubicación") },
+                    confirmButton = { /* sin botones en el pie */ },
+                    dismissButton = { /* sin botones en el pie */ },
                     text = {
                         Column(Modifier.fillMaxWidth().widthIn(min = 520.dp)) {
                             TabRow(selectedTabIndex = editTab) {
                                 Tab(selected = editTab == 0, onClick = { editTab = 0 }, text = { Text("Ubicación") })
                                 Tab(selected = editTab == 1, onClick = { editTab = 1 }, text = { Text("Base Line") })
-                                Tab(selected = editTab == 2, onClick = { editTab = 2 }, text = { Text("Historico") })
+                                Tab(selected = editTab == 2, onClick = { editTab = 2 }, text = { Text("Histórico") })
                             }
                             Spacer(Modifier.height(8.dp))
 
                             when (editTab) {
                                 0 -> {
-                                    // ====== TAB1: Formulario de edición ======
+                                    // ====== TAB 1: Formulario de edición + BOTÓN GUARDAR ======
                                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                         // Estatus
                                         ExposedDropdownMenuBox(
@@ -883,16 +783,232 @@ private fun CurrentInspectionSplitView() {
                                         if (newUbError != null) {
                                             Text(newUbError!!, color = MaterialTheme.colorScheme.error)
                                         }
+
+                                        // -------- Botón GUARDAR sólo en TAB 1 --------
+                                        Row(
+                                            Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.End
+                                        ) {
+                                            Button(
+                                                enabled = newUbName.isNotBlank(),
+                                                onClick = {
+                                                    // Guardar edición (misma lógica que antes)
+                                                    val name = newUbName.trim()
+                                                    if (name.isEmpty()) {
+                                                        newUbError = "El nombre es obligatorio"
+                                                        return@Button
+                                                    }
+                                                    val id = editingUbId ?: return@Button
+
+                                                    val parentForCalc = editingParentId
+                                                    val nivel = parentForCalc?.let { parentId ->
+                                                        depthOfId(nodes, parentId) + 1
+                                                    } ?: 0
+                                                    val ruta = when {
+                                                        parentForCalc == "0" -> "$rootTitle / $name"
+                                                        parentForCalc != null -> {
+                                                            val titles = titlePathForId(nodes, parentForCalc)
+                                                            if (titles.isNotEmpty()) titles.joinToString(" / ") + " / " + name else name
+                                                        }
+                                                        else -> "$rootTitle / $name"
+                                                    }
+
+                                                    scope.launch {
+                                                        val nowTs = java.time.LocalDateTime.now()
+                                                            .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+                                                        val existing = runCatching { ubicacionDao.getById(id) }.getOrNull()
+
+                                                        val nueva = com.example.etic.data.local.entities.Ubicacion(
+                                                            idUbicacion = id,
+                                                            idUbicacionPadre = parentForCalc,
+                                                            idSitio = currentInspection?.idSitio,
+                                                            nivelArbol = nivel,
+                                                            ubicacion = name,
+                                                            descripcion = newUbDesc.trim().ifBlank { null },
+                                                            esEquipo = if (newUbEsEquipo) "SI" else "NO",
+                                                            codigoBarras = newUbBarcode.trim().ifBlank { null },
+                                                            fabricante = newUbFabricanteId,
+                                                            ruta = ruta,
+                                                            estatus = "Activo",
+                                                            creadoPor = existing?.creadoPor ?: currentUserId,
+                                                            fechaCreacion = existing?.fechaCreacion,
+                                                            modificadoPor = currentUserId,
+                                                            fechaMod = nowTs,
+                                                            idTipoPrioridad = newUbPrioridadId,
+                                                            idInspeccion = existing?.idInspeccion
+                                                        )
+
+                                                        val okUb = runCatching { ubicacionDao.update(nueva) }.isSuccess
+                                                        if (okUb) {
+                                                            if (editingDetId != null) {
+                                                                val existingDet = runCatching {
+                                                                    inspeccionDetDao.getByUbicacion(id)
+                                                                }.getOrElse { emptyList() }.firstOrNull { it.idInspeccionDet == editingDetId }
+                                                                val det = com.example.etic.data.local.entities.InspeccionDet(
+                                                                    idInspeccionDet = editingDetId!!,
+                                                                    idInspeccion = editingInspId ?: existingDet?.idInspeccion,
+                                                                    idUbicacion = id,
+                                                                    idStatusInspeccionDet = newUbStatusId,
+                                                                    notasInspeccion = existingDet?.notasInspeccion,
+                                                                    estatus = "Activo",
+                                                                    idEstatusColorText = existingDet?.idEstatusColorText ?: 1,
+                                                                    expanded = existingDet?.expanded ?: "0",
+                                                                    selected = existingDet?.selected ?: "0",
+                                                                    creadoPor = existingDet?.creadoPor ?: currentUserId,
+                                                                    fechaCreacion = existingDet?.fechaCreacion,
+                                                                    modificadoPor = currentUserId,
+                                                                    fechaMod = nowTs,
+                                                                    idSitio = currentInspection?.idSitio
+                                                                )
+                                                                runCatching { inspeccionDetDao.update(det) }
+                                                            }
+                                                            // refrescar árbol
+                                                            val rows = runCatching { ubicacionDao.getAllActivas() }.getOrElse { emptyList() }
+                                                            val roots = buildTreeFromUbicaciones(rows)
+                                                            val siteRoot = TreeNode(id = rootId, title = rootTitle)
+                                                            siteRoot.children.addAll(roots)
+                                                            nodes = listOf(siteRoot)
+                                                            if (!expanded.contains(rootId)) expanded.add(rootId)
+
+                                                            newUbError = null
+                                                            showEditUbDialog = false
+                                                        } else {
+                                                            newUbError = "No se pudo guardar la ubicación"
+                                                        }
+                                                    }
+                                                }
+                                            ) { Text("Guardar") }
+                                        }
+                                        // ---------------------------------------------
                                     }
                                 }
                                 1 -> {
-                                    Box(Modifier.fillMaxWidth().padding(8.dp)) {
-                                        Text("Contenido de Tab2")
+                                    // ====== TAB 2 ======
+                                    val lineaBaseDao = remember { com.example.etic.data.local.DbProvider.get(ctx).lineaBaseDao() }
+                                    val inspDao = remember { com.example.etic.data.local.DbProvider.get(ctx).inspeccionDao() }
+                                    var showNewBaseline by remember { mutableStateOf(false) }
+                                    var refreshTick by remember { mutableStateOf(0) }
+                                    val ubId = editingUbId
+                                    val inspId = currentInspection?.idInspeccion
+
+                                    val tableData by produceState(initialValue = emptyList<Baseline>(), ubId, inspId, refreshTick) {
+                                        val rows = if (!inspId.isNullOrBlank()) {
+                                            runCatching { lineaBaseDao.getByInspeccionActivos(inspId) }.getOrElse { emptyList() }
+                                        } else emptyList()
+                                        val ubicaciones = runCatching { ubicacionDao.getAllActivas() }.getOrElse { emptyList() }
+                                        val ubicMap = ubicaciones.associateBy { it.idUbicacion }
+                                        value = rows
+                                            .filter { r -> ubId != null && r.idUbicacion == ubId }
+                                            .map { r ->
+                                                val fecha = runCatching {
+                                                    val raw = r.fechaCreacion?.takeIf { it.isNotBlank() }
+                                                    val onlyDate = raw?.take(10)
+                                                    if (onlyDate != null) java.time.LocalDate.parse(onlyDate) else java.time.LocalDate.now()
+                                                }.getOrDefault(java.time.LocalDate.now())
+                                                val numInspDisplay = r.idInspeccion?.let { id ->
+                                                    runCatching { inspDao.getById(id)?.noInspeccion?.toString() }.getOrNull()
+                                                } ?: ""
+                                                val ubicDisplay = r.idUbicacion?.let { id -> ubicMap[id]?.ubicacion } ?: ""
+                                                Baseline(
+                                                    numInspeccion = numInspDisplay,
+                                                    equipo = ubicDisplay,
+                                                    fecha = fecha,
+                                                    mtaC = r.mta ?: 0.0,
+                                                    tempC = r.tempMax ?: 0.0,
+                                                    ambC = r.tempAmb ?: 0.0,
+                                                    imgR = r.archivoIr,
+                                                    imgD = r.archivoId,
+                                                    notas = r.notas ?: ""
+                                                )
+                                            }
+                                    }
+
+                                    Column(Modifier.fillMaxWidth().padding(8.dp)) {
+                                        BaselineTable(baselines = tableData, onDelete = { /* no delete here */ })
+                                        Spacer(Modifier.height(8.dp))
+                                        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                                            Button(onClick = { showNewBaseline = true }) {
+                                                Icon(Icons.Filled.Add, contentDescription = null)
+                                                Spacer(Modifier.width(8.dp))
+                                                Text("Nuevo Baseline")
+                                            }
+                                        }
+                                    }
+
+                                    if (showNewBaseline) {
+                                        var mta by remember { mutableStateOf("") }
+                                        var tempMax by remember { mutableStateOf("") }
+                                        var tempAmb by remember { mutableStateOf("") }
+                                        var notas by remember { mutableStateOf("") }
+                                        var imgIr by remember { mutableStateOf("") }
+                                        var imgId by remember { mutableStateOf("") }
+                                        var error by remember { mutableStateOf<String?>(null) }
+
+                                        AlertDialog(
+                                            onDismissRequest = { showNewBaseline = false },
+                                            confirmButton = {
+                                                Button(onClick = {
+                                                    val idUb = ubId
+                                                    val idInsp = inspId
+                                                    if (idUb.isNullOrBlank() || idInsp.isNullOrBlank()) {
+                                                        error = "Falta Ubicación o Inspección"
+                                                        return@Button
+                                                    }
+                                                    val nowTs = java.time.LocalDateTime.now()
+                                                        .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+                                                    val item = com.example.etic.data.local.entities.LineaBase(
+                                                        idLineaBase = java.util.UUID.randomUUID().toString().uppercase(),
+                                                        idSitio = currentInspection?.idSitio,
+                                                        idUbicacion = idUb,
+                                                        idInspeccion = idInsp,
+                                                        idInspeccionDet = null,
+                                                        mta = mta.toDoubleOrNull(),
+                                                        tempMax = tempMax.toDoubleOrNull(),
+                                                        tempAmb = tempAmb.toDoubleOrNull(),
+                                                        notas = notas.ifBlank { null },
+                                                        archivoIr = imgIr.ifBlank { null },
+                                                        archivoId = imgId.ifBlank { null },
+                                                        ruta = null,
+                                                        estatus = "Activo",
+                                                        creadoPor = currentUserId,
+                                                        fechaCreacion = nowTs,
+                                                        modificadoPor = null,
+                                                        fechaMod = null
+                                                    )
+                                                    scope.launch {
+                                                        val ok = runCatching { lineaBaseDao.insert(item) }.isSuccess
+                                                        if (ok) {
+                                                            showNewBaseline = false
+                                                            refreshTick++
+                                                        } else {
+                                                            error = "No se pudo guardar la baseline"
+                                                        }
+                                                    }
+                                                }) { Text("Guardar") }
+                                            },
+                                            dismissButton = {
+                                                Button(onClick = { showNewBaseline = false }) { Text("Cancelar") }
+                                            },
+                                            text = {
+                                                Column(Modifier.fillMaxWidth()) {
+                                                    Text("Nuevo Baseline", style = MaterialTheme.typography.titleMedium)
+                                                    Spacer(Modifier.height(8.dp))
+                                                    TextField(value = mta, onValueChange = { mta = it }, label = { Text("MTA C") })
+                                                    TextField(value = tempMax, onValueChange = { tempMax = it }, label = { Text("Temp C") })
+                                                    TextField(value = tempAmb, onValueChange = { tempAmb = it }, label = { Text("Amb C") })
+                                                    TextField(value = imgIr, onValueChange = { imgIr = it }, label = { Text("IR") })
+                                                    TextField(value = imgId, onValueChange = { imgId = it }, label = { Text("ID") })
+                                                    TextField(value = notas, onValueChange = { notas = it }, label = { Text("Notas") })
+                                                    if (error != null) { Text(error!!, color = MaterialTheme.colorScheme.error) }
+                                                }
+                                            }
+                                        )
                                     }
                                 }
                                 2 -> {
+                                    // ====== TAB 3 ======
                                     Box(Modifier.fillMaxWidth().padding(8.dp)) {
-                                        Text("Contenido de Tab3")
+                                        Text("Contenido de Histórico")
                                     }
                                 }
                             }
