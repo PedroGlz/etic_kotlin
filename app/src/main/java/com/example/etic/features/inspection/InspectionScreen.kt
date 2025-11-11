@@ -1504,8 +1504,8 @@ private fun BaselineTable(baselines: List<Baseline>, onDelete: (Baseline) -> Uni
             cell(1) { Text(stringResource(com.example.etic.R.string.col_mta_c)) }
             cell(1) { Text(stringResource(com.example.etic.R.string.col_temp_c)) }
             cell(1) { Text(stringResource(com.example.etic.R.string.col_amb_c)) }
-            cell(1) { Icon(Icons.Outlined.Image, contentDescription = null) }
-            cell(1) { Icon(Icons.Outlined.Image, contentDescription = null) }
+            cell(1) { Text("IR") }
+            cell(1) { Text("ID") }
             cell(3) { Text("Notas") }
             cell(1) { Text(stringResource(com.example.etic.R.string.col_op)) }
         }
@@ -1526,24 +1526,8 @@ private fun BaselineTable(baselines: List<Baseline>, onDelete: (Baseline) -> Uni
                         cell(1) { Text(b.mtaC.toString()) }
                         cell(1) { Text(b.tempC.toString()) }
                         cell(1) { Text(b.ambC.toString()) }
-                        cell(1) {
-                            Icon(
-                                Icons.Outlined.Image,
-                                contentDescription = null,
-                                tint = if ((b.imgR ?: "").isEmpty())
-                                    MaterialTheme.colorScheme.onSurfaceVariant
-                                else MaterialTheme.colorScheme.primary
-                            )
-                        }
-                        cell(1) {
-                            Icon(
-                                Icons.Outlined.Image,
-                                contentDescription = null,
-                                tint = if ((b.imgD ?: "").isEmpty())
-                                    MaterialTheme.colorScheme.onSurfaceVariant
-                                else MaterialTheme.colorScheme.primary
-                            )
-                        }
+                        cell(1) { Text(b.imgR ?: "") }
+                        cell(1) { Text(b.imgD ?: "") }
                         cell(3) { Text(b.notas) }
                         cell(1) {
                             IconButton(onClick = { onDelete(b) }) {
