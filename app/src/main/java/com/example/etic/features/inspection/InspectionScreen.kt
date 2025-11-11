@@ -1632,12 +1632,16 @@ private fun ProblemsTableFromDatabase(selectedId: String?) {
 @Composable
 private fun BaselineTableFromDatabase(selectedId: String?) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
+    val currentInspection = LocalCurrentInspection.current
     val dao = remember { com.example.etic.data.local.DbProvider.get(ctx).lineaBaseDao() }
     val ubicacionDao = remember { com.example.etic.data.local.DbProvider.get(ctx).ubicacionDao() }
     val inspDao = remember { com.example.etic.data.local.DbProvider.get(ctx).inspeccionDao() }
 
-    val uiBaselines by produceState(initialValue = emptyList<Baseline>(), selectedId) {
-        val rows = try { dao.getAllActivos() } catch (_: Exception) { emptyList() }
+    val uiBaselines by produceState(initialValue = emptyList<Baseline>(), selectedId, currentInspection?.idInspeccion) {
+        val rows = try {
+            val inspId = currentInspection?.idInspeccion
+            if (!inspId.isNullOrBlank()) dao.getByInspeccionActivos(inspId) else dao.getAllActivos()
+        } catch (_: Exception) { emptyList() }
         val ubicaciones = try { ubicacionDao.getAllActivas() } catch (_: Exception) { emptyList() }
         val filteredRows = when {
             selectedId == null -> rows
