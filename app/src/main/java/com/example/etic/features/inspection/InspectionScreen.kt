@@ -897,7 +897,22 @@ private fun CurrentInspectionSplitView() {
                                     val ubId = editingUbId
                                     val inspId = currentInspection?.idInspeccion
 
-                                    val tableData by produceState(initialValue = emptyList<Baseline>(), ubId, inspId, refreshTick) {
+                                    data class BaselineRow(
+                                        val id: String,
+                                        val numInspeccion: String,
+                                        val fecha: java.time.LocalDate,
+                                        val mtaC: Double,
+                                        val tempC: Double,
+                                        val ambC: Double,
+                                        val imgR: String?,
+                                        val imgD: String?,
+                                        val notas: String
+                                    )
+
+                                    var baselineToEdit by remember { mutableStateOf<BaselineRow?>(null) }
+                                    var confirmDeleteId by remember { mutableStateOf<String?>(null) }
+
+                                    val tableData by produceState(initialValue = emptyList<BaselineRow>(), ubId, inspId, refreshTick) {
                                         val rows = if (!inspId.isNullOrBlank()) {
                                             runCatching { lineaBaseDao.getByInspeccionActivos(inspId) }.getOrElse { emptyList() }
                                         } else emptyList()
@@ -915,9 +930,9 @@ private fun CurrentInspectionSplitView() {
                                                     runCatching { inspDao.getById(id)?.noInspeccion?.toString() }.getOrNull()
                                                 } ?: ""
                                                 val ubicDisplay = r.idUbicacion?.let { id -> ubicMap[id]?.ubicacion } ?: ""
-                                                Baseline(
+                                                BaselineRow(
+                                                    id = r.idLineaBase,
                                                     numInspeccion = numInspDisplay,
-                                                    equipo = ubicDisplay,
                                                     fecha = fecha,
                                                     mtaC = r.mta ?: 0.0,
                                                     tempC = r.tempMax ?: 0.0,
@@ -936,7 +951,7 @@ private fun CurrentInspectionSplitView() {
                                             horizontalArrangement = Arrangement.End,
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
-                                            Button(onClick = { showNewBaseline = true }) {
+                                            Button(onClick = { baselineToEdit = null; showNewBaseline = true }) {
                                                 Icon(Icons.Filled.Add, contentDescription = null)
                                                 Spacer(Modifier.width(8.dp))
                                                 Text("Nuevo Baseline")
@@ -973,11 +988,15 @@ private fun CurrentInspectionSplitView() {
                                             }
                                         } else {
                                             LazyColumn(Modifier.fillMaxSize()) {
-                                                items(tableData) { b ->
+                                                items(tableData, key = { it.id }) { b ->
                                                     Row(
                                                         Modifier
                                                             .fillMaxWidth()
                                                             .padding(vertical = 6.dp, horizontal = 8.dp)
+                                                            .pointerInput(b.id) { detectTapGestures(onDoubleTap = {
+                                                                baselineToEdit = b
+                                                                showNewBaseline = true
+                                                            }) }
                                                     ) {
                                                         cell(2) { Text(b.numInspeccion) }
                                                         cell(2) { Text(b.fecha.toString()) }
@@ -987,11 +1006,35 @@ private fun CurrentInspectionSplitView() {
                                                         cell(1) { Text(b.imgR ?: "") }
                                                         cell(1) { Text(b.imgD ?: "") }
                                                         cell(3) { Text(b.notas) }
-                                                        cell(1) { }
+                                                        cell(1) {
+                                                            IconButton(onClick = { confirmDeleteId = b.id }) {
+                                                                Icon(Icons.Outlined.Delete, contentDescription = "Eliminar")
+                                                            }
+                                                        }
                                                     }
                                                     Divider(thickness = DIVIDER_THICKNESS)
                                                 }
                                             }
+                                        }
+
+                                        if (confirmDeleteId != null) {
+                                            AlertDialog(
+                                                onDismissRequest = { confirmDeleteId = null },
+                                                confirmButton = {
+                                                    Button(onClick = {
+                                                        val id = confirmDeleteId ?: return@Button
+                                                        scope.launch {
+                                                            runCatching { lineaBaseDao.deleteById(id) }
+                                                            confirmDeleteId = null
+                                                            refreshTick++
+                                                        }
+                                                    }) { Text("Eliminar") }
+                                                },
+                                                dismissButton = {
+                                                    Button(onClick = { confirmDeleteId = null }) { Text("Cancelar") }
+                                                },
+                                                text = { Text("¿Eliminar baseline seleccionado?") }
+                                            )
                                         }
                                     }
 
@@ -1004,6 +1047,21 @@ private fun CurrentInspectionSplitView() {
                                         var imgIr by remember { mutableStateOf("") }
                                         var imgId by remember { mutableStateOf("") }
                                         var error by remember { mutableStateOf<String?>(null) }
+
+                                        // Prefill when editing
+                                        LaunchedEffect(baselineToEdit, showNewBaseline) {
+                                            if (showNewBaseline && baselineToEdit != null) {
+                                                mta = baselineToEdit!!.mtaC.toString()
+                                                tempMax = baselineToEdit!!.tempC.toString()
+                                                tempAmb = baselineToEdit!!.ambC.toString()
+                                                notas = baselineToEdit!!.notas
+                                                imgIr = baselineToEdit!!.imgR ?: ""
+                                                imgId = baselineToEdit!!.imgD ?: ""
+                                            }
+                                            if (showNewBaseline && baselineToEdit == null) {
+                                                mta = ""; tempMax = ""; tempAmb = ""; notas = ""; imgIr = ""; imgId = ""; error = null
+                                            }
+                                        }
 
                                         var irPreview by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
                                         var idPreview by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
@@ -1063,7 +1121,7 @@ private fun CurrentInspectionSplitView() {
                                                     val nowTs = java.time.LocalDateTime.now()
                                                         .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
                                                     val item = com.example.etic.data.local.entities.LineaBase(
-                                                        idLineaBase = java.util.UUID.randomUUID().toString().uppercase(),
+                                                        idLineaBase = baselineToEdit?.id ?: java.util.UUID.randomUUID().toString().uppercase(),
                                                         idSitio = currentInspection?.idSitio,
                                                         idUbicacion = idUb,
                                                         idInspeccion = idInsp,
@@ -1082,12 +1140,28 @@ private fun CurrentInspectionSplitView() {
                                                         fechaMod = null
                                                     )
                                                     scope.launch {
-                                                        val ok = runCatching { lineaBaseDao.insert(item) }.isSuccess
-                                                        if (ok) {
-                                                            showNewBaseline = false
-                                                            refreshTick++
+                                                        if (baselineToEdit == null) {
+                                                            val exists = runCatching { lineaBaseDao.existsActiveByUbicacion(idUb) }.getOrDefault(false)
+                                                            if (exists) {
+                                                                error = "Ya existe un baseline para esta ubicacion"
+                                                                return@launch
+                                                            }
+                                                            val ok = runCatching { lineaBaseDao.insert(item) }.isSuccess
+                                                            if (ok) {
+                                                                showNewBaseline = false
+                                                                refreshTick++
+                                                            } else {
+                                                                error = "No se pudo guardar la baseline"
+                                                            }
                                                         } else {
-                                                            error = "No se pudo guardar la baseline"
+                                                            val ok = runCatching { lineaBaseDao.update(item) }.isSuccess
+                                                            if (ok) {
+                                                                showNewBaseline = false
+                                                                baselineToEdit = null
+                                                                refreshTick++
+                                                            } else {
+                                                                error = "No se pudo actualizar la baseline"
+                                                            }
                                                         }
                                                     }
                                                 }) { Text("Guardar") }

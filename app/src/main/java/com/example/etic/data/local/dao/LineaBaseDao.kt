@@ -27,4 +27,10 @@ interface LineaBaseDao {
 
     @Update
     suspend fun update(item: LineaBase)
+
+    @Query("SELECT EXISTS(SELECT 1 FROM linea_base WHERE Id_Ubicacion = :idUbicacion AND Estatus = 'Activo' LIMIT 1)")
+    suspend fun existsActiveByUbicacion(idUbicacion: String): Boolean
+
+    @Query("DELETE FROM linea_base WHERE Id_Linea_Base = :id")
+    suspend fun deleteById(id: String)
 }
