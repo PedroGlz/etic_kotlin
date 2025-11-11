@@ -1471,7 +1471,7 @@ private fun ProblemsTable(problems: List<Problem>, onDelete: (Problem) -> Unit) 
                         cell(1) { Text(p.deltaTC.toString()) }
                         cell(2) { Text(p.severidad) }
                         cell(2) { Text(p.equipo) }
-                        cell(3) { Text(p.comentarios, maxLines = 1) }
+            cell(3) { Text(p.comentarios) }
                         cell(1) {
                             IconButton(onClick = { onDelete(p) }) {
                                 Icon(Icons.Outlined.Delete, contentDescription = "Eliminar")
@@ -1544,7 +1544,7 @@ private fun BaselineTable(baselines: List<Baseline>, onDelete: (Baseline) -> Uni
                                 else MaterialTheme.colorScheme.primary
                             )
                         }
-                        cell(3) { Text(b.notas, maxLines = 1) }
+                        cell(3) { Text(b.notas) }
                         cell(1) {
                             IconButton(onClick = { onDelete(b) }) {
                                 Icon(Icons.Outlined.Delete, contentDescription = "Eliminar")
