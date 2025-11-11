@@ -113,17 +113,20 @@ private fun CurrentInspectionSplitView() {
     val rootTitle = currentInspection?.nombreSitio ?: "Sitio"
     val rootId = remember(currentInspection?.idSitio) { (currentInspection?.idSitio?.let { "root:$it" } ?: "root:site") }
     val expanded = remember { mutableStateListOf<String>() }
+    var selectedId by remember { mutableStateOf<String?>(null) }
+    var highlightedId by remember { mutableStateOf<String?>(null) }
     // Reconstruir el árbol cuando llegue/ cambie la Inspección actual
     LaunchedEffect(rootId, rootTitle) {
-        val rows = runCatching { ubicacionDao.getAll() }.getOrElse { emptyList() }
+        val rows = runCatching { ubicacionDao.getAllActivas() }.getOrElse { emptyList() }
         val roots = buildTreeFromUbicaciones(rows)
         val siteRoot = TreeNode(id = rootId, title = rootTitle)
         siteRoot.children.addAll(roots)
         nodes = listOf(siteRoot)
         if (!expanded.contains(rootId)) expanded.add(rootId)
+        // Seleccionar por defecto el nodo padre (sitio)
+        if (selectedId == null) selectedId = rootId
     }
-    var selectedId by remember { mutableStateOf<String?>(null) }
-    var highlightedId by remember { mutableStateOf<String?>(null) }
+    // selectedId y highlightedId declarados antes para usarlos en LaunchedEffect
 
     val borderColor = DividerDefaults.color
 
@@ -444,7 +447,7 @@ private fun CurrentInspectionSplitView() {
                                                 )
                                                 runCatching { inspeccionDetDao.insert(det) }
                                             }
-                                            val rows = runCatching { ubicacionDao.getAll() }.getOrElse { emptyList() }
+                                            val rows = runCatching { ubicacionDao.getAllActivas() }.getOrElse { emptyList() }
                                             val roots = buildTreeFromUbicaciones(rows)
                                             val siteRoot = TreeNode(id = rootId, title = rootTitle)
                                             siteRoot.children.addAll(roots)
@@ -706,7 +709,7 @@ private fun CurrentInspectionSplitView() {
                                                 runCatching { inspeccionDetDao.update(det) }
                                             }
                                             // refrescar árbol
-                                            val rows = runCatching { ubicacionDao.getAll() }.getOrElse { emptyList() }
+                                            val rows = runCatching { ubicacionDao.getAllActivas() }.getOrElse { emptyList() }
                                             val roots = buildTreeFromUbicaciones(rows)
                                             val siteRoot = TreeNode(id = rootId, title = rootTitle)
                                             siteRoot.children.addAll(roots)
@@ -728,7 +731,7 @@ private fun CurrentInspectionSplitView() {
                     text = {
                         Column(Modifier.fillMaxWidth().widthIn(min = 520.dp)) {
                             TabRow(selectedTabIndex = editTab) {
-                                Tab(selected = editTab == 0, onClick = { editTab = 0 }, text = { Text("Ubicacón") })
+                                Tab(selected = editTab == 0, onClick = { editTab = 0 }, text = { Text("Ubicación") })
                                 Tab(selected = editTab == 1, onClick = { editTab = 1 }, text = { Text("Base Line") })
                                 Tab(selected = editTab == 2, onClick = { editTab = 2 }, text = { Text("Historico") })
                             }
@@ -1574,12 +1577,16 @@ private fun ProblemsTableFromDatabase(selectedId: String?) {
     val tipoInspDao = remember { com.example.etic.data.local.DbProvider.get(ctx).tipoInspeccionDao() }
 
     val uiProblems by produceState(initialValue = emptyList<Problem>(), selectedId) {
-        val rows = try { dao.getAll() } catch (_: Exception) { emptyList() }
-        val ubicaciones = try { ubicacionDao.getAll() } catch (_: Exception) { emptyList() }
-        val filteredRows = selectedId?.let { rootId ->
-            val allowed = descendantIds(ubicaciones, rootId)
-            rows.filter { r -> r.idUbicacion != null && allowed.contains(r.idUbicacion!!) }
-        } ?: rows
+        val rows = try { dao.getAllActivos() } catch (_: Exception) { emptyList() }
+        val ubicaciones = try { ubicacionDao.getAllActivas() } catch (_: Exception) { emptyList() }
+        val filteredRows = when {
+            selectedId == null -> rows
+            selectedId!!.startsWith("root:") -> rows
+            else -> {
+                val allowed = descendantIds(ubicaciones, selectedId!!)
+                rows.filter { r -> r.idUbicacion != null && allowed.contains(r.idUbicacion!!) }
+            }
+        }
         val inspMap = try { inspDao.getAll().associateBy { it.idInspeccion } } catch (_: Exception) { emptyMap() }
         val sevMap = try { sevDao.getAll().associateBy { it.idSeveridad } } catch (_: Exception) { emptyMap() }
         val eqMap = try { eqDao.getAll().associateBy { it.idEquipo } } catch (_: Exception) { emptyMap() }
@@ -1627,12 +1634,16 @@ private fun BaselineTableFromDatabase(selectedId: String?) {
     val ubicacionDao = remember { com.example.etic.data.local.DbProvider.get(ctx).ubicacionDao() }
 
     val uiBaselines by produceState(initialValue = emptyList<Baseline>(), selectedId) {
-        val rows = try { dao.getAll() } catch (_: Exception) { emptyList() }
-        val ubicaciones = try { ubicacionDao.getAll() } catch (_: Exception) { emptyList() }
-        val filteredRows = selectedId?.let { rootId ->
-            val allowed = descendantIds(ubicaciones, rootId)
-            rows.filter { r -> r.idUbicacion != null && allowed.contains(r.idUbicacion!!) }
-        } ?: rows
+        val rows = try { dao.getAllActivos() } catch (_: Exception) { emptyList() }
+        val ubicaciones = try { ubicacionDao.getAllActivas() } catch (_: Exception) { emptyList() }
+        val filteredRows = when {
+            selectedId == null -> rows
+            selectedId!!.startsWith("root:") -> rows
+            else -> {
+                val allowed = descendantIds(ubicaciones, selectedId!!)
+                rows.filter { r -> r.idUbicacion != null && allowed.contains(r.idUbicacion!!) }
+            }
+        }
         value = filteredRows.map { r ->
             val fecha = runCatching {
                 val raw = r.fechaCreacion?.takeIf { it.isNotBlank() }
