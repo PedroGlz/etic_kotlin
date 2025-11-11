@@ -1106,21 +1106,24 @@ private fun CurrentInspectionSplitView() {
                                                             onValueChange = { mta = filter2Dec(it) },
                                                             label = { Text("MTA °C") },
                                                             singleLine = true,
-                                                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                                                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                                            modifier = Modifier.weight(1f)
                                                         )
                                                         TextField(
                                                             value = tempMax,
                                                             onValueChange = { tempMax = filter2Dec(it) },
                                                             label = { Text("Temp °C") },
                                                             singleLine = true,
-                                                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                                                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                                            modifier = Modifier.weight(1f)
                                                         )
                                                         TextField(
                                                             value = tempAmb,
                                                             onValueChange = { tempAmb = filter2Dec(it) },
                                                             label = { Text("Amb °C") },
                                                             singleLine = true,
-                                                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                                                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                                            modifier = Modifier.weight(1f)
                                                         )
                                                     }
 
