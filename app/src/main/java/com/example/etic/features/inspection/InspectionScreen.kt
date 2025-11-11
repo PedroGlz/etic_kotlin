@@ -24,6 +24,9 @@ import androidx.compose.material.icons.outlined.Factory
 import androidx.compose.material.icons.outlined.Traffic
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Image
+import androidx.compose.material.icons.outlined.PhotoCamera
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material.icons.filled.DragIndicator
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.AlertDialog
@@ -52,9 +55,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -1000,6 +1005,51 @@ private fun CurrentInspectionSplitView() {
                                         var imgId by remember { mutableStateOf("") }
                                         var error by remember { mutableStateOf<String?>(null) }
 
+                                        var irPreview by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
+                                        var idPreview by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
+
+                                        fun filter2Dec(input: String): String {
+                                            if (input.isEmpty()) return ""
+                                            val norm = input.replace(',', '.')
+                                            val regex = Regex("^\\d*([.]\\d{0,2})?$")
+                                            return if (regex.matches(norm)) norm else norm
+                                                .let { s ->
+                                                    val idx = s.indexOf('.')
+                                                    if (idx >= 0 && s.length > idx + 3) s.substring(0, idx + 3) else s
+                                                }
+                                        }
+
+                                        fun saveBitmapToImagenes(ctx: android.content.Context, bmp: android.graphics.Bitmap, prefix: String): String? {
+                                            return try {
+                                                val dir = java.io.File(ctx.filesDir, "Imagenes").apply { mkdirs() }
+                                                val name = "$prefix-" + System.currentTimeMillis().toString() + ".jpg"
+                                                val file = java.io.File(dir, name)
+                                                java.io.FileOutputStream(file).use { out ->
+                                                    bmp.compress(android.graphics.Bitmap.CompressFormat.JPEG, 92, out)
+                                                }
+                                                name
+                                            } catch (_: Exception) { null }
+                                        }
+
+                                        val irCameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { bmp ->
+                                            if (bmp != null) {
+                                                val name = saveBitmapToImagenes(ctx, bmp, "IR")
+                                                if (name != null) {
+                                                    imgIr = name
+                                                    irPreview = bmp
+                                                }
+                                            }
+                                        }
+                                        val idCameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { bmp ->
+                                            if (bmp != null) {
+                                                val name = saveBitmapToImagenes(ctx, bmp, "ID")
+                                                if (name != null) {
+                                                    imgId = name
+                                                    idPreview = bmp
+                                                }
+                                            }
+                                        }
+
                                         AlertDialog(
                                             onDismissRequest = { showNewBaseline = false },
                                             confirmButton = {
@@ -1049,13 +1099,109 @@ private fun CurrentInspectionSplitView() {
                                                 Column(Modifier.fillMaxWidth()) {
                                                     Text("Nuevo Baseline", style = MaterialTheme.typography.titleMedium)
                                                     Spacer(Modifier.height(8.dp))
-                                                    TextField(value = mta, onValueChange = { mta = it }, label = { Text("MTA C") })
-                                                    TextField(value = tempMax, onValueChange = { tempMax = it }, label = { Text("Temp C") })
-                                                    TextField(value = tempAmb, onValueChange = { tempAmb = it }, label = { Text("Amb C") })
-                                                    TextField(value = imgIr, onValueChange = { imgIr = it }, label = { Text("IR (ruta/archivo)") })
-                                                    TextField(value = imgId, onValueChange = { imgId = it }, label = { Text("ID (ruta/archivo)") })
-                                                    TextField(value = notas, onValueChange = { notas = it }, label = { Text("Notas") })
-                                                    if (error != null) { Text(error!!, color = MaterialTheme.colorScheme.error) }
+
+                                                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                                        TextField(
+                                                            value = mta,
+                                                            onValueChange = { mta = filter2Dec(it) },
+                                                            label = { Text("MTA °C") },
+                                                            singleLine = true,
+                                                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                                                        )
+                                                        TextField(
+                                                            value = tempMax,
+                                                            onValueChange = { tempMax = filter2Dec(it) },
+                                                            label = { Text("Temp °C") },
+                                                            singleLine = true,
+                                                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                                                        )
+                                                        TextField(
+                                                            value = tempAmb,
+                                                            onValueChange = { tempAmb = filter2Dec(it) },
+                                                            label = { Text("Amb °C") },
+                                                            singleLine = true,
+                                                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal)
+                                                        )
+                                                    }
+
+                                                    Spacer(Modifier.height(8.dp))
+
+                                                    TextField(
+                                                        value = notas,
+                                                        onValueChange = { notas = it },
+                                                        label = { Text("Notas") },
+                                                        modifier = Modifier.fillMaxWidth()
+                                                    )
+
+                                                    Spacer(Modifier.height(8.dp))
+
+                                                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                                        Column(Modifier.weight(1f)) {
+                                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                                TextField(
+                                                                    value = imgIr,
+                                                                    onValueChange = { imgIr = it },
+                                                                    label = { Text("IR (archivo)") },
+                                                                    modifier = Modifier.weight(1f)
+                                                                )
+                                                                Spacer(Modifier.width(8.dp))
+                                                                IconButton(onClick = { irCameraLauncher.launch(null) }) {
+                                                                    Icon(Icons.Outlined.PhotoCamera, contentDescription = null)
+                                                                }
+                                                            }
+                                                            if (irPreview != null || imgIr.isNotBlank()) {
+                                                                Spacer(Modifier.height(4.dp))
+                                                                val bmp = irPreview ?: run {
+                                                                    val file = java.io.File(androidx.compose.ui.platform.LocalContext.current.filesDir, "Imagenes/${'$'}imgIr")
+                                                                    if (file.exists()) android.graphics.BitmapFactory.decodeFile(file.absolutePath) else null
+                                                                }
+                                                                if (bmp != null) {
+                                                                    androidx.compose.foundation.Image(bmp.asImageBitmap(), contentDescription = null, modifier = Modifier.height(120.dp))
+                                                                }
+                                                            }
+                                                        }
+                                                        Column(Modifier.weight(1f)) {
+                                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                                TextField(
+                                                                    value = imgId,
+                                                                    onValueChange = { imgId = it },
+                                                                    label = { Text("ID (archivo)") },
+                                                                    modifier = Modifier.weight(1f)
+                                                                )
+                                                                Spacer(Modifier.width(8.dp))
+                                                                IconButton(onClick = { idCameraLauncher.launch(null) }) {
+                                                                    Icon(Icons.Outlined.PhotoCamera, contentDescription = null)
+                                                                }
+                                                            }
+                                                            if (idPreview != null || imgId.isNotBlank()) {
+                                                                Spacer(Modifier.height(4.dp))
+                                                                val bmp = idPreview ?: run {
+                                                                    val file = java.io.File(androidx.compose.ui.platform.LocalContext.current.filesDir, "Imagenes/${'$'}imgId")
+                                                                    if (file.exists()) android.graphics.BitmapFactory.decodeFile(file.absolutePath) else null
+                                                                }
+                                                                if (bmp != null) {
+                                                                    androidx.compose.foundation.Image(bmp.asImageBitmap(), contentDescription = null, modifier = Modifier.height(120.dp))
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+
+                                                    Spacer(Modifier.height(8.dp))
+
+                                                    val rutaEquipo by produceState(initialValue = "", ubId) {
+                                                        value = if (!ubId.isNullOrBlank()) {
+                                                            runCatching { ubicacionDao.getById(ubId!!)?.ruta ?: "" }.getOrDefault("")
+                                                        } else ""
+                                                    }
+                                                    TextField(
+                                                        value = rutaEquipo,
+                                                        onValueChange = {},
+                                                        readOnly = true,
+                                                        label = { Text("Ruta del equipo") },
+                                                        modifier = Modifier.fillMaxWidth()
+                                                    )
+
+                                                    if (error != null) { Spacer(Modifier.height(8.dp)); Text(error!!, color = MaterialTheme.colorScheme.error) }
                                                 }
                                             }
                                         )
