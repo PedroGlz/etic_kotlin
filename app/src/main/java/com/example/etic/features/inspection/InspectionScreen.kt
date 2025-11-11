@@ -1046,9 +1046,8 @@ private fun CurrentInspectionSplitView() {
                                         var notas by remember { mutableStateOf("") }
                                         var imgIr by remember { mutableStateOf("") }
                                         var imgId by remember { mutableStateOf("") }
-                                        var error by remember { mutableStateOf<String?>(null) }
 
-                                        // Prefill when editing
+                                        // Prefill si estás editando
                                         LaunchedEffect(baselineToEdit, showNewBaseline) {
                                             if (showNewBaseline && baselineToEdit != null) {
                                                 mta = baselineToEdit!!.mtaC.toString()
@@ -1059,7 +1058,7 @@ private fun CurrentInspectionSplitView() {
                                                 imgId = baselineToEdit!!.imgD ?: ""
                                             }
                                             if (showNewBaseline && baselineToEdit == null) {
-                                                mta = ""; tempMax = ""; tempAmb = ""; notas = ""; imgIr = ""; imgId = ""; error = null
+                                                mta = ""; tempMax = ""; tempAmb = ""; notas = ""; imgIr = ""; imgId = ""
                                             }
                                         }
 
@@ -1070,11 +1069,10 @@ private fun CurrentInspectionSplitView() {
                                             if (input.isEmpty()) return ""
                                             val norm = input.replace(',', '.')
                                             val regex = Regex("^\\d*([.]\\d{0,2})?$")
-                                            return if (regex.matches(norm)) norm else norm
-                                                .let { s ->
-                                                    val idx = s.indexOf('.')
-                                                    if (idx >= 0 && s.length > idx + 3) s.substring(0, idx + 3) else s
-                                                }
+                                            return if (regex.matches(norm)) norm else norm.let { s ->
+                                                val idx = s.indexOf('.')
+                                                if (idx >= 0 && s.length > idx + 3) s.substring(0, idx + 3) else s
+                                            }
                                         }
 
                                         fun saveBitmapToImagenes(ctx: android.content.Context, bmp: android.graphics.Bitmap, prefix: String): String? {
@@ -1108,78 +1106,89 @@ private fun CurrentInspectionSplitView() {
                                             }
                                         }
 
+                                        // ✅ Validación SOLO para habilitar el botón
+                                        val isBaselineValid by remember(mta, tempMax, tempAmb, imgIr, imgId) {
+                                            mutableStateOf(
+                                                mta.isNotBlank() &&
+                                                tempMax.isNotBlank() &&
+                                                tempAmb.isNotBlank() &&
+                                                imgIr.isNotBlank() &&
+                                                imgId.isNotBlank()
+                                            )
+                                        }
+
                                         AlertDialog(
                                             onDismissRequest = { showNewBaseline = false },
                                             confirmButton = {
-                                                Button(onClick = {
-                                                    val idUb = ubId
-                                                    val idInsp = inspId
-                                                    if (idUb.isNullOrBlank() || idInsp.isNullOrBlank()) {
-                                                        error = "Falta Ubicación o Inspección"
-                                                        return@Button
-                                                    }
-                                                    scope.launch {
-                                                        val nowTs = java.time.LocalDateTime.now()
-                                                            .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
-                                                        val detId = try { inspeccionDetDao.getByUbicacion(idUb).firstOrNull()?.idInspeccionDet } catch (_: Exception) { null }
-                                                        val item = com.example.etic.data.local.entities.LineaBase(
-                                                            idLineaBase = baselineToEdit?.id ?: java.util.UUID.randomUUID().toString().uppercase(),
-                                                            idSitio = currentInspection?.idSitio,
-                                                            idUbicacion = idUb,
-                                                            idInspeccion = idInsp,
-                                                            idInspeccionDet = detId,
-                                                            mta = mta.toDoubleOrNull(),
-                                                            tempMax = tempMax.toDoubleOrNull(),
-                                                            tempAmb = tempAmb.toDoubleOrNull(),
-                                                            notas = notas.ifBlank { null },
-                                                            archivoIr = imgIr.ifBlank { null },
-                                                            archivoId = imgId.ifBlank { null },
-                                                            ruta = null,
-                                                            estatus = "Activo",
-                                                            creadoPor = currentUserId,
-                                                            fechaCreacion = nowTs,
-                                                            modificadoPor = null,
-                                                            fechaMod = null
-                                                        )
-                                                        if (baselineToEdit == null) {
-                                                            val exists = runCatching { lineaBaseDao.existsActiveByUbicacionOrDet(idUb, detId) }.getOrDefault(false)
-                                                            if (exists) {
-                                                                error = "Ya existe un baseline para esta ubicacion"
-                                                                return@launch
-                                                            }
-                                                            val ok = runCatching { lineaBaseDao.insert(item) }.isSuccess
-                                                            if (ok) {
-                                                                showNewBaseline = false
-                                                                refreshTick++
+                                                Button(
+                                                    enabled = isBaselineValid, // ← deshabilita hasta que se llenen los obligatorios
+                                                    onClick = {
+                                                        val idUb = ubId
+                                                        val idInsp = inspId
+                                                        if (idUb.isNullOrBlank() || idInsp.isNullOrBlank()) {
+                                                            // No mostramos mensajes; simplemente no ejecutamos si falta relación
+                                                            return@Button
+                                                        }
+                                                        scope.launch {
+                                                            val nowTs = java.time.LocalDateTime.now()
+                                                                .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+                                                            val detId = try { inspeccionDetDao.getByUbicacion(idUb).firstOrNull()?.idInspeccionDet } catch (_: Exception) { null }
+                                                            val item = com.example.etic.data.local.entities.LineaBase(
+                                                                idLineaBase = baselineToEdit?.id ?: java.util.UUID.randomUUID().toString().uppercase(),
+                                                                idSitio = currentInspection?.idSitio,
+                                                                idUbicacion = idUb,
+                                                                idInspeccion = idInsp,
+                                                                idInspeccionDet = detId,
+                                                                mta = mta.toDoubleOrNull(),
+                                                                tempMax = tempMax.toDoubleOrNull(),
+                                                                tempAmb = tempAmb.toDoubleOrNull(),
+                                                                notas = notas.ifBlank { null },
+                                                                archivoIr = imgIr.ifBlank { null },
+                                                                archivoId = imgId.ifBlank { null },
+                                                                ruta = null,
+                                                                estatus = "Activo",
+                                                                creadoPor = currentUserId,
+                                                                fechaCreacion = nowTs,
+                                                                modificadoPor = null,
+                                                                fechaMod = null
+                                                            )
+                                                            val ok = if (baselineToEdit == null) {
+                                                                val exists = runCatching { lineaBaseDao.existsActiveByUbicacionOrDet(idUb, detId) }.getOrDefault(false)
+                                                                if (exists) return@launch // sin mensajes
+                                                                runCatching { lineaBaseDao.insert(item) }.isSuccess
                                                             } else {
-                                                                error = "No se pudo guardar la baseline"
+                                                                runCatching { lineaBaseDao.update(item) }.isSuccess
                                                             }
-                                                        } else {
-                                                            val ok = runCatching { lineaBaseDao.update(item) }.isSuccess
                                                             if (ok) {
                                                                 showNewBaseline = false
                                                                 baselineToEdit = null
                                                                 refreshTick++
-                                                            } else {
-                                                                error = "No se pudo actualizar la baseline"
                                                             }
                                                         }
                                                     }
-                                                }) { Text("Guardar") }
+                                                ) { Text("Guardar") }
                                             },
                                             dismissButton = {
                                                 Button(onClick = { showNewBaseline = false }) { Text("Cancelar") }
                                             },
                                             text = {
                                                 Column(Modifier.fillMaxWidth()) {
-                                                    Text("Nuevo Baseline", style = MaterialTheme.typography.titleMedium)
+                                                    Text(
+                                                        if (baselineToEdit == null) "Nuevo Baseline" else "Editar Baseline",
+                                                        style = MaterialTheme.typography.titleMedium
+                                                    )
                                                     Spacer(Modifier.height(8.dp))
 
+                                                    // ----- Campos obligatorios (con asterisco rojo) -----
                                                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                                         TextField(
                                                             value = mta,
                                                             onValueChange = { mta = filter2Dec(it) },
-                                                            label = { Text("MTA °C") },
+                                                            label = {
+                                                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                                                    Text("MTA °C"); Text(" *", color = MaterialTheme.colorScheme.error)
+                                                                }
+                                                            },
                                                             singleLine = true,
                                                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                                             modifier = Modifier.weight(1f)
@@ -1187,7 +1196,11 @@ private fun CurrentInspectionSplitView() {
                                                         TextField(
                                                             value = tempMax,
                                                             onValueChange = { tempMax = filter2Dec(it) },
-                                                            label = { Text("Temp °C") },
+                                                            label = {
+                                                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                                                    Text("Temp °C"); Text(" *", color = MaterialTheme.colorScheme.error)
+                                                                }
+                                                            },
                                                             singleLine = true,
                                                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                                             modifier = Modifier.weight(1f)
@@ -1195,7 +1208,11 @@ private fun CurrentInspectionSplitView() {
                                                         TextField(
                                                             value = tempAmb,
                                                             onValueChange = { tempAmb = filter2Dec(it) },
-                                                            label = { Text("Amb °C") },
+                                                            label = {
+                                                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                                                    Text("Amb °C"); Text(" *", color = MaterialTheme.colorScheme.error)
+                                                                }
+                                                            },
                                                             singleLine = true,
                                                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                                                             modifier = Modifier.weight(1f)
@@ -1204,6 +1221,7 @@ private fun CurrentInspectionSplitView() {
 
                                                     Spacer(Modifier.height(8.dp))
 
+                                                    // Opcional
                                                     TextField(
                                                         value = notas,
                                                         onValueChange = { notas = it },
@@ -1213,13 +1231,22 @@ private fun CurrentInspectionSplitView() {
 
                                                     Spacer(Modifier.height(8.dp))
 
-                                                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                                    // IR e ID obligatorios (con botón de cámara y previsualización)
+                                                    Row(
+                                                        Modifier.fillMaxWidth(),
+                                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                                        verticalAlignment = Alignment.CenterVertically
+                                                    ) {
                                                         Column(Modifier.weight(1f)) {
                                                             Row(verticalAlignment = Alignment.CenterVertically) {
                                                                 TextField(
                                                                     value = imgIr,
                                                                     onValueChange = { imgIr = it },
-                                                                    label = { Text("IR (archivo)") },
+                                                                    label = {
+                                                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                                                            Text("IR (archivo)"); Text(" *", color = MaterialTheme.colorScheme.error)
+                                                                        }
+                                                                    },
                                                                     modifier = Modifier.weight(1f)
                                                                 )
                                                                 Spacer(Modifier.width(8.dp))
@@ -1230,8 +1257,8 @@ private fun CurrentInspectionSplitView() {
                                                             Spacer(Modifier.height(4.dp))
                                                             val bmp = irPreview ?: run {
                                                                 if (imgIr.isNotBlank()) {
-                                                                    val file = java.io.File(androidx.compose.ui.platform.LocalContext.current.filesDir, "Imagenes/${'$'}imgIr")
-                                                                    if (file.exists()) android.graphics.BitmapFactory.decodeFile(file.absolutePath) else null
+                                                                    val f = java.io.File(androidx.compose.ui.platform.LocalContext.current.filesDir, "Imagenes/$imgIr")
+                                                                    if (f.exists()) android.graphics.BitmapFactory.decodeFile(f.absolutePath) else null
                                                                 } else null
                                                             }
                                                             if (bmp != null) {
@@ -1251,7 +1278,11 @@ private fun CurrentInspectionSplitView() {
                                                                 TextField(
                                                                     value = imgId,
                                                                     onValueChange = { imgId = it },
-                                                                    label = { Text("ID (archivo)") },
+                                                                    label = {
+                                                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                                                            Text("ID (archivo)"); Text(" *", color = MaterialTheme.colorScheme.error)
+                                                                        }
+                                                                    },
                                                                     modifier = Modifier.weight(1f)
                                                                 )
                                                                 Spacer(Modifier.width(8.dp))
@@ -1262,8 +1293,8 @@ private fun CurrentInspectionSplitView() {
                                                             Spacer(Modifier.height(4.dp))
                                                             val bmp2 = idPreview ?: run {
                                                                 if (imgId.isNotBlank()) {
-                                                                    val file = java.io.File(androidx.compose.ui.platform.LocalContext.current.filesDir, "Imagenes/${'$'}imgId")
-                                                                    if (file.exists()) android.graphics.BitmapFactory.decodeFile(file.absolutePath) else null
+                                                                    val f = java.io.File(androidx.compose.ui.platform.LocalContext.current.filesDir, "Imagenes/$imgId")
+                                                                    if (f.exists()) android.graphics.BitmapFactory.decodeFile(f.absolutePath) else null
                                                                 } else null
                                                             }
                                                             if (bmp2 != null) {
@@ -1282,6 +1313,7 @@ private fun CurrentInspectionSplitView() {
 
                                                     Spacer(Modifier.height(8.dp))
 
+                                                    // Ruta informativa (solo lectura)
                                                     val rutaEquipo by produceState(initialValue = "", ubId) {
                                                         value = if (!ubId.isNullOrBlank()) {
                                                             runCatching { ubicacionDao.getById(ubId!!)?.ruta ?: "" }.getOrDefault("")
@@ -1294,12 +1326,11 @@ private fun CurrentInspectionSplitView() {
                                                         label = { Text("Ruta del equipo") },
                                                         modifier = Modifier.fillMaxWidth()
                                                     )
-
-                                                    if (error != null) { Spacer(Modifier.height(8.dp)); Text(error!!, color = MaterialTheme.colorScheme.error) }
                                                 }
                                             }
                                         )
                                     }
+
                                 }
 
                                 // ====== TAB 3 ======
