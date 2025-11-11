@@ -632,11 +632,11 @@ private fun CurrentInspectionSplitView() {
                     androidx.compose.material3.Card(
                         modifier = Modifier
                             .widthIn(min = 720.dp, max = 1040.dp)
-                            .heightIn(min = 480.dp, max = 760.dp),
+                            .heightIn(min = 380.dp, max = 650.dp),
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         // Cabecera del diálogo
-                        Column(Modifier.fillMaxSize().padding(16.dp)) {
+                        Column(Modifier.fillMaxWidth().padding(16.dp)) {
                             Text("Editar ubicación", style = MaterialTheme.typography.titleLarge)
                             Spacer(Modifier.height(8.dp))
 
