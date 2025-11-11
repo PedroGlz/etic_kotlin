@@ -1634,6 +1634,7 @@ private fun BaselineTableFromDatabase(selectedId: String?) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val dao = remember { com.example.etic.data.local.DbProvider.get(ctx).lineaBaseDao() }
     val ubicacionDao = remember { com.example.etic.data.local.DbProvider.get(ctx).ubicacionDao() }
+    val inspDao = remember { com.example.etic.data.local.DbProvider.get(ctx).inspeccionDao() }
 
     val uiBaselines by produceState(initialValue = emptyList<Baseline>(), selectedId) {
         val rows = try { dao.getAllActivos() } catch (_: Exception) { emptyList() }
@@ -1646,6 +1647,9 @@ private fun BaselineTableFromDatabase(selectedId: String?) {
                 rows.filter { r -> r.idUbicacion != null && allowed.contains(r.idUbicacion!!) }
             }
         }
+        val inspMap = try { inspDao.getAll().associateBy { it.idInspeccion } } catch (_: Exception) { emptyMap() }
+        val ubicMap = ubicaciones.associateBy { it.idUbicacion }
+
         value = filteredRows.map { r ->
             val fecha = runCatching {
                 val raw = r.fechaCreacion?.takeIf { it.isNotBlank() }
@@ -1653,9 +1657,12 @@ private fun BaselineTableFromDatabase(selectedId: String?) {
                 if (onlyDate != null) java.time.LocalDate.parse(onlyDate) else java.time.LocalDate.now()
             }.getOrDefault(java.time.LocalDate.now())
 
+            val numInspDisplay = r.idInspeccion?.let { inspMap[it]?.noInspeccion?.toString() } ?: ""
+            val ubicDisplay = r.idUbicacion?.let { ubicMap[it]?.ubicacion } ?: ""
+
             Baseline(
-                numInspeccion = r.idInspeccion ?: "",
-                equipo = r.idUbicacion ?: "", // no hay columna Equipo; usamos ubicacion como referencia
+                numInspeccion = numInspDisplay,
+                equipo = ubicDisplay,
                 fecha = fecha,
                 mtaC = r.mta ?: 0.0,
                 tempC = r.tempMax ?: 0.0,
