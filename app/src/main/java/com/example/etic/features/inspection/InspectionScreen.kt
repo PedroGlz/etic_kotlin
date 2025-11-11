@@ -1590,6 +1590,7 @@ private fun ProblemsTableFromDatabase(selectedId: String?) {
         val inspMap = try { inspDao.getAll().associateBy { it.idInspeccion } } catch (_: Exception) { emptyMap() }
         val sevMap = try { sevDao.getAll().associateBy { it.idSeveridad } } catch (_: Exception) { emptyMap() }
         val eqMap = try { eqDao.getAll().associateBy { it.idEquipo } } catch (_: Exception) { emptyMap() }
+        val ubicMap = ubicaciones.associateBy { it.idUbicacion }
         val tipoMap = try { tipoInspDao.getAll().associateBy { it.idTipoInspeccion } } catch (_: Exception) { emptyMap() }
         value = filteredRows.map { r ->
             val fecha = runCatching {
@@ -1601,7 +1602,8 @@ private fun ProblemsTableFromDatabase(selectedId: String?) {
 
             val numInspDisplay = r.idInspeccion?.let { inspMap[it]?.noInspeccion?.toString() } ?: ""
             val severidadDisplay = r.idSeveridad?.let { sevMap[it]?.severidad } ?: (r.idSeveridad ?: "")
-            val equipoDisplay = r.idEquipo?.let { eqMap[it]?.equipo } ?: (r.idEquipo ?: "")
+            // Mostrar el nombre del equipo desde la Ubicacion asociada al problema
+            val equipoDisplay = r.idUbicacion?.let { ubicMap[it]?.ubicacion } ?: ""
             val tipoDisplay = r.idTipoInspeccion?.let { tipoMap[it]?.tipoInspeccion } ?: (r.idTipoInspeccion ?: "")
 
             Problem(
