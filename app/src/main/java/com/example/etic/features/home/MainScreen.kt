@@ -1,6 +1,7 @@
 package com.example.etic.features.home
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChecklistRtl
@@ -19,6 +20,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.draw.alpha
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.example.etic.R
@@ -32,6 +43,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 
 private enum class HomeSection { Inspection, Reports }
 
@@ -47,6 +59,7 @@ fun MainScreen(
     val appContext = LocalContext.current
     var showLogoutDialog by rememberSaveable { mutableStateOf(false) }
     var section by rememberSaveable { mutableStateOf(HomeSection.Inspection) }
+    var isLoading by rememberSaveable { mutableStateOf(true) }
 
     val drawerItemColors = NavigationDrawerItemDefaults.colors(
         selectedContainerColor = Color(0xFF202327),
@@ -184,8 +197,12 @@ fun MainScreen(
                 modifier = Modifier.fillMaxSize().padding(innerPadding)
             ) {
                 when (section) {
-                    HomeSection.Inspection -> InspectionScreen()
+                    HomeSection.Inspection -> InspectionScreen(onReady = { scope.launch { delay(900); isLoading = false } })
                     HomeSection.Reports -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Reportes") }
+                }
+
+                if (isLoading) {
+                    LoadingOverlay(message = "Cargando datos…")
                 }
             }
         }
@@ -206,6 +223,66 @@ fun MainScreen(
                 }) { Text("Cerrar sesión") }
             }
         )
+    }
+}
+
+@Composable
+private fun LoadingOverlay(message: String) {
+    val transition = rememberInfiniteTransition(label = "loading")
+    val angle by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1200, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "angle"
+    )
+    val dot1 by transition.animateFloat(
+        initialValue = 0.3f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(900, delayMillis = 0), RepeatMode.Reverse),
+        label = "dot1"
+    )
+    val dot2 by transition.animateFloat(
+        initialValue = 0.3f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(900, delayMillis = 150), RepeatMode.Reverse),
+        label = "dot2"
+    )
+    val dot3 by transition.animateFloat(
+        initialValue = 0.3f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(900, delayMillis = 300), RepeatMode.Reverse),
+        label = "dot3"
+    )
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xCC000000)),
+        contentAlignment = Alignment.Center
+    ) {
+        Card(
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF202327), contentColor = Color.White),
+            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+        ) {
+            Column(Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                // Logo girando para un efecto más atractivo
+                Image(
+                    painter = painterResource(id = R.drawable.etic_logo_login),
+                    contentDescription = null,
+                    modifier = Modifier.size(72.dp).rotate(angle)
+                )
+                Spacer(Modifier.height(16.dp))
+                Text(message)
+                Spacer(Modifier.height(12.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Box(Modifier.size(10.dp).scale(1f).background(Color.White.copy(alpha = dot1), CircleShape))
+                    Box(Modifier.size(10.dp).scale(1f).background(Color.White.copy(alpha = dot2), CircleShape))
+                    Box(Modifier.size(10.dp).scale(1f).background(Color.White.copy(alpha = dot3), CircleShape))
+                }
+            }
+        }
     }
 }
 

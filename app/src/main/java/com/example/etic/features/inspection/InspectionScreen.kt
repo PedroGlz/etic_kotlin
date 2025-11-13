@@ -102,13 +102,13 @@ private val HEADER_ACTION_SPACING: Dp = 8.dp
 // Nota: la tabla de Progreso ocupa siempre todo el ancho del panel
 
 @Composable
-fun InspectionScreen() {
-    CurrentInspectionSplitView()
+fun InspectionScreen(onReady: () -> Unit = {}) {
+    CurrentInspectionSplitView(onReady = onReady)
 }
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
-private fun CurrentInspectionSplitView() {
+private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
     // Usamos constantes para evitar número magicos in-line
     var hFrac by rememberSaveable { mutableStateOf(H_INIT_FRAC) } // fracción alto del panel superior
     var vFrac by rememberSaveable { mutableStateOf(V_INIT_FRAC) } // fracción ancho del panel izquierdo
@@ -125,6 +125,7 @@ private fun CurrentInspectionSplitView() {
         // Centralizar selección como si fuera un tap del usuario
     var selectedId by rememberSaveable { mutableStateOf<String?>(null) }
     var highlightedId by remember { mutableStateOf<String?>(null) }
+    var hasSignaledReady by rememberSaveable { mutableStateOf(false) }
     val onSelectNode: (String) -> Unit = { id -> selectedId = id }
     // Reconstruir el árbol cuando llegue/ cambie la Inspección actual
     LaunchedEffect(rootId, rootTitle) {
@@ -144,6 +145,7 @@ private fun CurrentInspectionSplitView() {
         onSelectNode(rootId)
         // Seleccionar por defecto el nodo padre (sitio)
         if (selectedId == null) selectedId = rootId
+        if (!hasSignaledReady) { hasSignaledReady = true; onReady() }
     }
     // selectedId y highlightedId declarados antes para usarlos en LaunchedEffect
 
