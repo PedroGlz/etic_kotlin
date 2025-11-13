@@ -122,16 +122,26 @@ private fun CurrentInspectionSplitView() {
     val rootTitle = currentInspection?.nombreSitio ?: "Sitio"
     val rootId = remember(currentInspection?.idSitio) { (currentInspection?.idSitio?.let { "root:$it" } ?: "root:site") }
     val expanded = remember { mutableStateListOf<String>() }
-    var selectedId by remember { mutableStateOf<String?>(null) }
+        // Centralizar selección como si fuera un tap del usuario
+    var selectedId by rememberSaveable { mutableStateOf<String?>(null) }
     var highlightedId by remember { mutableStateOf<String?>(null) }
+    val onSelectNode: (String) -> Unit = { id -> selectedId = id }
     // Reconstruir el árbol cuando llegue/ cambie la Inspección actual
     LaunchedEffect(rootId, rootTitle) {
         val rows = runCatching { ubicacionDao.getAllActivas() }.getOrElse { emptyList() }
         val roots = buildTreeFromUbicaciones(rows)
         val siteRoot = TreeNode(id = rootId, title = rootTitle)
         siteRoot.children.addAll(roots)
-        nodes = listOf(siteRoot)
-        if (!expanded.contains(rootId)) expanded.add(rootId)
+        
+        siteRoot.children.addAll(roots)
+                                            nodes = listOf(siteRoot)
+                                            if (!expanded.contains(rootId)) expanded.add(rootId)
+                                            onSelectNode(rootId)
+        
+                                            onSelectNode(rootId)
+        // Selección programática equivalente a un tap sobre el sitio
+        kotlinx.coroutines.delay(0)
+        onSelectNode(rootId)
         // Seleccionar por defecto el nodo padre (sitio)
         if (selectedId == null) selectedId = rootId
     }
@@ -460,8 +470,13 @@ private fun CurrentInspectionSplitView() {
                                             val roots = buildTreeFromUbicaciones(rows)
                                             val siteRoot = TreeNode(id = rootId, title = rootTitle)
                                             siteRoot.children.addAll(roots)
+                                            
+                                            siteRoot.children.addAll(roots)
                                             nodes = listOf(siteRoot)
                                             if (!expanded.contains(rootId)) expanded.add(rootId)
+                                            onSelectNode(rootId)
+                                            
+                                            onSelectNode(rootId)
                                             newUbName = ""
                                             newUbDesc = ""
                                             newUbEsEquipo = false
@@ -872,8 +887,13 @@ private fun CurrentInspectionSplitView() {
                                                             val roots = buildTreeFromUbicaciones(rows)
                                                             val siteRoot = TreeNode(id = rootId, title = rootTitle)
                                                             siteRoot.children.addAll(roots)
-                                                            nodes = listOf(siteRoot)
-                                                            if (!expanded.contains(rootId)) expanded.add(rootId)
+                                                            
+                                                            siteRoot.children.addAll(roots)
+                                            nodes = listOf(siteRoot)
+                                            if (!expanded.contains(rootId)) expanded.add(rootId)
+                                            onSelectNode(rootId)
+                                                            
+                                            onSelectNode(rootId)
                                                             newUbError = null
                                                             // no cierro para permitir seguir editando si quieres,
                                                             // si prefieres cerrar:
@@ -1365,7 +1385,7 @@ private fun CurrentInspectionSplitView() {
                             selectedId = selectedId,
                             highlightedId = highlightedId,
                             onToggle = { id -> if (!expanded.remove(id)) expanded.add(id) },
-                            onSelect = { id -> selectedId = id },
+                            onSelect = onSelectNode,
                             modifier = Modifier.fillMaxSize() // ocupa todo el panel
                         )
                     } else {
@@ -2144,3 +2164,6 @@ private fun UbicacionesFlatListFromDatabase(modifier: Modifier = Modifier) {
         }
     }
 }
+
+
+
