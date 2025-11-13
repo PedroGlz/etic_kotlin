@@ -302,3 +302,276 @@ val MIGRATION_8_9 = object : Migration(8, 9) {
         )
     }
 }
+
+val MIGRATION_9_10 = object : Migration(9, 10) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS causa_principal (
+                Id_Causa_Raiz      TEXT NOT NULL,
+                Id_Tipo_Inspeccion TEXT DEFAULT NULL,
+                Id_Falla           TEXT DEFAULT NULL,
+                Causa_Raiz         TEXT DEFAULT NULL,
+                Estatus            TEXT CHECK (Estatus IN ('Activo', 'Inactivo') ) DEFAULT 'Activo',
+                Creado_Por         TEXT DEFAULT NULL,
+                Fecha_Creacion     TEXT DEFAULT NULL,
+                Modificado_Por     TEXT DEFAULT NULL,
+                Fecha_Mod          TEXT DEFAULT NULL,
+                Id_Inspeccion      TEXT DEFAULT 'flag_export',
+                Id_Sitio           TEXT DEFAULT 'flag_export',
+                PRIMARY KEY (Id_Causa_Raiz)
+            )
+            """
+        )
+
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS clientes (
+                Id_Cliente       TEXT NOT NULL,
+                Id_Compania      TEXT DEFAULT NULL,
+                Id_Giro          TEXT DEFAULT NULL,
+                Razon_Social     TEXT DEFAULT NULL,
+                Nombre_Comercial TEXT DEFAULT NULL,
+                RFC              TEXT DEFAULT NULL,
+                Imagen_Cliente   TEXT DEFAULT NULL,
+                Estatus          TEXT CHECK (Estatus IN ('Activo', 'Inactivo') ) DEFAULT 'Activo',
+                Creado_Por       TEXT DEFAULT NULL,
+                Fecha_Creacion   TEXT DEFAULT NULL,
+                Modificado_Por   TEXT DEFAULT NULL,
+                Fecha_Mod        TEXT DEFAULT NULL,
+                Id_Inspeccion    TEXT DEFAULT 'flag_export',
+                Id_Sitio         TEXT DEFAULT 'flag_export',
+                PRIMARY KEY (Id_Cliente)
+            )
+            """
+        )
+
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS datos_reporte (
+                Id_Datos_Reporte            INTEGER PRIMARY KEY AUTOINCREMENT,
+                Id_Inspeccion               TEXT    DEFAULT NULL,
+                detalle_ubicacion           TEXT    DEFAULT NULL,
+                nombre_contacto             TEXT    DEFAULT NULL,
+                puesto_contacto             TEXT    DEFAULT NULL,
+                fecha_inicio_ra             TEXT    DEFAULT NULL,
+                fecha_fin_ra                TEXT    DEFAULT NULL,
+                nombre_img_portada          TEXT    DEFAULT NULL,
+                descripcion_reporte         TEXT    DEFAULT NULL,
+                areas_inspeccionadas        TEXT    DEFAULT NULL,
+                recomendacion_reporte       TEXT    DEFAULT NULL,
+                imagen_recomendacion        TEXT    DEFAULT NULL,
+                imagen_recomendacion_2      TEXT    DEFAULT NULL,
+                referencia_reporte          TEXT    DEFAULT NULL,
+                arrayElementosSeleccionados TEXT    DEFAULT NULL,
+                arrayProblemasSeleccionados TEXT    DEFAULT NULL,
+                Id_Sitio                    TEXT    DEFAULT 'flag_export'
+            )
+            """
+        )
+
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS estatus_color_text (
+                Id_Estatus_Color_Text INTEGER PRIMARY KEY AUTOINCREMENT,
+                Color_Text            TEXT    DEFAULT NULL,
+                Descripcion           TEXT    NOT NULL,
+                Id_Inspeccion         TEXT    DEFAULT 'flag_export',
+                Id_Sitio              TEXT    DEFAULT 'flag_export'
+            )
+            """
+        )
+
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS estatus_inspeccion (
+                Id_Status_Inspeccion TEXT NOT NULL,
+                Status_Inspeccion    TEXT DEFAULT NULL,
+                Desc_Status          TEXT DEFAULT NULL,
+                Estatus              TEXT CHECK (Estatus IN ('Activo', 'Inactivo') ) DEFAULT 'Activo',
+                Creado_Por           TEXT DEFAULT NULL,
+                Fecha_Creacion       TEXT DEFAULT NULL,
+                Modificado_Por       TEXT DEFAULT NULL,
+                Fecha_Mod            TEXT DEFAULT NULL,
+                Id_Inspeccion        TEXT DEFAULT 'flag_export',
+                Id_Sitio             TEXT DEFAULT 'flag_export',
+                PRIMARY KEY (Id_Status_Inspeccion)
+            )
+            """
+        )
+
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS fallas (
+                Id_Falla           TEXT NOT NULL,
+                Id_Tipo_Falla      TEXT DEFAULT NULL,
+                Id_Tipo_Inspeccion TEXT DEFAULT NULL,
+                Falla              TEXT DEFAULT NULL,
+                Estatus            TEXT CHECK (Estatus IN ('Activo', 'Inactivo') ) DEFAULT 'Activo',
+                Creado_Por         TEXT DEFAULT NULL,
+                Fecha_Creacion     TEXT DEFAULT NULL,
+                Modificado_Por     TEXT DEFAULT NULL,
+                Fecha_Mod          TEXT DEFAULT NULL,
+                Id_Inspeccion      TEXT DEFAULT 'flag_export',
+                Id_Sitio           TEXT DEFAULT 'flag_export',
+                PRIMARY KEY (Id_Falla)
+            )
+            """
+        )
+
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS fases (
+                Id_Fase        TEXT NOT NULL,
+                Nombre_Fase    TEXT DEFAULT NULL,
+                Descripcion    TEXT DEFAULT NULL,
+                Estatus        TEXT CHECK (Estatus IN ('Activo', 'Inactivo') ) DEFAULT 'Activo',
+                Creado_Por     TEXT DEFAULT NULL,
+                Fecha_Creacion TEXT DEFAULT NULL,
+                Modificado_Por TEXT DEFAULT NULL,
+                Fecha_Mod      TEXT DEFAULT NULL,
+                Id_Inspeccion  TEXT DEFAULT 'flag_export',
+                Id_Sitio       TEXT DEFAULT 'flag_export',
+                PRIMARY KEY (Id_Fase)
+            )
+            """
+        )
+
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS grupos (
+                Id_Grupo       TEXT NOT NULL,
+                Grupo          TEXT DEFAULT NULL,
+                Estatus        TEXT CHECK (Estatus IN ('Activo', 'Inactivo') ) DEFAULT 'Activo',
+                Creado_Por     TEXT DEFAULT NULL,
+                Fecha_Creacion TEXT DEFAULT NULL,
+                Modificado_Por TEXT DEFAULT NULL,
+                Fecha_Mod      TEXT DEFAULT NULL,
+                Id_Inspeccion  TEXT DEFAULT 'flag_export',
+                Id_Sitio       TEXT DEFAULT 'flag_export',
+                PRIMARY KEY (Id_Grupo)
+            )
+            """
+        )
+
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS grupos_sitios (
+                Id_Grupo_Sitios TEXT NOT NULL,
+                Id_Cliente      TEXT DEFAULT NULL,
+                Grupo           TEXT DEFAULT NULL,
+                Estatus         TEXT CHECK (Estatus IN ('Activo', 'Inactivo') ) DEFAULT 'Activo',
+                Creado_Por      TEXT DEFAULT NULL,
+                Fecha_Creacion  TEXT DEFAULT NULL,
+                Modificado_Por  TEXT DEFAULT NULL,
+                Fecha_Mod       TEXT DEFAULT NULL,
+                Id_Inspeccion   TEXT DEFAULT 'flag_export',
+                Id_Sitio        TEXT DEFAULT 'flag_export',
+                PRIMARY KEY (Id_Grupo_Sitios)
+            )
+            """
+        )
+
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS historial_problemas (
+                Id_Historial_Problema TEXT NOT NULL,
+                Id_Problema           TEXT DEFAULT NULL,
+                Id_Problema_Anterior  TEXT DEFAULT NULL,
+                Id_Problema_Original  TEXT DEFAULT NULL,
+                Estatus               TEXT CHECK (Estatus IN ('Activo', 'Inactivo') ) DEFAULT 'Activo',
+                Creado_Por            TEXT DEFAULT NULL,
+                Fecha_Creacion        TEXT DEFAULT NULL,
+                Modificado_Por        TEXT DEFAULT NULL,
+                Fecha_Mod             TEXT DEFAULT NULL,
+                Id_Inspeccion         TEXT DEFAULT 'flag_export',
+                Id_Sitio              TEXT DEFAULT 'flag_export',
+                PRIMARY KEY (Id_Historial_Problema)
+            )
+            """
+        )
+
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS recomendaciones (
+                Id_Recomendacion   TEXT NOT NULL,
+                Id_Tipo_Inspeccion TEXT DEFAULT NULL,
+                Id_Causa_Raiz      TEXT DEFAULT NULL,
+                Recomendacion      TEXT DEFAULT NULL,
+                Estatus            TEXT CHECK (Estatus IN ('Activo', 'Inactivo') ) DEFAULT 'Activo',
+                Creado_Por         TEXT DEFAULT NULL,
+                Fecha_Creacion     TEXT DEFAULT NULL,
+                Modificado_Por     TEXT DEFAULT NULL,
+                Fecha_Mod          TEXT DEFAULT NULL,
+                Id_Inspeccion      TEXT DEFAULT 'flag_export',
+                Id_Sitio           TEXT DEFAULT 'flag_export',
+                PRIMARY KEY (Id_Recomendacion)
+            )
+            """
+        )
+
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS sitios (
+                Id_Sitio          TEXT NOT NULL,
+                Id_Cliente        TEXT DEFAULT NULL,
+                Id_Grupo_Sitios   TEXT DEFAULT NULL,
+                Sitio             TEXT DEFAULT NULL,
+                Desc_Sitio        TEXT DEFAULT NULL,
+                Direccion         TEXT DEFAULT NULL,
+                Colonia           TEXT DEFAULT NULL,
+                Estado            TEXT DEFAULT NULL,
+                Municipio         TEXT DEFAULT NULL,
+                Folder            TEXT DEFAULT NULL,
+                Contacto_1        TEXT DEFAULT NULL,
+                Puesto_Contacto_1 TEXT DEFAULT NULL,
+                Contacto_2        TEXT DEFAULT NULL,
+                Puesto_Contacto_2 TEXT DEFAULT NULL,
+                Contacto_3        TEXT DEFAULT NULL,
+                Puesto_Contacto_3 TEXT DEFAULT NULL,
+                Estatus           TEXT CHECK (Estatus IN ('Activo', 'Inactivo') ) DEFAULT 'Activo',
+                Creado_Por        TEXT DEFAULT NULL,
+                Fecha_Creacion    TEXT DEFAULT NULL,
+                Modificado_Por    TEXT DEFAULT NULL,
+                Fecha_Mod         TEXT DEFAULT NULL,
+                Id_Inspeccion     TEXT DEFAULT 'flag_export',
+                PRIMARY KEY (Id_Sitio)
+            )
+            """
+        )
+
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS tipo_ambientes (
+                Id_Tipo_Ambiente TEXT NOT NULL,
+                Nombre           TEXT DEFAULT NULL,
+                Descripcion      TEXT DEFAULT NULL,
+                Adjust           REAL DEFAULT NULL,
+                Estatus          TEXT CHECK (Estatus IN ('Activo', 'Inactivo') ) DEFAULT 'Activo',
+                Id_Inspeccion    TEXT DEFAULT 'flag_export',
+                Id_Sitio         TEXT DEFAULT 'flag_export',
+                PRIMARY KEY (Id_Tipo_Ambiente)
+            )
+            """
+        )
+
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS tipo_fallas (
+                Id_Tipo_Falla      TEXT NOT NULL,
+                Id_Tipo_Inspeccion TEXT DEFAULT NULL,
+                Tipo_Falla         TEXT DEFAULT NULL,
+                Desc_Tipo_Falla    TEXT DEFAULT NULL,
+                Estatus            TEXT CHECK (Estatus IN ('Activo', 'Inactivo') ) DEFAULT 'Activo',
+                Creado_Por         TEXT DEFAULT NULL,
+                Fecha_Creacion     TEXT DEFAULT NULL,
+                Modificado_Por     TEXT DEFAULT NULL,
+                Fecha_Mod          TEXT DEFAULT NULL,
+                Id_Inspeccion      TEXT DEFAULT 'flag_export',
+                Id_Sitio           TEXT DEFAULT 'flag_export',
+                PRIMARY KEY (Id_Tipo_Falla)
+            )
+            """
+        )
+    }
+}
