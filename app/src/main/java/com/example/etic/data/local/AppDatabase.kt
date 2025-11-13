@@ -40,8 +40,6 @@ import com.example.etic.data.local.entities.TipoInspeccion
 import com.example.etic.data.local.entities.InspeccionDet
 import com.example.etic.data.local.entities.CausaPrincipal
 import com.example.etic.data.local.entities.Cliente
-import com.example.etic.data.local.entities.DatosReporte
-import com.example.etic.data.local.entities.EstatusColorText
 import com.example.etic.data.local.entities.EstatusInspeccion
 import com.example.etic.data.local.entities.Falla
 import com.example.etic.data.local.entities.Fase
@@ -70,8 +68,6 @@ import com.example.etic.data.local.entities.TipoFalla
         // Nuevas entidades
         CausaPrincipal::class,
         Cliente::class,
-        DatosReporte::class,
-        EstatusColorText::class,
         EstatusInspeccion::class,
         Falla::class,
         Fase::class,
@@ -83,7 +79,7 @@ import com.example.etic.data.local.entities.TipoFalla
         TipoAmbiente::class,
         TipoFalla::class,
     ],
-    version = 10,
+    version = 11,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

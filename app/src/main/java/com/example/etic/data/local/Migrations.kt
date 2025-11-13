@@ -575,3 +575,334 @@ val MIGRATION_9_10 = object : Migration(9, 10) {
         )
     }
 }
+
+val MIGRATION_10_11 = object : Migration(10, 11) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // Recreate tables added in 9_10 to remove DEFAULTs and align with Room entities
+
+        // causa_principal
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS causa_principal_new (
+                Id_Causa_Raiz      TEXT NOT NULL,
+                Id_Tipo_Inspeccion TEXT,
+                Id_Falla           TEXT,
+                Causa_Raiz         TEXT,
+                Estatus            TEXT,
+                Creado_Por         TEXT,
+                Fecha_Creacion     TEXT,
+                Modificado_Por     TEXT,
+                Fecha_Mod          TEXT,
+                Id_Inspeccion      TEXT,
+                Id_Sitio           TEXT,
+                PRIMARY KEY (Id_Causa_Raiz)
+            )
+            """
+        )
+        db.execSQL("INSERT INTO causa_principal_new SELECT Id_Causa_Raiz, Id_Tipo_Inspeccion, Id_Falla, Causa_Raiz, Estatus, Creado_Por, Fecha_Creacion, Modificado_Por, Fecha_Mod, Id_Inspeccion, Id_Sitio FROM causa_principal")
+        db.execSQL("DROP TABLE causa_principal")
+        db.execSQL("ALTER TABLE causa_principal_new RENAME TO causa_principal")
+
+        // clientes
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS clientes_new (
+                Id_Cliente       TEXT NOT NULL,
+                Id_Compania      TEXT,
+                Id_Giro          TEXT,
+                Razon_Social     TEXT,
+                Nombre_Comercial TEXT,
+                RFC              TEXT,
+                Imagen_Cliente   TEXT,
+                Estatus          TEXT,
+                Creado_Por       TEXT,
+                Fecha_Creacion   TEXT,
+                Modificado_Por   TEXT,
+                Fecha_Mod        TEXT,
+                Id_Inspeccion    TEXT,
+                Id_Sitio         TEXT,
+                PRIMARY KEY (Id_Cliente)
+            )
+            """
+        )
+        db.execSQL("INSERT INTO clientes_new SELECT Id_Cliente, Id_Compania, Id_Giro, Razon_Social, Nombre_Comercial, RFC, Imagen_Cliente, Estatus, Creado_Por, Fecha_Creacion, Modificado_Por, Fecha_Mod, Id_Inspeccion, Id_Sitio FROM clientes")
+        db.execSQL("DROP TABLE clientes")
+        db.execSQL("ALTER TABLE clientes_new RENAME TO clientes")
+
+        // datos_reporte
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS datos_reporte_new (
+                Id_Datos_Reporte            INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+                Id_Inspeccion               TEXT,
+                detalle_ubicacion           TEXT,
+                nombre_contacto             TEXT,
+                puesto_contacto             TEXT,
+                fecha_inicio_ra             TEXT,
+                fecha_fin_ra                TEXT,
+                nombre_img_portada          TEXT,
+                descripcion_reporte         TEXT,
+                areas_inspeccionadas        TEXT,
+                recomendacion_reporte       TEXT,
+                imagen_recomendacion        TEXT,
+                imagen_recomendacion_2      TEXT,
+                referencia_reporte          TEXT,
+                arrayElementosSeleccionados TEXT,
+                arrayProblemasSeleccionados TEXT,
+                Id_Sitio                    TEXT
+            )
+            """
+        )
+        db.execSQL("INSERT INTO datos_reporte_new SELECT Id_Datos_Reporte, Id_Inspeccion, detalle_ubicacion, nombre_contacto, puesto_contacto, fecha_inicio_ra, fecha_fin_ra, nombre_img_portada, descripcion_reporte, areas_inspeccionadas, recomendacion_reporte, imagen_recomendacion, imagen_recomendacion_2, referencia_reporte, arrayElementosSeleccionados, arrayProblemasSeleccionados, Id_Sitio FROM datos_reporte")
+        db.execSQL("DROP TABLE datos_reporte")
+        db.execSQL("ALTER TABLE datos_reporte_new RENAME TO datos_reporte")
+
+        // estatus_color_text
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS estatus_color_text_new (
+                Id_Estatus_Color_Text INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+                Color_Text            TEXT,
+                Descripcion           TEXT NOT NULL,
+                Id_Inspeccion         TEXT,
+                Id_Sitio              TEXT
+            )
+            """
+        )
+        db.execSQL("INSERT INTO estatus_color_text_new SELECT Id_Estatus_Color_Text, Color_Text, Descripcion, Id_Inspeccion, Id_Sitio FROM estatus_color_text")
+        db.execSQL("DROP TABLE estatus_color_text")
+        db.execSQL("ALTER TABLE estatus_color_text_new RENAME TO estatus_color_text")
+
+        // estatus_inspeccion
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS estatus_inspeccion_new (
+                Id_Status_Inspeccion TEXT NOT NULL,
+                Status_Inspeccion    TEXT,
+                Desc_Status          TEXT,
+                Estatus              TEXT,
+                Creado_Por           TEXT,
+                Fecha_Creacion       TEXT,
+                Modificado_Por       TEXT,
+                Fecha_Mod            TEXT,
+                Id_Inspeccion        TEXT,
+                Id_Sitio             TEXT,
+                PRIMARY KEY (Id_Status_Inspeccion)
+            )
+            """
+        )
+        db.execSQL("INSERT INTO estatus_inspeccion_new SELECT Id_Status_Inspeccion, Status_Inspeccion, Desc_Status, Estatus, Creado_Por, Fecha_Creacion, Modificado_Por, Fecha_Mod, Id_Inspeccion, Id_Sitio FROM estatus_inspeccion")
+        db.execSQL("DROP TABLE estatus_inspeccion")
+        db.execSQL("ALTER TABLE estatus_inspeccion_new RENAME TO estatus_inspeccion")
+
+        // fallas
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS fallas_new (
+                Id_Falla           TEXT NOT NULL,
+                Id_Tipo_Falla      TEXT,
+                Id_Tipo_Inspeccion TEXT,
+                Falla              TEXT,
+                Estatus            TEXT,
+                Creado_Por         TEXT,
+                Fecha_Creacion     TEXT,
+                Modificado_Por     TEXT,
+                Fecha_Mod          TEXT,
+                Id_Inspeccion      TEXT,
+                Id_Sitio           TEXT,
+                PRIMARY KEY (Id_Falla)
+            )
+            """
+        )
+        db.execSQL("INSERT INTO fallas_new SELECT Id_Falla, Id_Tipo_Falla, Id_Tipo_Inspeccion, Falla, Estatus, Creado_Por, Fecha_Creacion, Modificado_Por, Fecha_Mod, Id_Inspeccion, Id_Sitio FROM fallas")
+        db.execSQL("DROP TABLE fallas")
+        db.execSQL("ALTER TABLE fallas_new RENAME TO fallas")
+
+        // fases
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS fases_new (
+                Id_Fase        TEXT NOT NULL,
+                Nombre_Fase    TEXT,
+                Descripcion    TEXT,
+                Estatus        TEXT,
+                Creado_Por     TEXT,
+                Fecha_Creacion TEXT,
+                Modificado_Por TEXT,
+                Fecha_Mod      TEXT,
+                Id_Inspeccion  TEXT,
+                Id_Sitio       TEXT,
+                PRIMARY KEY (Id_Fase)
+            )
+            """
+        )
+        db.execSQL("INSERT INTO fases_new SELECT Id_Fase, Nombre_Fase, Descripcion, Estatus, Creado_Por, Fecha_Creacion, Modificado_Por, Fecha_Mod, Id_Inspeccion, Id_Sitio FROM fases")
+        db.execSQL("DROP TABLE fases")
+        db.execSQL("ALTER TABLE fases_new RENAME TO fases")
+
+        // grupos
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS grupos_new (
+                Id_Grupo       TEXT NOT NULL,
+                Grupo          TEXT,
+                Estatus        TEXT,
+                Creado_Por     TEXT,
+                Fecha_Creacion TEXT,
+                Modificado_Por TEXT,
+                Fecha_Mod      TEXT,
+                Id_Inspeccion  TEXT,
+                Id_Sitio       TEXT,
+                PRIMARY KEY (Id_Grupo)
+            )
+            """
+        )
+        db.execSQL("INSERT INTO grupos_new SELECT Id_Grupo, Grupo, Estatus, Creado_Por, Fecha_Creacion, Modificado_Por, Fecha_Mod, Id_Inspeccion, Id_Sitio FROM grupos")
+        db.execSQL("DROP TABLE grupos")
+        db.execSQL("ALTER TABLE grupos_new RENAME TO grupos")
+
+        // grupos_sitios
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS grupos_sitios_new (
+                Id_Grupo_Sitios TEXT NOT NULL,
+                Id_Cliente      TEXT,
+                Grupo           TEXT,
+                Estatus         TEXT,
+                Creado_Por      TEXT,
+                Fecha_Creacion  TEXT,
+                Modificado_Por  TEXT,
+                Fecha_Mod       TEXT,
+                Id_Inspeccion   TEXT,
+                Id_Sitio        TEXT,
+                PRIMARY KEY (Id_Grupo_Sitios)
+            )
+            """
+        )
+        db.execSQL("INSERT INTO grupos_sitios_new SELECT Id_Grupo_Sitios, Id_Cliente, Grupo, Estatus, Creado_Por, Fecha_Creacion, Modificado_Por, Fecha_Mod, Id_Inspeccion, Id_Sitio FROM grupos_sitios")
+        db.execSQL("DROP TABLE grupos_sitios")
+        db.execSQL("ALTER TABLE grupos_sitios_new RENAME TO grupos_sitios")
+
+        // historial_problemas
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS historial_problemas_new (
+                Id_Historial_Problema TEXT NOT NULL,
+                Id_Problema           TEXT,
+                Id_Problema_Anterior  TEXT,
+                Id_Problema_Original  TEXT,
+                Estatus               TEXT,
+                Creado_Por            TEXT,
+                Fecha_Creacion        TEXT,
+                Modificado_Por        TEXT,
+                Fecha_Mod             TEXT,
+                Id_Inspeccion         TEXT,
+                Id_Sitio              TEXT,
+                PRIMARY KEY (Id_Historial_Problema)
+            )
+            """
+        )
+        db.execSQL("INSERT INTO historial_problemas_new SELECT Id_Historial_Problema, Id_Problema, Id_Problema_Anterior, Id_Problema_Original, Estatus, Creado_Por, Fecha_Creacion, Modificado_Por, Fecha_Mod, Id_Inspeccion, Id_Sitio FROM historial_problemas")
+        db.execSQL("DROP TABLE historial_problemas")
+        db.execSQL("ALTER TABLE historial_problemas_new RENAME TO historial_problemas")
+
+        // recomendaciones
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS recomendaciones_new (
+                Id_Recomendacion   TEXT NOT NULL,
+                Id_Tipo_Inspeccion TEXT,
+                Id_Causa_Raiz      TEXT,
+                Recomendacion      TEXT,
+                Estatus            TEXT,
+                Creado_Por         TEXT,
+                Fecha_Creacion     TEXT,
+                Modificado_Por     TEXT,
+                Fecha_Mod          TEXT,
+                Id_Inspeccion      TEXT,
+                Id_Sitio           TEXT,
+                PRIMARY KEY (Id_Recomendacion)
+            )
+            """
+        )
+        db.execSQL("INSERT INTO recomendaciones_new SELECT Id_Recomendacion, Id_Tipo_Inspeccion, Id_Causa_Raiz, Recomendacion, Estatus, Creado_Por, Fecha_Creacion, Modificado_Por, Fecha_Mod, Id_Inspeccion, Id_Sitio FROM recomendaciones")
+        db.execSQL("DROP TABLE recomendaciones")
+        db.execSQL("ALTER TABLE recomendaciones_new RENAME TO recomendaciones")
+
+        // sitios
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS sitios_new (
+                Id_Sitio          TEXT NOT NULL,
+                Id_Cliente        TEXT,
+                Id_Grupo_Sitios   TEXT,
+                Sitio             TEXT,
+                Desc_Sitio        TEXT,
+                Direccion         TEXT,
+                Colonia           TEXT,
+                Estado            TEXT,
+                Municipio         TEXT,
+                Folder            TEXT,
+                Contacto_1        TEXT,
+                Puesto_Contacto_1 TEXT,
+                Contacto_2        TEXT,
+                Puesto_Contacto_2 TEXT,
+                Contacto_3        TEXT,
+                Puesto_Contacto_3 TEXT,
+                Estatus           TEXT,
+                Creado_Por        TEXT,
+                Fecha_Creacion    TEXT,
+                Modificado_Por    TEXT,
+                Fecha_Mod         TEXT,
+                Id_Inspeccion     TEXT,
+                PRIMARY KEY (Id_Sitio)
+            )
+            """
+        )
+        db.execSQL("INSERT INTO sitios_new SELECT Id_Sitio, Id_Cliente, Id_Grupo_Sitios, Sitio, Desc_Sitio, Direccion, Colonia, Estado, Municipio, Folder, Contacto_1, Puesto_Contacto_1, Contacto_2, Puesto_Contacto_2, Contacto_3, Puesto_Contacto_3, Estatus, Creado_Por, Fecha_Creacion, Modificado_Por, Fecha_Mod, Id_Inspeccion FROM sitios")
+        db.execSQL("DROP TABLE sitios")
+        db.execSQL("ALTER TABLE sitios_new RENAME TO sitios")
+
+        // tipo_ambientes
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS tipo_ambientes_new (
+                Id_Tipo_Ambiente TEXT NOT NULL,
+                Nombre           TEXT,
+                Descripcion      TEXT,
+                Adjust           REAL,
+                Estatus          TEXT,
+                Id_Inspeccion    TEXT,
+                Id_Sitio         TEXT,
+                PRIMARY KEY (Id_Tipo_Ambiente)
+            )
+            """
+        )
+        db.execSQL("INSERT INTO tipo_ambientes_new SELECT Id_Tipo_Ambiente, Nombre, Descripcion, Adjust, Estatus, Id_Inspeccion, Id_Sitio FROM tipo_ambientes")
+        db.execSQL("DROP TABLE tipo_ambientes")
+        db.execSQL("ALTER TABLE tipo_ambientes_new RENAME TO tipo_ambientes")
+
+        // tipo_fallas
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS tipo_fallas_new (
+                Id_Tipo_Falla      TEXT NOT NULL,
+                Id_Tipo_Inspeccion TEXT,
+                Tipo_Falla         TEXT,
+                Desc_Tipo_Falla    TEXT,
+                Estatus            TEXT,
+                Creado_Por         TEXT,
+                Fecha_Creacion     TEXT,
+                Modificado_Por     TEXT,
+                Fecha_Mod          TEXT,
+                Id_Inspeccion      TEXT,
+                Id_Sitio           TEXT,
+                PRIMARY KEY (Id_Tipo_Falla)
+            )
+            """
+        )
+        db.execSQL("INSERT INTO tipo_fallas_new SELECT Id_Tipo_Falla, Id_Tipo_Inspeccion, Tipo_Falla, Desc_Tipo_Falla, Estatus, Creado_Por, Fecha_Creacion, Modificado_Por, Fecha_Mod, Id_Inspeccion, Id_Sitio FROM tipo_fallas")
+        db.execSQL("DROP TABLE tipo_fallas")
+        db.execSQL("ALTER TABLE tipo_fallas_new RENAME TO tipo_fallas")
+    }
+}
