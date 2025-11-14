@@ -78,6 +78,7 @@ fun MainScreen(
     var showLogoutDialog by rememberSaveable { mutableStateOf(false) }
     var section by rememberSaveable { mutableStateOf(HomeSection.Inspection) }
     var isLoading by rememberSaveable { mutableStateOf(true) }
+    var fontsExpanded by rememberSaveable { mutableStateOf(false) }
 
     val drawerItemColors = NavigationDrawerItemDefaults.colors(
         selectedContainerColor = Color(0xFF202327),
@@ -167,6 +168,38 @@ fun MainScreen(
                         modifier = Modifier.padding(vertical = 4.dp),
                         colors = drawerItemColors
                     )
+
+                    // Opción Fuentes con sub-opciones
+                    NavigationDrawerItem(
+                        label = { Text("Fuentes") },
+                        selected = false,
+                        onClick = { fontsExpanded = !fontsExpanded },
+                        modifier = Modifier.padding(vertical = 4.dp),
+                        colors = drawerItemColors
+                    )
+                    if (fontsExpanded) {
+                        NavigationDrawerItem(
+                            label = { Text("Pequeña") },
+                            selected = false,
+                            onClick = { /* sin acción por ahora */ },
+                            modifier = Modifier.padding(start = 24.dp, top = 2.dp, bottom = 2.dp),
+                            colors = drawerItemColors
+                        )
+                        NavigationDrawerItem(
+                            label = { Text("Mediana") },
+                            selected = false,
+                            onClick = { /* sin acción por ahora */ },
+                            modifier = Modifier.padding(start = 24.dp, top = 2.dp, bottom = 2.dp),
+                            colors = drawerItemColors
+                        )
+                        NavigationDrawerItem(
+                            label = { Text("Grande") },
+                            selected = false,
+                            onClick = { /* sin acción por ahora */ },
+                            modifier = Modifier.padding(start = 24.dp, top = 2.dp, bottom = 2.dp),
+                            colors = drawerItemColors
+                        )
+                    }
 
                     Spacer(modifier = Modifier.height(8.dp))
                     HorizontalDivider(
