@@ -1,49 +1,67 @@
 package com.example.etic.features.home
 
-import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ChecklistRtl
-import androidx.compose.material.icons.filled.Logout
-import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material3.*
-import androidx.compose.material3.DrawerValue
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.ModalDrawerSheet
-import androidx.compose.material3.ModalNavigationDrawer
-import androidx.compose.material3.NavigationDrawerItem
-import androidx.compose.material3.NavigationDrawerItemDefaults
-import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.draw.alpha
-import androidx.compose.foundation.shape.CircleShape
+import android.widget.Toast
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ChecklistRtl
+import androidx.compose.material.icons.filled.Logout
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.NavigationDrawerItem
+import androidx.compose.material3.NavigationDrawerItemDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberDrawerState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.example.etic.R
-import com.example.etic.features.inspection.ui.home.InspectionScreen
 import com.example.etic.core.current.LocalCurrentInspection
 import com.example.etic.core.current.ProvideCurrentInspection
 import com.example.etic.core.current.ProvideCurrentUser
 import com.example.etic.core.export.exportRoomDbToDownloads
-import android.widget.Toast
+import com.example.etic.features.inspection.ui.home.InspectionScreen
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import androidx.compose.ui.platform.LocalContext
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 private enum class HomeSection { Inspection, Reports }
 
@@ -72,14 +90,14 @@ fun MainScreen(
 
     ModalNavigationDrawer(
         drawerState = drawerState,
+        gesturesEnabled = true, // permite cerrar al tocar fuera / gesto
+        scrimColor = Color.Black.copy(alpha = 0.32f),
         drawerContent = {
             val screenWidth = LocalConfiguration.current.screenWidthDp.dp
-            val drawerWidth = remember(screenWidth) {
-                when {
-                    screenWidth < 360.dp -> screenWidth - 24.dp
-                    screenWidth < 600.dp -> 250.dp
-                    else -> 260.dp
-                }
+            val drawerWidth = when {
+                screenWidth < 360.dp -> screenWidth - 24.dp
+                screenWidth < 600.dp -> 250.dp
+                else -> 260.dp
             }
 
             ModalDrawerSheet(
@@ -90,7 +108,7 @@ fun MainScreen(
                 Column(modifier = Modifier.padding(12.dp)) {
                     ListItem(
                         headlineContent = { Text("ETIC System", color = Color.White) },
-                        supportingContent = { Text("Rafael Garcia", color = Color.LightGray) },
+                        supportingContent = { Text(userName, color = Color.LightGray) },
                         leadingContent = {
                             Image(
                                 painter = painterResource(id = R.drawable.img_etic_menu),
@@ -102,10 +120,9 @@ fun MainScreen(
                     )
 
                     Spacer(Modifier.height(4.dp))
-
                     HorizontalDivider(
                         modifier = Modifier.padding(bottom = 4.dp),
-                        thickness = DividerDefaults.Thickness,
+                        thickness = androidx.compose.material3.DividerDefaults.Thickness,
                         color = Color.White.copy(alpha = 0.15f)
                     )
 
@@ -117,7 +134,7 @@ fun MainScreen(
                             scope.launch { drawerState.close() }
                         },
                         modifier = Modifier.padding(vertical = 4.dp),
-                        icon = { Icon(Icons.Filled.ChecklistRtl, contentDescription = "Seleccionado") },
+                        icon = { Icon(Icons.Filled.ChecklistRtl, contentDescription = null) },
                         colors = drawerItemColors
                     )
                     NavigationDrawerItem(
@@ -130,14 +147,20 @@ fun MainScreen(
                         modifier = Modifier.padding(vertical = 4.dp),
                         colors = drawerItemColors
                     )
-
                     NavigationDrawerItem(
                         label = { Text("Exportar DB") },
                         selected = false,
                         onClick = {
                             scope.launch {
-                                val result = withContext(Dispatchers.IO) { exportRoomDbToDownloads(appContext) }
-                                Toast.makeText(appContext, if (result.success) result.message else "Fallo: ${result.message}", Toast.LENGTH_LONG).show()
+                                val result = withContext(Dispatchers.IO) {
+                                    exportRoomDbToDownloads(appContext)
+                                }
+                                Toast.makeText(
+                                    appContext,
+                                    if (result.success) result.message
+                                    else "Fallo: ${result.message}",
+                                    Toast.LENGTH_LONG
+                                ).show()
                                 drawerState.close()
                             }
                         },
@@ -146,9 +169,8 @@ fun MainScreen(
                     )
 
                     Spacer(modifier = Modifier.height(8.dp))
-
                     HorizontalDivider(
-                        thickness = DividerDefaults.Thickness,
+                        thickness = androidx.compose.material3.DividerDefaults.Thickness,
                         color = Color.White.copy(alpha = 0.15f)
                     )
                 }
@@ -156,58 +178,85 @@ fun MainScreen(
         }
     ) {
         ProvideCurrentUser {
-        ProvideCurrentInspection {
-        Scaffold(
-            topBar = {
-                CenterAlignedTopAppBar(
-                    title = {
-                        val info = LocalCurrentInspection.current
-                        val titleText = info?.let { info ->
-                            val no = info.noInspeccion?.toString() ?: "-"
-                            val cliente = info.nombreCliente?.takeIf { it.isNotBlank() } ?: (info.idCliente ?: "-")
-                            "No. Inspeccion Actual: $no - Cliente: $cliente"
-                        } ?: "Pantalla principal"
-                        Text(titleText)
+            ProvideCurrentInspection {
+
+                // BLUR para TODO el Scaffold (header + contenido)
+                val blurModifier =
+                    if (drawerState.isOpen) Modifier.blur(8.dp) else Modifier
+
+                Scaffold(
+                    topBar = {
+                        CenterAlignedTopAppBar(
+                            title = {
+                                val info = LocalCurrentInspection.current
+                                val titleText = info?.let { data ->
+                                    val no = data.noInspeccion?.toString() ?: "-"
+                                    val cliente =
+                                        data.nombreCliente?.ifBlank { data.idCliente ?: "-" } ?: "-"
+                                    "No. Inspección Actual: $no - Cliente: $cliente"
+                                } ?: "Pantalla principal"
+                                Text(titleText)
+                            },
+                            navigationIcon = {
+                                IconButton(onClick = {
+                                    scope.launch {
+                                        if (drawerState.isOpen) drawerState.close()
+                                        else drawerState.open()
+                                    }
+                                }) {
+                                    Icon(Icons.Filled.Menu, contentDescription = "Abrir menú")
+                                }
+                            },
+                            actions = {
+                                IconButton(onClick = { showLogoutDialog = true }) {
+                                    Icon(Icons.Filled.Logout, contentDescription = "Cerrar sesión")
+                                }
+                            },
+                            colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
+                                containerColor = Color(0xFF202327),
+                                titleContentColor = Color.White,
+                                navigationIconContentColor = Color.White,
+                                actionIconContentColor = Color.White
+                            )
+                        )
                     },
-                    navigationIcon = {
-                        IconButton(onClick = {
-                            scope.launch {
-                                if (drawerState.isOpen) drawerState.close() else drawerState.open()
-                            }
-                        }) {
-                            Icon(Icons.Filled.Menu, contentDescription = "Abrir menú")
+                    modifier = modifier.then(blurModifier)
+                ) { innerPadding ->
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(innerPadding)
+                    ) {
+
+                        when (section) {
+                            HomeSection.Inspection ->
+                                InspectionScreen(
+                                    onReady = {
+                                        scope.launch {
+                                            delay(900)
+                                            isLoading = false
+                                        }
+                                    }
+                                )
+
+                            HomeSection.Reports ->
+                                Box(
+                                    Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text("Reportes")
+                                }
                         }
-                    },
-                    actions = {
-                        IconButton(onClick = { showLogoutDialog = true }) {
-                            Icon(Icons.Filled.Logout, contentDescription = "Cerrar sesión")
+
+                        if (isLoading) {
+                            LoadingOverlay("Cargando datos…")
                         }
-                    },
-                    colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                        containerColor = Color(0xFF202327),
-                        titleContentColor = Color.White,
-                        navigationIconContentColor = Color.White,
-                        actionIconContentColor = Color.White
-                    )
-                )
-            },
-            modifier = modifier
-        ) { innerPadding ->
-            Box(
-                modifier = Modifier.fillMaxSize().padding(innerPadding)
-            ) {
-                when (section) {
-                    HomeSection.Inspection -> InspectionScreen(onReady = { scope.launch { delay(900); isLoading = false } })
-                    HomeSection.Reports -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Reportes") }
+                    }
                 }
 
-                if (isLoading) {
-                    LoadingOverlay(message = "Cargando datos…")
-                }
-            }
-        }
-        }
-        }
+            } // ProvideCurrentInspection
+        } // ProvideCurrentUser
     }
 
     if (showLogoutDialog) {
@@ -215,20 +264,33 @@ fun MainScreen(
             onDismissRequest = { showLogoutDialog = false },
             title = { Text("Cerrar sesión") },
             text = { Text("¿Seguro que deseas cerrar sesión?") },
-            dismissButton = { TextButton(onClick = { showLogoutDialog = false }) { Text("Cancelar") } },
+            dismissButton = {
+                TextButton(onClick = { showLogoutDialog = false }) {
+                    Text("Cancelar")
+                }
+            },
             confirmButton = {
                 TextButton(onClick = {
                     showLogoutDialog = false
                     onLogout()
-                }) { Text("Cerrar sesión") }
+                }) {
+                    Text("Cerrar sesión")
+                }
             }
         )
     }
 }
 
+
+
+// ------------------------------------------------------------
+//  LOADING OVERLAY (fuera de MainScreen)
+// ------------------------------------------------------------
+
 @Composable
-private fun LoadingOverlay(message: String) {
+fun LoadingOverlay(message: String) {
     val transition = rememberInfiniteTransition(label = "loading")
+
     val angle by transition.animateFloat(
         initialValue = 0f,
         targetValue = 360f,
@@ -238,24 +300,37 @@ private fun LoadingOverlay(message: String) {
         ),
         label = "angle"
     )
+
     val dot1 by transition.animateFloat(
         initialValue = 0.3f,
         targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(900, delayMillis = 0), RepeatMode.Reverse),
+        animationSpec = infiniteRepeatable(
+            tween(900, delayMillis = 0),
+            RepeatMode.Reverse
+        ),
         label = "dot1"
     )
+
     val dot2 by transition.animateFloat(
         initialValue = 0.3f,
         targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(900, delayMillis = 150), RepeatMode.Reverse),
+        animationSpec = infiniteRepeatable(
+            tween(900, delayMillis = 150),
+            RepeatMode.Reverse
+        ),
         label = "dot2"
     )
+
     val dot3 by transition.animateFloat(
         initialValue = 0.3f,
         targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(900, delayMillis = 300), RepeatMode.Reverse),
+        animationSpec = infiniteRepeatable(
+            tween(900, delayMillis = 300),
+            RepeatMode.Reverse
+        ),
         label = "dot3"
     )
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -263,26 +338,47 @@ private fun LoadingOverlay(message: String) {
         contentAlignment = Alignment.Center
     ) {
         Card(
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF202327), contentColor = Color.White),
+            colors = CardDefaults.cardColors(
+                containerColor = Color(0xFF202327),
+                contentColor = Color.White
+            ),
             elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
         ) {
-            Column(Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                // Logo girando para un efecto más atractivo
+            Column(
+                Modifier.padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
                 Image(
                     painter = painterResource(id = R.drawable.etic_logo_login),
                     contentDescription = null,
-                    modifier = Modifier.size(72.dp).rotate(angle)
+                    modifier = Modifier
+                        .size(72.dp)
+                        .rotate(angle)
                 )
+
                 Spacer(Modifier.height(16.dp))
                 Text(message)
+
                 Spacer(Modifier.height(12.dp))
+
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Box(Modifier.size(10.dp).scale(1f).background(Color.White.copy(alpha = dot1), CircleShape))
-                    Box(Modifier.size(10.dp).scale(1f).background(Color.White.copy(alpha = dot2), CircleShape))
-                    Box(Modifier.size(10.dp).scale(1f).background(Color.White.copy(alpha = dot3), CircleShape))
+                    Box(
+                        Modifier
+                            .size(10.dp)
+                            .background(Color.White.copy(alpha = dot1), CircleShape)
+                    )
+                    Box(
+                        Modifier
+                            .size(10.dp)
+                            .background(Color.White.copy(alpha = dot2), CircleShape)
+                    )
+                    Box(
+                        Modifier
+                            .size(10.dp)
+                            .background(Color.White.copy(alpha = dot3), CircleShape)
+                    )
                 }
             }
         }
     }
 }
-
