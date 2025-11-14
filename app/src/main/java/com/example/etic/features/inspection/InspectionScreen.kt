@@ -12,6 +12,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -49,11 +50,14 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.tooling.preview.Preview
@@ -934,7 +938,8 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                     var baselineToEdit by remember { mutableStateOf<BaselineRow?>(null) }
                                     var confirmDeleteId by remember { mutableStateOf<String?>(null) }
 
-                                    val tableData by produceState(initialValue = emptyList<BaselineRow>(), ubId, inspId, refreshTick) {
+                                    var baselineCache by remember { mutableStateOf(emptyList<BaselineRow>()) }
+                                    val tableData by produceState(initialValue = baselineCache, ubId, inspId, refreshTick) {
                                         val rows = if (!inspId.isNullOrBlank()) {
                                             runCatching { lineaBaseDao.getByInspeccionActivos(inspId) }.getOrElse { emptyList() }
                                         } else emptyList()
@@ -964,6 +969,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                                     notas = r.notas ?: ""
                                                 )
                                             }
+                                        baselineCache = value
                                     }
 
                                     // Layout con cabecera fija (botón siempre visible) + cuerpo con tabla personalizada
@@ -1004,12 +1010,13 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                         }
                                         Divider(thickness = DIVIDER_THICKNESS)
 
+                                        val baselineTabListState = rememberSaveable("baseline_tab2_state", saver = LazyListState.Saver) { LazyListState() }
                                         if (tableData.isEmpty()) {
                                             Box(Modifier.fillMaxWidth().padding(8.dp), contentAlignment = Alignment.CenterStart) {
                                                 Text(stringResource(com.example.etic.R.string.msg_sin_baseline))
                                             }
                                         } else {
-                                            LazyColumn(Modifier.fillMaxSize()) {
+                                            LazyColumn(Modifier.fillMaxSize(), state = baselineTabListState) {
                                                 items(tableData, key = { it.id }) { b ->
                                                     Row(
                                                         Modifier
@@ -1548,6 +1555,7 @@ private data class TreeNode(
 ) { val isLeaf: Boolean get() = children.isEmpty() }
 
 private data class Problem(
+    val id: String,
     val no: Int,
     val fecha: java.time.LocalDate,
     val numInspeccion: String,
@@ -1562,6 +1570,7 @@ private data class Problem(
 )
 
 private data class Baseline(
+    val id: String,
     val numInspeccion: String,
     val equipo: String,
     val fecha: java.time.LocalDate,
@@ -1625,8 +1634,9 @@ private fun SimpleTreeView(
     val selColor = MaterialTheme.colorScheme.primary.copy(alpha = SELECT_ALPHA)
 
     val hScroll = rememberScrollState()
+    val treeListState = rememberSaveable("tree_list_state", saver = LazyListState.Saver) { LazyListState() }
     Box(Modifier.fillMaxSize().horizontalScroll(hScroll)) {
-        LazyColumn(Modifier.fillMaxHeight()) {
+        LazyColumn(Modifier.fillMaxHeight(), state = treeListState) {
             items(flat, key = { it.node.id }) { item ->
                 val n = item.node
                 val isSelected = selectedId == n.id
@@ -1703,10 +1713,11 @@ private fun DetailsTable(
                 }
                 Divider(thickness = DIVIDER_THICKNESS)
 
+                val listState = rememberSaveable("details_list_state", saver = LazyListState.Saver) { LazyListState() }
                 if (children.isEmpty()) {
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Sin elementos") }
                 } else {
-                    LazyColumn(Modifier.fillMaxHeight()) {
+                    LazyColumn(Modifier.fillMaxHeight(), state = listState) {
                         items(children, key = { it.id }) { n ->
                             Row(
                                 Modifier
@@ -1767,9 +1778,22 @@ private fun ListTabs(
             Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text(stringResource(com.example.etic.R.string.tab_baseline)) })
         }
         Divider(thickness = DIVIDER_THICKNESS)
-        when (tab) {
-            0 -> ProblemsTableFromDatabase(selectedId = node?.id)
-            1 -> BaselineTableFromDatabase(selectedId = node?.id)
+        val showProblems = tab == 0
+        Box(Modifier.fillMaxSize()) {
+            ProblemsTableFromDatabase(
+                selectedId = node?.id,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .alpha(if (showProblems) 1f else 0f)
+                    .zIndex(if (showProblems) 1f else 0f)
+            )
+            BaselineTableFromDatabase(
+                selectedId = node?.id,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .alpha(if (showProblems) 0f else 1f)
+                    .zIndex(if (showProblems) 0f else 1f)
+            )
         }
     }
 }
@@ -1899,6 +1923,7 @@ private fun ProblemsTable(problems: List<Problem>, onDelete: (Problem) -> Unit) 
     fun RowScope.cell(flex: Int, content: @Composable () -> Unit) =
         Box(Modifier.weight(flex.toFloat()), contentAlignment = Alignment.CenterStart) { content() }
 
+    val listState = rememberSaveable("problems_list_state", saver = LazyListState.Saver) { LazyListState() }
     Column(Modifier.fillMaxSize()) {
         Row(
             Modifier
@@ -1923,8 +1948,8 @@ private fun ProblemsTable(problems: List<Problem>, onDelete: (Problem) -> Unit) 
         if (problems.isEmpty()) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(stringResource(com.example.etic.R.string.msg_sin_problemas)) }
         } else {
-            LazyColumn(Modifier.fillMaxSize()) {
-                items(problems) { p ->
+            LazyColumn(Modifier.fillMaxSize(), state = listState) {
+                items(problems, key = { it.id }) { p ->
                     Row(
                         Modifier
                             .fillMaxWidth()
@@ -1960,6 +1985,7 @@ private fun BaselineTable(baselines: List<Baseline>, onDelete: (Baseline) -> Uni
     fun RowScope.cell(flex: Int, content: @Composable () -> Unit) =
         Box(Modifier.weight(flex.toFloat())) { content() }
 
+    val listState = rememberSaveable("baseline_list_state", saver = LazyListState.Saver) { LazyListState() }
     Column(Modifier.fillMaxSize()) {
         Row(
             Modifier
@@ -1982,8 +2008,8 @@ private fun BaselineTable(baselines: List<Baseline>, onDelete: (Baseline) -> Uni
         if (baselines.isEmpty()) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(stringResource(com.example.etic.R.string.msg_sin_baseline)) }
         } else {
-            LazyColumn(Modifier.fillMaxSize()) {
-                items(baselines) { b ->
+            LazyColumn(Modifier.fillMaxSize(), state = listState) {
+                items(baselines, key = { it.id }) { b ->
                     Row(
                         Modifier
                             .fillMaxWidth()
@@ -2020,7 +2046,7 @@ private fun PreviewInspection() { EticTheme { InspectionScreen() } }
 // -------------------------
 
 @Composable
-private fun ProblemsTableFromDatabase(selectedId: String?) {
+private fun ProblemsTableFromDatabase(selectedId: String?, modifier: Modifier = Modifier) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val dao = remember { com.example.etic.data.local.DbProvider.get(ctx).problemaDao() }
     val ubicacionDao = remember { com.example.etic.data.local.DbProvider.get(ctx).ubicacionDao() }
@@ -2029,7 +2055,8 @@ private fun ProblemsTableFromDatabase(selectedId: String?) {
     val eqDao = remember { com.example.etic.data.local.DbProvider.get(ctx).equipoDao() }
     val tipoInspDao = remember { com.example.etic.data.local.DbProvider.get(ctx).tipoInspeccionDao() }
 
-    val uiProblems by produceState(initialValue = emptyList<Problem>(), selectedId) {
+    var problemsCache by remember { mutableStateOf(emptyList<Problem>()) }
+    val uiProblems by produceState(initialValue = problemsCache, selectedId) {
         val rows = try { dao.getAllActivos() } catch (_: Exception) { emptyList() }
         val ubicaciones = try { ubicacionDao.getAllActivas() } catch (_: Exception) { emptyList() }
         val filteredRows = when {
@@ -2060,6 +2087,7 @@ private fun ProblemsTableFromDatabase(selectedId: String?) {
             val tipoDisplay = r.idTipoInspeccion?.let { tipoMap[it]?.tipoInspeccion } ?: (r.idTipoInspeccion ?: "")
 
             Problem(
+                id = r.idProblema,
                 no = r.numeroProblema ?: 0,
                 fecha = fecha,
                 numInspeccion = numInspDisplay,
@@ -2073,9 +2101,12 @@ private fun ProblemsTableFromDatabase(selectedId: String?) {
                 comentarios = r.componentComment ?: ""
             )
         }
+        problemsCache = value
     }
 
-    ProblemsTable(problems = uiProblems, onDelete = { /* no-op: from DB */ })
+    Box(modifier) {
+        ProblemsTable(problems = uiProblems, onDelete = { /* no-op: from DB */ })
+    }
 }
 
 // -------------------------
@@ -2083,14 +2114,15 @@ private fun ProblemsTableFromDatabase(selectedId: String?) {
 // -------------------------
 
 @Composable
-private fun BaselineTableFromDatabase(selectedId: String?) {
+private fun BaselineTableFromDatabase(selectedId: String?, modifier: Modifier = Modifier) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val currentInspection = LocalCurrentInspection.current
     val dao = remember { com.example.etic.data.local.DbProvider.get(ctx).lineaBaseDao() }
     val ubicacionDao = remember { com.example.etic.data.local.DbProvider.get(ctx).ubicacionDao() }
     val inspDao = remember { com.example.etic.data.local.DbProvider.get(ctx).inspeccionDao() }
 
-    val uiBaselines by produceState(initialValue = emptyList<Baseline>(), selectedId, currentInspection?.idInspeccion) {
+    var baselinesCache by remember { mutableStateOf(emptyList<Baseline>()) }
+    val uiBaselines by produceState(initialValue = baselinesCache, selectedId, currentInspection?.idInspeccion) {
         val rows = try {
             val inspId = currentInspection?.idInspeccion
             if (!inspId.isNullOrBlank()) dao.getByInspeccionActivos(inspId) else dao.getAllActivos()
@@ -2118,6 +2150,7 @@ private fun BaselineTableFromDatabase(selectedId: String?) {
             val ubicDisplay = r.idUbicacion?.let { ubicMap[it]?.ubicacion } ?: ""
 
             Baseline(
+                id = r.idLineaBase,
                 numInspeccion = numInspDisplay,
                 equipo = ubicDisplay,
                 fecha = fecha,
@@ -2129,9 +2162,12 @@ private fun BaselineTableFromDatabase(selectedId: String?) {
                 notas = r.notas ?: ""
             )
         }
+        baselinesCache = value
     }
 
-    BaselineTable(baselines = uiBaselines, onDelete = { /* no-op: from DB */ })
+    Box(modifier) {
+        BaselineTable(baselines = uiBaselines, onDelete = { /* no-op: from DB */ })
+    }
 }
 
 // -------------------------
@@ -2151,7 +2187,8 @@ private fun UbicacionesFlatListFromDatabase(modifier: Modifier = Modifier) {
             Text("Sin ubicaciones en BD")
         }
     } else {
-        LazyColumn(Modifier.fillMaxSize()) {
+        val listState = rememberSaveable("ubicaciones_list_state", saver = LazyListState.Saver) { LazyListState() }
+        LazyColumn(Modifier.fillMaxSize(), state = listState) {
             items(ubicaciones, key = { it.idUbicacion }) { u ->
                 Column(Modifier.fillMaxWidth().padding(vertical = 8.dp, horizontal = 8.dp)) {
                     Text(u.ubicacion ?: u.descripcion ?: "(Sin nombre)", style = MaterialTheme.typography.bodyLarge)
