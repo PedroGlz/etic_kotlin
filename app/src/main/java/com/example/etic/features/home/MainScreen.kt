@@ -14,6 +14,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChecklistRtl
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.AlertDialog
@@ -62,6 +66,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.example.etic.ui.theme.FontSizeOption
 
 private enum class HomeSection { Inspection, Reports }
 
@@ -69,6 +74,8 @@ private enum class HomeSection { Inspection, Reports }
 @Composable
 fun MainScreen(
     userName: String,
+    currentFontSize: FontSizeOption = FontSizeOption.Large,
+    onChangeFontSize: (FontSizeOption) -> Unit = {},
     onLogout: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -175,28 +182,52 @@ fun MainScreen(
                         selected = false,
                         onClick = { fontsExpanded = !fontsExpanded },
                         modifier = Modifier.padding(vertical = 4.dp),
+                        icon = {
+                            Icon(
+                                imageVector = if (fontsExpanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                                contentDescription = if (fontsExpanded) "Contraer" else "Expandir"
+                            )
+                        },
                         colors = drawerItemColors
                     )
                     if (fontsExpanded) {
+                        val isSmall = currentFontSize == FontSizeOption.Small
+                        val isMedium = currentFontSize == FontSizeOption.Medium
+                        val isLarge = currentFontSize == FontSizeOption.Large
                         NavigationDrawerItem(
                             label = { Text("Pequeña") },
-                            selected = false,
-                            onClick = { /* sin acción por ahora */ },
+                            selected = isSmall,
+                            onClick = {
+                                onChangeFontSize(FontSizeOption.Small)
+                                fontsExpanded = false
+                                scope.launch { drawerState.close() }
+                            },
                             modifier = Modifier.padding(start = 24.dp, top = 2.dp, bottom = 2.dp),
+                            icon = { if (isSmall) Icon(Icons.Filled.Check, contentDescription = null) },
                             colors = drawerItemColors
                         )
                         NavigationDrawerItem(
                             label = { Text("Mediana") },
-                            selected = false,
-                            onClick = { /* sin acción por ahora */ },
+                            selected = isMedium,
+                            onClick = {
+                                onChangeFontSize(FontSizeOption.Medium)
+                                fontsExpanded = false
+                                scope.launch { drawerState.close() }
+                            },
                             modifier = Modifier.padding(start = 24.dp, top = 2.dp, bottom = 2.dp),
+                            icon = { if (isMedium) Icon(Icons.Filled.Check, contentDescription = null) },
                             colors = drawerItemColors
                         )
                         NavigationDrawerItem(
                             label = { Text("Grande") },
-                            selected = false,
-                            onClick = { /* sin acción por ahora */ },
+                            selected = isLarge,
+                            onClick = {
+                                onChangeFontSize(FontSizeOption.Large)
+                                fontsExpanded = false
+                                scope.launch { drawerState.close() }
+                            },
                             modifier = Modifier.padding(start = 24.dp, top = 2.dp, bottom = 2.dp),
+                            icon = { if (isLarge) Icon(Icons.Filled.Check, contentDescription = null) },
                             colors = drawerItemColors
                         )
                     }
