@@ -8,7 +8,7 @@ import androidx.room.PrimaryKey
 data class EstatusColorText(
     @PrimaryKey(autoGenerate = true)
     @ColumnInfo(name = "Id_Estatus_Color_Text")
-    val idEstatusColorText: Int = 0,
+    val idEstatusColorText: Int? = null,
 
     @ColumnInfo(name = "Color_Text")
     val colorText: String? = null,
@@ -22,4 +22,3 @@ data class EstatusColorText(
     @ColumnInfo(name = "Id_Sitio")
     val idSitio: String? = "flag_export",
 )
-

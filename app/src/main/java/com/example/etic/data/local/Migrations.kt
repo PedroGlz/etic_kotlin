@@ -107,7 +107,7 @@ val MIGRATION_3_4 = object : Migration(3, 4) {
             CREATE TABLE IF NOT EXISTS ubicaciones (
                 Id_Ubicacion TEXT NOT NULL,
                 Id_Sitio TEXT,
-                Id_Ubicacion_padre TEXT,
+                Id_Ubicacion_Padre TEXT,
                 Id_Tipo_Prioridad TEXT,
                 Id_Tipo_Inspeccion TEXT,
                 Ubicacion TEXT,
@@ -904,5 +904,111 @@ val MIGRATION_10_11 = object : Migration(10, 11) {
         db.execSQL("INSERT INTO tipo_fallas_new SELECT Id_Tipo_Falla, Id_Tipo_Inspeccion, Tipo_Falla, Desc_Tipo_Falla, Estatus, Creado_Por, Fecha_Creacion, Modificado_Por, Fecha_Mod, Id_Inspeccion, Id_Sitio FROM tipo_fallas")
         db.execSQL("DROP TABLE tipo_fallas")
         db.execSQL("ALTER TABLE tipo_fallas_new RENAME TO tipo_fallas")
+    }
+}
+
+// Crea la vista vista_ubicaciones_arbol para componer el árbol por inspección
+val MIGRATION_11_12 = object : Migration(11, 12) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("DROP VIEW IF EXISTS vista_ubicaciones_arbol")
+        db.execSQL(
+            """
+            CREATE VIEW vista_ubicaciones_arbol AS
+            SELECT
+                insdet.Id_Inspeccion_Det        AS Id_Inspeccion_Det,
+                insdet.Id_Ubicacion             AS Id_Ubicacion,
+                ubi.Id_Sitio                    AS Id_Sitio,
+                ubi.Ubicacion                   AS nombreUbicacion,
+                ubi.Nivel_arbol                 AS level,
+                ubi.Codigo_Barras               AS Codigo_Barras,
+                ubi.Es_Equipo                   AS Es_Equipo,
+                ubi.Estatus                     AS Estatus,
+                ubi.Id_Tipo_Prioridad           AS Id_Tipo_Prioridad,
+                ubi.Descripcion                 AS Descripcion,
+                ubi.Fabricante                  AS Id_Fabricante,
+                IFNULL(ubi.Id_Ubicacion_Padre, '0') AS Id_Ubicacion_Padre,
+                insdet.Id_Status_Inspeccion_Det AS Id_Status_Inspeccion_Det,
+                insdet.Id_Inspeccion            AS Id_Inspeccion,
+                insp.No_Inspeccion              AS No_Inspeccion,
+                insp.Fecha_Inicio               AS Fecha_inspeccion,
+                insdet.Notas_Inspeccion         AS Notas_Inspeccion,
+                ubi.Ruta                        AS path,
+                ubi.Fecha_Creacion              AS Fecha_Creacion,
+                CASE 
+                    WHEN ubi.Es_Equipo = 'SI' THEN 'fas fa-traffic-light'
+                    ELSE 'fas fa-grip-vertical'
+                END                             AS icon,
+                eid.Estatus_Inspeccion_Det      AS Estatus_Inspeccion_Det,
+                ect.Color_Text                  AS color,
+                insdet.expanded                 AS expanded,
+                insdet.selected                 AS selected
+            FROM inspecciones_det       AS insdet
+            JOIN ubicaciones            AS ubi  ON insdet.Id_Ubicacion = ubi.Id_Ubicacion
+            JOIN estatus_color_text     AS ect  ON insdet.Id_Estatus_Color_Text = ect.Id_Estatus_Color_Text
+            JOIN inspecciones           AS insp ON insdet.Id_Inspeccion = insp.Id_Inspeccion
+            JOIN estatus_inspeccion_det AS eid  ON insdet.Id_Status_Inspeccion_Det = eid.Id_Status_Inspeccion_Det
+            WHERE insdet.Estatus = 'Activo'
+              AND insdet.Id_Inspeccion = (
+                    SELECT i.Id_Inspeccion
+                    FROM inspecciones AS i
+                    ORDER BY i.No_Inspeccion DESC
+                    LIMIT 1
+              )
+            ORDER BY ubi.Fecha_Creacion
+            """
+        )
+    }
+}
+
+// Fuerza recreación de la vista para bases ya en v12
+val MIGRATION_12_13 = object : Migration(12, 13) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("DROP VIEW IF EXISTS vista_ubicaciones_arbol")
+        db.execSQL(
+            """
+            CREATE VIEW vista_ubicaciones_arbol AS
+            SELECT
+                insdet.Id_Inspeccion_Det        AS Id_Inspeccion_Det,
+                insdet.Id_Ubicacion             AS Id_Ubicacion,
+                ubi.Id_Sitio                    AS Id_Sitio,
+                ubi.Ubicacion                   AS nombreUbicacion,
+                ubi.Nivel_arbol                 AS level,
+                ubi.Codigo_Barras               AS Codigo_Barras,
+                ubi.Es_Equipo                   AS Es_Equipo,
+                ubi.Estatus                     AS Estatus,
+                ubi.Id_Tipo_Prioridad           AS Id_Tipo_Prioridad,
+                ubi.Descripcion                 AS Descripcion,
+                ubi.Fabricante                  AS Id_Fabricante,
+                IFNULL(ubi.Id_Ubicacion_Padre, '0') AS Id_Ubicacion_Padre,
+                insdet.Id_Status_Inspeccion_Det AS Id_Status_Inspeccion_Det,
+                insdet.Id_Inspeccion            AS Id_Inspeccion,
+                insp.No_Inspeccion              AS No_Inspeccion,
+                insp.Fecha_Inicio               AS Fecha_inspeccion,
+                insdet.Notas_Inspeccion         AS Notas_Inspeccion,
+                ubi.Ruta                        AS path,
+                ubi.Fecha_Creacion              AS Fecha_Creacion,
+                CASE 
+                    WHEN ubi.Es_Equipo = 'SI' THEN 'fas fa-traffic-light'
+                    ELSE 'fas fa-grip-vertical'
+                END                             AS icon,
+                eid.Estatus_Inspeccion_Det      AS Estatus_Inspeccion_Det,
+                ect.Color_Text                  AS color,
+                insdet.expanded                 AS expanded,
+                insdet.selected                 AS selected
+            FROM inspecciones_det       AS insdet
+            JOIN ubicaciones            AS ubi  ON insdet.Id_Ubicacion = ubi.Id_Ubicacion
+            JOIN estatus_color_text     AS ect  ON insdet.Id_Estatus_Color_Text = ect.Id_Estatus_Color_Text
+            JOIN inspecciones           AS insp ON insdet.Id_Inspeccion = insp.Id_Inspeccion
+            JOIN estatus_inspeccion_det AS eid  ON insdet.Id_Status_Inspeccion_Det = eid.Id_Status_Inspeccion_Det
+            WHERE insdet.Estatus = 'Activo'
+              AND insdet.Id_Inspeccion = (
+                    SELECT i.Id_Inspeccion
+                    FROM inspecciones AS i
+                    ORDER BY i.No_Inspeccion DESC
+                    LIMIT 1
+              )
+            ORDER BY ubi.Fecha_Creacion
+            """
+        )
     }
 }

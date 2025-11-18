@@ -50,6 +50,7 @@ import com.example.etic.data.local.entities.Recomendacion
 import com.example.etic.data.local.entities.Sitio
 import com.example.etic.data.local.entities.TipoAmbiente
 import com.example.etic.data.local.entities.TipoFalla
+import com.example.etic.data.local.entities.EstatusColorText
 
 @Database(
     entities = [
@@ -58,6 +59,7 @@ import com.example.etic.data.local.entities.TipoFalla
         LineaBase::class,
         Ubicacion::class,
         EstatusInspeccionDet::class,
+        EstatusColorText::class,
         TipoPrioridad::class,
         Fabricante::class,
         InspeccionDet::class,
@@ -79,7 +81,7 @@ import com.example.etic.data.local.entities.TipoFalla
         TipoAmbiente::class,
         TipoFalla::class,
     ],
-    version = 11,
+    version = 13,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -108,4 +110,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun sitioDao(): SitioDao
     abstract fun tipoAmbienteDao(): TipoAmbienteDao
     abstract fun tipoFallaDao(): TipoFallaDao
+
+    // Vista/consultas auxiliares
+    abstract fun vistaUbicacionArbolDao(): com.example.etic.data.local.dao.VistaUbicacionArbolDao
 }

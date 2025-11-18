@@ -13,7 +13,7 @@ data class Ubicacion(
     @ColumnInfo(name = "Id_Sitio")
     val idSitio: String? = null,
 
-    @ColumnInfo(name = "Id_Ubicacion_padre")
+    @ColumnInfo(name = "Id_Ubicacion_Padre")
     val idUbicacionPadre: String? = null,
 
     @ColumnInfo(name = "Id_Tipo_Prioridad")

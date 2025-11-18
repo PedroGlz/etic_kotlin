@@ -78,6 +78,8 @@ import com.example.etic.core.current.LocalCurrentInspection
 import com.example.etic.core.current.LocalCurrentUser
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 
 // Centralizamos algunos "magic numbers" para facilitar ajuste futuro
@@ -132,9 +134,17 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
     var hasSignaledReady by rememberSaveable { mutableStateOf(false) }
     val onSelectNode: (String) -> Unit = { id -> selectedId = id }
     // Reconstruir el árbol cuando llegue/ cambie la Inspección actual
-    LaunchedEffect(rootId, rootTitle) {
-        val rows = runCatching { ubicacionDao.getAllActivas() }.getOrElse { emptyList() }
-        val roots = buildTreeFromUbicaciones(rows)
+    LaunchedEffect(rootId, rootTitle, currentInspection?.idInspeccion) {
+        val dao = com.example.etic.data.local.DbProvider.get(ctx).vistaUbicacionArbolDao()
+        val rowsVista = try {
+            withContext(Dispatchers.IO) { dao.getAll() }
+        } catch (e: Exception) {
+            android.util.Log.e("VistaUbicacionArbol", "Error al cargar vista_ubicaciones_arbol", e)
+            emptyList()
+        }
+        android.util.Log.d("VistaUbicacionArbol", "rowsVista.size = ${rowsVista.size}")
+
+        val roots = buildTreeFromVista(rowsVista)
         val siteRoot = TreeNode(id = rootId, title = rootTitle)
         siteRoot.children.addAll(roots)
         
@@ -149,6 +159,9 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
         onSelectNode(rootId)
         // Seleccionar por defecto el nodo padre (sitio)
         if (selectedId == null) selectedId = rootId
+        val defaultExpanded = rowsVista.filter { it.expanded == "1" }.map { it.idUbicacion }
+        defaultExpanded.forEach { if (!expanded.contains(it)) expanded.add(it) }
+        rowsVista.firstOrNull { it.selected == "1" }?.idUbicacion?.let { onSelectNode(it) }
         if (!hasSignaledReady) { hasSignaledReady = true; onReady() }
     }
     // selectedId y highlightedId declarados antes para usarlos en LaunchedEffect
@@ -2107,6 +2120,42 @@ private fun ProblemsTableFromDatabase(selectedId: String?, modifier: Modifier = 
     Box(modifier) {
         ProblemsTable(problems = uiProblems, onDelete = { /* no-op: from DB */ })
     }
+}
+
+private fun buildTreeFromVista(rows: List<com.example.etic.data.local.views.VistaUbicacionArbol>): MutableList<TreeNode> {
+    android.util.Log.d("VistaUbicacionArbol", "Filas obtenidas en buildTreeFromVista: ${rows.size}")
+    rows.forEach { r ->
+        android.util.Log.d(
+            "VistaUbicacionArbol",
+            "insp=${r.idInspeccion} det=${r.idInspeccionDet} id=${r.idUbicacion} padre=${r.idUbicacionPadre} nombre=${r.nombreUbicacion}"
+        )
+    }
+
+    val byId = mutableMapOf<String, TreeNode>()
+    val roots = mutableListOf<TreeNode>()
+
+    rows.forEach { r ->
+        val node = TreeNode(
+            id = r.idUbicacion,
+            title = r.nombreUbicacion ?: "(Sin nombre)",
+            barcode = r.codigoBarras,
+            verified = (r.esEquipo ?: "").equals("SI", ignoreCase = true)
+        )
+        byId[r.idUbicacion] = node
+    }
+
+    rows.forEach { r ->
+        val node = byId[r.idUbicacion] ?: return@forEach
+        val parentId = r.idUbicacionPadre?.takeIf { it.isNotBlank() && it != "0" }
+        if (parentId != null) {
+            val parent = byId[parentId]
+            if (parent != null) parent.children.add(node) else roots.add(node)
+        } else {
+            roots.add(node)
+        }
+    }
+
+    return roots
 }
 
 // -------------------------
