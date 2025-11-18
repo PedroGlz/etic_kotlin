@@ -26,6 +26,7 @@ import com.example.etic.data.local.dao.RecomendacionDao
 import com.example.etic.data.local.dao.SitioDao
 import com.example.etic.data.local.dao.TipoAmbienteDao
 import com.example.etic.data.local.dao.TipoFallaDao
+import com.example.etic.data.local.dao.EstatusColorTextDao
 import com.example.etic.data.local.entities.Usuario
 import com.example.etic.data.local.entities.Problema
 import com.example.etic.data.local.entities.LineaBase
@@ -113,4 +114,5 @@ abstract class AppDatabase : RoomDatabase() {
 
     // Vista/consultas auxiliares
     abstract fun vistaUbicacionArbolDao(): com.example.etic.data.local.dao.VistaUbicacionArbolDao
+    abstract fun estatusColorTextDao(): EstatusColorTextDao
 }

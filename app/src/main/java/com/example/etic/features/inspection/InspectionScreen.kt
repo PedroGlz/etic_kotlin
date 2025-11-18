@@ -147,13 +147,9 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
         val roots = buildTreeFromVista(rowsVista)
         val siteRoot = TreeNode(id = rootId, title = rootTitle)
         siteRoot.children.addAll(roots)
-        
-        siteRoot.children.addAll(roots)
-                                            nodes = listOf(siteRoot)
-                                            if (!expanded.contains(rootId)) expanded.add(rootId)
-                                            onSelectNode(rootId)
-        
-                                            onSelectNode(rootId)
+        nodes = listOf(siteRoot)
+        if (!expanded.contains(rootId)) expanded.add(rootId)
+        onSelectNode(rootId)
         // Selección programática equivalente a un tap sobre el sitio
         kotlinx.coroutines.delay(0)
         onSelectNode(rootId)
@@ -488,8 +484,6 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                             val rows = runCatching { ubicacionDao.getAllActivas() }.getOrElse { emptyList() }
                                             val roots = buildTreeFromUbicaciones(rows)
                                             val siteRoot = TreeNode(id = rootId, title = rootTitle)
-                                            siteRoot.children.addAll(roots)
-                                            
                                             siteRoot.children.addAll(roots)
                                             nodes = listOf(siteRoot)
                                             if (!expanded.contains(rootId)) expanded.add(rootId)
@@ -906,8 +900,6 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                                             val roots = buildTreeFromUbicaciones(rows)
                                                             val siteRoot = TreeNode(id = rootId, title = rootTitle)
                                                             siteRoot.children.addAll(roots)
-                                                            
-                                                            siteRoot.children.addAll(roots)
                                             nodes = listOf(siteRoot)
                                             if (!expanded.contains(rootId)) expanded.add(rootId)
                                             onSelectNode(rootId)
@@ -1174,7 +1166,11 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                                         scope.launch {
                                                             val nowTs = java.time.LocalDateTime.now()
                                                                 .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
-                                                            val detId = try { inspeccionDetDao.getByUbicacion(idUb).firstOrNull()?.idInspeccionDet } catch (_: Exception) { null }
+                                                            val detRow = try {
+                                                                inspeccionDetDao.getByUbicacion(idUb)
+                                                                    .firstOrNull { it.idInspeccion == idInsp }
+                                                            } catch (_: Exception) { null }
+                                                            val detId = detRow?.idInspeccionDet
                                                             val item = com.example.etic.data.local.entities.LineaBase(
                                                                 idLineaBase = baselineToEdit?.id ?: java.util.UUID.randomUUID().toString().uppercase(),
                                                                 idSitio = currentInspection?.idSitio,
@@ -1202,6 +1198,16 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                                                 runCatching { lineaBaseDao.update(item) }.isSuccess
                                                             }
                                                             if (ok) {
+                                                                // Actualizar inspecciones_det asociado para reflejar baseline
+                                                                if (detRow != null) {
+                                                                    val updatedDet = detRow.copy(
+                                                                        idStatusInspeccionDet = "568798D2-76BB-11D3-82BF-00104BC75DC2",
+                                                                        idEstatusColorText = 3,
+                                                                        modificadoPor = currentUserId,
+                                                                        fechaMod = nowTs
+                                                                    )
+                                                                    runCatching { inspeccionDetDao.update(updatedDet) }
+                                                                }
                                                                 showNewBaseline = false
                                                                 baselineToEdit = null
                                                                 refreshTick++
@@ -1562,6 +1568,7 @@ private data class TreeNode(
     var title: String,
     var barcode: String? = null,
     var verified: Boolean = false,
+    var textColorHex: String? = null,
     val children: MutableList<TreeNode> = mutableListOf(),
     val problems: MutableList<Problem> = mutableListOf(),
     val baselines: MutableList<Baseline> = mutableListOf()
@@ -1679,9 +1686,25 @@ private fun SimpleTreeView(
                         val tintColor = if (item.depth == 0) ICON_NO_EQUIPO_COLOR else if (n.verified) ICON_EQUIPO_COLOR else ICON_NO_EQUIPO_COLOR
                         Icon(nodeIcon, contentDescription = null, tint = tintColor, modifier = Modifier.size(TREE_ICON_SIZE))
                         Spacer(Modifier.width(TREE_SPACING))
+                        val baseColor = n.textColorHex?.let { raw ->
+                            val hex = raw.trim()
+                            when {
+                                hex.startsWith("#") -> {
+                                    runCatching { Color(android.graphics.Color.parseColor(hex)) }.getOrNull()
+                                }
+                                hex.startsWith("0x", ignoreCase = true) -> {
+                                    runCatching {
+                                        val intValue = hex.removePrefix("0x").removePrefix("0X").toLong(16).toInt()
+                                        Color(intValue)
+                                    }.getOrNull()
+                                }
+                                else -> null
+                            }
+                        } ?: MaterialTheme.colorScheme.onSurface
+                        val textColor = if (n.id == highlightedId) MaterialTheme.colorScheme.error else baseColor
                         Text(
                             n.title,
-                            color = if (n.id == highlightedId) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
+                            color = textColor,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.clickable { onSelect(n.id) }
@@ -2071,7 +2094,7 @@ private fun ProblemsTableFromDatabase(selectedId: String?, modifier: Modifier = 
     var problemsCache by remember { mutableStateOf(emptyList<Problem>()) }
     val uiProblems by produceState(initialValue = problemsCache, selectedId) {
         val rows = try { dao.getAllActivos() } catch (_: Exception) { emptyList() }
-        val ubicaciones = try { ubicacionDao.getAllActivas() } catch (_: Exception) { emptyList() }
+        val ubicaciones = try { ubicacionDao.getAll() } catch (_: Exception) { emptyList() }
         val filteredRows = when {
             selectedId == null -> rows
             selectedId!!.startsWith("root:") -> rows
@@ -2139,7 +2162,8 @@ private fun buildTreeFromVista(rows: List<com.example.etic.data.local.views.Vist
             id = r.idUbicacion,
             title = r.nombreUbicacion ?: "(Sin nombre)",
             barcode = r.codigoBarras,
-            verified = (r.esEquipo ?: "").equals("SI", ignoreCase = true)
+            verified = (r.esEquipo ?: "").equals("SI", ignoreCase = true),
+            textColorHex = r.color
         )
         byId[r.idUbicacion] = node
     }
