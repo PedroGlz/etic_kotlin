@@ -17,4 +17,33 @@ interface InspeccionDetDao {
 
     @Update
     suspend fun update(row: InspeccionDet)
+
+    @Query(
+        """
+        UPDATE inspecciones_det
+        SET expanded = :expanded
+        WHERE Id_Inspeccion = :idInspeccion
+          AND Id_Ubicacion = :idUbicacion
+        """
+    )
+    suspend fun updateExpandedByUbicacion(
+        idInspeccion: String,
+        idUbicacion: String,
+        expanded: String
+    )
+
+    @Query(
+        """
+        UPDATE inspecciones_det
+        SET selected = CASE
+            WHEN Id_Ubicacion = :idUbicacion THEN '1'
+            ELSE '0'
+        END
+        WHERE Id_Inspeccion = :idInspeccion
+        """
+    )
+    suspend fun updateSelectedByUbicacion(
+        idInspeccion: String,
+        idUbicacion: String
+    )
 }

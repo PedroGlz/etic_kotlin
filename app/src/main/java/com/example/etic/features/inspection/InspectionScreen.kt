@@ -133,7 +133,18 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
     var highlightedId by remember { mutableStateOf<String?>(null) }
     var baselineRefreshTick by remember { mutableStateOf(0) }
     var hasSignaledReady by rememberSaveable { mutableStateOf(false) }
-    val onSelectNode: (String) -> Unit = { id -> selectedId = id }
+    val treeScope = rememberCoroutineScope()
+    val onSelectNode: (String) -> Unit = { id ->
+        selectedId = id
+        val inspId = currentInspection?.idInspeccion
+        if (!inspId.isNullOrBlank() && !id.startsWith("root:")) {
+            treeScope.launch {
+                runCatching {
+                    inspeccionDetDao.updateSelectedByUbicacion(inspId, id)
+                }
+            }
+        }
+    }
     // Reconstruir el árbol cuando llegue/ cambie la Inspección actual
     LaunchedEffect(rootId, rootTitle, currentInspection?.idInspeccion) {
         val dao = com.example.etic.data.local.DbProvider.get(ctx).vistaUbicacionArbolDao()
@@ -1431,7 +1442,22 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                             expanded = expanded.toSet(),
                             selectedId = selectedId,
                             highlightedId = highlightedId,
-                            onToggle = { id -> if (!expanded.remove(id)) expanded.add(id) },
+                            onToggle = { id ->
+                                val inspId = currentInspection?.idInspeccion
+                                if (!expanded.remove(id)) expanded.add(id) else Unit
+                                val isExpandedNow = expanded.contains(id)
+                                if (!inspId.isNullOrBlank() && !id.startsWith("root:")) {
+                                    treeScope.launch {
+                                        runCatching {
+                                            inspeccionDetDao.updateExpandedByUbicacion(
+                                                inspId,
+                                                id,
+                                                if (isExpandedNow) "1" else "0"
+                                            )
+                                        }
+                                    }
+                                }
+                            },
                             onSelect = onSelectNode,
                             modifier = Modifier.fillMaxSize() // ocupa todo el panel
                         )
@@ -1672,7 +1698,7 @@ private fun SimpleTreeView(
         }
     }
     val flat = remember(nodes, expanded) { mutableListOf<FlatNode>().also { flatten(nodes, 0, it) } }
-    val selColor = MaterialTheme.colorScheme.primary.copy(alpha = SELECT_ALPHA)
+    val selColor = Color(0xFFE1BEE7) // violeta suave
 
     val hScroll = rememberScrollState()
     val treeListState = rememberSaveable("tree_list_state", saver = LazyListState.Saver) { LazyListState() }
