@@ -131,6 +131,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
         // Centralizar selección como si fuera un tap del usuario
     var selectedId by rememberSaveable { mutableStateOf<String?>(null) }
     var highlightedId by remember { mutableStateOf<String?>(null) }
+    var baselineRefreshTick by remember { mutableStateOf(0) }
     var hasSignaledReady by rememberSaveable { mutableStateOf(false) }
     val onSelectNode: (String) -> Unit = { id -> selectedId = id }
     // Reconstruir el árbol cuando llegue/ cambie la Inspección actual
@@ -160,6 +161,25 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
         rowsVista.firstOrNull { it.selected == "1" }?.idUbicacion?.let { onSelectNode(it) }
         if (!hasSignaledReady) { hasSignaledReady = true; onReady() }
     }
+
+    // Refrescar árbol cuando cambie el baseline (para actualizar colores)
+    LaunchedEffect(baselineRefreshTick, currentInspection?.idInspeccion, rootId, rootTitle) {
+        if (baselineRefreshTick == 0) return@LaunchedEffect
+        val dao = com.example.etic.data.local.DbProvider.get(ctx).vistaUbicacionArbolDao()
+        val rowsVista = try {
+            withContext(Dispatchers.IO) { dao.getAll() }
+        } catch (_: Exception) {
+            emptyList()
+        }
+        val roots = buildTreeFromVista(rowsVista)
+        val siteRoot = TreeNode(id = rootId, title = rootTitle)
+        siteRoot.children.addAll(roots)
+        nodes = listOf(siteRoot)
+        if (!expanded.contains(rootId)) expanded.add(rootId)
+        val currentSelection = selectedId ?: rootId
+        onSelectNode(currentSelection)
+    }
+
     // selectedId y highlightedId declarados antes para usarlos en LaunchedEffect
 
     val borderColor = DividerDefaults.color
@@ -924,7 +944,6 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                     val lineaBaseDao = remember { com.example.etic.data.local.DbProvider.get(ctx).lineaBaseDao() }
                                     val inspDao = remember { com.example.etic.data.local.DbProvider.get(ctx).inspeccionDao() }
                                     var showNewBaseline by remember { mutableStateOf(false) }
-                                    var refreshTick by remember { mutableStateOf(0) }
                                     val ubId = editingUbId
                                     val inspId = currentInspection?.idInspeccion
 
@@ -944,7 +963,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                     var confirmDeleteId by remember { mutableStateOf<String?>(null) }
 
                                     var baselineCache by remember { mutableStateOf(emptyList<BaselineRow>()) }
-                                    val tableData by produceState(initialValue = baselineCache, ubId, inspId, refreshTick) {
+                                    val tableData by produceState(initialValue = baselineCache, ubId, inspId, baselineRefreshTick) {
                                         val rows = if (!inspId.isNullOrBlank()) {
                                             runCatching { lineaBaseDao.getByInspeccionActivos(inspId) }.getOrElse { emptyList() }
                                         } else emptyList()
@@ -1060,7 +1079,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                                         scope.launch {
                                                             runCatching { lineaBaseDao.deleteById(id) }
                                                             confirmDeleteId = null
-                                                            refreshTick++
+                                                            baselineRefreshTick++
                                                         }
                                                     }) { Text("Eliminar") }
                                                 },
@@ -1210,7 +1229,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                                                 }
                                                                 showNewBaseline = false
                                                                 baselineToEdit = null
-                                                                refreshTick++
+                                                                baselineRefreshTick++
                                                             }
                                                         }
                                                     }
@@ -1527,6 +1546,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                         val cur = findById(selectedId, nodes)
                         cur?.baselines?.remove(b)
                     },
+                    baselineRefreshTick = baselineRefreshTick,
                     modifier = Modifier.fillMaxSize()  // asegura ocupar todo el espacio
                 )
             }
@@ -1803,6 +1823,7 @@ private fun ListTabs(
     node: TreeNode?,
     onDeleteProblem: (Problem) -> Unit,
     onDeleteBaseline: (Baseline) -> Unit,
+    baselineRefreshTick: Int,
     modifier: Modifier = Modifier
 ) {
     // Nota: mostramos versiones ligadas a BD; no usamos listas calculadas por nodo aquí
@@ -1825,6 +1846,7 @@ private fun ListTabs(
             )
             BaselineTableFromDatabase(
                 selectedId = node?.id,
+                refreshTick = baselineRefreshTick,
                 modifier = Modifier
                     .fillMaxSize()
                     .alpha(if (showProblems) 0f else 1f)
@@ -2187,7 +2209,7 @@ private fun buildTreeFromVista(rows: List<com.example.etic.data.local.views.Vist
 // -------------------------
 
 @Composable
-private fun BaselineTableFromDatabase(selectedId: String?, modifier: Modifier = Modifier) {
+private fun BaselineTableFromDatabase(selectedId: String?, refreshTick: Int, modifier: Modifier = Modifier) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val currentInspection = LocalCurrentInspection.current
     val dao = remember { com.example.etic.data.local.DbProvider.get(ctx).lineaBaseDao() }
@@ -2195,7 +2217,7 @@ private fun BaselineTableFromDatabase(selectedId: String?, modifier: Modifier = 
     val inspDao = remember { com.example.etic.data.local.DbProvider.get(ctx).inspeccionDao() }
 
     var baselinesCache by remember { mutableStateOf(emptyList<Baseline>()) }
-    val uiBaselines by produceState(initialValue = baselinesCache, selectedId, currentInspection?.idInspeccion) {
+    val uiBaselines by produceState(initialValue = baselinesCache, selectedId, currentInspection?.idInspeccion, refreshTick) {
         val rows = try {
             val inspId = currentInspection?.idInspeccion
             if (!inspId.isNullOrBlank()) dao.getByInspeccionActivos(inspId) else dao.getAllActivos()
