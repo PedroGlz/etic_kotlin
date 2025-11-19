@@ -1913,10 +1913,20 @@ private fun DetailsTable(
 }
 
 @Composable private fun RowScope.HeaderCell(text: String, flex: Int) {
-    Box(Modifier.weight(flex.toFloat())) { Text(text, style = MaterialTheme.typography.labelLarge) }
+    Box(Modifier.weight(flex.toFloat())) {
+        Text(
+            text,
+            style = MaterialTheme.typography.labelLarge,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
 }
+
 @Composable private fun RowScope.BodyCell(flex: Int, content: @Composable () -> Unit) {
-    Box(Modifier.weight(flex.toFloat())) { content() }
+    Box(Modifier.weight(flex.toFloat())) {
+        content()
+    }
 }
 
 @Composable
