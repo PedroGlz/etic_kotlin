@@ -1591,7 +1591,8 @@ private data class TreeNode(
     var textColorHex: String? = null,
     val children: MutableList<TreeNode> = mutableListOf(),
     val problems: MutableList<Problem> = mutableListOf(),
-    val baselines: MutableList<Baseline> = mutableListOf()
+    val baselines: MutableList<Baseline> = mutableListOf(),
+    var estatusInspeccionDet: String? = null
 ) { val isLeaf: Boolean get() = children.isEmpty() }
 
 private data class Problem(
@@ -1785,7 +1786,7 @@ private fun DetailsTable(
                             ) {
                                 BodyCell(3) { Text(n.title) }
                                 BodyCell(2) { Text(n.barcode ?: "-") }
-                                BodyCell(2) { Text(if (n.verified) "Verificado" else "Por verificar") }
+                                BodyCell(2) { Text(n.estatusInspeccionDet ?: "Por verificar") }
                                 BodyCell(1) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         androidx.compose.runtime.CompositionLocalProvider(
@@ -2185,7 +2186,8 @@ private fun buildTreeFromVista(rows: List<com.example.etic.data.local.views.Vist
             title = r.nombreUbicacion ?: "(Sin nombre)",
             barcode = r.codigoBarras,
             verified = (r.esEquipo ?: "").equals("SI", ignoreCase = true),
-            textColorHex = r.color
+            textColorHex = r.color,
+            estatusInspeccionDet = r.estatusInspeccionDet
         )
         byId[r.idUbicacion] = node
     }
