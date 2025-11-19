@@ -1112,7 +1112,30 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                                     Button(onClick = {
                                                         val id = confirmDeleteId ?: return@Button
                                                         scope.launch {
+                                                            // Eliminar baseline
                                                             runCatching { lineaBaseDao.deleteById(id) }
+
+                                                            // Revertir estatus de inspeccion_det asociado a PVERIF
+                                                            val idUb = ubId
+                                                            val idInsp = inspId
+                                                            if (!idUb.isNullOrBlank() && !idInsp.isNullOrBlank()) {
+                                                                val nowTs = java.time.LocalDateTime.now()
+                                                                    .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+                                                                val detRow = try {
+                                                                    inspeccionDetDao.getByUbicacion(idUb)
+                                                                        .firstOrNull { it.idInspeccion == idInsp }
+                                                                } catch (_: Exception) { null }
+                                                                if (detRow != null) {
+                                                                    val revertedDet = detRow.copy(
+                                                                        idStatusInspeccionDet = "568798D1-76BB-11D3-82BF-00104BC75DC2",
+                                                                        idEstatusColorText = 1,
+                                                                        modificadoPor = currentUserId,
+                                                                        fechaMod = nowTs
+                                                                    )
+                                                                    runCatching { inspeccionDetDao.update(revertedDet) }
+                                                                }
+                                                            }
+
                                                             confirmDeleteId = null
                                                             baselineRefreshTick++
                                                         }
