@@ -124,6 +124,8 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
     val ubicacionDao = remember { com.example.etic.data.local.DbProvider.get(ctx).ubicacionDao() }
     val usuarioDao = remember { com.example.etic.data.local.DbProvider.get(ctx).usuarioDao() }
     val inspeccionDetDao = remember { com.example.etic.data.local.DbProvider.get(ctx).inspeccionDetDao() }
+    val problemaDao = remember { com.example.etic.data.local.DbProvider.get(ctx).problemaDao() }
+    val lineaBaseDaoGlobal = remember { com.example.etic.data.local.DbProvider.get(ctx).lineaBaseDao() }
     val currentInspection = LocalCurrentInspection.current
     val rootTitle = currentInspection?.nombreSitio ?: "Sitio"
     val rootId = remember(currentInspection?.idSitio) { (currentInspection?.idSitio?.let { "root:$it" } ?: "root:site") }
@@ -251,6 +253,9 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             var editingParentId by remember { mutableStateOf<String?>(null) }
             var editingDetId by remember { mutableStateOf<String?>(null) }
             var editingInspId by remember { mutableStateOf<String?>(null) }
+            var deleteUbInfoMessage by remember { mutableStateOf<String?>(null) }
+            var pendingDeleteUbId by remember { mutableStateOf<String?>(null) }
+            var deleteUbConfirmNode by remember { mutableStateOf<TreeNode?>(null) }
             val scope = rememberCoroutineScope()
             // Lee el usuario actual del CompositionLocal en contexto @Composable
             val currentUser = LocalCurrentUser.current
@@ -401,7 +406,19 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             }
             Divider(thickness = DIVIDER_THICKNESS)
 
-            // Di�logo cuando se intenta crear una ubicaci�n debajo de un equipo
+            // Diálogo informativo para errores al borrar ubicación
+            if (deleteUbInfoMessage != null) {
+                AlertDialog(
+                    onDismissRequest = { deleteUbInfoMessage = null },
+                    confirmButton = {
+                        Button(onClick = { deleteUbInfoMessage = null }) { Text("Aceptar") }
+                    },
+                    title = { Text("Información") },
+                    text = { Text(deleteUbInfoMessage!!) }
+                )
+            }
+
+            // Dialogo cuando se intenta crear una ubicacion debajo de un equipo
             if (showInvalidParentDialog) {
                 AlertDialog(
                     onDismissRequest = { showInvalidParentDialog = false },
@@ -424,6 +441,61 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     text = { Text("Debes seleccionar una ubicación para agregar un nuevo elemento.") }
                 )
             }
+
+
+            // Diálogo de confirmación para eliminar ubicación
+            if (deleteUbConfirmNode != null) {
+                val nodeToDelete = deleteUbConfirmNode!!
+                AlertDialog(
+                    onDismissRequest = { deleteUbConfirmNode = null },
+                    confirmButton = {
+                        Button(onClick = {
+                            scope.launch {
+                                val ubId = nodeToDelete.id
+                                val nowTs = java.time.LocalDateTime.now()
+                                    .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+                                val userId = currentUser?.idUsuario
+
+                                // Marcar ubicación como Inactivo en BD
+                                val existing = runCatching { ubicacionDao.getById(ubId) }.getOrNull()
+                                if (existing != null) {
+                                    val updated = existing.copy(
+                                        estatus = "Inactivo",
+                                        modificadoPor = userId,
+                                        fechaMod = nowTs
+                                    )
+                                    runCatching { ubicacionDao.update(updated) }
+                                }
+
+                                // Reconstruir árbol solo con ubicaciones activas
+                                val rows = runCatching { ubicacionDao.getAllActivas() }
+                                    .getOrElse { emptyList() }
+                                val roots = buildTreeFromUbicaciones(rows)
+                                val siteRoot = TreeNode(id = rootId, title = rootTitle)
+                                siteRoot.children.addAll(roots)
+                                nodes = listOf(siteRoot)
+
+                                // Mantener selección: si borras la seleccionada, caer a la raíz
+                                val currentSelection =
+                                    selectedId?.takeIf { it != ubId } ?: rootId
+                                if (!expanded.contains(rootId)) {
+                                    expanded.add(rootId)
+                                }
+                                currentSelection.let { onSelectNode(it) }
+
+                                deleteUbConfirmNode = null
+                            }
+                        }) { Text("Eliminar") }
+                    },
+                    dismissButton = {
+                        Button(onClick = { deleteUbConfirmNode = null }) { Text("Cancelar") }
+                    },
+                    title = { Text("Confirmar eliminación") },
+                    text = { Text("¿Eliminar la ubicación seleccionada?") }
+                )
+            }
+
+
 
             // ------------------ DIÁLOGO: NUEVA UBICACIÓN (igual que tenías) ------------------
             if (showNewUbDialog) {
@@ -738,7 +810,11 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                 ) {
                     androidx.compose.material3.Card(
                         modifier = Modifier
-                            .widthIn(min = 720.dp, max = 1040.dp)
+                            // Baseline suele necesitar más ancho para las columnas
+                            .widthIn(
+                                min = if (editTab == 1) 900.dp else 720.dp,
+                                max = 1200.dp
+                            )
                             .heightIn(min = 380.dp, max = 650.dp),
                         shape = RoundedCornerShape(12.dp)
                     ) {
@@ -1565,8 +1641,54 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                         children = children,
                         modifier = Modifier.fillMaxSize(),
                         onDelete = { node ->
-                            if (selectedId == node.id) selectedId = null
-                            nodes = nodes.toMutableList().also { removeById(node.id, it) }
+                            scope.launch {
+                                val ubId = node.id
+                                val inspId = currentInspection?.idInspeccion
+
+                                // 1) Validar si tiene ubicaciones hijas activas
+                                val hasChildren = runCatching {
+                                    ubicacionDao.getAllActivas().any { it.idUbicacionPadre == ubId }
+                                }.getOrDefault(false)
+                                if (hasChildren) {
+                                    deleteUbInfoMessage = "No se puede eliminar la ubicación porque tiene ubicaciones hijas."
+                                    return@launch
+                                }
+
+                                // 2) Validar si tiene baseline activo
+                                val hasBaseline = runCatching {
+                                    lineaBaseDaoGlobal.existsActiveByUbicacionOrDet(ubId, null)
+                                }.getOrDefault(false)
+
+                                // 3) Validar si tiene problemas activos
+                                val hasProblems = runCatching {
+                                    val problemas = if (!inspId.isNullOrBlank()) {
+                                        problemaDao.getByInspeccionActivos(inspId)
+                                    } else {
+                                        problemaDao.getAllActivos()
+                                    }
+                                    problemas.any { it.idUbicacion == ubId && (it.estatus ?: "Activo") == "Activo" }
+                                }.getOrDefault(false)
+
+                                when {
+                                    hasBaseline && hasProblems -> {
+                                        deleteUbInfoMessage =
+                                            "No se puede eliminar la ubicación porque tiene baseline y problemas registrados."
+                                    }
+                                    hasBaseline -> {
+                                        deleteUbInfoMessage =
+                                            "No se puede eliminar la ubicación porque tiene baseline registrado."
+                                    }
+                                    hasProblems -> {
+                                        deleteUbInfoMessage =
+                                            "No se puede eliminar la ubicación porque tiene problemas registrados."
+                                    }
+                                    else -> {
+                                        // Sin hijos, sin baseline y sin problemas: pedir confirmación
+                                        // Sin hijos, sin baseline y sin problemas: marcar para confirmar
+                                        deleteUbConfirmNode = node
+                                    }
+                                }
+                            }
                         },
                         onEdit = { node ->
                             // Abrir diálogo de EDICIÓN con tabs y precargar datos desde BD
