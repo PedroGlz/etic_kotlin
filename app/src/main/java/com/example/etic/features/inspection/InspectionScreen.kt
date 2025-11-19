@@ -254,6 +254,27 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             // Lee el usuario actual del CompositionLocal en contexto @Composable
             val currentUser = LocalCurrentUser.current
 
+            LaunchedEffect(showNewUbDialog) {
+                if (showNewUbDialog) {
+                    // Siempre que se abre \"Nueva ubicación\", forzamos modo creación (no edición)
+                    editingUbId = null
+                    editingParentId = null
+                    editingDetId = null
+                    editingInspId = null
+
+                    // Limpiar todos los campos del formulario
+                    newUbName = ""
+                    newUbDesc = ""
+                    newUbEsEquipo = false
+                    newUbError = null
+                    newUbBarcode = ""
+                    newUbPrioridadId = null
+                    newUbPrioridadLabel = ""
+                    newUbFabricanteId = null
+                    newUbFabricanteLabel = ""
+                }
+            }
+
             // Preseleccionar estatus por defecto al abrir el diálogo de NUEVA ubicación
             LaunchedEffect(showNewUbDialog) {
                 if (showNewUbDialog) {
