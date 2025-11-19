@@ -22,6 +22,9 @@ interface LineaBaseDao {
     @Query("SELECT * FROM linea_base WHERE Id_Inspeccion = :idInspeccion AND Estatus = 'Activo' ORDER BY Fecha_Creacion ASC")
     suspend fun getByInspeccionActivos(idInspeccion: String): List<LineaBase>
 
+    @Query("SELECT * FROM linea_base WHERE Id_Linea_Base = :id LIMIT 1")
+    suspend fun getById(id: String): LineaBase?
+
     @Insert(onConflict = OnConflictStrategy.ABORT)
     suspend fun insert(item: LineaBase)
 

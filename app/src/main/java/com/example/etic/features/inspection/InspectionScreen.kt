@@ -1608,7 +1608,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     .weight(1f - hFrac)
                     .fillMaxWidth()
                     .fillMaxHeight(),
-            ) {
+                ) {
                 ListTabs(
                     node = findById(selectedId, nodes),
                     onDeleteProblem = { p ->
@@ -1620,6 +1620,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                         cur?.baselines?.remove(b)
                     },
                     baselineRefreshTick = baselineRefreshTick,
+                    onBaselineChanged = { baselineRefreshTick++ },
                     modifier = Modifier.fillMaxSize()  // asegura ocupar todo el espacio
                 )
             }
@@ -1898,6 +1899,7 @@ private fun ListTabs(
     onDeleteProblem: (Problem) -> Unit,
     onDeleteBaseline: (Baseline) -> Unit,
     baselineRefreshTick: Int,
+    onBaselineChanged: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     // Nota: mostramos versiones ligadas a BD; no usamos listas calculadas por nodo aquí
@@ -1921,6 +1923,7 @@ private fun ListTabs(
             BaselineTableFromDatabase(
                 selectedId = node?.id,
                 refreshTick = baselineRefreshTick,
+                onBaselineChanged = onBaselineChanged,
                 modifier = Modifier
                     .fillMaxSize()
                     .alpha(if (showProblems) 0f else 1f)
@@ -2284,12 +2287,21 @@ private fun buildTreeFromVista(rows: List<com.example.etic.data.local.views.Vist
 // -------------------------
 
 @Composable
-private fun BaselineTableFromDatabase(selectedId: String?, refreshTick: Int, modifier: Modifier = Modifier) {
+private fun BaselineTableFromDatabase(
+    selectedId: String?,
+    refreshTick: Int,
+    onBaselineChanged: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val currentInspection = LocalCurrentInspection.current
     val dao = remember { com.example.etic.data.local.DbProvider.get(ctx).lineaBaseDao() }
     val ubicacionDao = remember { com.example.etic.data.local.DbProvider.get(ctx).ubicacionDao() }
     val inspDao = remember { com.example.etic.data.local.DbProvider.get(ctx).inspeccionDao() }
+
+    val inspeccionDetDao = remember { com.example.etic.data.local.DbProvider.get(ctx).inspeccionDetDao() }
+    val currentUser = LocalCurrentUser.current
+    val scope = rememberCoroutineScope()
 
     var baselinesCache by remember { mutableStateOf(emptyList<Baseline>()) }
     val uiBaselines by produceState(initialValue = baselinesCache, selectedId, currentInspection?.idInspeccion, refreshTick) {
@@ -2335,8 +2347,62 @@ private fun BaselineTableFromDatabase(selectedId: String?, refreshTick: Int, mod
         baselinesCache = value
     }
 
+    var baselineToDelete by remember { mutableStateOf<Baseline?>(null) }
+
     Box(modifier) {
-        BaselineTable(baselines = uiBaselines, onDelete = { /* no-op: from DB */ })
+        BaselineTable(
+            baselines = uiBaselines,
+            onDelete = { baseline -> baselineToDelete = baseline }
+        )
+
+        if (baselineToDelete != null) {
+            val baseline = baselineToDelete!!
+            AlertDialog(
+                onDismissRequest = { baselineToDelete = null },
+                confirmButton = {
+                    Button(onClick = {
+                        scope.launch {
+                            // Leer la línea base antes de eliminarla para obtener relación con inspección_det
+                            val row = runCatching { dao.getById(baseline.id) }.getOrNull()
+
+                            if (row != null) {
+                                val idUb = row.idUbicacion
+                                val idInsp = row.idInspeccion
+                                if (!idUb.isNullOrBlank() && !idInsp.isNullOrBlank()) {
+                                    val nowTs = java.time.LocalDateTime.now()
+                                        .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+                                    val detRow = try {
+                                        inspeccionDetDao.getByUbicacion(idUb)
+                                            .firstOrNull { it.idInspeccion == idInsp }
+                                    } catch (_: Exception) { null }
+                                    if (detRow != null) {
+                                        val revertedDet = detRow.copy(
+                                            idStatusInspeccionDet = "568798D1-76BB-11D3-82BF-00104BC75DC2",
+                                            idEstatusColorText = 1,
+                                            modificadoPor = currentUser?.idUsuario,
+                                            fechaMod = nowTs
+                                        )
+                                        runCatching { inspeccionDetDao.update(revertedDet) }
+                                    }
+                                }
+                            }
+
+                            // Eliminar la línea base de la base de datos
+                            runCatching { dao.deleteById(baseline.id) }
+
+                            // Actualizar caché local y notificar cambio
+                            baselinesCache = baselinesCache.filter { it.id != baseline.id }
+                            baselineToDelete = null
+                            onBaselineChanged()
+                        }
+                    }) { Text("Eliminar") }
+                },
+                dismissButton = {
+                    Button(onClick = { baselineToDelete = null }) { Text("Cancelar") }
+                },
+                text = { Text("¿Eliminar baseline seleccionado?") }
+            )
+        }
     }
 }
 
