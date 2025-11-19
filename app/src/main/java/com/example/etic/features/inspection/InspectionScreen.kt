@@ -538,10 +538,13 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                             val siteRoot = TreeNode(id = rootId, title = rootTitle)
                                             siteRoot.children.addAll(roots)
                                             nodes = listOf(siteRoot)
-                                            if (!expanded.contains(rootId)) expanded.add(rootId)
-                                            onSelectNode(rootId)
-                                            
-                                            onSelectNode(rootId)
+
+                                            // Mantener estados actuales de selección y expansión
+                                            val currentSelection = selectedId ?: rootId
+                                            if (!expanded.contains(rootId)) {
+                                                expanded.add(rootId)
+                                            }
+                                            currentSelection?.let { onSelectNode(it) }
                                             newUbName = ""
                                             newUbDesc = ""
                                             newUbEsEquipo = false
