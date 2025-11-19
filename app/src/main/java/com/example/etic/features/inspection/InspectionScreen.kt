@@ -460,7 +460,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                             modificadoPor = if (isEdit) currentUserId else null,
                                             fechaMod = if (isEdit) nowTs else null,
                                             idTipoPrioridad = newUbPrioridadId,
-                                            idInspeccion = null
+                                            idInspeccion = currentInspection?.idInspeccion
                                         )
 
                                         val okUb = runCatching {
@@ -495,7 +495,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                                 val inspId = java.util.UUID.randomUUID().toString().uppercase()
                                                 val det = com.example.etic.data.local.entities.InspeccionDet(
                                                     idInspeccionDet = detId,
-                                                    idInspeccion = inspId,
+                                                    idInspeccion = currentInspection?.idInspeccion,
                                                     idUbicacion = id,
                                                     idStatusInspeccionDet = newUbStatusId,
                                                     notasInspeccion = null,
