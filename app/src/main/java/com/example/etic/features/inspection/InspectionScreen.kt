@@ -1685,7 +1685,8 @@ private data class TreeNode(
     val children: MutableList<TreeNode> = mutableListOf(),
     val problems: MutableList<Problem> = mutableListOf(),
     val baselines: MutableList<Baseline> = mutableListOf(),
-    var estatusInspeccionDet: String? = null
+    var estatusInspeccionDet: String? = null,
+    var idStatusInspeccionDet: String? = null
 ) { val isLeaf: Boolean get() = children.isEmpty() }
 
 private data class Problem(
@@ -1800,21 +1801,27 @@ private fun SimpleTreeView(
                         val tintColor = if (item.depth == 0) ICON_NO_EQUIPO_COLOR else if (n.verified) ICON_EQUIPO_COLOR else ICON_NO_EQUIPO_COLOR
                         Icon(nodeIcon, contentDescription = null, tint = tintColor, modifier = Modifier.size(TREE_ICON_SIZE))
                         Spacer(Modifier.width(TREE_SPACING))
-                        val baseColor = n.textColorHex?.let { raw ->
-                            val hex = raw.trim()
-                            when {
-                                hex.startsWith("#") -> {
-                                    runCatching { Color(android.graphics.Color.parseColor(hex)) }.getOrNull()
+                        // Si el nodo corresponde a estatus de texto 1 (no inspeccionado),
+                        // no usamos color fijo y dejamos que el tema defina el color.
+                        val baseColor = if (n.idStatusInspeccionDet == "568798D1-76BB-11D3-82BF-00104BC75DC2") {
+                            MaterialTheme.colorScheme.onSurface
+                        } else {
+                            n.textColorHex?.let { raw ->
+                                val hex = raw.trim()
+                                when {
+                                    hex.startsWith("#") -> {
+                                        runCatching { Color(android.graphics.Color.parseColor(hex)) }.getOrNull()
+                                    }
+                                    hex.startsWith("0x", ignoreCase = true) -> {
+                                        runCatching {
+                                            val intValue = hex.removePrefix("0x").removePrefix("0X").toLong(16).toInt()
+                                            Color(intValue)
+                                        }.getOrNull()
+                                    }
+                                    else -> null
                                 }
-                                hex.startsWith("0x", ignoreCase = true) -> {
-                                    runCatching {
-                                        val intValue = hex.removePrefix("0x").removePrefix("0X").toLong(16).toInt()
-                                        Color(intValue)
-                                    }.getOrNull()
-                                }
-                                else -> null
-                            }
-                        } ?: MaterialTheme.colorScheme.onSurface
+                            } ?: MaterialTheme.colorScheme.onSurface
+                        }
                         val textColor = if (n.id == highlightedId) MaterialTheme.colorScheme.error else baseColor
                         Text(
                             n.title,
@@ -2282,7 +2289,8 @@ private fun buildTreeFromVista(rows: List<com.example.etic.data.local.views.Vist
             barcode = r.codigoBarras,
             verified = (r.esEquipo ?: "").equals("SI", ignoreCase = true),
             textColorHex = r.color,
-            estatusInspeccionDet = r.estatusInspeccionDet
+            estatusInspeccionDet = r.estatusInspeccionDet,
+            idStatusInspeccionDet = r.idStatusInspeccionDet
         )
         byId[r.idUbicacion] = node
     }
