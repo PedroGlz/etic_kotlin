@@ -1,11 +1,6 @@
 package com.example.etic.navigation
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -14,19 +9,34 @@ import com.example.etic.core.session.SessionManager
 import com.example.etic.core.session.sessionDataStore
 import com.example.etic.features.auth.LoginScreen
 import com.example.etic.features.home.MainScreen
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
 
 @Composable
 fun AppNavHost() {
     val navController = rememberNavController()
+    val context = LocalContext.current
+    val session = remember { SessionManager(context.sessionDataStore) }
+    val scope = rememberCoroutineScope()
+
+    // Leer una vez si el usuario ya estaba logueado
+    var startDestination by remember { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(Unit) {
+        val loggedIn = session.isLoggedIn.firstOrNull() ?: false
+        startDestination = if (loggedIn) "home" else "login"
+    }
+
+    // Mientras obtenemos la sesión, no dibujamos el NavHost
+    val resolvedStart = startDestination ?: return
 
     NavHost(
         navController = navController,
-        startDestination = "login"
+        startDestination = resolvedStart
     ) {
         composable("login") {
             LoginScreen(
-                onLogin = { user ->
+                onLogin = { _ ->
                     navController.navigate("home") {
                         popUpTo("login") { inclusive = true }
                     }
@@ -37,8 +47,12 @@ fun AppNavHost() {
             MainScreen(
                 userName = "Usuario",
                 onLogout = {
-                    navController.navigate("login") {
-                        popUpTo("home") { inclusive = true }
+                    // Limpiar sesión y volver a login
+                    scope.launch {
+                        session.clear()
+                        navController.navigate("login") {
+                            popUpTo("home") { inclusive = true }
+                        }
                     }
                 }
             )

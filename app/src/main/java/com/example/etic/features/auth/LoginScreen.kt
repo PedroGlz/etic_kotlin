@@ -28,6 +28,8 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import com.example.etic.data.local.DbProvider
+import com.example.etic.core.session.SessionManager
+import com.example.etic.core.session.sessionDataStore
 import kotlinx.coroutines.launch
 import at.favre.lib.crypto.bcrypt.BCrypt
 
@@ -37,6 +39,7 @@ fun LoginScreen(onLogin: (String) -> Unit) {
     val ctx = LocalContext.current
     // Obtenemos el DAO una sola vez
     val usuarioDao = remember { DbProvider.get(ctx).usuarioDao() }
+    val sessionManager = remember { SessionManager(ctx.sessionDataStore) }
     val scope = rememberCoroutineScope()
 
     var username by rememberSaveable { mutableStateOf("") }
@@ -64,7 +67,11 @@ fun LoginScreen(onLogin: (String) -> Unit) {
             loading = false
             if (ok) {
                 errorMsg = null
-                onLogin(user?.usuario ?: user?.idUsuario ?: username)
+                val effectiveUser = user?.usuario ?: user?.idUsuario ?: username
+                // Persistir sesión para que no pida login al rotar / volver a la app
+                sessionManager.setUsername(effectiveUser)
+                sessionManager.setLoggedIn(true)
+                onLogin(effectiveUser)
             } else {
                 errorMsg = "Usuario o contraseña incorrecto"
             }
