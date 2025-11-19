@@ -229,6 +229,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             }
             var searchMessage by remember { mutableStateOf<String?>(null) }
             var showNoSelectionDialog by rememberSaveable { mutableStateOf(false) }
+            var showInvalidParentDialog by rememberSaveable { mutableStateOf(false) }
             var showNewUbDialog by remember { mutableStateOf(false) }
             var newUbName by rememberSaveable { mutableStateOf("") }
             var newUbEsEquipo by rememberSaveable { mutableStateOf(false) }
@@ -374,8 +375,14 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                         if (selectedId == null) {
                             showNoSelectionDialog = true
                         } else {
-                            searchMessage = null
-                            showNewUbDialog = true
+                            val selectedNode = findById(selectedId, nodes)
+                            if (selectedNode?.verified == true) {
+                                // Nodo es un equipo: no permitir crear nueva ubicación debajo
+                                showInvalidParentDialog = true
+                            } else {
+                                searchMessage = null
+                                showNewUbDialog = true
+                            }
                         }
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),
@@ -393,6 +400,18 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                 )
             }
             Divider(thickness = DIVIDER_THICKNESS)
+
+            // Di�logo cuando se intenta crear una ubicaci�n debajo de un equipo
+            if (showInvalidParentDialog) {
+                AlertDialog(
+                    onDismissRequest = { showInvalidParentDialog = false },
+                    confirmButton = {
+                        Button(onClick = { showInvalidParentDialog = false }) { Text("Aceptar") }
+                    },
+                    title = { Text("Información") },
+                    text = { Text("Solo puede crear elementos dentro de ubicaciones.") }
+                )
+            }
 
             // Diálogo cuando no hay ubicación seleccionada
             if (showNoSelectionDialog) {
