@@ -79,6 +79,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlin.collections.LinkedHashSet
+import kotlin.collections.buildList
 
 
 // Centralizamos algunos "magic numbers" para facilitar ajuste futuro
@@ -251,8 +253,48 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             var editingInspId by remember { mutableStateOf<String?>(null) }
             var deleteUbInfoMessage by remember { mutableStateOf<String?>(null) }
             var pendingDeleteUbId by remember { mutableStateOf<String?>(null) }
-            var deleteUbConfirmNode by remember { mutableStateOf<TreeNode?>(null) }
-            val scope = rememberCoroutineScope()
+    var deleteUbConfirmNode by remember { mutableStateOf<TreeNode?>(null) }
+    val scope = rememberCoroutineScope()
+
+    suspend fun refreshTree(
+        selectIfAvailable: String? = null,
+        preserveSelection: String? = selectedId,
+        extraExpanded: Collection<String?> = emptyList()
+    ) {
+        val rowsVista = withContext(Dispatchers.IO) {
+            runCatching { vistaUbicacionArbolDao.getAll() }.getOrElse { emptyList() }
+        }
+        val roots = buildTreeFromVista(rowsVista)
+        val siteRoot = TreeNode(id = rootId, title = rootTitle)
+        siteRoot.children.addAll(roots)
+        val newNodes = listOf(siteRoot)
+        nodes = newNodes
+
+        fun nodeExists(id: String?): Boolean = !id.isNullOrBlank() && findById(id, newNodes) != null
+
+        val expandedSnapshot = expanded.toList()
+        val desiredExpanded = LinkedHashSet<String>()
+        desiredExpanded.add(rootId)
+        val idsToPreserve = buildList {
+            addAll(expandedSnapshot)
+            extraExpanded.forEach { id -> if (!id.isNullOrBlank()) add(id) }
+        }
+        idsToPreserve.forEach { id ->
+            if (nodeExists(id)) desiredExpanded.add(id)
+        }
+        expanded.clear()
+        expanded.addAll(desiredExpanded)
+
+        val targetSelection = when {
+            nodeExists(selectIfAvailable) -> selectIfAvailable
+            nodeExists(preserveSelection) -> preserveSelection
+            else -> rootId
+        }
+        val previousSelection = selectedId
+        if (targetSelection != null && (previousSelection != targetSelection || !nodeExists(previousSelection))) {
+            onSelectNode(targetSelection)
+        }
+    }
             // Lee el usuario actual del CompositionLocal en contexto @Composable
             val currentUser = LocalCurrentUser.current
 
@@ -463,21 +505,10 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                     runCatching { ubicacionDao.update(updated) }
                                 }
 
-                                // Reconstruir árbol desde la vista
-                                val rowsVista = runCatching { vistaUbicacionArbolDao.getAll() }
-                                    .getOrElse { emptyList() }
-                                val roots = buildTreeFromVista(rowsVista)
-                                val siteRoot = TreeNode(id = rootId, title = rootTitle)
-                                siteRoot.children.addAll(roots)
-                                nodes = listOf(siteRoot)
-
-                                // Mantener selección: si borras la seleccionada, caer a la raíz
-                                val currentSelection =
-                                    selectedId?.takeIf { it != ubId } ?: rootId
-                                if (!expanded.contains(rootId)) {
-                                    expanded.add(rootId)
-                                }
-                                currentSelection.let { onSelectNode(it) }
+                                val preservedSelection = selectedId?.takeIf { it != ubId }
+                                refreshTree(
+                                    preserveSelection = preservedSelection
+                                )
 
                                 deleteUbConfirmNode = null
                             }
@@ -621,18 +652,13 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                                 )
                                                 runCatching { inspeccionDetDao.insert(det) }
                                             }
-                                            val rowsVista = runCatching { vistaUbicacionArbolDao.getAll() }.getOrElse { emptyList() }
-                                            val roots = buildTreeFromVista(rowsVista)
-                                            val siteRoot = TreeNode(id = rootId, title = rootTitle)
-                                            siteRoot.children.addAll(roots)
-                                            nodes = listOf(siteRoot)
-
-                                            // Mantener estados actuales de selección y expansión
-                                            val currentSelection = selectedId ?: rootId
-                                            if (!expanded.contains(rootId)) {
-                                                expanded.add(rootId)
+                                            val parentToExpand = when (parentForCalc) {
+                                                null, "0" -> rootId
+                                                else -> parentForCalc
                                             }
-                                            currentSelection?.let { onSelectNode(it) }
+                                            refreshTree(
+                                                extraExpanded = listOf(parentToExpand)
+                                            )
                                             newUbName = ""
                                             newUbDesc = ""
                                             newUbEsEquipo = false
@@ -1068,16 +1094,14 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                                                 )
                                                                 runCatching { inspeccionDetDao.update(det) }
                                                             }
-                                                            // refrescar árbol
-                                                            val rowsVista = runCatching { vistaUbicacionArbolDao.getAll() }.getOrElse { emptyList() }
-                                                            val roots = buildTreeFromVista(rowsVista)
-                                                            val siteRoot = TreeNode(id = rootId, title = rootTitle)
-                                                            siteRoot.children.addAll(roots)
-                                            nodes = listOf(siteRoot)
-                                            if (!expanded.contains(rootId)) expanded.add(rootId)
-                                            onSelectNode(rootId)
-                                                            
-                                            onSelectNode(rootId)
+                                                            val parentToExpand = when (editingParentId) {
+                                                                null, "0" -> rootId
+                                                                else -> editingParentId
+                                                            }
+                                                            refreshTree(
+                                                                selectIfAvailable = editingUbId,
+                                                                extraExpanded = listOf(parentToExpand, editingUbId)
+                                                            )
                                                             newUbError = null
                                                             // no cierro para permitir seguir editando si quieres,
                                                             // si prefieres cerrar:
@@ -2619,6 +2643,3 @@ private fun UbicacionesFlatListFromDatabase(modifier: Modifier = Modifier) {
         }
     }
 }
-
-
-
