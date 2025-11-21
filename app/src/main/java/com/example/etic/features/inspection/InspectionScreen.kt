@@ -1890,11 +1890,19 @@ private fun SimpleTreeView(
     val flat = remember(nodes, expanded) { mutableListOf<FlatNode>().also { flatten(nodes, 0, it) } }
     val selColor = Color(0xFFE1BEE7) // violeta suave
     val treeListState = rememberSaveable("tree_list_state", saver = LazyListState.Saver) { LazyListState() }
+    val rootNodeId = nodes.firstOrNull()?.id
+    val hasValidSelection = selectedId != null && flat.any { it.node.id == selectedId }
+    val effectiveSelectedId = if (hasValidSelection) selectedId else rootNodeId
+    LaunchedEffect(hasValidSelection, rootNodeId) {
+        if (!hasValidSelection && rootNodeId != null) {
+            onSelect(rootNodeId)
+        }
+    }
     Box(Modifier.fillMaxSize()) {
         LazyColumn(Modifier.fillMaxWidth(), state = treeListState) {
             items(flat, key = { it.node.id }) { item ->
                 val n = item.node
-                val isSelected = selectedId == n.id
+                val isSelected = effectiveSelectedId == n.id
                 val rowBackground = if (isSelected) selColor else Color.Transparent
                 Column(
                     Modifier
