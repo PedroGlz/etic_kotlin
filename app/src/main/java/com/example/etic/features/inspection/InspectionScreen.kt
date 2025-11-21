@@ -499,6 +499,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                 AlertDialog(
                     onDismissRequest = { showNewUbDialog = false },
                     properties = DialogProperties(usePlatformDefaultWidth = false),
+                    shape = RoundedCornerShape(12.dp),
                     confirmButton = {
                         Row(
                             Modifier.fillMaxWidth(),
