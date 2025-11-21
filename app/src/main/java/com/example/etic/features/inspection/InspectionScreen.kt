@@ -1889,17 +1889,22 @@ private fun SimpleTreeView(
     }
     val flat = remember(nodes, expanded) { mutableListOf<FlatNode>().also { flatten(nodes, 0, it) } }
     val selColor = Color(0xFFE1BEE7) // violeta suave
-
-    val hScroll = rememberScrollState()
     val treeListState = rememberSaveable("tree_list_state", saver = LazyListState.Saver) { LazyListState() }
-    Box(Modifier.fillMaxSize().horizontalScroll(hScroll)) {
-        LazyColumn(Modifier.fillMaxHeight(), state = treeListState) {
+    Box(Modifier.fillMaxSize()) {
+        LazyColumn(Modifier.fillMaxWidth(), state = treeListState) {
             items(flat, key = { it.node.id }) { item ->
                 val n = item.node
                 val isSelected = selectedId == n.id
-                Column(Modifier.background(if (isSelected) selColor else Color.Transparent)) {
+                val rowBackground = if (isSelected) selColor else Color.Transparent
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .background(rowBackground)
+                        .clickable { onSelect(n.id) }
+                ) {
                     Row(
                         Modifier
+                            .fillMaxWidth()
                             .padding(start = (item.depth * TREE_INDENT.value).dp, end = TREE_SPACING),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -1950,7 +1955,7 @@ private fun SimpleTreeView(
                             color = textColor,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.clickable { onSelect(n.id) }
+                            modifier = Modifier.weight(1f)
                         )
                     }
                     Divider(thickness = DIVIDER_THICKNESS)
