@@ -1,7 +1,6 @@
 ﻿package com.example.etic.features.inspection.ui.home
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.Orientation
@@ -101,8 +100,6 @@ private val TREE_TOGGLE_SIZE: Dp = 20.dp   // Tamaño del ícono de expandir/col
 private val TREE_ICON_SIZE: Dp = 18.dp     // Tamaño del ícono del nodo
 private val TREE_SPACING: Dp = 4.dp        // Espaciado horizontal pequeño
 private val TREE_INDENT: Dp = 12.dp        // Indentación por nivel
-// Ancho mínimo para que la tabla de Progreso no se comprima; habilita scroll horizontal si el panel es más angosto
-private val DETAILS_TABLE_MIN_WIDTH: Dp = 900.dp
 private val HEADER_ACTION_SPACING: Dp = 8.dp
 
 // Nota: la tabla de Progreso ocupa siempre todo el ancho del panel
@@ -1985,62 +1982,69 @@ private fun DetailsTable(
     onDelete: (TreeNode) -> Unit,
     onEdit: (TreeNode) -> Unit
 ) {
-    BoxWithConstraints(Modifier.fillMaxSize()) {
-        val hScroll = rememberScrollState()
-        val minWidth = DETAILS_TABLE_MIN_WIDTH
-        val tableWidth = if (maxWidth < minWidth) minWidth else maxWidth
+    Column(
+        modifier
+            .fillMaxSize()
+    ) {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .background(MaterialTheme.colorScheme.surface)
+                .padding(vertical = 4.dp, horizontal = 8.dp)
+        ) {
+            HeaderCell("ubicacion", 3)
+            HeaderCell("Código de barras", 2)
+            HeaderCell("Estatus", 2)
+            HeaderCell("Op", 1)
+        }
+        Divider(thickness = DIVIDER_THICKNESS)
 
-        Box(Modifier.fillMaxSize().horizontalScroll(hScroll)) {
-            Column(Modifier.width(tableWidth).fillMaxHeight()) {
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .background(MaterialTheme.colorScheme.surface)
-                        .padding(vertical = 4.dp, horizontal = 8.dp)
-                ) {
-                    HeaderCell("ubicacion", 3)
-                    HeaderCell("Código de barras", 2)
-                    HeaderCell("Estatus", 2)
-                    HeaderCell("Op", 1)
-                }
-                Divider(thickness = DIVIDER_THICKNESS)
-
-                val listState = rememberSaveable("details_list_state", saver = LazyListState.Saver) { LazyListState() }
-                if (children.isEmpty()) {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("Sin elementos") }
-                } else {
-                    LazyColumn(Modifier.fillMaxHeight(), state = listState) {
-                        items(children, key = { it.id }) { n ->
-                            Row(
-                                Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 2.dp, horizontal = 8.dp)
-                                    .pointerInput(n.id) {
-                                        detectTapGestures(onDoubleTap = { onEdit(n) })
-                                    }
-                            ) {
-                                BodyCell(3) { Text(n.title) }
-                                BodyCell(2) { Text(n.barcode ?: "-") }
-                                BodyCell(2) { Text(n.estatusInspeccionDet ?: "Por verificar") }
-                                BodyCell(1) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        androidx.compose.runtime.CompositionLocalProvider(
-                                            androidx.compose.material3.LocalMinimumInteractiveComponentEnforcement provides false
-                                        ) {
-                                            IconButton(onClick = { onDelete(n) }, modifier = Modifier.size(28.dp)) {
-                                                Icon(
-                                                    Icons.Outlined.Delete,
-                                                    contentDescription = "Eliminar",
-                                                    modifier = Modifier.size(18.dp)
-                                                )
-                                            }
-                                        }
+        val listState = rememberSaveable("details_list_state", saver = LazyListState.Saver) { LazyListState() }
+        if (children.isEmpty()) {
+            Box(
+                Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+                contentAlignment = Alignment.Center
+            ) {
+                Text("Sin elementos")
+            }
+        } else {
+            LazyColumn(
+                Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+                state = listState
+            ) {
+                items(children, key = { it.id }) { n ->
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 2.dp, horizontal = 8.dp)
+                            .pointerInput(n.id) {
+                                detectTapGestures(onDoubleTap = { onEdit(n) })
+                            }
+                    ) {
+                        BodyCell(3) { Text(n.title) }
+                        BodyCell(2) { Text(n.barcode ?: "-") }
+                        BodyCell(2) { Text(n.estatusInspeccionDet ?: "Por verificar") }
+                        BodyCell(1) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                androidx.compose.runtime.CompositionLocalProvider(
+                                    androidx.compose.material3.LocalMinimumInteractiveComponentEnforcement provides false
+                                ) {
+                                    IconButton(onClick = { onDelete(n) }, modifier = Modifier.size(28.dp)) {
+                                        Icon(
+                                            Icons.Outlined.Delete,
+                                            contentDescription = "Eliminar",
+                                            modifier = Modifier.size(18.dp)
+                                        )
                                     }
                                 }
                             }
-                            Divider(thickness = DIVIDER_THICKNESS)
                         }
                     }
+                    Divider(thickness = DIVIDER_THICKNESS)
                 }
             }
         }
