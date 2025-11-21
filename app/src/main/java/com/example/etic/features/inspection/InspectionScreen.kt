@@ -789,7 +789,33 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                     label = { Text(stringResource(com.example.etic.R.string.label_codigo_barras)) },
                                     modifier = Modifier.fillMaxWidth()
                                 )
-                                Row(verticalAlignment = Alignment.CenterVertically) { }
+                                // Ruta destino informativa para que el usuario vea dónde se creará
+                                val previewRoute = run {
+                                    val parentForPreview = when {
+                                        editingUbId != null -> editingParentId
+                                        selectedId == null -> null
+                                        selectedId == rootId -> "0"
+                                        else -> selectedId
+                                    }
+                                    val basePath = when {
+                                        parentForPreview == null || parentForPreview == "0" -> rootTitle
+                                        else -> titlePathForId(nodes, parentForPreview).joinToString(" / ").ifBlank { rootTitle }
+                                    }
+                                    val trimmedName = newUbName.trim()
+                                    when {
+                                        basePath.isBlank() && trimmedName.isBlank() -> ""
+                                        basePath.isBlank() -> trimmedName
+                                        trimmedName.isBlank() -> basePath
+                                        else -> "$basePath / $trimmedName"
+                                    }
+                                }
+                                TextField(
+                                    value = previewRoute,
+                                    onValueChange = {},
+                                    readOnly = true,
+                                    label = { Text("Ruta destino") },
+                                    modifier = Modifier.fillMaxWidth()
+                                )
                                 if (newUbError != null) {
                                     Text(newUbError!!, color = MaterialTheme.colorScheme.error)
                                 }
