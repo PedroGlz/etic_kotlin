@@ -1,4 +1,4 @@
-﻿package com.example.etic.features.inspection.ui.home
+package com.example.etic.features.inspection.ui.home
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.rememberScrollState
@@ -81,11 +81,24 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.collections.LinkedHashSet
 import kotlin.collections.buildList
+import com.example.etic.features.inspection.data.InspectionRepository
+import com.example.etic.features.inspection.data.UbicacionSaveContext
+import com.example.etic.features.inspection.tree.Baseline
+import com.example.etic.features.inspection.tree.Problem
+import com.example.etic.features.inspection.tree.TreeNode
+import com.example.etic.features.inspection.tree.buildTreeFromVista
+import com.example.etic.features.inspection.tree.collectBaselines
+import com.example.etic.features.inspection.tree.collectProblems
+import com.example.etic.features.inspection.tree.depthOfId
+import com.example.etic.features.inspection.tree.descendantIds
+import com.example.etic.features.inspection.tree.findById
+import com.example.etic.features.inspection.tree.findPathByBarcode
+import com.example.etic.features.inspection.tree.titlePathForId
 
 
 // Centralizamos algunos "magic numbers" para facilitar ajuste futuro
-private const val MIN_FRAC: Float = 0.2f     // Límite inferior de los splitters
-private const val MAX_FRAC: Float = 0.8f     // Límite superior de los splitters
+private const val MIN_FRAC: Float = 0.2f     // límite inferior de los splitters
+private const val MAX_FRAC: Float = 0.8f     // límite superior de los splitters
 private const val H_INIT_FRAC: Float = 0.6f  // Fracción inicial del panel superior
 private const val V_INIT_FRAC: Float = 0.5f  // Fracción inicial del panel izquierdo
 
@@ -124,6 +137,9 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
     val vistaUbicacionArbolDao = remember { com.example.etic.data.local.DbProvider.get(ctx).vistaUbicacionArbolDao() }
     val usuarioDao = remember { com.example.etic.data.local.DbProvider.get(ctx).usuarioDao() }
     val inspeccionDetDao = remember { com.example.etic.data.local.DbProvider.get(ctx).inspeccionDetDao() }
+    val inspectionRepository = remember {
+        InspectionRepository(ubicacionDao, inspeccionDetDao, vistaUbicacionArbolDao)
+    }
     val problemaDao = remember { com.example.etic.data.local.DbProvider.get(ctx).problemaDao() }
     val lineaBaseDaoGlobal = remember { com.example.etic.data.local.DbProvider.get(ctx).lineaBaseDao() }
     val currentInspection = LocalCurrentInspection.current
@@ -261,13 +277,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
         preserveSelection: String? = selectedId,
         extraExpanded: Collection<String?> = emptyList()
     ) {
-        val rowsVista = withContext(Dispatchers.IO) {
-            runCatching { vistaUbicacionArbolDao.getAll() }.getOrElse { emptyList() }
-        }
-        val roots = buildTreeFromVista(rowsVista)
-        val siteRoot = TreeNode(id = rootId, title = rootTitle)
-        siteRoot.children.addAll(roots)
-        val newNodes = listOf(siteRoot)
+        val newNodes = inspectionRepository.loadTree(rootId, rootTitle)
         nodes = newNodes
 
         fun nodeExists(id: String?): Boolean = !id.isNullOrBlank() && findById(id, newNodes) != null
@@ -494,16 +504,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                     .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
                                 val userId = currentUser?.idUsuario
 
-                                // Marcar ubicación como Inactivo en BD
-                                val existing = runCatching { ubicacionDao.getById(ubId) }.getOrNull()
-                                if (existing != null) {
-                                    val updated = existing.copy(
-                                        estatus = "Inactivo",
-                                        modificadoPor = userId,
-                                        fechaMod = nowTs
-                                    )
-                                    runCatching { ubicacionDao.update(updated) }
-                                }
+                                inspectionRepository.markUbicacionInactive(ubId, userId, nowTs)
 
                                 val preservedSelection = selectedId?.takeIf { it != ubId }
                                 refreshTree(
@@ -524,7 +525,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
 
 
 
-            // ------------------ DIÁLOGO: NUEVA UBICACIÓN (igual que tenías) ------------------
+            // ------------------ DiálOGO: NUEVA UBICACión (igual que tenías) ------------------
             if (showNewUbDialog) {
                 AlertDialog(
                     onDismissRequest = { showNewUbDialog = false },
@@ -603,56 +604,21 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                             idInspeccion = currentInspection?.idInspeccion
                                         )
 
-                                        val okUb = runCatching {
-                                            if (isEdit) ubicacionDao.update(nueva) else ubicacionDao.insert(nueva)
-                                        }.isSuccess
-                                        if (okUb) {
-                                            // Crear/actualizar Inspecciónes_det ligada a la ubicacion
-                                            if (isEdit && editingDetId != null) {
-                                                val existingDet = runCatching {
-                                                    inspeccionDetDao.getByUbicacion(id)
-                                                }.getOrElse { emptyList() }.firstOrNull { it.idInspeccionDet == editingDetId }
-                                                val det = com.example.etic.data.local.entities.InspeccionDet(
-                                                    idInspeccionDet = editingDetId!!,
-                                                    idInspeccion = editingInspId,
-                                                    idUbicacion = id,
-                                                    idStatusInspeccionDet = newUbStatusId,
-                                                    notasInspeccion = null,
-                                                    estatus = "Activo",
-                                                    idEstatusColorText = 1,
-                                                    expanded = "0",
-                                                    selected = "0",
-                                                    creadoPor = existingDet?.creadoPor ?: currentUserId,
-                                                    fechaCreacion = existingDet?.fechaCreacion ?: nowTs,
-                                                    modificadoPor = currentUserId,
-                                                    fechaMod = nowTs,
-                                                    // Id_Sitio desde datos globales de la inspección
-                                                    idSitio = currentInspection?.idSitio
-                                                )
-                                                runCatching { inspeccionDetDao.update(det) }
-                                            } else {
-                                                val detId = java.util.UUID.randomUUID().toString().uppercase()
-                                                val inspId = java.util.UUID.randomUUID().toString().uppercase()
-                                                val det = com.example.etic.data.local.entities.InspeccionDet(
-                                                    idInspeccionDet = detId,
-                                                    idInspeccion = currentInspection?.idInspeccion,
-                                                    idUbicacion = id,
-                                                    idStatusInspeccionDet = newUbStatusId,
-                                                    notasInspeccion = null,
-                                                    estatus = "Activo",
-                                                    idEstatusColorText = 1,
-                                                    expanded = "0",
-                                                    selected = "0",
-                                                    creadoPor = currentUserId,
-                                                    fechaCreacion = nowTs,
-                                                    modificadoPor = null,
-                                                    fechaMod = null,
-                                                    // Id_Sitio desde datos globales de la inspección
-                                                    idSitio = currentInspection?.idSitio
-                                                )
-                                                runCatching { inspeccionDetDao.insert(det) }
-                                            }
-                                            val parentToExpand = when (parentForCalc) {
+                                        val saveContext = UbicacionSaveContext(
+                                            isEdit = isEdit,
+                                            editingDetId = editingDetId,
+                                            editingInspId = editingInspId,
+                                            newStatusId = newUbStatusId,
+                                            currentInspectionId = currentInspection?.idInspeccion,
+                                            currentSiteId = currentInspection?.idSitio
+                                        )
+                                        val okUb = inspectionRepository.saveUbicacion(
+                                            entity = nueva,
+                                            context = saveContext,
+                                            nowTs = nowTs,
+                                            currentUserId = currentUserId
+                                        )
+                                        if (okUb) {                                            val parentToExpand = when (parentForCalc) {
                                                 null, "0" -> rootId
                                                 else -> parentForCalc
                                             }
@@ -852,7 +818,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             }
             // -------------------------------------------------------------------------------
 
-            // ------------------ DIÁLOGO: EDITAR UBICACIÓN (NUEVO con 3 TABS) ------------------
+            // ------------------ DiálOGO: EDITAR UBICACión (NUEVO con 3 TABS) ------------------
             if (showEditUbDialog) {
                 androidx.compose.material3.BasicAlertDialog(
                     onDismissRequest = { showEditUbDialog = false }
@@ -1070,31 +1036,21 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                                             idTipoPrioridad = newUbPrioridadId,
                                                             idInspeccion = existing?.idInspeccion
                                                         )
-                                                        val okUb = runCatching { ubicacionDao.update(nueva) }.isSuccess
-                                                        if (okUb) {
-                                                            if (editingDetId != null) {
-                                                                val existingDet = runCatching {
-                                                                    inspeccionDetDao.getByUbicacion(id)
-                                                                }.getOrElse { emptyList() }.firstOrNull { it.idInspeccionDet == editingDetId }
-                                                                val det = com.example.etic.data.local.entities.InspeccionDet(
-                                                                    idInspeccionDet = editingDetId!!,
-                                                                    idInspeccion = editingInspId ?: existingDet?.idInspeccion,
-                                                                    idUbicacion = id,
-                                                                    idStatusInspeccionDet = newUbStatusId,
-                                                                    notasInspeccion = existingDet?.notasInspeccion,
-                                                                    estatus = "Activo",
-                                                                    idEstatusColorText = existingDet?.idEstatusColorText ?: 1,
-                                                                    expanded = existingDet?.expanded ?: "0",
-                                                                    selected = existingDet?.selected ?: "0",
-                                                                    creadoPor = existingDet?.creadoPor ?: currentUserId,
-                                                                    fechaCreacion = existingDet?.fechaCreacion,
-                                                                    modificadoPor = currentUserId,
-                                                                    fechaMod = nowTs,
-                                                                    idSitio = currentInspection?.idSitio
-                                                                )
-                                                                runCatching { inspeccionDetDao.update(det) }
-                                                            }
-                                                            val parentToExpand = when (editingParentId) {
+                                                                                                                val saveContext = UbicacionSaveContext(
+                                                            isEdit = true,
+                                                            editingDetId = editingDetId,
+                                                            editingInspId = editingInspId,
+                                                            newStatusId = newUbStatusId,
+                                                            currentInspectionId = currentInspection?.idInspeccion,
+                                                            currentSiteId = currentInspection?.idSitio
+                                                        )
+                                                        val okUb = inspectionRepository.saveUbicacion(
+                                                            entity = nueva,
+                                                            context = saveContext,
+                                                            nowTs = nowTs,
+                                                            currentUserId = currentUserId
+                                                        )
+                                                        if (okUb) {val parentToExpand = when (editingParentId) {
                                                                 null, "0" -> rootId
                                                                 else -> editingParentId
                                                             }
@@ -1359,7 +1315,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                             }
                                         }
 
-                                        // ✅ Validación SOLO para habilitar el botón
+                                        // ? Validación SOLO para habilitar el botón
                                         val isBaselineValid by remember(mta, tempMax, tempAmb, imgIr, imgId) {
                                             mutableStateOf(
                                                 mta.isNotBlank() &&
@@ -1374,7 +1330,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                             onDismissRequest = { showNewBaseline = false },
                                             confirmButton = {
                                                 Button(
-                                                    enabled = isBaselineValid, // ← deshabilita hasta que se llenen los obligatorios
+                                                    enabled = isBaselineValid, // ? deshabilita hasta que se llenen los obligatorios
                                                     onClick = {
                                                         val idUb = ubId
                                                         val idInsp = inspId
@@ -1744,7 +1700,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                             }
                         },
                         onEdit = { node ->
-                            // Abrir diálogo de EDICIÓN con tabs y precargar datos desde BD
+                            // Abrir diálogo de EDICión con tabs y precargar datos desde BD
                             newUbError = null
                             editingUbId = node.id
                             showEditUbDialog = true
@@ -1846,75 +1802,6 @@ private fun CellPanel(
             content()
         }
     }
-}
-
-// -------------------------
-// Modelo de datos / utilería
-// -------------------------
-
-private data class TreeNode(
-    val id: String,
-    var title: String,
-    var barcode: String? = null,
-    var verified: Boolean = false,
-    var textColorHex: String? = null,
-    val children: MutableList<TreeNode> = mutableListOf(),
-    val problems: MutableList<Problem> = mutableListOf(),
-    val baselines: MutableList<Baseline> = mutableListOf(),
-    var estatusInspeccionDet: String? = null,
-    var idStatusInspeccionDet: String? = null
-) { val isLeaf: Boolean get() = children.isEmpty() }
-
-private data class Problem(
-    val id: String,
-    val no: Int,
-    val fecha: java.time.LocalDate,
-    val numInspeccion: String,
-    val tipo: String,
-    val estatus: String,
-    val cronico: Boolean,
-    val tempC: Double,
-    val deltaTC: Double,
-    val severidad: String,
-    val equipo: String,
-    val comentarios: String
-)
-
-private data class Baseline(
-    val id: String,
-    val numInspeccion: String,
-    val equipo: String,
-    val fecha: java.time.LocalDate,
-    val mtaC: Double,
-    val tempC: Double,
-    val ambC: Double,
-    val imgR: String? = null,
-    val imgD: String? = null,
-    val notas: String
-)
-
-private fun findById(id: String?, list: List<TreeNode>): TreeNode? {
-    if (id == null) return null
-    for (n in list) {
-        if (n.id == id) return n
-        val found = findById(id, n.children)
-        if (found != null) return found
-    }
-    return null
-}
-
-private fun removeById(id: String, list: MutableList<TreeNode>): Boolean {
-    val it = list.listIterator()
-    while (it.hasNext()) {
-        val idx = it.nextIndex()
-        val n = it.next()
-        if (n.id == id) {
-            list.removeAt(idx)
-            return true
-        }
-        if (removeById(id, n.children)) return true
-    }
-    return false
 }
 
 // -------------------------
@@ -2165,94 +2052,6 @@ private fun ListTabs(
             )
         }
     }
-}
-
-// Encuentra el camino (ids) desde la raíz hasta el nodo cuyo Código de barras coincide exactamente
-private fun findPathByBarcode(list: List<TreeNode>, barcode: String): List<String>? {
-    fun dfs(n: TreeNode, path: List<String>): List<String>? {
-        if ((n.barcode ?: "") == barcode) return path + n.id
-        for (c in n.children) {
-            val found = dfs(c, path + n.id)
-            if (found != null) return found
-        }
-        return null
-    }
-    for (root in list) {
-        val res = dfs(root, emptyList())
-        if (res != null) return res
-    }
-    return null
-}
-
-// Profundidad del nodo por id (0 = raíz). Si no se encuentra, devuelve 0
-private fun depthOfId(list: List<TreeNode>, targetId: String): Int {
-    fun dfs(n: TreeNode, depth: Int): Int? {
-        if (n.id == targetId) return depth
-        for (c in n.children) {
-            val d = dfs(c, depth + 1)
-            if (d != null) return d
-        }
-        return null
-    }
-    for (root in list) {
-        val d = dfs(root, 0)
-        if (d != null) return d
-    }
-    return 0
-}
-
-// Ruta de títulos desde la raíz hasta el nodo indicado
-private fun titlePathForId(list: List<TreeNode>, targetId: String): List<String> {
-    fun dfs(n: TreeNode, path: List<String>): List<String>? {
-        val newPath = path + n.title
-        if (n.id == targetId) return newPath
-        for (c in n.children) {
-            val res = dfs(c, newPath)
-            if (res != null) return res
-        }
-        return null
-    }
-    for (root in list) {
-        val res = dfs(root, emptyList())
-        if (res != null) return res
-    }
-    return emptyList()
-}
-
-// Retorna el conjunto de Id_ubicacion del nodo seleccionado y todos sus descendientes
-private fun descendantIds(
-    all: List<com.example.etic.data.local.entities.Ubicacion>,
-    rootId: String
-): Set<String> {
-    val childrenMap: Map<String?, List<com.example.etic.data.local.entities.Ubicacion>> =
-        all.groupBy { it.idUbicacionPadre }
-    val out = mutableSetOf<String>()
-    val stack = ArrayDeque<String>()
-    stack.add(rootId)
-    while (stack.isNotEmpty()) {
-        val id = stack.removeLast()
-        if (out.add(id)) {
-            val children = childrenMap[id].orEmpty()
-            children.forEach { stack.add(it.idUbicacion) }
-        }
-    }
-    return out
-}
-
-private fun collectProblems(root: TreeNode?): List<Problem> {
-    if (root == null) return emptyList()
-    val out = mutableListOf<Problem>()
-    fun dfs(n: TreeNode) { out += n.problems; n.children.forEach { dfs(it) } }
-    dfs(root)
-    return out
-}
-
-private fun collectBaselines(root: TreeNode?): List<Baseline> {
-    if (root == null) return emptyList()
-    val out = mutableListOf<Baseline>()
-    fun dfs(n: TreeNode) { out += n.baselines; n.children.forEach { dfs(it) } }
-    dfs(root)
-    return out
 }
 
 @Composable
@@ -2643,3 +2442,5 @@ private fun UbicacionesFlatListFromDatabase(modifier: Modifier = Modifier) {
         }
     }
 }
+
+
