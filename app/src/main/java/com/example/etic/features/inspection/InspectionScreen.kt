@@ -119,6 +119,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
     var nodes by remember { mutableStateOf<List<TreeNode>>(emptyList()) }
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val ubicacionDao = remember { com.example.etic.data.local.DbProvider.get(ctx).ubicacionDao() }
+    val vistaUbicacionArbolDao = remember { com.example.etic.data.local.DbProvider.get(ctx).vistaUbicacionArbolDao() }
     val usuarioDao = remember { com.example.etic.data.local.DbProvider.get(ctx).usuarioDao() }
     val inspeccionDetDao = remember { com.example.etic.data.local.DbProvider.get(ctx).inspeccionDetDao() }
     val problemaDao = remember { com.example.etic.data.local.DbProvider.get(ctx).problemaDao() }
@@ -146,9 +147,8 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
     }
     // Reconstruir el árbol cuando llegue/ cambie la Inspección actual
     LaunchedEffect(rootId, rootTitle, currentInspection?.idInspeccion) {
-        val dao = com.example.etic.data.local.DbProvider.get(ctx).vistaUbicacionArbolDao()
         val rowsVista = try {
-            withContext(Dispatchers.IO) { dao.getAll() }
+            withContext(Dispatchers.IO) { vistaUbicacionArbolDao.getAll() }
         } catch (e: Exception) {
             android.util.Log.e("VistaUbicacionArbol", "Error al cargar vista_ubicaciones_arbol", e)
             emptyList()
@@ -175,9 +175,8 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
     // Refrescar árbol cuando cambie el baseline (para actualizar colores)
     LaunchedEffect(baselineRefreshTick, currentInspection?.idInspeccion, rootId, rootTitle) {
         if (baselineRefreshTick == 0) return@LaunchedEffect
-        val dao = com.example.etic.data.local.DbProvider.get(ctx).vistaUbicacionArbolDao()
         val rowsVista = try {
-            withContext(Dispatchers.IO) { dao.getAll() }
+            withContext(Dispatchers.IO) { vistaUbicacionArbolDao.getAll() }
         } catch (_: Exception) {
             emptyList()
         }
@@ -464,10 +463,10 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                     runCatching { ubicacionDao.update(updated) }
                                 }
 
-                                // Reconstruir árbol solo con ubicaciones activas
-                                val rows = runCatching { ubicacionDao.getAllActivas() }
+                                // Reconstruir árbol desde la vista
+                                val rowsVista = runCatching { vistaUbicacionArbolDao.getAll() }
                                     .getOrElse { emptyList() }
-                                val roots = buildTreeFromUbicaciones(rows)
+                                val roots = buildTreeFromVista(rowsVista)
                                 val siteRoot = TreeNode(id = rootId, title = rootTitle)
                                 siteRoot.children.addAll(roots)
                                 nodes = listOf(siteRoot)
@@ -622,8 +621,8 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                                 )
                                                 runCatching { inspeccionDetDao.insert(det) }
                                             }
-                                            val rows = runCatching { ubicacionDao.getAllActivas() }.getOrElse { emptyList() }
-                                            val roots = buildTreeFromUbicaciones(rows)
+                                            val rowsVista = runCatching { vistaUbicacionArbolDao.getAll() }.getOrElse { emptyList() }
+                                            val roots = buildTreeFromVista(rowsVista)
                                             val siteRoot = TreeNode(id = rootId, title = rootTitle)
                                             siteRoot.children.addAll(roots)
                                             nodes = listOf(siteRoot)
@@ -1044,8 +1043,8 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                                                 runCatching { inspeccionDetDao.update(det) }
                                                             }
                                                             // refrescar árbol
-                                                            val rows = runCatching { ubicacionDao.getAllActivas() }.getOrElse { emptyList() }
-                                                            val roots = buildTreeFromUbicaciones(rows)
+                                                            val rowsVista = runCatching { vistaUbicacionArbolDao.getAll() }.getOrElse { emptyList() }
+                                                            val roots = buildTreeFromVista(rowsVista)
                                                             val siteRoot = TreeNode(id = rootId, title = rootTitle)
                                                             siteRoot.children.addAll(roots)
                                             nodes = listOf(siteRoot)
@@ -1570,6 +1569,12 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             Row(Modifier.weight(hFrac)) {
 
                 // Panel izquierdo
+                val statusLabelMap = remember(statusOptions) {
+                    statusOptions.associate { opt ->
+                        opt.idStatusInspeccionDet to (opt.estatusInspeccionDet ?: opt.idStatusInspeccionDet)
+                    }
+                }
+
                 CellPanel(
                     borderColor = borderColor,
                     modifier = Modifier
@@ -1720,7 +1725,8 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                         ?: statusId
                                 }
                             }
-                        }
+                        },
+                        statusNameForId = { id -> id?.let { statusLabelMap[it] } }
                     )
                 }
             }
@@ -1981,7 +1987,8 @@ private fun DetailsTable(
     children: List<TreeNode>,
     modifier: Modifier = Modifier,
     onDelete: (TreeNode) -> Unit,
-    onEdit: (TreeNode) -> Unit
+    onEdit: (TreeNode) -> Unit,
+    statusNameForId: (String?) -> String?
 ) {
     Column(
         modifier
@@ -2028,7 +2035,8 @@ private fun DetailsTable(
                     ) {
                         BodyCell(3) { Text(n.title) }
                         BodyCell(2) { Text(n.barcode ?: "-") }
-                        BodyCell(2) { Text(n.estatusInspeccionDet ?: "Por verificar") }
+                        val statusLabel = n.estatusInspeccionDet ?: statusNameForId(n.idStatusInspeccionDet)
+                        BodyCell(2) { Text(statusLabel ?: "Por verificar") }
                         BodyCell(1) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 androidx.compose.runtime.CompositionLocalProvider(
@@ -2124,37 +2132,6 @@ private fun findPathByBarcode(list: List<TreeNode>, barcode: String): List<Strin
         if (res != null) return res
     }
     return null
-}
-
-private fun buildTreeFromUbicaciones(rows: List<com.example.etic.data.local.entities.Ubicacion>): MutableList<TreeNode> {
-    val byId = mutableMapOf<String, TreeNode>()
-    val roots = mutableListOf<TreeNode>()
-
-    rows.forEach { r ->
-        val node = TreeNode(
-            id = r.idUbicacion,
-            title = r.ubicacion ?: "(Sin nombre)",
-            barcode = r.codigoBarras,
-            verified = (r.esEquipo ?: "").equals("SI", ignoreCase = true)
-        )
-        byId[r.idUbicacion] = node
-    }
-
-    rows.forEach { r ->
-        val node = byId[r.idUbicacion] ?: return@forEach
-        val parentId = r.idUbicacionPadre?.takeIf { it.isNotBlank() }
-        if (parentId != null) {
-            val parent = byId[parentId]
-            if (parent != null) parent.children.add(node) else roots.add(node)
-        } else {
-            roots.add(node)
-        }
-    }
-
-    // Importante: no reordenar aquí; 'rows' ya viene ordenado por Fecha_Creacion ASC desde el DAO.
-    // Mantener el orden de inserción garantiza que raíces e hijos respeten ese orden.
-
-    return roots
 }
 
 // Profundidad del nodo por id (0 = raíz). Si no se encuentra, devuelve 0
