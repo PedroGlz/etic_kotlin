@@ -1,4 +1,4 @@
-package com.example.etic.features.inspection.ui.state
+﻿package com.example.etic.features.inspection.ui.state
 
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.Stable
@@ -134,3 +134,4 @@ fun rememberLocationFormState(): LocationFormState {
         )
     }
 }
+

@@ -1,4 +1,4 @@
-package com.example.etic.features.inspection.tree
+﻿package com.example.etic.features.inspection.tree
 
 import android.util.Log
 import com.example.etic.data.local.entities.Ubicacion
@@ -191,3 +191,4 @@ fun buildTreeFromVista(rows: List<VistaUbicacionArbol>): MutableList<TreeNode> {
 
     return roots
 }
+

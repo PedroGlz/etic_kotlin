@@ -99,24 +99,24 @@ import com.example.etic.features.inspection.tree.titlePathForId
 
 
 // Centralizamos algunos "magic numbers" para facilitar ajuste futuro
-private const val MIN_FRAC: Float = 0.2f     // l?mite inferior de los splitters
-private const val MAX_FRAC: Float = 0.8f     // l?mite superior de los splitters
-private const val H_INIT_FRAC: Float = 0.6f  // Fracci?n inicial del panel superior
-private const val V_INIT_FRAC: Float = 0.5f  // Fracci?n inicial del panel izquierdo
+private const val MIN_FRAC: Float = 0.2f     // Limite inferior de los splitters
+private const val MAX_FRAC: Float = 0.8f     // Limite superior de los splitters
+private const val H_INIT_FRAC: Float = 0.6f  // Fraccion inicial del panel superior
+private const val V_INIT_FRAC: Float = 0.5f  // Fraccion inicial del panel izquierdo
 
 private val HANDLE_THICKNESS: Dp = 2.dp      // Grosor de los handles de split
-private val DIVIDER_THICKNESS: Dp = 0.5.dp   // Grosor est?ndar de divisores/bordes
+private val DIVIDER_THICKNESS: Dp = 0.5.dp   // Grosor estandar de divisores/bordes
 private val PANEL_PADDING: Dp = 12.dp        // Padding interno de cada panel
 private const val SURFACE_VARIANT_ALPHA: Float = 0.4f
 private const val SELECT_ALPHA: Float = 0.10f
 private val ICON_EQUIPO_COLOR: Color = Color(0xFFFFC107)     // Amarillo (Traffic)
 private val ICON_NO_EQUIPO_COLOR: Color = Color(0xFF4CAF50)  // Verde (DragIndicator)
 
-// Ajustes de compacidad para filas del ?rbol
-private val TREE_TOGGLE_SIZE: Dp = 20.dp   // Tama?o del ?cono de expandir/colapsar
-private val TREE_ICON_SIZE: Dp = 18.dp     // Tama?o del ?cono del nodo
-private val TREE_SPACING: Dp = 4.dp        // Espaciado horizontal peque?o
-private val TREE_INDENT: Dp = 12.dp        // Indentaci?n por nivel
+// Ajustes de compacidad para filas del arbol
+private val TREE_TOGGLE_SIZE: Dp = 20.dp   // Tamano del icono de expandir/colapsar
+private val TREE_ICON_SIZE: Dp = 18.dp     // Tamano del icono del nodo
+private val TREE_SPACING: Dp = 4.dp        // Espaciado horizontal pequeno
+private val TREE_INDENT: Dp = 12.dp        // Indentacion por nivel
 
 // Nota: la tabla de Progreso ocupa siempre todo el ancho del panel
 
@@ -128,9 +128,9 @@ fun InspectionScreen(onReady: () -> Unit = {}) {
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
 private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
-    // Usamos constantes para evitar n?mero magicos in-line
-    var hFrac by rememberSaveable { mutableStateOf(H_INIT_FRAC) } // fracci?n alto del panel superior
-    var vFrac by rememberSaveable { mutableStateOf(V_INIT_FRAC) } // fracci?n ancho del panel izquierdo
+    // Usamos constantes para evitar numero magicos in-line
+    var hFrac by rememberSaveable { mutableStateOf(H_INIT_FRAC) } // Fraccion alto del panel superior
+    var vFrac by rememberSaveable { mutableStateOf(V_INIT_FRAC) } // Fraccion ancho del panel izquierdo
 
     var nodes by remember { mutableStateOf<List<TreeNode>>(emptyList()) }
     val ctx = androidx.compose.ui.platform.LocalContext.current
@@ -147,7 +147,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
     val rootTitle = currentInspection?.nombreSitio ?: "Sitio"
     val rootId = remember(currentInspection?.idSitio) { (currentInspection?.idSitio?.let { "root:$it" } ?: "root:site") }
     val expanded = remember { mutableStateListOf<String>() }
-        // Centralizar selecci?n como si fuera un tap del usuario
+        // Centralizar seleccion como si fuera un tap del usuario
     var selectedId by rememberSaveable { mutableStateOf<String?>(null) }
     var highlightedId by remember { mutableStateOf<String?>(null) }
     var baselineRefreshTick by remember { mutableStateOf(0) }
@@ -164,7 +164,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             }
         }
     }
-    // Reconstruir el ?rbol cuando llegue/ cambie la Inspecci?n actual
+    // Reconstruir el arbol cuando llegue/ cambie la Inspeccion actual
     LaunchedEffect(rootId, rootTitle, currentInspection?.idInspeccion) {
         val rowsVista = try {
             withContext(Dispatchers.IO) { vistaUbicacionArbolDao.getAll() }
@@ -180,7 +180,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
         nodes = listOf(siteRoot)
         if (!expanded.contains(rootId)) expanded.add(rootId)
         onSelectNode(rootId)
-        // Selecci?n program?tica equivalente a un tap sobre el sitio
+        // seleccion programatica equivalente a un tap sobre el sitio
         kotlinx.coroutines.delay(0)
         onSelectNode(rootId)
         // Seleccionar por defecto el nodo padre (sitio)
@@ -191,7 +191,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
         if (!hasSignaledReady) { hasSignaledReady = true; onReady() }
     }
 
-    // Refrescar ?rbol cuando cambie el baseline (para actualizar colores)
+    // Refrescar arbol cuando cambie el baseline (para actualizar colores)
     LaunchedEffect(baselineRefreshTick, currentInspection?.idInspeccion, rootId, rootTitle) {
         if (baselineRefreshTick == 0) return@LaunchedEffect
         val rowsVista = try {
@@ -212,13 +212,13 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
 
     val borderColor = DividerDefaults.color
 
-    // ---------- Estados NUEVOS para el di?logo de edici?n con tabs ----------
+    // ---------- Estados NUEVOS para el dialogo de edicion con tabs ----------
     var showEditUbDialog by remember { mutableStateOf(false) }
     var editTab by rememberSaveable { mutableStateOf(0) }
     // -----------------------------------------------------------------------
 
     BoxWithConstraints(Modifier.fillMaxSize()) {
-        // Convierte dimensiones del BoxWithConstraints a p?xeles de forma segura
+        // Convierte dimensiones del BoxWithConstraints a pixeles de forma segura
         val density = LocalDensity.current
         val totalWidthPx = with(density) { maxWidth.value * density.density }
         val totalHeightPx = with(density) { maxHeight.value * density.density }
@@ -298,7 +298,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
 
             LaunchedEffect(showNewUbDialog) {
                 if (showNewUbDialog) {
-                    // Siempre que se abre \"Nueva ubicaci?n\", forzamos modo creaci?n (no edici?n)
+                    // Siempre que se abre \"Nueva ubicacion\", forzamos modo creacion (no edicion)
                     editingUbId = null
                     editingParentId = null
                     editingDetId = null
@@ -309,7 +309,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                 }
             }
 
-            // Preseleccionar estatus por defecto al abrir el di?logo de NUEVA ubicaci?n
+            // Preseleccionar estatus por defecto al abrir el dialogo de NUEVA ubicacion
             LaunchedEffect(showNewUbDialog) {
                 if (showNewUbDialog) {
                     val defaultId = "568798D1-76BB-11D3-82BF-00104BC75DC2"
@@ -321,7 +321,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                         locationForm.statusId = null
                         locationForm.statusLabel = ""
                     }
-                    // Fijar usuario actual le?do en composici?n
+                    // Fijar usuario actual leido en composicion
                     currentUserId = currentUser?.idUsuario
                 }
             }
@@ -332,7 +332,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                 if (code.isEmpty()) return
                 val path = findPathByBarcode(nodes, code)
                 if (path == null) {
-                    searchMessage = "No hay elementos con ese C?digo de barras"
+                    searchMessage = "No hay elementos con ese Codigo de barras"
                 } else {
                     // expandir ancestros y seleccionar objetivo
                     path.dropLast(1).forEach { id -> if (!expanded.contains(id)) expanded.add(id) }
@@ -391,14 +391,14 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             }
             Divider(thickness = DIVIDER_THICKNESS)
 
-            // Di?logo informativo para errores al borrar ubicaci?n
+            // dialogo informativo para errores al borrar ubicacion
             if (deleteUbInfoMessage != null) {
                 AlertDialog(
                     onDismissRequest = { deleteUbInfoMessage = null },
                     confirmButton = {
                         Button(onClick = { deleteUbInfoMessage = null }) { Text("Aceptar") }
                     },
-                    title = { Text("Informaci?n") },
+                    title = { Text("Informacion") },
                     text = { Text(deleteUbInfoMessage!!) }
                 )
             }
@@ -410,25 +410,25 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     confirmButton = {
                         Button(onClick = { showInvalidParentDialog = false }) { Text("Aceptar") }
                     },
-                    title = { Text("Informaci?n") },
+                    title = { Text("Informacion") },
                     text = { Text("Solo puede crear elementos dentro de ubicaciones.") }
                 )
             }
 
-            // Di?logo cuando no hay ubicaci?n seleccionada
+            // dialogo cuando no hay ubicacion seleccionada
             if (showNoSelectionDialog) {
                 AlertDialog(
                     onDismissRequest = { showNoSelectionDialog = false },
                     confirmButton = {
                         Button(onClick = { showNoSelectionDialog = false }) { Text("Aceptar") }
                     },
-                    title = { Text("Informaci?n") },
-                    text = { Text("Debes seleccionar una ubicaci?n para agregar un nuevo elemento.") }
+                    title = { Text("Informacion") },
+                    text = { Text("Debes seleccionar una ubicacion para agregar un nuevo elemento.") }
                 )
             }
 
 
-            // Di?logo de confirmaci?n para eliminar ubicaci?n
+            // dialogo de confirmacion para eliminar ubicacion
             if (deleteUbConfirmNode != null) {
                 val nodeToDelete = deleteUbConfirmNode!!
                 AlertDialog(
@@ -455,14 +455,14 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     dismissButton = {
                         Button(onClick = { deleteUbConfirmNode = null }) { Text("Cancelar") }
                     },
-                    title = { Text("Confirmar eliminaci?n") },
-                    text = { Text("?Eliminar la ubicaci?n seleccionada?") }
+                    title = { Text("Confirmar eliminacion") },
+                    text = { Text("Eliminar la ubicacion seleccionada?") }
                 )
             }
 
 
 
-            // ------------------ DIÁLOGO: NUEVA UBICACIÓN ------------------
+            // ------------------ DIaLOGO: NUEVA UBICACIoN ------------------
             val previewRoute = run {
                 val parentForPreview = when {
                     editingUbId != null -> editingParentId
@@ -587,14 +587,14 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             )
             // -------------------------------------------------------------------------------
 
-            // ------------------ Di?lOGO: EDITAR UBICACi?n (NUEVO con 3 TABS) ------------------
+            // ------------------ dialogo: EDITAR ubicacion (NUEVO con 3 TABS) ------------------
             if (showEditUbDialog) {
                 androidx.compose.material3.BasicAlertDialog(
                     onDismissRequest = { showEditUbDialog = false }
                 ) {
                     androidx.compose.material3.Card(
                         modifier = Modifier
-                            // Baseline suele necesitar m?s ancho para las columnas
+                            // Baseline suele necesitar mas ancho para las columnas
                             .widthIn(
                                 min = if (editTab == 1) 900.dp else 720.dp,
                                 max = 1200.dp
@@ -602,23 +602,23 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                             .heightIn(min = 380.dp, max = 650.dp),
                         shape = RoundedCornerShape(12.dp)
                     ) {
-                        // Cabecera del di?logo
+                        // Cabecera del dialogo
                         Column(Modifier.fillMaxWidth().padding(16.dp)) {
-                            Text("Editar ubicaci?n", style = MaterialTheme.typography.titleLarge)
+                            Text("Editar ubicacion", style = MaterialTheme.typography.titleLarge)
                             Spacer(Modifier.height(8.dp))
 
                             // Tabs
                             TabRow(selectedTabIndex = editTab) {
-                                Tab(selected = editTab == 0, onClick = { editTab = 0 }, text = { Text("Ubicaci?n") })
+                                Tab(selected = editTab == 0, onClick = { editTab = 0 }, text = { Text("ubicacion") })
                                 Tab(selected = editTab == 1, onClick = { editTab = 1 }, text = { Text("Baseline") })
-                                Tab(selected = editTab == 2, onClick = { editTab = 2 }, text = { Text("Hist?rico") })
+                                Tab(selected = editTab == 2, onClick = { editTab = 2 }, text = { Text("Historico") })
                             }
 
                             Spacer(Modifier.height(8.dp))
 
                             // Contenido de los tabs ocupa el resto del espacio y es scrolleable
                             when (editTab) {
-                                // ====== TAB 1: Formulario edici?n + bot?n Guardar dentro del tab ======
+                                // ====== TAB 1: Formulario edicion + boton Guardar dentro del tab ======
                                 0 -> {
                                     val scroll = rememberScrollState()
                                     Column(
@@ -758,7 +758,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                             Text(locationForm.error!!, color = MaterialTheme.colorScheme.error)
                                         }
 
-                                        // Botonera propia del TAB 1 (no en el footer del di?logo)
+                                        // Botonera propia del TAB 1 (no en el footer del dialogo)
                                         Row(
                                              Modifier.fillMaxWidth(),
                                              horizontalArrangement = Arrangement.End
@@ -832,7 +832,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                                             // si prefieres cerrar:
                                                             // showEditUbDialog = false
                                                         } else {
-                                                            locationForm.error = "No se pudo guardar la ubicaci?n"
+                                                            locationForm.error = "No se pudo guardar la ubicacion"
                                                         }
                                                     }
                                                 }
@@ -841,7 +841,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                     }
                                 }
 
-                                // ====== TAB 2: Baseline (bot?n visible arriba) ======
+                                // ====== TAB 2: Baseline (boton visible arriba) ======
                                 1 -> {
                                     val lineaBaseDao = remember { com.example.etic.data.local.DbProvider.get(ctx).lineaBaseDao() }
                                     val inspDao = remember { com.example.etic.data.local.DbProvider.get(ctx).inspeccionDao() }
@@ -898,7 +898,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                         baselineCache = value
                                     }
 
-                                    // Layout con cabecera fija (bot?n siempre visible) + cuerpo con tabla personalizada
+                                    // Layout con cabecera fija (boton siempre visible) + cuerpo con tabla personalizada
                                     Column(Modifier.fillMaxSize()) {
                                         Row(
                                             Modifier.fillMaxWidth(),
@@ -926,9 +926,9 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                         ) {
                                             cell(2) { Text("No. Insp") }
                                             cell(2) { Text("Fecha") }
-                                            cell(1) { Text("MTA ?C") }
-                                            cell(1) { Text("Temp ?C") }
-                                            cell(1) { Text("Amb ?C") }
+                                            cell(1) { Text("MTA C") }
+                                            cell(1) { Text("Temp C") }
+                                            cell(1) { Text("Amb C") }
                                             cell(1) { Text("IR") }
                                             cell(1) { Text("ID") }
                                             cell(3) { Text("Notas") }
@@ -1011,12 +1011,12 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                                 dismissButton = {
                                                     Button(onClick = { confirmDeleteId = null }) { Text("Cancelar") }
                                                 },
-                                                text = { Text("?Eliminar baseline seleccionado?") }
+                                                text = { Text("Eliminar baseline seleccionado?") }
                                             )
                                         }
                                     }
 
-                                    // Di?logo de "Nuevo Baseline"
+                                    // dialogo de "Nuevo Baseline"
                                     if (showNewBaseline) {
                                         var mta by remember { mutableStateOf("") }
                                         var tempMax by remember { mutableStateOf("") }
@@ -1025,7 +1025,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                         var imgIr by remember { mutableStateOf("") }
                                         var imgId by remember { mutableStateOf("") }
 
-                                        // Prefill si est?s editando
+                                        // Prefill si estas editando
                                         LaunchedEffect(baselineToEdit, showNewBaseline) {
                                             if (showNewBaseline && baselineToEdit != null) {
                                                 mta = baselineToEdit!!.mtaC.toString()
@@ -1084,7 +1084,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                             }
                                         }
 
-                                        // ? Validaci?n SOLO para habilitar el bot?n
+                                        // ? Validacion SOLO para habilitar el boton
                                         val isBaselineValid by remember(mta, tempMax, tempAmb, imgIr, imgId) {
                                             mutableStateOf(
                                                 mta.isNotBlank() &&
@@ -1104,7 +1104,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                                         val idUb = ubId
                                                         val idInsp = inspId
                                                         if (idUb.isNullOrBlank() || idInsp.isNullOrBlank()) {
-                                                            // No mostramos mensajes; simplemente no ejecutamos si falta relaci?n
+                                                            // No mostramos mensajes; simplemente no ejecutamos si falta relacion
                                                             return@Button
                                                         }
                                                         scope.launch {
@@ -1178,7 +1178,6 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                                             onValueChange = { mta = filter2Dec(it) },
                                                             label = {
                                                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                                                    Text("MTA ?C"); Text(" *", color = MaterialTheme.colorScheme.error)
                                                                 }
                                                             },
                                                             singleLine = true,
@@ -1190,7 +1189,6 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                                             onValueChange = { tempMax = filter2Dec(it) },
                                                             label = {
                                                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                                                    Text("Temp ?C"); Text(" *", color = MaterialTheme.colorScheme.error)
                                                                 }
                                                             },
                                                             singleLine = true,
@@ -1202,7 +1200,6 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                                             onValueChange = { tempAmb = filter2Dec(it) },
                                                             label = {
                                                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                                                    Text("Amb ?C"); Text(" *", color = MaterialTheme.colorScheme.error)
                                                                 }
                                                             },
                                                             singleLine = true,
@@ -1223,7 +1220,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
 
                                                     Spacer(Modifier.height(8.dp))
 
-                                                    // IR e ID obligatorios (con bot?n de c?mara y previsualizaci?n)
+                                                    // IR e ID obligatorios (con boton de camara y previsualizacion)
                                                     Row(
                                                         Modifier.fillMaxWidth(),
                                                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -1331,7 +1328,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                     Column(
                                         Modifier.fillMaxSize().verticalScroll(scroll)
                                     ) {
-                                        Text("Contenido de Tab 3 (Hist?rico)")
+                                        Text("Contenido de Tab 3 (Historico)")
                                     }
                                 }
                             }
@@ -1382,13 +1379,17 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                             modifier = Modifier.fillMaxSize() // ocupa todo el panel
                         )
                     } else {
-                        UbicacionesFlatListFromDatabase(
-                            modifier = Modifier.fillMaxSize() // ocupa todo el panel
-                        )
+                        Box(
+                            Modifier
+                                .fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("Sin ubicaciones registradas")
+                        }
                     }
                 }
 
-                // Handle vertical (m?s suave)
+                // Handle vertical (mas suave)
                 Box(
                     Modifier
                         .width(HANDLE_THICKNESS)
@@ -1428,7 +1429,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                     ubicacionDao.getAllActivas().any { it.idUbicacionPadre == ubId }
                                 }.getOrDefault(false)
                                 if (hasChildren) {
-                                    deleteUbInfoMessage = "No se puede eliminar la ubicaci?n porque tiene ubicaciones hijas."
+                                    deleteUbInfoMessage = "No se puede eliminar la ubicacion porque tiene ubicaciones hijas."
                                     return@launch
                                 }
 
@@ -1450,18 +1451,18 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                 when {
                                     hasBaseline && hasProblems -> {
                                         deleteUbInfoMessage =
-                                            "No se puede eliminar la ubicaci?n porque tiene baseline y problemas registrados."
+                                            "No se puede eliminar la ubicacion porque tiene baseline y problemas registrados."
                                     }
                                     hasBaseline -> {
                                         deleteUbInfoMessage =
-                                            "No se puede eliminar la ubicaci?n porque tiene baseline registrado."
+                                            "No se puede eliminar la ubicacion porque tiene baseline registrado."
                                     }
                                     hasProblems -> {
                                         deleteUbInfoMessage =
-                                            "No se puede eliminar la ubicaci?n porque tiene problemas registrados."
+                                            "No se puede eliminar la ubicacion porque tiene problemas registrados."
                                     }
                                     else -> {
-                                        // Sin hijos, sin baseline y sin problemas: pedir confirmaci?n
+                                        // Sin hijos, sin baseline y sin problemas: pedir confirmacion
                                         // Sin hijos, sin baseline y sin problemas: marcar para confirmar
                                         deleteUbConfirmNode = node
                                     }
@@ -1469,7 +1470,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                             }
                         },
                         onEdit = { node ->
-                            // Abrir di?logo de EDICi?n con tabs y precargar datos desde BD
+                            // Abrir dialogo de edicion con tabs y precargar datos desde BD
                             locationForm.error = null
                             editingUbId = node.id
                             showEditUbDialog = true
@@ -1637,7 +1638,7 @@ private fun SimpleTreeView(
                         } else {
                             Spacer(Modifier.width(TREE_TOGGLE_SIZE))
                         }
-                        // Icono: nodo ra?z (sitio) usa Factory; dem?s seg?n esEquipo
+                        // Icono: nodo raiz (sitio) usa Factory; demas segun esEquipo
                         val nodeIcon = when {
                             item.depth == 0 -> Icons.Outlined.Factory
                             n.verified -> Icons.Outlined.Traffic
@@ -1707,7 +1708,7 @@ private fun DetailsTable(
                 .padding(vertical = 4.dp, horizontal = 8.dp)
         ) {
             HeaderCell("ubicacion", 3)
-            HeaderCell("C?digo de barras", 2)
+            HeaderCell("Codigo de barras", 2)
             HeaderCell("Estatus", 2)
             HeaderCell("Op", 1)
         }
@@ -2134,7 +2135,7 @@ private fun BaselineTableFromDatabase(
                 confirmButton = {
                     Button(onClick = {
                         scope.launch {
-                            // Leer la l?nea base antes de eliminarla para obtener relaci?n con inspecci?n_det
+                            // Leer la linea base antes de eliminarla para obtener relacion con Inspeccion_det
                             val row = runCatching { dao.getById(baseline.id) }.getOrNull()
 
                             if (row != null) {
@@ -2159,7 +2160,7 @@ private fun BaselineTableFromDatabase(
                                 }
                             }
 
-                            // Eliminar la l?nea base de la base de datos
+                            // Eliminar la linea base de la base de datos
                             runCatching { dao.deleteById(baseline.id) }
 
                             // Actualizar cach? local y notificar cambio
@@ -2172,47 +2173,9 @@ private fun BaselineTableFromDatabase(
                 dismissButton = {
                     Button(onClick = { baselineToDelete = null }) { Text("Cancelar") }
                 },
-                text = { Text("?Eliminar baseline seleccionado?") }
+                text = { Text("Eliminar baseline seleccionado?") }
             )
         }
     }
 }
-
-// -------------------------
-// DB-backed ubicaciones flat list (fallback)
-// -------------------------
-
-@Composable
-private fun UbicacionesFlatListFromDatabase(modifier: Modifier = Modifier) {
-    val ctx = androidx.compose.ui.platform.LocalContext.current
-    val dao = remember { com.example.etic.data.local.DbProvider.get(ctx).ubicacionDao() }
-    val ubicaciones by produceState(initialValue = emptyList<com.example.etic.data.local.entities.Ubicacion>()) {
-        value = try { dao.getAll() } catch (_: Exception) { emptyList() }
-    }
-
-    if (ubicaciones.isEmpty()) {
-        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("Sin ubicaciones en BD")
-        }
-    } else {
-        val listState = rememberSaveable("ubicaciones_list_state", saver = LazyListState.Saver) { LazyListState() }
-        LazyColumn(Modifier.fillMaxSize(), state = listState) {
-            items(ubicaciones, key = { it.idUbicacion }) { u ->
-                Column(Modifier.fillMaxWidth().padding(vertical = 8.dp, horizontal = 8.dp)) {
-                    Text(u.ubicacion ?: u.descripcion ?: "(Sin nombre)", style = MaterialTheme.typography.bodyLarge)
-                    val sub = listOfNotNull(
-                        u.codigoBarras?.takeIf { it.isNotBlank() }?.let { "CB: $it" },
-                        u.idUbicacionPadre?.takeIf { it.isNotBlank() }?.let { "Padre: $it" }
-                    ).joinToString("  ?  ")
-                    if (sub.isNotEmpty()) Text(sub, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                Divider(thickness = DIVIDER_THICKNESS)
-            }
-        }
-    }
-}
-
-
-
-
 

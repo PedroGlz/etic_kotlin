@@ -1,4 +1,4 @@
-package com.example.etic.features.inspection.ui.components
+﻿package com.example.etic.features.inspection.ui.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
@@ -110,3 +110,4 @@ fun InspectionHeader(
         }
     }
 }
+
