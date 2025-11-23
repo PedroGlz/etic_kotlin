@@ -1,9 +1,11 @@
-﻿package com.example.etic.features.inspection.ui.components
+package com.example.etic.features.inspection.ui.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -54,6 +56,7 @@ fun InspectionHeader(
         horizontalArrangement = Arrangement.End,
         verticalAlignment = Alignment.CenterVertically
     ) {
+        val controlHeight = 56.dp
         TextField(
             value = barcode,
             onValueChange = onBarcodeChange,
@@ -61,7 +64,10 @@ fun InspectionHeader(
             leadingIcon = { Icon(Icons.Outlined.Search, contentDescription = null) },
             label = { Text(stringResource(R.string.label_codigo_barras)) },
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-            keyboardActions = KeyboardActions(onSearch = { onSearch() })
+            keyboardActions = KeyboardActions(onSearch = { onSearch() }),
+            modifier = Modifier
+                .widthIn(min = 180.dp, max = 320.dp)
+                .height(controlHeight)
         )
         Spacer(Modifier.width(HEADER_ACTION_SPACING))
         ExposedDropdownMenuBox(
@@ -74,7 +80,9 @@ fun InspectionHeader(
                 readOnly = true,
                 label = { Text(stringResource(R.string.label_estatus)) },
                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = statusMenuExpanded) },
-                modifier = Modifier.menuAnchor()
+                modifier = Modifier
+                    .menuAnchor()
+                    .height(controlHeight)
             )
             DropdownMenu(
                 expanded = statusMenuExpanded,
@@ -104,10 +112,10 @@ fun InspectionHeader(
         Button(
             onClick = onClickNewLocation,
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),
-            shape = RoundedCornerShape(8.dp)
+            shape = RoundedCornerShape(8.dp),
+            modifier = Modifier.height(controlHeight)
         ) {
             Text(stringResource(R.string.btn_nueva_ubicacion), color = Color.White)
         }
     }
 }
-

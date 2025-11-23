@@ -47,6 +47,7 @@ dependencies {
     implementation("at.favre.lib:bcrypt:0.10.2")
     implementation(libs.androidx.navigation.compose)
     implementation("androidx.datastore:datastore-preferences:1.1.1")
+    implementation(libs.androidx.compose.foundation.layout.android)
     // --- ROOM (SQLite ORM oficial de Android) ---
     val roomVersion = "2.6.1"
     implementation("androidx.room:room-runtime:$roomVersion")
