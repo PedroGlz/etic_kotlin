@@ -857,7 +857,6 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                                                     else -> editingParentId
                                                                 }
                                                                 refreshTree(
-                                                                    selectIfAvailable = editingUbId,
                                                                     extraExpanded = listOf(parentToExpand, editingUbId)
                                                                 )
                                                                 locationForm.error = null
