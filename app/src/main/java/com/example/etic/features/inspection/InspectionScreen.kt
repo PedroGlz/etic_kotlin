@@ -66,6 +66,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogProperties
 import com.example.etic.ui.theme.EticTheme
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -214,8 +215,15 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
 
     // ---------- Estados NUEVOS para el dialogo de edicion con tabs ----------
     var showEditUbDialog by remember { mutableStateOf(false) }
+    var isSavingEditUb by remember { mutableStateOf(false) }
     var editTab by rememberSaveable { mutableStateOf(0) }
     // -----------------------------------------------------------------------
+
+    LaunchedEffect(showEditUbDialog) {
+        if (!showEditUbDialog) {
+            isSavingEditUb = false
+        }
+    }
 
     BoxWithConstraints(Modifier.fillMaxSize()) {
         // Convierte dimensiones del BoxWithConstraints a pixeles de forma segura
@@ -248,6 +256,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             var showNoSelectionDialog by rememberSaveable { mutableStateOf(false) }
             var showInvalidParentDialog by rememberSaveable { mutableStateOf(false) }
             var showNewUbDialog by remember { mutableStateOf(false) }
+            var isSavingNewUb by remember { mutableStateOf(false) }
             val locationForm = rememberLocationFormState()
             var currentUserId by remember { mutableStateOf<String?>(null) }
             var currentSitioId by remember { mutableStateOf<String?>(null) }
@@ -306,12 +315,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
 
                     // Limpiar todos los campos del formulario
                     locationForm.resetForNew()
-                }
-            }
 
-            // Preseleccionar estatus por defecto al abrir el dialogo de NUEVA ubicacion
-            LaunchedEffect(showNewUbDialog) {
-                if (showNewUbDialog) {
                     val defaultId = "568798D1-76BB-11D3-82BF-00104BC75DC2"
                     val match = statusOptions.firstOrNull { it.idStatusInspeccionDet.equals(defaultId, true) }
                     if (match != null) {
@@ -323,6 +327,9 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     }
                     // Fijar usuario actual leido en composicion
                     currentUserId = currentUser?.idUsuario
+                } else {
+                    isSavingNewUb = false
+                    locationForm.error = null
                 }
             }
 
@@ -489,11 +496,15 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                 prioridadOptions = prioridadOptions,
                 fabricanteOptions = fabricanteOptions,
                 previewRoute = previewRoute,
+                isSaving = isSavingNewUb,
                 onDismiss = {
+                    if (isSavingNewUb) return@NewLocationDialog
                     showNewUbDialog = false
                     locationForm.error = null
+                    isSavingNewUb = false
                 },
                 onConfirm = confirm@{
+                    if (isSavingNewUb) return@confirm
                     val name = locationForm.name.trim()
                     if (name.isEmpty()) {
                         locationForm.error = "El nombre es obligatorio"
@@ -526,61 +537,73 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                         else -> "$rootTitle / $name"
                     }
                     scope.launch {
-                        val nowTs = java.time.LocalDateTime.now()
-                            .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
-                        val existing = if (isEdit) runCatching { ubicacionDao.getById(id) }.getOrNull() else null
+                        isSavingNewUb = true
+                        try {
+                            val nowTs = java.time.LocalDateTime.now()
+                                .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+                            val existing = if (isEdit) runCatching { ubicacionDao.getById(id) }.getOrNull() else null
 
-                        val nueva = com.example.etic.data.local.entities.Ubicacion(
-                            idUbicacion = id,
-                            idUbicacionPadre = parentForCalc,
-                            idSitio = currentInspection?.idSitio,
-                            nivelArbol = nivel,
-                            ubicacion = name,
-                            descripcion = locationForm.description.trim().ifBlank { null },
-                            esEquipo = if (locationForm.isEquipment) "SI" else "NO",
-                            codigoBarras = locationForm.barcode.trim().ifBlank { null },
-                            fabricante = locationForm.fabricanteId,
-                            ruta = ruta,
-                            estatus = "Activo",
-                            creadoPor = existing?.creadoPor ?: currentUserId,
-                            fechaCreacion = existing?.fechaCreacion ?: nowTs,
-                            modificadoPor = if (isEdit) currentUserId else null,
-                            fechaMod = if (isEdit) nowTs else null,
-                            idTipoPrioridad = locationForm.prioridadId,
-                            idInspeccion = currentInspection?.idInspeccion
-                        )
-
-                        val saveContext = UbicacionSaveContext(
-                            isEdit = isEdit,
-                            editingDetId = editingDetId,
-                            editingInspId = editingInspId,
-                            newStatusId = locationForm.statusId,
-                            currentInspectionId = currentInspection?.idInspeccion,
-                            currentSiteId = currentInspection?.idSitio
-                        )
-                        val okUb = inspectionRepository.saveUbicacion(
-                            entity = nueva,
-                            context = saveContext,
-                            nowTs = nowTs,
-                            currentUserId = currentUserId
-                        )
-                        if (okUb) {
-                            val parentToExpand = when (parentForCalc) {
-                                null, "0" -> rootId
-                                else -> parentForCalc
-                            }
-                            refreshTree(
-                                extraExpanded = listOf(parentToExpand)
+                            val nueva = com.example.etic.data.local.entities.Ubicacion(
+                                idUbicacion = id,
+                                idUbicacionPadre = parentForCalc,
+                                idSitio = currentInspection?.idSitio,
+                                nivelArbol = nivel,
+                                ubicacion = name,
+                                descripcion = locationForm.description.trim().ifBlank { null },
+                                esEquipo = if (locationForm.isEquipment) "SI" else "NO",
+                                codigoBarras = locationForm.barcode.trim().ifBlank { null },
+                                fabricante = locationForm.fabricanteId,
+                                ruta = ruta,
+                                estatus = "Activo",
+                                creadoPor = existing?.creadoPor ?: currentUserId,
+                                fechaCreacion = existing?.fechaCreacion ?: nowTs,
+                                modificadoPor = if (isEdit) currentUserId else null,
+                                fechaMod = if (isEdit) nowTs else null,
+                                idTipoPrioridad = locationForm.prioridadId,
+                                idInspeccion = currentInspection?.idInspeccion
                             )
-                            locationForm.resetForNew()
-                            editingUbId = null
-                            editingParentId = null
-                            editingDetId = null
-                            editingInspId = null
-                            showNewUbDialog = false
-                            selectedId?.let { pid -> if (!expanded.contains(pid)) expanded.add(pid) }
-                        } else {
+
+                            val saveContext = UbicacionSaveContext(
+                                isEdit = isEdit,
+                                editingDetId = editingDetId,
+                                editingInspId = editingInspId,
+                                newStatusId = locationForm.statusId,
+                                currentInspectionId = currentInspection?.idInspeccion,
+                                currentSiteId = currentInspection?.idSitio
+                            )
+                            val okUb = runCatching {
+                                inspectionRepository.saveUbicacion(
+                                    entity = nueva,
+                                    context = saveContext,
+                                    nowTs = nowTs,
+                                    currentUserId = currentUserId
+                                )
+                            }.getOrDefault(false)
+                            if (okUb) {
+                                val parentToExpand = when (parentForCalc) {
+                                    null, "0" -> rootId
+                                    else -> parentForCalc
+                                }
+                                refreshTree(
+                                    extraExpanded = listOf(parentToExpand)
+                                )
+                                editingUbId = null
+                                editingParentId = null
+                                editingDetId = null
+                                editingInspId = null
+                                locationForm.error = null
+                                selectedId?.let { pid -> if (!expanded.contains(pid)) expanded.add(pid) }
+                                delay(3000)
+                                showNewUbDialog = false
+                                locationForm.resetForNew()
+                                isSavingNewUb = false
+                            } else {
+                                locationForm.error = "No se pudo guardar la ubicacion"
+                                isSavingNewUb = false
+                            }
+                        } catch (_: Exception) {
                             locationForm.error = "No se pudo guardar la ubicacion"
+                            isSavingNewUb = false
                         }
                     }
                 }
@@ -590,7 +613,11 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             // ------------------ dialogo: EDITAR ubicacion (NUEVO con 3 TABS) ------------------
             if (showEditUbDialog) {
                 androidx.compose.material3.BasicAlertDialog(
-                    onDismissRequest = { showEditUbDialog = false }
+                    onDismissRequest = { },
+                    properties = DialogProperties(
+                        dismissOnClickOutside = false,
+                        dismissOnBackPress = false
+                    )
                 ) {
                     androidx.compose.material3.Card(
                         modifier = Modifier
@@ -760,12 +787,13 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
 
                                         // Botonera propia del TAB 1 (no en el footer del dialogo)
                                         Row(
-                                             Modifier.fillMaxWidth(),
-                                             horizontalArrangement = Arrangement.End
-                                         ) {
+                                            Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.End
+                                        ) {
                                             Button(
-                                                enabled = locationForm.name.isNotBlank(),
+                                                enabled = locationForm.name.isNotBlank() && !isSavingEditUb,
                                                 onClick = {
+                                                    if (isSavingEditUb) return@Button
                                                     val name = locationForm.name.trim()
                                                     if (name.isEmpty()) {
                                                         locationForm.error = "El nombre es obligatorio"
@@ -783,56 +811,66 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                                         else -> "${rootTitle} / $name"
                                                     }
                                                     scope.launch {
-                                                        val nowTs = java.time.LocalDateTime.now()
-                                                            .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
-                                                        val existing = runCatching { ubicacionDao.getById(id) }.getOrNull()
-                                                        val nueva = com.example.etic.data.local.entities.Ubicacion(
-                                                            idUbicacion = id,
-                                                            idUbicacionPadre = parentForCalc,
-                                                            idSitio = currentInspection?.idSitio,
-                                                            nivelArbol = nivel,
-                                                            ubicacion = name,
-                                                            descripcion = locationForm.description.trim().ifBlank { null },
-                                                            esEquipo = if (locationForm.isEquipment) "SI" else "NO",
-                                                            codigoBarras = locationForm.barcode.trim().ifBlank { null },
-                                                            fabricante = locationForm.fabricanteId,
-                                                            ruta = ruta,
-                                                            estatus = "Activo",
-                                                            creadoPor = existing?.creadoPor ?: currentUserId,
-                                                            fechaCreacion = existing?.fechaCreacion,
-                                                            modificadoPor = currentUserId,
-                                                            fechaMod = nowTs,
-                                                            idTipoPrioridad = locationForm.prioridadId,
-                                                            idInspeccion = existing?.idInspeccion
-                                                        )
-                                                                                                                val saveContext = UbicacionSaveContext(
-                                                            isEdit = true,
-                                                            editingDetId = editingDetId,
-                                                            editingInspId = editingInspId,
-                                                            newStatusId = locationForm.statusId,
-                                                            currentInspectionId = currentInspection?.idInspeccion,
-                                                            currentSiteId = currentInspection?.idSitio
-                                                        )
-                                                        val okUb = inspectionRepository.saveUbicacion(
-                                                            entity = nueva,
-                                                            context = saveContext,
-                                                            nowTs = nowTs,
-                                                            currentUserId = currentUserId
-                                                        )
-                                                        if (okUb) {val parentToExpand = when (editingParentId) {
-                                                                null, "0" -> rootId
-                                                                else -> editingParentId
-                                                            }
-                                                            refreshTree(
-                                                                selectIfAvailable = editingUbId,
-                                                                extraExpanded = listOf(parentToExpand, editingUbId)
+                                                        isSavingEditUb = true
+                                                        try {
+                                                            val nowTs = java.time.LocalDateTime.now()
+                                                                .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+                                                            val existing = runCatching { ubicacionDao.getById(id) }.getOrNull()
+                                                            val nueva = com.example.etic.data.local.entities.Ubicacion(
+                                                                idUbicacion = id,
+                                                                idUbicacionPadre = parentForCalc,
+                                                                idSitio = currentInspection?.idSitio,
+                                                                nivelArbol = nivel,
+                                                                ubicacion = name,
+                                                                descripcion = locationForm.description.trim().ifBlank { null },
+                                                                esEquipo = if (locationForm.isEquipment) "SI" else "NO",
+                                                                codigoBarras = locationForm.barcode.trim().ifBlank { null },
+                                                                fabricante = locationForm.fabricanteId,
+                                                                ruta = ruta,
+                                                                estatus = "Activo",
+                                                                creadoPor = existing?.creadoPor ?: currentUserId,
+                                                                fechaCreacion = existing?.fechaCreacion,
+                                                                modificadoPor = currentUserId,
+                                                                fechaMod = nowTs,
+                                                                idTipoPrioridad = locationForm.prioridadId,
+                                                                idInspeccion = existing?.idInspeccion
                                                             )
-                                                            locationForm.error = null
-                                                            // no cierro para permitir seguir editando si quieres,
-                                                            // si prefieres cerrar:
-                                                            // showEditUbDialog = false
-                                                        } else {
+                                                            val saveContext = UbicacionSaveContext(
+                                                                isEdit = true,
+                                                                editingDetId = editingDetId,
+                                                                editingInspId = editingInspId,
+                                                                newStatusId = locationForm.statusId,
+                                                                currentInspectionId = currentInspection?.idInspeccion,
+                                                                currentSiteId = currentInspection?.idSitio
+                                                            )
+                                                            val okUb = runCatching {
+                                                                inspectionRepository.saveUbicacion(
+                                                                    entity = nueva,
+                                                                    context = saveContext,
+                                                                    nowTs = nowTs,
+                                                                    currentUserId = currentUserId
+                                                                )
+                                                            }.getOrDefault(false)
+                                                            if (okUb) {
+                                                                val parentToExpand = when (editingParentId) {
+                                                                    null, "0" -> rootId
+                                                                    else -> editingParentId
+                                                                }
+                                                                refreshTree(
+                                                                    selectIfAvailable = editingUbId,
+                                                                    extraExpanded = listOf(parentToExpand, editingUbId)
+                                                                )
+                                                                locationForm.error = null
+                                                                delay(3000)
+                                                                showEditUbDialog = false
+                                                                isSavingEditUb = false
+                                                            } else {
+                                                                locationForm.error = "No se pudo guardar la ubicacion"
+                                                                isSavingEditUb = false
+                                                            }
+                                                        } catch (_: Exception) {
                                                             locationForm.error = "No se pudo guardar la ubicacion"
+                                                            isSavingEditUb = false
                                                         }
                                                     }
                                                 }
@@ -846,8 +884,14 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                     val lineaBaseDao = remember { com.example.etic.data.local.DbProvider.get(ctx).lineaBaseDao() }
                                     val inspDao = remember { com.example.etic.data.local.DbProvider.get(ctx).inspeccionDao() }
                                     var showNewBaseline by remember { mutableStateOf(false) }
+                                    var isSavingBaseline by remember { mutableStateOf(false) }
                                     val ubId = editingUbId
                                     val inspId = currentInspection?.idInspeccion
+                                    LaunchedEffect(showNewBaseline) {
+                                        if (!showNewBaseline) {
+                                            isSavingBaseline = false
+                                        }
+                                    }
 
                                     data class BaselineRow(
                                         val id: String,
@@ -1096,72 +1140,93 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                         }
 
                                         AlertDialog(
-                                            onDismissRequest = { showNewBaseline = false },
+                                            onDismissRequest = { },
+                                            properties = DialogProperties(
+                                                dismissOnClickOutside = false,
+                                                dismissOnBackPress = false
+                                            ),
                                             confirmButton = {
                                                 Button(
-                                                    enabled = isBaselineValid, // ? deshabilita hasta que se llenen los obligatorios
+                                                    enabled = isBaselineValid && !isSavingBaseline,
                                                     onClick = {
+                                                        if (isSavingBaseline) return@Button
                                                         val idUb = ubId
                                                         val idInsp = inspId
                                                         if (idUb.isNullOrBlank() || idInsp.isNullOrBlank()) {
-                                                            // No mostramos mensajes; simplemente no ejecutamos si falta relacion
                                                             return@Button
                                                         }
                                                         scope.launch {
-                                                            val nowTs = java.time.LocalDateTime.now()
-                                                                .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
-                                                            val detRow = try {
-                                                                inspeccionDetDao.getByUbicacion(idUb)
-                                                                    .firstOrNull { it.idInspeccion == idInsp }
-                                                            } catch (_: Exception) { null }
-                                                            val detId = detRow?.idInspeccionDet
-                                                            val item = com.example.etic.data.local.entities.LineaBase(
-                                                                idLineaBase = baselineToEdit?.id ?: java.util.UUID.randomUUID().toString().uppercase(),
-                                                                idSitio = currentInspection?.idSitio,
-                                                                idUbicacion = idUb,
-                                                                idInspeccion = idInsp,
-                                                                idInspeccionDet = detId,
-                                                                mta = mta.toDoubleOrNull(),
-                                                                tempMax = tempMax.toDoubleOrNull(),
-                                                                tempAmb = tempAmb.toDoubleOrNull(),
-                                                                notas = notas.ifBlank { null },
-                                                                archivoIr = imgIr.ifBlank { null },
-                                                                archivoId = imgId.ifBlank { null },
-                                                                ruta = null,
-                                                                estatus = "Activo",
-                                                                creadoPor = currentUserId,
-                                                                fechaCreacion = nowTs,
-                                                                modificadoPor = null,
-                                                                fechaMod = null
-                                                            )
-                                                            val ok = if (baselineToEdit == null) {
-                                                                val exists = runCatching { lineaBaseDao.existsActiveByUbicacionOrDet(idUb, detId) }.getOrDefault(false)
-                                                                if (exists) return@launch // sin mensajes
-                                                                runCatching { lineaBaseDao.insert(item) }.isSuccess
-                                                            } else {
-                                                                runCatching { lineaBaseDao.update(item) }.isSuccess
-                                                            }
-                                                            if (ok) {
-                                                                // Actualizar inspecciones_det asociado para reflejar baseline
-                                                                if (detRow != null) {
-                                                                    val updatedDet = detRow.copy(
-                                                                        idStatusInspeccionDet = "568798D2-76BB-11D3-82BF-00104BC75DC2",
-                                                                        idEstatusColorText = 3,
-                                                                        modificadoPor = currentUserId,
-                                                                        fechaMod = nowTs
-                                                                    )
-                                                                    runCatching { inspeccionDetDao.update(updatedDet) }
+                                                            if (isSavingBaseline) return@launch
+                                                            isSavingBaseline = true
+                                                            try {
+                                                                val nowTs = java.time.LocalDateTime.now()
+                                                                    .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+                                                                val detRow = try {
+                                                                    inspeccionDetDao.getByUbicacion(idUb)
+                                                                        .firstOrNull { it.idInspeccion == idInsp }
+                                                                } catch (_: Exception) { null }
+                                                                val detId = detRow?.idInspeccionDet
+                                                                val item = com.example.etic.data.local.entities.LineaBase(
+                                                                    idLineaBase = baselineToEdit?.id ?: java.util.UUID.randomUUID().toString().uppercase(),
+                                                                    idSitio = currentInspection?.idSitio,
+                                                                    idUbicacion = idUb,
+                                                                    idInspeccion = idInsp,
+                                                                    idInspeccionDet = detId,
+                                                                    mta = mta.toDoubleOrNull(),
+                                                                    tempMax = tempMax.toDoubleOrNull(),
+                                                                    tempAmb = tempAmb.toDoubleOrNull(),
+                                                                    notas = notas.ifBlank { null },
+                                                                    archivoIr = imgIr.ifBlank { null },
+                                                                    archivoId = imgId.ifBlank { null },
+                                                                    ruta = null,
+                                                                    estatus = "Activo",
+                                                                    creadoPor = currentUserId,
+                                                                    fechaCreacion = nowTs,
+                                                                    modificadoPor = null,
+                                                                    fechaMod = null
+                                                                )
+                                                                val ok = if (baselineToEdit == null) {
+                                                                    val exists = runCatching { lineaBaseDao.existsActiveByUbicacionOrDet(idUb, detId) }.getOrDefault(false)
+                                                                    if (exists) {
+                                                                        isSavingBaseline = false
+                                                                        return@launch
+                                                                    }
+                                                                    runCatching { lineaBaseDao.insert(item) }.isSuccess
+                                                                } else {
+                                                                    runCatching { lineaBaseDao.update(item) }.isSuccess
                                                                 }
-                                                                showNewBaseline = false
-                                                                baselineToEdit = null
-                                                                baselineRefreshTick++
+                                                                if (ok) {
+                                                                    if (detRow != null) {
+                                                                        val updatedDet = detRow.copy(
+                                                                            idStatusInspeccionDet = "568798D2-76BB-11D3-82BF-00104BC75DC2",
+                                                                            idEstatusColorText = 3,
+                                                                            modificadoPor = currentUserId,
+                                                                            fechaMod = nowTs
+                                                                        )
+                                                                        runCatching { inspeccionDetDao.update(updatedDet) }
+                                                                    }
+                                                                    delay(3000)
+                                                                    showNewBaseline = false
+                                                                    baselineToEdit = null
+                                                                    baselineRefreshTick++
+                                                                    isSavingBaseline = false
+                                                                } else {
+                                                                    isSavingBaseline = false
+                                                                }
+                                                            } catch (_: Exception) {
+                                                                isSavingBaseline = false
                                                             }
                                                         }
                                                     }
                                                 ) { Text("Guardar") }
                                             },
                                             dismissButton = {
-                                                Button(onClick = { showNewBaseline = false }) { Text("Cancelar") }
+                                                Button(
+                                                    onClick = {
+                                                        if (!isSavingBaseline) showNewBaseline = false
+                                                    },
+                                                    enabled = !isSavingBaseline
+                                                ) { Text("Cancelar") }
                                             },
                                             text = {
                                                 Column(Modifier.fillMaxWidth()) {
@@ -1330,6 +1395,24 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                     ) {
                                         Text("Contenido de Tab 3 (Historico)")
                                     }
+                                }
+                            }
+
+                            Spacer(Modifier.height(12.dp))
+                            Row(
+                                Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.End
+                            ) {
+                                Button(
+                                    enabled = !isSavingEditUb,
+                                    onClick = {
+                                        if (!isSavingEditUb) {
+                                            showEditUbDialog = false
+                                            locationForm.error = null
+                                        }
+                                    }
+                                ) {
+                                    Text("Cancelar")
                                 }
                             }
                         }

@@ -1,4 +1,4 @@
-﻿package com.example.etic.features.inspection.ui.components
+package com.example.etic.features.inspection.ui.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -41,14 +41,19 @@ fun NewLocationDialog(
     prioridadOptions: List<TipoPrioridad>,
     fabricanteOptions: List<Fabricante>,
     previewRoute: String,
+    isSaving: Boolean,
     onDismiss: () -> Unit,
     onConfirm: () -> Unit
 ) {
     if (!show) return
 
     AlertDialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false),
+        onDismissRequest = { },
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            dismissOnClickOutside = false,
+            dismissOnBackPress = false
+        ),
         shape = RoundedCornerShape(12.dp),
         title = { Text(stringResource(R.string.dlg_nueva_ubicacion)) },
         text = {
@@ -196,15 +201,16 @@ fun NewLocationDialog(
         },
         confirmButton = {
             Button(
-                enabled = formState.name.isNotBlank(),
+                enabled = formState.name.isNotBlank() && !isSaving,
                 onClick = onConfirm
             ) {
                 Text("Guardar")
             }
         },
         dismissButton = {
-            Button(onClick = onDismiss) { Text("Cancelar") }
+            Button(onClick = onDismiss, enabled = !isSaving) { Text("Cancelar") }
         }
     )
 }
+
 
