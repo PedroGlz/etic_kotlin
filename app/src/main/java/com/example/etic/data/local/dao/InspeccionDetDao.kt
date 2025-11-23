@@ -21,6 +21,21 @@ interface InspeccionDetDao {
     @Query(
         """
         UPDATE inspecciones_det
+        SET Estatus = 'Inactivo',
+            Modificado_Por = :userId,
+            Fecha_Mod = :timestamp
+        WHERE Id_Ubicacion = :idUbicacion
+        """
+    )
+    suspend fun markInactiveByUbicacion(
+        idUbicacion: String,
+        userId: String?,
+        timestamp: String
+    )
+
+    @Query(
+        """
+        UPDATE inspecciones_det
         SET expanded = :expanded
         WHERE Id_Inspeccion = :idInspeccion
           AND Id_Ubicacion = :idUbicacion

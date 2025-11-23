@@ -44,6 +44,7 @@ class InspectionRepository(
                     fechaMod = timestamp
                 )
                 runCatching { ubicacionDao.update(updated) }
+                runCatching { inspeccionDetDao.markInactiveByUbicacion(ubId, userId, timestamp) }
             }
         }
     }
