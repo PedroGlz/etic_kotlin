@@ -1451,21 +1451,45 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                                                         onValueChange = { mta = filter2Dec(it) },
                                                                         singleLine = true,
                                                                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                                                                        modifier = Modifier.weight(1f)
+                                                                        modifier = Modifier.weight(1f),
+                                                                        label = {
+                                                                            Row(
+                                                                                verticalAlignment = Alignment.CenterVertically
+                                                                            ) {
+                                                                                Text("MTA")
+                                                                                Text(" *", color = MaterialTheme.colorScheme.error)
+                                                                            }
+                                                                        }
                                                                     )
                                                                     TextField(
                                                                         value = tempMax,
                                                                         onValueChange = { tempMax = filter2Dec(it) },
                                                                         singleLine = true,
                                                                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                                                                        modifier = Modifier.weight(1f)
+                                                                        modifier = Modifier.weight(1f),
+                                                                        label = {
+                                                                            Row(
+                                                                                verticalAlignment = Alignment.CenterVertically
+                                                                            ) {
+                                                                                Text("MAX")
+                                                                                Text(" *", color = MaterialTheme.colorScheme.error)
+                                                                            }
+                                                                        }
                                                                     )
                                                                     TextField(
                                                                         value = tempAmb,
                                                                         onValueChange = { tempAmb = filter2Dec(it) },
                                                                         singleLine = true,
                                                                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                                                                        modifier = Modifier.weight(1f)
+                                                                        modifier = Modifier.weight(1f),
+                                                                        label = {
+                                                                            Row(
+                                                                                verticalAlignment = Alignment.CenterVertically
+                                                                            ) {
+                                                                                Text("AMB")
+                                                                                Text(" *", color = MaterialTheme.colorScheme.error)
+                                                                            }
+                                                                        }
                                                                     )
                                                                 }
 
