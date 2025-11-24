@@ -40,6 +40,7 @@ import androidx.compose.material3.NavigationDrawerItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
@@ -92,7 +93,8 @@ fun MainScreen(
     var isLoading by rememberSaveable { mutableStateOf(true) }
     var fontsExpanded by rememberSaveable { mutableStateOf(false) }
     var showInitImagesDialog by rememberSaveable { mutableStateOf(false) }
-    var initImagePath by rememberSaveable { mutableStateOf("") }
+    var initThermalPath by rememberSaveable { mutableStateOf("") }
+    var initDigitalPath by rememberSaveable { mutableStateOf("") }
 
     val drawerItemColors = NavigationDrawerItemDefaults.colors(
         selectedContainerColor = Color(0xFF202327),
@@ -382,16 +384,31 @@ fun MainScreen(
                 ) {
                     Text(text = "Inicializar imágenes")
                     
+                    Text(text = "Imagen térmica", style = MaterialTheme.typography.titleSmall)
                     ImageInputButtonGroup(
-                        label = "Archivo de imagen",
-                        value = initImagePath,
-                        onValueChange = { initImagePath = it },
+                        label = "Archivo IR",
+                        value = initThermalPath,
+                        onValueChange = { initThermalPath = it },
                         modifier = Modifier.fillMaxWidth(),
-                        onMoveUp = { /* TODO: historial hacia arriba */ },
-                        onMoveDown = { /* TODO: historial hacia abajo */ },
-                        onDotsClick = { /* TODO: acciones adicionales */ },
-                        onFolderClick = { /* TODO: abrir explorador */ },
-                        onCameraClick = { /* TODO: abrir cámara */ }
+                        isRequired = true,
+                        onMoveUp = { /* TODO: IR hacia arriba */ },
+                        onMoveDown = { /* TODO: IR hacia abajo */ },
+                        onDotsClick = { /* TODO: IR acciones */ },
+                        onFolderClick = { /* TODO: IR explorador */ },
+                        onCameraClick = { /* TODO: IR cámara */ }
+                    )
+                    Text(text = "Imagen digital", style = MaterialTheme.typography.titleSmall)
+                    ImageInputButtonGroup(
+                        label = "Archivo ID",
+                        value = initDigitalPath,
+                        onValueChange = { initDigitalPath = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        isRequired = true,
+                        onMoveUp = { /* TODO: ID hacia arriba */ },
+                        onMoveDown = { /* TODO: ID hacia abajo */ },
+                        onDotsClick = { /* TODO: ID acciones */ },
+                        onFolderClick = { /* TODO: ID explorador */ },
+                        onCameraClick = { /* TODO: ID cámara */ }
                     )
                     Button(
                         onClick = { showInitImagesDialog = false },
