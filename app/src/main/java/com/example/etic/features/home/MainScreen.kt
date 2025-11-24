@@ -19,8 +19,10 @@ import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Logout
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
@@ -56,11 +58,13 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
 import com.example.etic.R
 import com.example.etic.core.current.LocalCurrentInspection
 import com.example.etic.core.current.ProvideCurrentInspection
 import com.example.etic.core.current.ProvideCurrentUser
 import com.example.etic.core.export.exportRoomDbToDownloads
+import com.example.etic.features.components.ImageInputButtonGroup
 import com.example.etic.features.inspection.ui.home.InspectionScreen
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -86,6 +90,8 @@ fun MainScreen(
     var section by rememberSaveable { mutableStateOf(HomeSection.Inspection) }
     var isLoading by rememberSaveable { mutableStateOf(true) }
     var fontsExpanded by rememberSaveable { mutableStateOf(false) }
+    var showInitImagesDialog by rememberSaveable { mutableStateOf(false) }
+    var initImagePath by rememberSaveable { mutableStateOf("") }
 
     val drawerItemColors = NavigationDrawerItemDefaults.colors(
         selectedContainerColor = Color(0xFF202327),
@@ -173,6 +179,18 @@ fun MainScreen(
                             }
                         },
                         modifier = Modifier.padding(vertical = 4.dp),
+                        colors = drawerItemColors
+                    )
+                    NavigationDrawerItem(
+                        label = { Text("Inicializar imágenes") },
+                        selected = false,
+                        onClick = {
+                            showInitImagesDialog = true
+                            fontsExpanded = false
+                            scope.launch { drawerState.close() }
+                        },
+                        modifier = Modifier.padding(vertical = 4.dp),
+                        icon = { Icon(Icons.Filled.Image, contentDescription = null) },
                         colors = drawerItemColors
                     )
 
@@ -342,6 +360,47 @@ fun MainScreen(
                 }
             }
         )
+    }
+
+    if (showInitImagesDialog) {
+        Dialog(onDismissRequest = { showInitImagesDialog = false }) {
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = Color.White,
+                    contentColor = Color.Black
+                )
+            ) {
+                Column(
+                    modifier = Modifier
+                        .widthIn(max = 360.dp)
+                        .padding(24.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Text(text = "Inicializar imágenes")
+                    Text(
+                        text = "Pronto podrás ejecutar la inicialización desde esta ventana.",
+                        color = Color.DarkGray
+                    )
+                    ImageInputButtonGroup(
+                        label = "Archivo de imagen",
+                        value = initImagePath,
+                        onValueChange = { initImagePath = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        onMoveUp = { /* TODO: historial hacia arriba */ },
+                        onMoveDown = { /* TODO: historial hacia abajo */ },
+                        onDotsClick = { /* TODO: acciones adicionales */ },
+                        onFolderClick = { /* TODO: abrir explorador */ },
+                        onCameraClick = { /* TODO: abrir cámara */ }
+                    )
+                    Button(
+                        onClick = { showInitImagesDialog = false },
+                        modifier = Modifier.align(Alignment.End)
+                    ) {
+                        Text("Cerrar")
+                    }
+                }
+            }
+        }
     }
 }
 
