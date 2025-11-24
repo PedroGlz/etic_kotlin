@@ -1263,23 +1263,73 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                                     var notas by remember { mutableStateOf("") }
                                                     var imgIr by remember { mutableStateOf("") }
                                                     var imgId by remember { mutableStateOf("") }
-
-                                                    LaunchedEffect(baselineToEdit, showNewBaseline) {
-                                                        if (showNewBaseline && baselineToEdit != null) {
-                                                            mta = baselineToEdit!!.mtaC.toString()
-                                                            tempMax = baselineToEdit!!.tempC.toString()
-                                                            tempAmb = baselineToEdit!!.ambC.toString()
-                                                            notas = baselineToEdit!!.notas
-                                                            imgIr = baselineToEdit!!.imgR ?: ""
-                                                            imgId = baselineToEdit!!.imgD ?: ""
-                                                        }
-                                                        if (showNewBaseline && baselineToEdit == null) {
-                                                            mta = ""; tempMax = ""; tempAmb = ""; notas = ""; imgIr = ""; imgId = ""
-                                                        }
-                                                    }
-
                                                     var irPreview by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
                                                     var idPreview by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
+
+                                                    fun resetBaselineFormState() {
+                                                        mta = ""
+                                                        tempMax = ""
+                                                        tempAmb = ""
+                                                        notas = ""
+                                                        imgIr = ""
+                                                        imgId = ""
+                                                        irPreview = null
+                                                        idPreview = null
+                                                    }
+
+                                                    suspend fun BaselineRow.refreshFromDatabase(): BaselineRow {
+                                                        val latest = runCatching {
+                                                            withContext(Dispatchers.IO) { lineaBaseDao.getById(id) }
+                                                        }.getOrNull() ?: return this
+                                                        val updatedFecha = runCatching {
+                                                            val raw = latest.fechaCreacion?.takeIf { it.isNotBlank() }
+                                                            val onlyDate = raw?.take(10)
+                                                            if (onlyDate != null) java.time.LocalDate.parse(onlyDate) else fecha
+                                                        }.getOrDefault(fecha)
+                                                        val updatedNumInsp = latest.idInspeccion?.let { inspId ->
+                                                            runCatching {
+                                                                withContext(Dispatchers.IO) { inspDao.getById(inspId) }
+                                                                    ?.noInspeccion
+                                                                    ?.toString()
+                                                            }.getOrNull()
+                                                        } ?: numInspeccion
+                                                        return copy(
+                                                            numInspeccion = updatedNumInsp,
+                                                            fecha = updatedFecha,
+                                                            mtaC = latest.mta ?: mtaC,
+                                                            tempC = latest.tempMax ?: tempC,
+                                                            ambC = latest.tempAmb ?: ambC,
+                                                            notas = latest.notas ?: "",
+                                                            imgR = latest.archivoIr,
+                                                            imgD = latest.archivoId
+                                                        )
+                                                    }
+
+                                                    LaunchedEffect(showNewBaseline, baselineToEdit?.id, baselineRefreshTick) {
+                                                        if (!showNewBaseline) {
+                                                            resetBaselineFormState()
+                                                            return@LaunchedEffect
+                                                        }
+                                                        val current = baselineToEdit
+                                                        if (current == null) {
+                                                            resetBaselineFormState()
+                                                            return@LaunchedEffect
+                                                        }
+                                                        val refreshed = try {
+                                                            current.refreshFromDatabase()
+                                                        } catch (_: Exception) {
+                                                            current
+                                                        }
+                                                        baselineToEdit = refreshed
+                                                        mta = refreshed.mtaC.toString()
+                                                        tempMax = refreshed.tempC.toString()
+                                                        tempAmb = refreshed.ambC.toString()
+                                                        notas = refreshed.notas
+                                                        imgIr = refreshed.imgR ?: ""
+                                                        imgId = refreshed.imgD ?: ""
+                                                        irPreview = null
+                                                        idPreview = null
+                                                    }
 
                                                     fun filter2Dec(input: String): String {
                                                         if (input.isEmpty()) return ""
