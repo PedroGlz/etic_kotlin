@@ -97,7 +97,7 @@ import com.example.etic.features.inspection.tree.descendantIds
 import com.example.etic.features.inspection.tree.findById
 import com.example.etic.features.inspection.tree.findPathByBarcode
 import com.example.etic.features.inspection.tree.titlePathForId
-
+import androidx.compose.ui.window.Dialog
 
 // Centralizamos algunos "magic numbers" para facilitar ajuste futuro
 private const val MIN_FRAC: Float = 0.2f     // Limite inferior de los splitters
@@ -618,16 +618,12 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             // =====================================================================
             if (showEditUbDialog) {
 
-                // ---------------------------------------------------------------
-                // DESACTIVAR EL ANCHO POR DEFECTO DEL SISTEMA
-                // Para permitir que el diálogo pueda ser MUCHO más ancho
-                // ---------------------------------------------------------------
-                androidx.compose.material3.BasicAlertDialog(
+                Dialog(
                     onDismissRequest = { },
                     properties = DialogProperties(
                         dismissOnClickOutside = false,
                         dismissOnBackPress = false,
-                        usePlatformDefaultWidth = false   // ← CLAVE PARA EXPANDIR EL DIÁLOGO
+                        usePlatformDefaultWidth = false   // ahora sí usamos TODO el tamaño disponible
                     )
                 ) {
 
@@ -637,7 +633,8 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     // ---------------------------------------------------------------
                     Box(
                         modifier = Modifier
-                            .fillMaxWidth(0.98f)  // ← Diálogo casi de lado a lado
+                            .fillMaxWidth(0.98f)   // 98% del ancho de la pantalla
+                            .fillMaxHeight(0.98f)  // 98% del alto de la pantalla
                             .padding(16.dp),
                         contentAlignment = Alignment.Center
                     ) {
@@ -648,12 +645,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                         // ---------------------------------------------------------------
                         androidx.compose.material3.Card(
                             modifier = Modifier
-                                .widthIn(
-                                    min = 900.dp,     // si la pantalla da, mínimo 900dp
-                                    max = 1400.dp     // máximo 1400dp en monitores grandes / desktop
-                                )
-                                .fillMaxWidth()       // en pantallas chicas ocupa todo el ancho disponible
-                                .heightIn(min = 400.dp, max = 720.dp),
+                                .fillMaxSize(),    // ← importante: usa TODO el Box (que ya es 98% x 98%)
                             shape = RoundedCornerShape(12.dp)
                         ) {
 
@@ -693,7 +685,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                     val scrollForm = rememberScrollState()
                                     Column(
                                         modifier = Modifier
-                                            .weight(0.35f)   // ← columna angosta
+                                            .weight(0.25f)   // ← columna angosta
                                             .fillMaxHeight()
                                             .verticalScroll(scrollForm),
                                         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -935,7 +927,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                     // ===========================================================
                                     Column(
                                         modifier = Modifier
-                                            .weight(0.65f)  // ← columna más ancha
+                                            .weight(0.75f)  // ← columna más ancha
                                             .fillMaxHeight()
                                     ) {
 
