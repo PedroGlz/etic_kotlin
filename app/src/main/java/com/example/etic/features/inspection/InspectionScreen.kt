@@ -690,9 +690,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                             .verticalScroll(scrollForm),
                                         verticalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
-
-                                        // ------------------------------------------------------------------
-
+                                        
                                         ExposedDropdownMenuBox(
                                             expanded = locationForm.statusExpanded,
                                             onExpandedChange = { locationForm.statusExpanded = !locationForm.statusExpanded }
@@ -934,6 +932,29 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                         // ---------------------------------------------------------------
                                         // TABS DERECHA (ya NO mostramos tab de Ubicación)
                                         // ---------------------------------------------------------------
+
+                                        val editingRoute = remember(editingUbId, nodes, rootTitle) {
+                                            editingUbId?.let { id ->
+                                                val titles = titlePathForId(nodes, id)
+                                                titles.takeIf { it.isNotEmpty() }?.joinToString(" / ")
+                                                    ?: rootTitle
+                                            } ?: rootTitle
+                                        }
+                                        Text(
+                                            "Ruta del equipo",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        Text(
+                                            editingRoute,
+                                            style = MaterialTheme.typography.bodyMedium,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                        Divider()
+
+                                        // ------------------------------------------------------------------
+
+
                                         TabRow(selectedTabIndex = editTab) {
                                             Tab(
                                                 selected = editTab == 0,
@@ -1709,7 +1730,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
 
 
                                 // ===============================================================
-                                // BOTÓN CANCELAR EN EL PIE DEL DIÁLOGO
+                                // BOTÓN CERRAR EN EL PIE DEL DIÁLOGO
                                 // ===============================================================
                                 Spacer(Modifier.height(12.dp))
                                 Row(
@@ -1723,7 +1744,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                             locationForm.error = null
                                         }
                                     ) {
-                                        Text("Cancelar")
+                                        Text("Cerrar")
                                     }
                                 }
                             }
