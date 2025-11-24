@@ -966,6 +966,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                                 var isSavingBaseline by remember { mutableStateOf(false) }
                                                 val ubId = editingUbId
                                                 val inspId = currentInspection?.idInspeccion
+
                                                 LaunchedEffect(showNewBaseline) {
                                                     if (!showNewBaseline) {
                                                         isSavingBaseline = false
@@ -1005,6 +1006,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                                             val numInspDisplay = r.idInspeccion?.let { id ->
                                                                 runCatching { inspDao.getById(id)?.noInspeccion?.toString() }.getOrNull()
                                                             } ?: ""
+                                                            val ubicDisplay = r.idUbicacion?.let { id -> ubicMap[id]?.ubicacion } ?: ""
                                                             BaselineRow(
                                                                 id = r.idLineaBase,
                                                                 numInspeccion = numInspDisplay,
@@ -1020,7 +1022,52 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                                     baselineCache = value
                                                 }
 
+                                                // Helpers locales para celdas con ancho fijo / flexible
+                                                @Composable
+                                                fun HeaderCellFixed(text: String, width: Dp) {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .width(width)
+                                                            .padding(horizontal = 4.dp),
+                                                        contentAlignment = Alignment.CenterStart
+                                                    ) {
+                                                        Text(
+                                                            text,
+                                                            maxLines = 1,
+                                                            overflow = TextOverflow.Ellipsis,
+                                                            style = MaterialTheme.typography.bodySmall
+                                                        )
+                                                    }
+                                                }
+
+                                                @Composable
+                                                fun RowCellFixed(width: Dp, content: @Composable () -> Unit) {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .width(width)
+                                                            .padding(horizontal = 4.dp),
+                                                        contentAlignment = Alignment.CenterStart
+                                                    ) {
+                                                        content()
+                                                    }
+                                                }
+
+                                                @Composable
+                                                fun RowCellFlexible(content: @Composable () -> Unit) {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .weight(1f)
+                                                            .padding(horizontal = 4.dp),
+                                                        contentAlignment = Alignment.CenterStart
+                                                    ) {
+                                                        content()
+                                                    }
+                                                }
+
+                                                // Layout con cabecera fija (botón arriba) + cuerpo con tabla
                                                 Column(Modifier.fillMaxSize()) {
+
+                                                    // Botón "Nuevo Baseline" siempre visible
                                                     Row(
                                                         Modifier.fillMaxWidth(),
                                                         horizontalArrangement = Arrangement.End,
@@ -1034,40 +1081,44 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                                     }
                                                     Spacer(Modifier.height(8.dp))
 
-                                                    @Composable
-                                                    fun RowScope.cell(flex: Int, content: @Composable () -> Unit) =
-                                                        Box(
-                                                            Modifier.weight(flex.toFloat()),
-                                                            contentAlignment = Alignment.CenterStart
-                                                        ) { content() }
-
+                                                    // Encabezados con anchos fijos
                                                     Row(
                                                         Modifier
                                                             .fillMaxWidth()
                                                             .background(MaterialTheme.colorScheme.surface)
                                                             .padding(vertical = 8.dp, horizontal = 8.dp)
                                                     ) {
-                                                        cell(2) { Text("No. Insp") }
-                                                        cell(2) { Text("Fecha") }
-                                                        cell(1) { Text("MTA °C") }
-                                                        cell(1) { Text("Temp °C") }
-                                                        cell(1) { Text("Amb °C") }
-                                                        cell(1) { Text("IR") }
-                                                        cell(1) { Text("ID") }
-                                                        cell(3) { Text("Notas") }
+                                                        HeaderCellFixed("No. Insp", 80.dp)
+                                                        HeaderCellFixed("Fecha", 100.dp)
+                                                        HeaderCellFixed("MTA C", 70.dp)
+                                                        HeaderCellFixed("Temp C", 70.dp)
+                                                        HeaderCellFixed("Amb C", 70.dp)
+                                                        HeaderCellFixed("IR", 80.dp)
+                                                        HeaderCellFixed("ID", 80.dp)
+
+                                                        // Notas ocupa el espacio restante
                                                         Box(
-                                                            modifier = Modifier.align(Alignment.CenterVertically),
+                                                            modifier = Modifier
+                                                                .weight(1f)
+                                                                .padding(horizontal = 4.dp),
+                                                            contentAlignment = Alignment.CenterStart
+                                                        ) {
+                                                            Text("Notas", style = MaterialTheme.typography.bodySmall)
+                                                        }
+
+                                                        // Columna Op: ancho justo para el botón
+                                                        Box(
+                                                            modifier = Modifier
+                                                                .width(56.dp),
                                                             contentAlignment = Alignment.Center
                                                         ) {
-                                                            Text("")
+                                                            Text("Op", style = MaterialTheme.typography.bodySmall)
                                                         }
                                                     }
                                                     Divider(thickness = DIVIDER_THICKNESS)
 
-                                                    val baselineTabListState = rememberSaveable(
-                                                        "baseline_tab2_state",
-                                                        saver = LazyListState.Saver
-                                                    ) { LazyListState() }
+                                                    val baselineTabListState =
+                                                        rememberSaveable("baseline_tab2_state", saver = LazyListState.Saver) { LazyListState() }
 
                                                     if (tableData.isEmpty()) {
                                                         Box(
@@ -1095,32 +1146,56 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                                                             })
                                                                         }
                                                                 ) {
-                                                                    cell(2) { Text(b.numInspeccion) }
-                                                                    cell(2) { Text(b.fecha.toString()) }
-                                                                    cell(1) { Text(b.mtaC.toString()) }
-                                                                    cell(1) { Text(b.tempC.toString()) }
-                                                                    cell(1) { Text(b.ambC.toString()) }
-                                                                    cell(1) { Text(b.imgR ?: "") }
-                                                                    cell(1) { Text(b.imgD ?: "") }
-                                                                    cell(3) { Text(b.notas) }
+                                                                    RowCellFixed(80.dp) {
+                                                                        Text(
+                                                                            b.numInspeccion,
+                                                                            maxLines = 1,
+                                                                            overflow = TextOverflow.Ellipsis
+                                                                        )
+                                                                    }
+                                                                    RowCellFixed(100.dp) {
+                                                                        Text(
+                                                                            b.fecha.toString(),
+                                                                            maxLines = 1,
+                                                                            overflow = TextOverflow.Ellipsis
+                                                                        )
+                                                                    }
+                                                                    RowCellFixed(70.dp) { Text(b.mtaC.toString()) }
+                                                                    RowCellFixed(70.dp) { Text(b.tempC.toString()) }
+                                                                    RowCellFixed(70.dp) { Text(b.ambC.toString()) }
+                                                                    RowCellFixed(80.dp) {
+                                                                        Text(
+                                                                            b.imgR ?: "",
+                                                                            maxLines = 1,
+                                                                            overflow = TextOverflow.Ellipsis
+                                                                        )
+                                                                    }
+                                                                    RowCellFixed(80.dp) {
+                                                                        Text(
+                                                                            b.imgD ?: "",
+                                                                            maxLines = 1,
+                                                                            overflow = TextOverflow.Ellipsis
+                                                                        )
+                                                                    }
+                                                                    RowCellFlexible {
+                                                                        Text(
+                                                                            b.notas,
+                                                                            maxLines = 1,
+                                                                            overflow = TextOverflow.Ellipsis
+                                                                        )
+                                                                    }
+
+                                                                    // Columna Op con botón de eliminar (icono rojo)
                                                                     Box(
-                                                                        modifier = Modifier.align(Alignment.CenterVertically),
+                                                                        modifier = Modifier.width(56.dp),
                                                                         contentAlignment = Alignment.Center
                                                                     ) {
-                                                                        CompositionLocalProvider(
-                                                                            androidx.compose.material3.LocalMinimumInteractiveComponentEnforcement provides false
-                                                                        ) {
-                                                                            IconButton(
-                                                                                onClick = { confirmDeleteId = b.id },
-                                                                                modifier = Modifier.size(28.dp)  // tamaño compacto
-                                                                            ) {
-                                                                                Icon(
-                                                                                    Icons.Outlined.Delete,
-                                                                                    contentDescription = "Eliminar",
-                                                                                    modifier = Modifier.size(18.dp),
-                                                                                    tint = MaterialTheme.colorScheme.error
-                                                                                )
-                                                                            }
+                                                                        IconButton(onClick = { confirmDeleteId = b.id }) {
+                                                                            Icon(
+                                                                                Icons.Outlined.Delete,
+                                                                                contentDescription = "Eliminar",
+                                                                                tint = MaterialTheme.colorScheme.error
+                                                                            )
                                                                         }
                                                                     }
                                                                 }
@@ -1129,6 +1204,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                                         }
                                                     }
 
+                                                    // Diálogo de confirmación de borrado (igual que ya tenías)
                                                     if (confirmDeleteId != null) {
                                                         AlertDialog(
                                                             onDismissRequest = { confirmDeleteId = null },
@@ -1136,8 +1212,10 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                                                 Button(onClick = {
                                                                     val id = confirmDeleteId ?: return@Button
                                                                     scope.launch {
+                                                                        // Eliminar baseline
                                                                         runCatching { lineaBaseDao.deleteById(id) }
 
+                                                                        // Revertir estatus de inspeccion_det asociado a PVERIF
                                                                         val idUb = ubId
                                                                         val idInsp = inspId
                                                                         if (!idUb.isNullOrBlank() && !idInsp.isNullOrBlank()) {
