@@ -685,7 +685,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                     val scrollForm = rememberScrollState()
                                     Column(
                                         modifier = Modifier
-                                            .weight(0.25f)   // ← columna angosta
+                                            .weight(0.32f)   // ← columna angosta
                                             .fillMaxHeight()
                                             .verticalScroll(scrollForm),
                                         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -927,7 +927,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                     // ===========================================================
                                     Column(
                                         modifier = Modifier
-                                            .weight(0.75f)  // ← columna más ancha
+                                            .weight(0.68f)  // ← columna más ancha
                                             .fillMaxHeight()
                                     ) {
 
@@ -1049,13 +1049,18 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                                     ) {
                                                         cell(2) { Text("No. Insp") }
                                                         cell(2) { Text("Fecha") }
-                                                        cell(1) { Text("MTA C") }
-                                                        cell(1) { Text("Temp C") }
-                                                        cell(1) { Text("Amb C") }
+                                                        cell(1) { Text("MTA °C") }
+                                                        cell(1) { Text("Temp °C") }
+                                                        cell(1) { Text("Amb °C") }
                                                         cell(1) { Text("IR") }
                                                         cell(1) { Text("ID") }
                                                         cell(3) { Text("Notas") }
-                                                        cell(1) { Text("Op") }
+                                                        Box(
+                                                            modifier = Modifier.align(Alignment.CenterVertically),
+                                                            contentAlignment = Alignment.Center
+                                                        ) {
+                                                            Text("")
+                                                        }
                                                     }
                                                     Divider(thickness = DIVIDER_THICKNESS)
 
@@ -1098,12 +1103,24 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                                                     cell(1) { Text(b.imgR ?: "") }
                                                                     cell(1) { Text(b.imgD ?: "") }
                                                                     cell(3) { Text(b.notas) }
-                                                                    cell(1) {
-                                                                        IconButton(onClick = { confirmDeleteId = b.id }) {
-                                                                            Icon(
-                                                                                Icons.Outlined.Delete,
-                                                                                contentDescription = "Eliminar"
-                                                                            )
+                                                                    Box(
+                                                                        modifier = Modifier.align(Alignment.CenterVertically),
+                                                                        contentAlignment = Alignment.Center
+                                                                    ) {
+                                                                        CompositionLocalProvider(
+                                                                            androidx.compose.material3.LocalMinimumInteractiveComponentEnforcement provides false
+                                                                        ) {
+                                                                            IconButton(
+                                                                                onClick = { confirmDeleteId = b.id },
+                                                                                modifier = Modifier.size(28.dp)  // tamaño compacto
+                                                                            ) {
+                                                                                Icon(
+                                                                                    Icons.Outlined.Delete,
+                                                                                    contentDescription = "Eliminar",
+                                                                                    modifier = Modifier.size(18.dp),
+                                                                                    tint = MaterialTheme.colorScheme.error
+                                                                                )
+                                                                            }
                                                                         }
                                                                     }
                                                                 }
