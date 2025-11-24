@@ -610,51 +610,97 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             )
             // -------------------------------------------------------------------------------
 
-            // ------------------ dialogo: EDITAR ubicacion (NUEVO con 3 TABS) ------------------
+            // =====================================================================
+            // DIÁLOGO COMPLETO: EDITAR UBICACIÓN EN 2 COLUMNAS
+            //   - Diálogo más ancho
+            //   - Columna izquierda angosta (formulario)
+            //   - Columna derecha ancha (Baseline / Histórico)
+            // =====================================================================
             if (showEditUbDialog) {
+
+                // ---------------------------------------------------------------
+                // DESACTIVAR EL ANCHO POR DEFECTO DEL SISTEMA
+                // Para permitir que el diálogo pueda ser MUCHO más ancho
+                // ---------------------------------------------------------------
                 androidx.compose.material3.BasicAlertDialog(
                     onDismissRequest = { },
                     properties = DialogProperties(
                         dismissOnClickOutside = false,
-                        dismissOnBackPress = false
+                        dismissOnBackPress = false,
+                        usePlatformDefaultWidth = false   // ← CLAVE PARA EXPANDIR EL DIÁLOGO
                     )
                 ) {
-                    androidx.compose.material3.Card(
+
+                    // ---------------------------------------------------------------
+                    // BOX QUE CONTROLA EL ANCHO REAL DEL DIÁLOGO
+                    // fillMaxWidth(0.98f) = usa casi toda la pantalla
+                    // ---------------------------------------------------------------
+                    Box(
                         modifier = Modifier
-                            // Baseline suele necesitar mas ancho para las columnas
-                            .widthIn(
-                                min = if (editTab == 1) 900.dp else 720.dp,
-                                max = 1200.dp
-                            )
-                            .heightIn(min = 380.dp, max = 650.dp),
-                        shape = RoundedCornerShape(12.dp)
+                            .fillMaxWidth(0.98f)  // ← Diálogo casi de lado a lado
+                            .padding(16.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        // Cabecera del dialogo
-                        Column(Modifier.fillMaxWidth().padding(16.dp)) {
-                            Text("Editar ubicacion", style = MaterialTheme.typography.titleLarge)
-                            Spacer(Modifier.height(8.dp))
 
-                            // Tabs
-                            TabRow(selectedTabIndex = editTab) {
-                                Tab(selected = editTab == 0, onClick = { editTab = 0 }, text = { Text("ubicacion") })
-                                Tab(selected = editTab == 1, onClick = { editTab = 1 }, text = { Text("Baseline") })
-                                Tab(selected = editTab == 2, onClick = { editTab = 2 }, text = { Text("Historico") })
-                            }
+                        // ---------------------------------------------------------------
+                        // CARD PRINCIPAL DEL DIÁLOGO
+                        // Se expande a todo el ancho permitido por el Box
+                        // ---------------------------------------------------------------
+                        androidx.compose.material3.Card(
+                            modifier = Modifier
+                                .widthIn(
+                                    min = 900.dp,     // si la pantalla da, mínimo 900dp
+                                    max = 1400.dp     // máximo 1400dp en monitores grandes / desktop
+                                )
+                                .fillMaxWidth()       // en pantallas chicas ocupa todo el ancho disponible
+                                .heightIn(min = 400.dp, max = 720.dp),
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
 
-                            Spacer(Modifier.height(8.dp))
+                            // ---------------------------------------------------------------
+                            // CONTENEDOR PRINCIPAL
+                            // ---------------------------------------------------------------
+                            Column(
+                                Modifier
+                                    .fillMaxSize()
+                                    .padding(16.dp)
+                            ) {
 
-                            // Contenido de los tabs ocupa el resto del espacio y es scrolleable
-                            when (editTab) {
-                                // ====== TAB 1: Formulario edicion + boton Guardar dentro del tab ======
-                                0 -> {
-                                    val scroll = rememberScrollState()
+                                // ---------------------------------------------------------------
+                                // TÍTULO DEL DIÁLOGO
+                                // ---------------------------------------------------------------
+                                Text("Editar ubicación", style = MaterialTheme.typography.titleLarge)
+                                Spacer(Modifier.height(8.dp))
+
+
+                                // ===============================================================
+                                // FILA PRINCIPAL EN DOS COLUMNAS
+                                //   IZQUIERDA: formulario de ubicación
+                                //   DERECHA: tabs Baseline / Histórico
+                                // ===============================================================
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .weight(1f, fill = true),
+                                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                                ) {
+
+
+                                    // ===========================================================
+                                    // COLUMNA IZQUIERDA  (Formulario de Ubicación)
+                                    // MÁS ANGOSTA → 35%
+                                    // ===========================================================
+                                    val scrollForm = rememberScrollState()
                                     Column(
-                                        Modifier
-                                            .fillMaxSize()
-                                            .verticalScroll(scroll),
+                                        modifier = Modifier
+                                            .weight(0.35f)   // ← columna angosta
+                                            .fillMaxHeight()
+                                            .verticalScroll(scrollForm),
                                         verticalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
-                                        // --- formulario (igual que antes) ---
+
+                                        // ------------------------------------------------------------------
+
                                         ExposedDropdownMenuBox(
                                             expanded = locationForm.statusExpanded,
                                             onExpandedChange = { locationForm.statusExpanded = !locationForm.statusExpanded }
@@ -748,7 +794,10 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                         Row(verticalAlignment = Alignment.CenterVertically) {
                                             Text("Es equipo")
                                             Spacer(Modifier.width(12.dp))
-                                            Switch(checked = locationForm.isEquipment, onCheckedChange = { locationForm.isEquipment = it })
+                                            Switch(
+                                                checked = locationForm.isEquipment,
+                                                onCheckedChange = { locationForm.isEquipment = it }
+                                            )
                                         }
 
                                         TextField(
@@ -785,7 +834,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                             Text(locationForm.error!!, color = MaterialTheme.colorScheme.error)
                                         }
 
-                                        // Botonera propia del TAB 1 (no en el footer del dialogo)
+                                        // Botonera propia del formulario (antes en Tab 0)
                                         Row(
                                             Modifier.fillMaxWidth(),
                                             horizontalArrangement = Arrangement.End
@@ -875,550 +924,654 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                                 }
                                             ) { Text("Guardar") }
                                         }
-                                    }
-                                }
 
-                                // ====== TAB 2: Baseline (boton visible arriba) ======
-                                1 -> {
-                                    val lineaBaseDao = remember { com.example.etic.data.local.DbProvider.get(ctx).lineaBaseDao() }
-                                    val inspDao = remember { com.example.etic.data.local.DbProvider.get(ctx).inspeccionDao() }
-                                    var showNewBaseline by remember { mutableStateOf(false) }
-                                    var isSavingBaseline by remember { mutableStateOf(false) }
-                                    val ubId = editingUbId
-                                    val inspId = currentInspection?.idInspeccion
-                                    LaunchedEffect(showNewBaseline) {
-                                        if (!showNewBaseline) {
-                                            isSavingBaseline = false
+                                        // ------------------------------------------------------------------
+                                    }
+
+
+                                    // ===========================================================
+                                    // COLUMNA DERECHA  (Baseline / Histórico)
+                                    // MÁS ANCHA → 65%
+                                    // ===========================================================
+                                    Column(
+                                        modifier = Modifier
+                                            .weight(0.65f)  // ← columna más ancha
+                                            .fillMaxHeight()
+                                    ) {
+
+                                        // ---------------------------------------------------------------
+                                        // TABS DERECHA (ya NO mostramos tab de Ubicación)
+                                        // ---------------------------------------------------------------
+                                        TabRow(selectedTabIndex = editTab) {
+                                            Tab(
+                                                selected = editTab == 0,
+                                                onClick = { editTab = 0 },
+                                                text = { Text("Baseline") }
+                                            )
+                                            Tab(
+                                                selected = editTab == 1,
+                                                onClick = { editTab = 1 },
+                                                text = { Text("Histórico") }
+                                            )
                                         }
-                                    }
 
-                                    data class BaselineRow(
-                                        val id: String,
-                                        val numInspeccion: String,
-                                        val fecha: java.time.LocalDate,
-                                        val mtaC: Double,
-                                        val tempC: Double,
-                                        val ambC: Double,
-                                        val imgR: String?,
-                                        val imgD: String?,
-                                        val notas: String
-                                    )
-
-                                    var baselineToEdit by remember { mutableStateOf<BaselineRow?>(null) }
-                                    var confirmDeleteId by remember { mutableStateOf<String?>(null) }
-
-                                    var baselineCache by remember { mutableStateOf(emptyList<BaselineRow>()) }
-                                    val tableData by produceState(initialValue = baselineCache, ubId, inspId, baselineRefreshTick) {
-                                        val rows = if (!inspId.isNullOrBlank()) {
-                                            runCatching { lineaBaseDao.getByInspeccionActivos(inspId) }.getOrElse { emptyList() }
-                                        } else emptyList()
-                                        val ubicaciones = runCatching { ubicacionDao.getAllActivas() }.getOrElse { emptyList() }
-                                        val ubicMap = ubicaciones.associateBy { it.idUbicacion }
-                                        value = rows
-                                            .filter { r -> ubId != null && r.idUbicacion == ubId }
-                                            .map { r ->
-                                                val fecha = runCatching {
-                                                    val raw = r.fechaCreacion?.takeIf { it.isNotBlank() }
-                                                    val onlyDate = raw?.take(10)
-                                                    if (onlyDate != null) java.time.LocalDate.parse(onlyDate) else java.time.LocalDate.now()
-                                                }.getOrDefault(java.time.LocalDate.now())
-                                                val numInspDisplay = r.idInspeccion?.let { id ->
-                                                    runCatching { inspDao.getById(id)?.noInspeccion?.toString() }.getOrNull()
-                                                } ?: ""
-                                                val ubicDisplay = r.idUbicacion?.let { id -> ubicMap[id]?.ubicacion } ?: ""
-                                                BaselineRow(
-                                                    id = r.idLineaBase,
-                                                    numInspeccion = numInspDisplay,
-                                                    fecha = fecha,
-                                                    mtaC = r.mta ?: 0.0,
-                                                    tempC = r.tempMax ?: 0.0,
-                                                    ambC = r.tempAmb ?: 0.0,
-                                                    imgR = r.archivoIr,
-                                                    imgD = r.archivoId,
-                                                    notas = r.notas ?: ""
-                                                )
-                                            }
-                                        baselineCache = value
-                                    }
-
-                                    // Layout con cabecera fija (boton siempre visible) + cuerpo con tabla personalizada
-                                    Column(Modifier.fillMaxSize()) {
-                                        Row(
-                                            Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.End,
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Button(onClick = { baselineToEdit = null; showNewBaseline = true }) {
-                                                Icon(Icons.Filled.Add, contentDescription = null)
-                                                Spacer(Modifier.width(8.dp))
-                                                Text("Nuevo Baseline")
-                                            }
-                                        }
                                         Spacer(Modifier.height(8.dp))
 
-                                        @Composable
-                                        fun RowScope.cell(flex: Int, content: @Composable () -> Unit) =
-                                            Box(Modifier.weight(flex.toFloat()), contentAlignment = Alignment.CenterStart) { content() }
 
-                                        // Encabezados requeridos para Tab2
-                                        Row(
-                                            Modifier
-                                                .fillMaxWidth()
-                                                .background(MaterialTheme.colorScheme.surface)
-                                                .padding(vertical = 8.dp, horizontal = 8.dp)
-                                        ) {
-                                            cell(2) { Text("No. Insp") }
-                                            cell(2) { Text("Fecha") }
-                                            cell(1) { Text("MTA C") }
-                                            cell(1) { Text("Temp C") }
-                                            cell(1) { Text("Amb C") }
-                                            cell(1) { Text("IR") }
-                                            cell(1) { Text("ID") }
-                                            cell(3) { Text("Notas") }
-                                            cell(1) { Text("Op") }
-                                        }
-                                        Divider(thickness = DIVIDER_THICKNESS)
+                                        // ===========================================================
+                                        // CONTENIDO DE TAB 0 Y TAB 1
+                                        // ===========================================================
+                                        when (editTab) {
 
-                                        val baselineTabListState = rememberSaveable("baseline_tab2_state", saver = LazyListState.Saver) { LazyListState() }
-                                        if (tableData.isEmpty()) {
-                                            Box(Modifier.fillMaxWidth().padding(8.dp), contentAlignment = Alignment.CenterStart) {
-                                                Text(stringResource(com.example.etic.R.string.msg_sin_baseline))
-                                            }
-                                        } else {
-                                            LazyColumn(Modifier.fillMaxSize(), state = baselineTabListState) {
-                                                items(tableData, key = { it.id }) { b ->
+
+                                            // -----------------------------------------------------------
+                                            // TAB 0 → BASELINE
+                                            // -----------------------------------------------------------
+                                            0 -> {
+                                                val lineaBaseDao = remember { com.example.etic.data.local.DbProvider.get(ctx).lineaBaseDao() }
+                                                val inspDao = remember { com.example.etic.data.local.DbProvider.get(ctx).inspeccionDao() }
+                                                var showNewBaseline by remember { mutableStateOf(false) }
+                                                var isSavingBaseline by remember { mutableStateOf(false) }
+                                                val ubId = editingUbId
+                                                val inspId = currentInspection?.idInspeccion
+                                                LaunchedEffect(showNewBaseline) {
+                                                    if (!showNewBaseline) {
+                                                        isSavingBaseline = false
+                                                    }
+                                                }
+
+                                                data class BaselineRow(
+                                                    val id: String,
+                                                    val numInspeccion: String,
+                                                    val fecha: java.time.LocalDate,
+                                                    val mtaC: Double,
+                                                    val tempC: Double,
+                                                    val ambC: Double,
+                                                    val imgR: String?,
+                                                    val imgD: String?,
+                                                    val notas: String
+                                                )
+
+                                                var baselineToEdit by remember { mutableStateOf<BaselineRow?>(null) }
+                                                var confirmDeleteId by remember { mutableStateOf<String?>(null) }
+
+                                                var baselineCache by remember { mutableStateOf(emptyList<BaselineRow>()) }
+                                                val tableData by produceState(initialValue = baselineCache, ubId, inspId, baselineRefreshTick) {
+                                                    val rows = if (!inspId.isNullOrBlank()) {
+                                                        runCatching { lineaBaseDao.getByInspeccionActivos(inspId) }.getOrElse { emptyList() }
+                                                    } else emptyList()
+                                                    val ubicaciones = runCatching { ubicacionDao.getAllActivas() }.getOrElse { emptyList() }
+                                                    val ubicMap = ubicaciones.associateBy { it.idUbicacion }
+                                                    value = rows
+                                                        .filter { r -> ubId != null && r.idUbicacion == ubId }
+                                                        .map { r ->
+                                                            val fecha = runCatching {
+                                                                val raw = r.fechaCreacion?.takeIf { it.isNotBlank() }
+                                                                val onlyDate = raw?.take(10)
+                                                                if (onlyDate != null) java.time.LocalDate.parse(onlyDate) else java.time.LocalDate.now()
+                                                            }.getOrDefault(java.time.LocalDate.now())
+                                                            val numInspDisplay = r.idInspeccion?.let { id ->
+                                                                runCatching { inspDao.getById(id)?.noInspeccion?.toString() }.getOrNull()
+                                                            } ?: ""
+                                                            BaselineRow(
+                                                                id = r.idLineaBase,
+                                                                numInspeccion = numInspDisplay,
+                                                                fecha = fecha,
+                                                                mtaC = r.mta ?: 0.0,
+                                                                tempC = r.tempMax ?: 0.0,
+                                                                ambC = r.tempAmb ?: 0.0,
+                                                                imgR = r.archivoIr,
+                                                                imgD = r.archivoId,
+                                                                notas = r.notas ?: ""
+                                                            )
+                                                        }
+                                                    baselineCache = value
+                                                }
+
+                                                Column(Modifier.fillMaxSize()) {
+                                                    Row(
+                                                        Modifier.fillMaxWidth(),
+                                                        horizontalArrangement = Arrangement.End,
+                                                        verticalAlignment = Alignment.CenterVertically
+                                                    ) {
+                                                        Button(onClick = { baselineToEdit = null; showNewBaseline = true }) {
+                                                            Icon(Icons.Filled.Add, contentDescription = null)
+                                                            Spacer(Modifier.width(8.dp))
+                                                            Text("Nuevo Baseline")
+                                                        }
+                                                    }
+                                                    Spacer(Modifier.height(8.dp))
+
+                                                    @Composable
+                                                    fun RowScope.cell(flex: Int, content: @Composable () -> Unit) =
+                                                        Box(
+                                                            Modifier.weight(flex.toFloat()),
+                                                            contentAlignment = Alignment.CenterStart
+                                                        ) { content() }
+
                                                     Row(
                                                         Modifier
                                                             .fillMaxWidth()
-                                                            .padding(vertical = 6.dp, horizontal = 8.dp)
-                                                            .pointerInput(b.id) { detectTapGestures(onDoubleTap = {
-                                                                baselineToEdit = b
-                                                                showNewBaseline = true
-                                                            }) }
+                                                            .background(MaterialTheme.colorScheme.surface)
+                                                            .padding(vertical = 8.dp, horizontal = 8.dp)
                                                     ) {
-                                                        cell(2) { Text(b.numInspeccion) }
-                                                        cell(2) { Text(b.fecha.toString()) }
-                                                        cell(1) { Text(b.mtaC.toString()) }
-                                                        cell(1) { Text(b.tempC.toString()) }
-                                                        cell(1) { Text(b.ambC.toString()) }
-                                                        cell(1) { Text(b.imgR ?: "") }
-                                                        cell(1) { Text(b.imgD ?: "") }
-                                                        cell(3) { Text(b.notas) }
-                                                        cell(1) {
-                                                            IconButton(onClick = { confirmDeleteId = b.id }) {
-                                                                Icon(Icons.Outlined.Delete, contentDescription = "Eliminar")
-                                                            }
-                                                        }
+                                                        cell(2) { Text("No. Insp") }
+                                                        cell(2) { Text("Fecha") }
+                                                        cell(1) { Text("MTA C") }
+                                                        cell(1) { Text("Temp C") }
+                                                        cell(1) { Text("Amb C") }
+                                                        cell(1) { Text("IR") }
+                                                        cell(1) { Text("ID") }
+                                                        cell(3) { Text("Notas") }
+                                                        cell(1) { Text("Op") }
                                                     }
                                                     Divider(thickness = DIVIDER_THICKNESS)
+
+                                                    val baselineTabListState = rememberSaveable(
+                                                        "baseline_tab2_state",
+                                                        saver = LazyListState.Saver
+                                                    ) { LazyListState() }
+
+                                                    if (tableData.isEmpty()) {
+                                                        Box(
+                                                            Modifier
+                                                                .fillMaxWidth()
+                                                                .padding(8.dp),
+                                                            contentAlignment = Alignment.CenterStart
+                                                        ) {
+                                                            Text(stringResource(com.example.etic.R.string.msg_sin_baseline))
+                                                        }
+                                                    } else {
+                                                        LazyColumn(
+                                                            Modifier.fillMaxSize(),
+                                                            state = baselineTabListState
+                                                        ) {
+                                                            items(tableData, key = { it.id }) { b ->
+                                                                Row(
+                                                                    Modifier
+                                                                        .fillMaxWidth()
+                                                                        .padding(vertical = 6.dp, horizontal = 8.dp)
+                                                                        .pointerInput(b.id) {
+                                                                            detectTapGestures(onDoubleTap = {
+                                                                                baselineToEdit = b
+                                                                                showNewBaseline = true
+                                                                            })
+                                                                        }
+                                                                ) {
+                                                                    cell(2) { Text(b.numInspeccion) }
+                                                                    cell(2) { Text(b.fecha.toString()) }
+                                                                    cell(1) { Text(b.mtaC.toString()) }
+                                                                    cell(1) { Text(b.tempC.toString()) }
+                                                                    cell(1) { Text(b.ambC.toString()) }
+                                                                    cell(1) { Text(b.imgR ?: "") }
+                                                                    cell(1) { Text(b.imgD ?: "") }
+                                                                    cell(3) { Text(b.notas) }
+                                                                    cell(1) {
+                                                                        IconButton(onClick = { confirmDeleteId = b.id }) {
+                                                                            Icon(
+                                                                                Icons.Outlined.Delete,
+                                                                                contentDescription = "Eliminar"
+                                                                            )
+                                                                        }
+                                                                    }
+                                                                }
+                                                                Divider(thickness = DIVIDER_THICKNESS)
+                                                            }
+                                                        }
+                                                    }
+
+                                                    if (confirmDeleteId != null) {
+                                                        AlertDialog(
+                                                            onDismissRequest = { confirmDeleteId = null },
+                                                            confirmButton = {
+                                                                Button(onClick = {
+                                                                    val id = confirmDeleteId ?: return@Button
+                                                                    scope.launch {
+                                                                        runCatching { lineaBaseDao.deleteById(id) }
+
+                                                                        val idUb = ubId
+                                                                        val idInsp = inspId
+                                                                        if (!idUb.isNullOrBlank() && !idInsp.isNullOrBlank()) {
+                                                                            val nowTs = java.time.LocalDateTime.now()
+                                                                                .format(
+                                                                                    java.time.format.DateTimeFormatter.ofPattern(
+                                                                                        "yyyy-MM-dd HH:mm:ss"
+                                                                                    )
+                                                                                )
+                                                                            val detRow = try {
+                                                                                inspeccionDetDao.getByUbicacion(idUb)
+                                                                                    .firstOrNull { it.idInspeccion == idInsp }
+                                                                            } catch (_: Exception) {
+                                                                                null
+                                                                            }
+                                                                            if (detRow != null) {
+                                                                                val revertedDet = detRow.copy(
+                                                                                    idStatusInspeccionDet = "568798D1-76BB-11D3-82BF-00104BC75DC2",
+                                                                                    idEstatusColorText = 1,
+                                                                                    modificadoPor = currentUserId,
+                                                                                    fechaMod = nowTs
+                                                                                )
+                                                                                runCatching { inspeccionDetDao.update(revertedDet) }
+                                                                            }
+                                                                        }
+
+                                                                        confirmDeleteId = null
+                                                                        baselineRefreshTick++
+                                                                    }
+                                                                }) { Text("Eliminar") }
+                                                            },
+                                                            dismissButton = {
+                                                                Button(onClick = { confirmDeleteId = null }) { Text("Cancelar") }
+                                                            },
+                                                            text = { Text("Eliminar baseline seleccionado?") }
+                                                        )
+                                                    }
                                                 }
-                                            }
-                                        }
 
-                                        if (confirmDeleteId != null) {
-                                            AlertDialog(
-                                                onDismissRequest = { confirmDeleteId = null },
-                                                confirmButton = {
-                                                    Button(onClick = {
-                                                        val id = confirmDeleteId ?: return@Button
-                                                        scope.launch {
-                                                            // Eliminar baseline
-                                                            runCatching { lineaBaseDao.deleteById(id) }
+                                                // dialogo de "Nuevo Baseline"
+                                                if (showNewBaseline) {
+                                                    var mta by remember { mutableStateOf("") }
+                                                    var tempMax by remember { mutableStateOf("") }
+                                                    var tempAmb by remember { mutableStateOf("") }
+                                                    var notas by remember { mutableStateOf("") }
+                                                    var imgIr by remember { mutableStateOf("") }
+                                                    var imgId by remember { mutableStateOf("") }
 
-                                                            // Revertir estatus de inspeccion_det asociado a PVERIF
-                                                            val idUb = ubId
-                                                            val idInsp = inspId
-                                                            if (!idUb.isNullOrBlank() && !idInsp.isNullOrBlank()) {
-                                                                val nowTs = java.time.LocalDateTime.now()
-                                                                    .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
-                                                                val detRow = try {
-                                                                    inspeccionDetDao.getByUbicacion(idUb)
-                                                                        .firstOrNull { it.idInspeccion == idInsp }
-                                                                } catch (_: Exception) { null }
-                                                                if (detRow != null) {
-                                                                    val revertedDet = detRow.copy(
-                                                                        idStatusInspeccionDet = "568798D1-76BB-11D3-82BF-00104BC75DC2",
-                                                                        idEstatusColorText = 1,
-                                                                        modificadoPor = currentUserId,
-                                                                        fechaMod = nowTs
+                                                    LaunchedEffect(baselineToEdit, showNewBaseline) {
+                                                        if (showNewBaseline && baselineToEdit != null) {
+                                                            mta = baselineToEdit!!.mtaC.toString()
+                                                            tempMax = baselineToEdit!!.tempC.toString()
+                                                            tempAmb = baselineToEdit!!.ambC.toString()
+                                                            notas = baselineToEdit!!.notas
+                                                            imgIr = baselineToEdit!!.imgR ?: ""
+                                                            imgId = baselineToEdit!!.imgD ?: ""
+                                                        }
+                                                        if (showNewBaseline && baselineToEdit == null) {
+                                                            mta = ""; tempMax = ""; tempAmb = ""; notas = ""; imgIr = ""; imgId = ""
+                                                        }
+                                                    }
+
+                                                    var irPreview by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
+                                                    var idPreview by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
+
+                                                    fun filter2Dec(input: String): String {
+                                                        if (input.isEmpty()) return ""
+                                                        val norm = input.replace(',', '.')
+                                                        val regex = Regex("^\\d*([.]\\d{0,2})?$")
+                                                        return if (regex.matches(norm)) norm else norm.let { s ->
+                                                            val idx = s.indexOf('.')
+                                                            if (idx >= 0 && s.length > idx + 3) s.substring(0, idx + 3) else s
+                                                        }
+                                                    }
+
+                                                    fun saveBitmapToImagenes(ctx: android.content.Context, bmp: android.graphics.Bitmap, prefix: String): String? {
+                                                        return try {
+                                                            val dir = java.io.File(ctx.filesDir, "Imagenes").apply { mkdirs() }
+                                                            val name = "$prefix-" + System.currentTimeMillis().toString() + ".jpg"
+                                                            val file = java.io.File(dir, name)
+                                                            java.io.FileOutputStream(file).use { out ->
+                                                                bmp.compress(android.graphics.Bitmap.CompressFormat.JPEG, 92, out)
+                                                            }
+                                                            name
+                                                        } catch (_: Exception) { null }
+                                                    }
+
+                                                    val irCameraLauncher = rememberLauncherForActivityResult(
+                                                        ActivityResultContracts.TakePicturePreview()
+                                                    ) { bmp ->
+                                                        if (bmp != null) {
+                                                            val name = saveBitmapToImagenes(ctx, bmp, "IR")
+                                                            if (name != null) {
+                                                                imgIr = name
+                                                                irPreview = bmp
+                                                            }
+                                                        }
+                                                    }
+                                                    val idCameraLauncher = rememberLauncherForActivityResult(
+                                                        ActivityResultContracts.TakePicturePreview()
+                                                    ) { bmp ->
+                                                        if (bmp != null) {
+                                                            val name = saveBitmapToImagenes(ctx, bmp, "ID")
+                                                            if (name != null) {
+                                                                imgId = name
+                                                                idPreview = bmp
+                                                            }
+                                                        }
+                                                    }
+
+                                                    val isBaselineValid by remember(mta, tempMax, tempAmb, imgIr, imgId) {
+                                                        mutableStateOf(
+                                                            mta.isNotBlank() &&
+                                                                    tempMax.isNotBlank() &&
+                                                                    tempAmb.isNotBlank() &&
+                                                                    imgIr.isNotBlank() &&
+                                                                    imgId.isNotBlank()
+                                                        )
+                                                    }
+
+                                                    AlertDialog(
+                                                        onDismissRequest = { },
+                                                        properties = DialogProperties(
+                                                            dismissOnClickOutside = false,
+                                                            dismissOnBackPress = false
+                                                        ),
+                                                        confirmButton = {
+                                                            Button(
+                                                                enabled = isBaselineValid && !isSavingBaseline,
+                                                                onClick = {
+                                                                    if (isSavingBaseline) return@Button
+                                                                    val idUb = ubId
+                                                                    val idInsp = inspId
+                                                                    if (idUb.isNullOrBlank() || idInsp.isNullOrBlank()) {
+                                                                        return@Button
+                                                                    }
+                                                                    scope.launch {
+                                                                        if (isSavingBaseline) return@launch
+                                                                        isSavingBaseline = true
+                                                                        try {
+                                                                            val nowTs = java.time.LocalDateTime.now()
+                                                                                .format(
+                                                                                    java.time.format.DateTimeFormatter.ofPattern(
+                                                                                        "yyyy-MM-dd HH:mm:ss"
+                                                                                    )
+                                                                                )
+                                                                            val detRow = try {
+                                                                                inspeccionDetDao.getByUbicacion(idUb)
+                                                                                    .firstOrNull { it.idInspeccion == idInsp }
+                                                                            } catch (_: Exception) {
+                                                                                null
+                                                                            }
+                                                                            val detId = detRow?.idInspeccionDet
+                                                                            val item = com.example.etic.data.local.entities.LineaBase(
+                                                                                idLineaBase = baselineToEdit?.id ?: java.util.UUID.randomUUID().toString()
+                                                                                    .uppercase(),
+                                                                                idSitio = currentInspection?.idSitio,
+                                                                                idUbicacion = idUb,
+                                                                                idInspeccion = idInsp,
+                                                                                idInspeccionDet = detId,
+                                                                                mta = mta.toDoubleOrNull(),
+                                                                                tempMax = tempMax.toDoubleOrNull(),
+                                                                                tempAmb = tempAmb.toDoubleOrNull(),
+                                                                                notas = notas.ifBlank { null },
+                                                                                archivoIr = imgIr.ifBlank { null },
+                                                                                archivoId = imgId.ifBlank { null },
+                                                                                ruta = null,
+                                                                                estatus = "Activo",
+                                                                                creadoPor = currentUserId,
+                                                                                fechaCreacion = nowTs,
+                                                                                modificadoPor = null,
+                                                                                fechaMod = null
+                                                                            )
+                                                                            val ok = if (baselineToEdit == null) {
+                                                                                val exists = runCatching {
+                                                                                    lineaBaseDao.existsActiveByUbicacionOrDet(idUb, detId)
+                                                                                }.getOrDefault(false)
+                                                                                if (exists) {
+                                                                                    isSavingBaseline = false
+                                                                                    return@launch
+                                                                                }
+                                                                                runCatching { lineaBaseDao.insert(item) }.isSuccess
+                                                                            } else {
+                                                                                runCatching { lineaBaseDao.update(item) }.isSuccess
+                                                                            }
+                                                                            if (ok) {
+                                                                                if (detRow != null) {
+                                                                                    val updatedDet = detRow.copy(
+                                                                                        idStatusInspeccionDet = "568798D2-76BB-11D3-82BF-00104BC75DC2",
+                                                                                        idEstatusColorText = 3,
+                                                                                        modificadoPor = currentUserId,
+                                                                                        fechaMod = nowTs
+                                                                                    )
+                                                                                    runCatching { inspeccionDetDao.update(updatedDet) }
+                                                                                }
+                                                                                delay(3000)
+                                                                                showNewBaseline = false
+                                                                                baselineToEdit = null
+                                                                                baselineRefreshTick++
+                                                                                isSavingBaseline = false
+                                                                            } else {
+                                                                                isSavingBaseline = false
+                                                                            }
+                                                                        } catch (_: Exception) {
+                                                                            isSavingBaseline = false
+                                                                        }
+                                                                    }
+                                                                }
+                                                            ) { Text("Guardar") }
+                                                        },
+                                                        dismissButton = {
+                                                            Button(
+                                                                onClick = {
+                                                                    if (!isSavingBaseline) showNewBaseline = false
+                                                                },
+                                                                enabled = !isSavingBaseline
+                                                            ) { Text("Cancelar") }
+                                                        },
+                                                        text = {
+                                                            Column(Modifier.fillMaxWidth()) {
+                                                                Text(
+                                                                    if (baselineToEdit == null) "Nuevo Baseline" else "Editar Baseline",
+                                                                    style = MaterialTheme.typography.titleMedium
+                                                                )
+                                                                Spacer(Modifier.height(8.dp))
+
+                                                                Row(
+                                                                    Modifier.fillMaxWidth(),
+                                                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                                                ) {
+                                                                    TextField(
+                                                                        value = mta,
+                                                                        onValueChange = { mta = filter2Dec(it) },
+                                                                        singleLine = true,
+                                                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                                                        modifier = Modifier.weight(1f)
                                                                     )
-                                                                    runCatching { inspeccionDetDao.update(revertedDet) }
+                                                                    TextField(
+                                                                        value = tempMax,
+                                                                        onValueChange = { tempMax = filter2Dec(it) },
+                                                                        singleLine = true,
+                                                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                                                        modifier = Modifier.weight(1f)
+                                                                    )
+                                                                    TextField(
+                                                                        value = tempAmb,
+                                                                        onValueChange = { tempAmb = filter2Dec(it) },
+                                                                        singleLine = true,
+                                                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                                                                        modifier = Modifier.weight(1f)
+                                                                    )
                                                                 }
-                                                            }
 
-                                                            confirmDeleteId = null
-                                                            baselineRefreshTick++
+                                                                Spacer(Modifier.height(8.dp))
+
+                                                                TextField(
+                                                                    value = notas,
+                                                                    onValueChange = { notas = it },
+                                                                    label = { Text("Notas") },
+                                                                    modifier = Modifier.fillMaxWidth()
+                                                                )
+
+                                                                Spacer(Modifier.height(8.dp))
+
+                                                                Row(
+                                                                    Modifier.fillMaxWidth(),
+                                                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                                                    verticalAlignment = Alignment.CenterVertically
+                                                                ) {
+                                                                    Column(Modifier.weight(1f)) {
+                                                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                                                            TextField(
+                                                                                value = imgIr,
+                                                                                onValueChange = { imgIr = it },
+                                                                                label = {
+                                                                                    Row(
+                                                                                        verticalAlignment = Alignment.CenterVertically
+                                                                                    ) {
+                                                                                        Text("IR (archivo)")
+                                                                                        Text(" *", color = MaterialTheme.colorScheme.error)
+                                                                                    }
+                                                                                },
+                                                                                modifier = Modifier.weight(1f)
+                                                                            )
+                                                                            Spacer(Modifier.width(8.dp))
+                                                                            IconButton(onClick = { irCameraLauncher.launch(null) }) {
+                                                                                Icon(Icons.Outlined.PhotoCamera, contentDescription = null)
+                                                                            }
+                                                                        }
+                                                                        Spacer(Modifier.height(4.dp))
+                                                                        val bmp = irPreview ?: run {
+                                                                            if (imgIr.isNotBlank()) {
+                                                                                val f = java.io.File(
+                                                                                    androidx.compose.ui.platform.LocalContext.current.filesDir,
+                                                                                    "Imagenes/$imgIr"
+                                                                                )
+                                                                                if (f.exists()) android.graphics.BitmapFactory.decodeFile(f.absolutePath) else null
+                                                                            } else null
+                                                                        }
+                                                                        if (bmp != null) {
+                                                                            androidx.compose.foundation.Image(
+                                                                                bmp.asImageBitmap(),
+                                                                                contentDescription = null,
+                                                                                modifier = Modifier
+                                                                                    .fillMaxWidth()
+                                                                                    .height(200.dp)
+                                                                            )
+                                                                        } else {
+                                                                            Box(
+                                                                                Modifier
+                                                                                    .fillMaxWidth()
+                                                                                    .height(200.dp),
+                                                                                contentAlignment = Alignment.Center
+                                                                            ) {
+                                                                                Icon(
+                                                                                    Icons.Outlined.Image,
+                                                                                    contentDescription = "Imagen no encontrada",
+                                                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                                                                )
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                    Column(Modifier.weight(1f)) {
+                                                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                                                            TextField(
+                                                                                value = imgId,
+                                                                                onValueChange = { imgId = it },
+                                                                                label = {
+                                                                                    Row(
+                                                                                        verticalAlignment = Alignment.CenterVertically
+                                                                                    ) {
+                                                                                        Text("ID (archivo)")
+                                                                                        Text(" *", color = MaterialTheme.colorScheme.error)
+                                                                                    }
+                                                                                },
+                                                                                modifier = Modifier.weight(1f)
+                                                                            )
+                                                                            Spacer(Modifier.width(8.dp))
+                                                                            IconButton(onClick = { idCameraLauncher.launch(null) }) {
+                                                                                Icon(Icons.Outlined.PhotoCamera, contentDescription = null)
+                                                                            }
+                                                                        }
+                                                                        Spacer(Modifier.height(4.dp))
+                                                                        val bmp2 = idPreview ?: run {
+                                                                            if (imgId.isNotBlank()) {
+                                                                                val f = java.io.File(
+                                                                                    androidx.compose.ui.platform.LocalContext.current.filesDir,
+                                                                                    "Imagenes/$imgId"
+                                                                                )
+                                                                                if (f.exists()) android.graphics.BitmapFactory.decodeFile(f.absolutePath) else null
+                                                                            } else null
+                                                                        }
+                                                                        if (bmp2 != null) {
+                                                                            androidx.compose.foundation.Image(
+                                                                                bmp2.asImageBitmap(),
+                                                                                contentDescription = null,
+                                                                                modifier = Modifier
+                                                                                    .fillMaxWidth()
+                                                                                    .height(200.dp)
+                                                                            )
+                                                                        } else {
+                                                                            Box(
+                                                                                Modifier
+                                                                                    .fillMaxWidth()
+                                                                                    .height(200.dp),
+                                                                                contentAlignment = Alignment.Center
+                                                                            ) {
+                                                                                Icon(
+                                                                                    Icons.Outlined.Image,
+                                                                                    contentDescription = "Imagen no encontrada",
+                                                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                                                                )
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                }
+
+                                                                Spacer(Modifier.height(8.dp))
+
+                                                                val rutaEquipo by produceState(initialValue = "", ubId) {
+                                                                    value = if (!ubId.isNullOrBlank()) {
+                                                                        runCatching {
+                                                                            ubicacionDao.getById(ubId!!)?.ruta ?: ""
+                                                                        }.getOrDefault("")
+                                                                    } else ""
+                                                                }
+                                                                TextField(
+                                                                    value = rutaEquipo,
+                                                                    onValueChange = {},
+                                                                    readOnly = true,
+                                                                    label = { Text("Ruta del equipo") },
+                                                                    modifier = Modifier.fillMaxWidth()
+                                                                )
+                                                            }
                                                         }
-                                                    }) { Text("Eliminar") }
-                                                },
-                                                dismissButton = {
-                                                    Button(onClick = { confirmDeleteId = null }) { Text("Cancelar") }
-                                                },
-                                                text = { Text("Eliminar baseline seleccionado?") }
-                                            )
+                                                    )
+                                                }
+                                            }
+
+
+                                            // -----------------------------------------------------------
+                                            // TAB 1 → HISTÓRICO
+                                            // -----------------------------------------------------------
+                                            1 -> {
+                                                val scroll = rememberScrollState()
+                                                Column(
+                                                    Modifier
+                                                        .fillMaxSize()
+                                                        .verticalScroll(scroll)
+                                                ) {
+                                                    Text("Contenido de Tab 3 (Historico)")
+                                                }
+                                            }
                                         }
                                     }
-
-                                    // dialogo de "Nuevo Baseline"
-                                    if (showNewBaseline) {
-                                        var mta by remember { mutableStateOf("") }
-                                        var tempMax by remember { mutableStateOf("") }
-                                        var tempAmb by remember { mutableStateOf("") }
-                                        var notas by remember { mutableStateOf("") }
-                                        var imgIr by remember { mutableStateOf("") }
-                                        var imgId by remember { mutableStateOf("") }
-
-                                        // Prefill si estas editando
-                                        LaunchedEffect(baselineToEdit, showNewBaseline) {
-                                            if (showNewBaseline && baselineToEdit != null) {
-                                                mta = baselineToEdit!!.mtaC.toString()
-                                                tempMax = baselineToEdit!!.tempC.toString()
-                                                tempAmb = baselineToEdit!!.ambC.toString()
-                                                notas = baselineToEdit!!.notas
-                                                imgIr = baselineToEdit!!.imgR ?: ""
-                                                imgId = baselineToEdit!!.imgD ?: ""
-                                            }
-                                            if (showNewBaseline && baselineToEdit == null) {
-                                                mta = ""; tempMax = ""; tempAmb = ""; notas = ""; imgIr = ""; imgId = ""
-                                            }
-                                        }
-
-                                        var irPreview by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
-                                        var idPreview by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
-
-                                        fun filter2Dec(input: String): String {
-                                            if (input.isEmpty()) return ""
-                                            val norm = input.replace(',', '.')
-                                            val regex = Regex("^\\d*([.]\\d{0,2})?$")
-                                            return if (regex.matches(norm)) norm else norm.let { s ->
-                                                val idx = s.indexOf('.')
-                                                if (idx >= 0 && s.length > idx + 3) s.substring(0, idx + 3) else s
-                                            }
-                                        }
-
-                                        fun saveBitmapToImagenes(ctx: android.content.Context, bmp: android.graphics.Bitmap, prefix: String): String? {
-                                            return try {
-                                                val dir = java.io.File(ctx.filesDir, "Imagenes").apply { mkdirs() }
-                                                val name = "$prefix-" + System.currentTimeMillis().toString() + ".jpg"
-                                                val file = java.io.File(dir, name)
-                                                java.io.FileOutputStream(file).use { out ->
-                                                    bmp.compress(android.graphics.Bitmap.CompressFormat.JPEG, 92, out)
-                                                }
-                                                name
-                                            } catch (_: Exception) { null }
-                                        }
-
-                                        val irCameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { bmp ->
-                                            if (bmp != null) {
-                                                val name = saveBitmapToImagenes(ctx, bmp, "IR")
-                                                if (name != null) {
-                                                    imgIr = name
-                                                    irPreview = bmp
-                                                }
-                                            }
-                                        }
-                                        val idCameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { bmp ->
-                                            if (bmp != null) {
-                                                val name = saveBitmapToImagenes(ctx, bmp, "ID")
-                                                if (name != null) {
-                                                    imgId = name
-                                                    idPreview = bmp
-                                                }
-                                            }
-                                        }
-
-                                        // ? Validacion SOLO para habilitar el boton
-                                        val isBaselineValid by remember(mta, tempMax, tempAmb, imgIr, imgId) {
-                                            mutableStateOf(
-                                                mta.isNotBlank() &&
-                                                tempMax.isNotBlank() &&
-                                                tempAmb.isNotBlank() &&
-                                                imgIr.isNotBlank() &&
-                                                imgId.isNotBlank()
-                                            )
-                                        }
-
-                                        AlertDialog(
-                                            onDismissRequest = { },
-                                            properties = DialogProperties(
-                                                dismissOnClickOutside = false,
-                                                dismissOnBackPress = false
-                                            ),
-                                            confirmButton = {
-                                                Button(
-                                                    enabled = isBaselineValid && !isSavingBaseline,
-                                                    onClick = {
-                                                        if (isSavingBaseline) return@Button
-                                                        val idUb = ubId
-                                                        val idInsp = inspId
-                                                        if (idUb.isNullOrBlank() || idInsp.isNullOrBlank()) {
-                                                            return@Button
-                                                        }
-                                                        scope.launch {
-                                                            if (isSavingBaseline) return@launch
-                                                            isSavingBaseline = true
-                                                            try {
-                                                                val nowTs = java.time.LocalDateTime.now()
-                                                                    .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
-                                                                val detRow = try {
-                                                                    inspeccionDetDao.getByUbicacion(idUb)
-                                                                        .firstOrNull { it.idInspeccion == idInsp }
-                                                                } catch (_: Exception) { null }
-                                                                val detId = detRow?.idInspeccionDet
-                                                                val item = com.example.etic.data.local.entities.LineaBase(
-                                                                    idLineaBase = baselineToEdit?.id ?: java.util.UUID.randomUUID().toString().uppercase(),
-                                                                    idSitio = currentInspection?.idSitio,
-                                                                    idUbicacion = idUb,
-                                                                    idInspeccion = idInsp,
-                                                                    idInspeccionDet = detId,
-                                                                    mta = mta.toDoubleOrNull(),
-                                                                    tempMax = tempMax.toDoubleOrNull(),
-                                                                    tempAmb = tempAmb.toDoubleOrNull(),
-                                                                    notas = notas.ifBlank { null },
-                                                                    archivoIr = imgIr.ifBlank { null },
-                                                                    archivoId = imgId.ifBlank { null },
-                                                                    ruta = null,
-                                                                    estatus = "Activo",
-                                                                    creadoPor = currentUserId,
-                                                                    fechaCreacion = nowTs,
-                                                                    modificadoPor = null,
-                                                                    fechaMod = null
-                                                                )
-                                                                val ok = if (baselineToEdit == null) {
-                                                                    val exists = runCatching { lineaBaseDao.existsActiveByUbicacionOrDet(idUb, detId) }.getOrDefault(false)
-                                                                    if (exists) {
-                                                                        isSavingBaseline = false
-                                                                        return@launch
-                                                                    }
-                                                                    runCatching { lineaBaseDao.insert(item) }.isSuccess
-                                                                } else {
-                                                                    runCatching { lineaBaseDao.update(item) }.isSuccess
-                                                                }
-                                                                if (ok) {
-                                                                    if (detRow != null) {
-                                                                        val updatedDet = detRow.copy(
-                                                                            idStatusInspeccionDet = "568798D2-76BB-11D3-82BF-00104BC75DC2",
-                                                                            idEstatusColorText = 3,
-                                                                            modificadoPor = currentUserId,
-                                                                            fechaMod = nowTs
-                                                                        )
-                                                                        runCatching { inspeccionDetDao.update(updatedDet) }
-                                                                    }
-                                                                    delay(3000)
-                                                                    showNewBaseline = false
-                                                                    baselineToEdit = null
-                                                                    baselineRefreshTick++
-                                                                    isSavingBaseline = false
-                                                                } else {
-                                                                    isSavingBaseline = false
-                                                                }
-                                                            } catch (_: Exception) {
-                                                                isSavingBaseline = false
-                                                            }
-                                                        }
-                                                    }
-                                                ) { Text("Guardar") }
-                                            },
-                                            dismissButton = {
-                                                Button(
-                                                    onClick = {
-                                                        if (!isSavingBaseline) showNewBaseline = false
-                                                    },
-                                                    enabled = !isSavingBaseline
-                                                ) { Text("Cancelar") }
-                                            },
-                                            text = {
-                                                Column(Modifier.fillMaxWidth()) {
-                                                    Text(
-                                                        if (baselineToEdit == null) "Nuevo Baseline" else "Editar Baseline",
-                                                        style = MaterialTheme.typography.titleMedium
-                                                    )
-                                                    Spacer(Modifier.height(8.dp))
-
-                                                    // ----- Campos obligatorios (con asterisco rojo) -----
-                                                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                                        TextField(
-                                                            value = mta,
-                                                            onValueChange = { mta = filter2Dec(it) },
-                                                            label = {
-                                                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                                                }
-                                                            },
-                                                            singleLine = true,
-                                                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                                                            modifier = Modifier.weight(1f)
-                                                        )
-                                                        TextField(
-                                                            value = tempMax,
-                                                            onValueChange = { tempMax = filter2Dec(it) },
-                                                            label = {
-                                                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                                                }
-                                                            },
-                                                            singleLine = true,
-                                                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                                                            modifier = Modifier.weight(1f)
-                                                        )
-                                                        TextField(
-                                                            value = tempAmb,
-                                                            onValueChange = { tempAmb = filter2Dec(it) },
-                                                            label = {
-                                                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                                                }
-                                                            },
-                                                            singleLine = true,
-                                                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                                                            modifier = Modifier.weight(1f)
-                                                        )
-                                                    }
-
-                                                    Spacer(Modifier.height(8.dp))
-
-                                                    // Opcional
-                                                    TextField(
-                                                        value = notas,
-                                                        onValueChange = { notas = it },
-                                                        label = { Text("Notas") },
-                                                        modifier = Modifier.fillMaxWidth()
-                                                    )
-
-                                                    Spacer(Modifier.height(8.dp))
-
-                                                    // IR e ID obligatorios (con boton de camara y previsualizacion)
-                                                    Row(
-                                                        Modifier.fillMaxWidth(),
-                                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                                        verticalAlignment = Alignment.CenterVertically
-                                                    ) {
-                                                        Column(Modifier.weight(1f)) {
-                                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                                TextField(
-                                                                    value = imgIr,
-                                                                    onValueChange = { imgIr = it },
-                                                                    label = {
-                                                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                                                            Text("IR (archivo)"); Text(" *", color = MaterialTheme.colorScheme.error)
-                                                                        }
-                                                                    },
-                                                                    modifier = Modifier.weight(1f)
-                                                                )
-                                                                Spacer(Modifier.width(8.dp))
-                                                                IconButton(onClick = { irCameraLauncher.launch(null) }) {
-                                                                    Icon(Icons.Outlined.PhotoCamera, contentDescription = null)
-                                                                }
-                                                            }
-                                                            Spacer(Modifier.height(4.dp))
-                                                            val bmp = irPreview ?: run {
-                                                                if (imgIr.isNotBlank()) {
-                                                                    val f = java.io.File(androidx.compose.ui.platform.LocalContext.current.filesDir, "Imagenes/$imgIr")
-                                                                    if (f.exists()) android.graphics.BitmapFactory.decodeFile(f.absolutePath) else null
-                                                                } else null
-                                                            }
-                                                            if (bmp != null) {
-                                                                androidx.compose.foundation.Image(
-                                                                    bmp.asImageBitmap(),
-                                                                    contentDescription = null,
-                                                                    modifier = Modifier.fillMaxWidth().height(200.dp)
-                                                                )
-                                                            } else {
-                                                                Box(Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
-                                                                    Icon(Icons.Outlined.Image, contentDescription = "Imagen no encontrada", tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                                                                }
-                                                            }
-                                                        }
-                                                        Column(Modifier.weight(1f)) {
-                                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                                TextField(
-                                                                    value = imgId,
-                                                                    onValueChange = { imgId = it },
-                                                                    label = {
-                                                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                                                            Text("ID (archivo)"); Text(" *", color = MaterialTheme.colorScheme.error)
-                                                                        }
-                                                                    },
-                                                                    modifier = Modifier.weight(1f)
-                                                                )
-                                                                Spacer(Modifier.width(8.dp))
-                                                                IconButton(onClick = { idCameraLauncher.launch(null) }) {
-                                                                    Icon(Icons.Outlined.PhotoCamera, contentDescription = null)
-                                                                }
-                                                            }
-                                                            Spacer(Modifier.height(4.dp))
-                                                            val bmp2 = idPreview ?: run {
-                                                                if (imgId.isNotBlank()) {
-                                                                    val f = java.io.File(androidx.compose.ui.platform.LocalContext.current.filesDir, "Imagenes/$imgId")
-                                                                    if (f.exists()) android.graphics.BitmapFactory.decodeFile(f.absolutePath) else null
-                                                                } else null
-                                                            }
-                                                            if (bmp2 != null) {
-                                                                androidx.compose.foundation.Image(
-                                                                    bmp2.asImageBitmap(),
-                                                                    contentDescription = null,
-                                                                    modifier = Modifier.fillMaxWidth().height(200.dp)
-                                                                )
-                                                            } else {
-                                                                Box(Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
-                                                                    Icon(Icons.Outlined.Image, contentDescription = "Imagen no encontrada", tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                                                                }
-                                                            }
-                                                        }
-                                                    }
-
-                                                    Spacer(Modifier.height(8.dp))
-
-                                                    // Ruta informativa (solo lectura)
-                                                    val rutaEquipo by produceState(initialValue = "", ubId) {
-                                                        value = if (!ubId.isNullOrBlank()) {
-                                                            runCatching { ubicacionDao.getById(ubId!!)?.ruta ?: "" }.getOrDefault("")
-                                                        } else ""
-                                                    }
-                                                    TextField(
-                                                        value = rutaEquipo,
-                                                        onValueChange = {},
-                                                        readOnly = true,
-                                                        label = { Text("Ruta del equipo") },
-                                                        modifier = Modifier.fillMaxWidth()
-                                                    )
-                                                }
-                                            }
-                                        )
-                                    }
-
                                 }
 
-                                // ====== TAB 3 ======
-                                2 -> {
-                                    val scroll = rememberScrollState()
-                                    Column(
-                                        Modifier.fillMaxSize().verticalScroll(scroll)
-                                    ) {
-                                        Text("Contenido de Tab 3 (Historico)")
-                                    }
-                                }
-                            }
 
-                            Spacer(Modifier.height(12.dp))
-                            Row(
-                                Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.End
-                            ) {
-                                Button(
-                                    enabled = !isSavingEditUb,
-                                    onClick = {
-                                        if (!isSavingEditUb) {
+                                // ===============================================================
+                                // BOTÓN CANCELAR EN EL PIE DEL DIÁLOGO
+                                // ===============================================================
+                                Spacer(Modifier.height(12.dp))
+                                Row(
+                                    Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.End
+                                ) {
+                                    Button(
+                                        enabled = !isSavingEditUb,
+                                        onClick = {
                                             showEditUbDialog = false
                                             locationForm.error = null
                                         }
+                                    ) {
+                                        Text("Cancelar")
                                     }
-                                ) {
-                                    Text("Cancelar")
                                 }
                             }
                         }
                     }
                 }
             }
-            // -------------------------------------------------------------------------------
+            // =====================================================================
+
 
             Row(Modifier.weight(hFrac)) {
 
