@@ -59,6 +59,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.example.etic.R
 import com.example.etic.core.current.LocalCurrentInspection
 import com.example.etic.core.current.ProvideCurrentInspection
@@ -363,24 +364,24 @@ fun MainScreen(
     }
 
     if (showInitImagesDialog) {
-        Dialog(onDismissRequest = { showInitImagesDialog = false }) {
+        Dialog(
+            onDismissRequest = { /* bloqueo: solo botones cierran */ },
+            properties = DialogProperties(
+                dismissOnClickOutside = false,
+                dismissOnBackPress = false
+            )
+        ) {
             Card(
-                colors = CardDefaults.cardColors(
-                    containerColor = Color.White,
-                    contentColor = Color.Black
-                )
+                colors = CardDefaults.cardColors()
             ) {
                 Column(
                     modifier = Modifier
-                        .widthIn(max = 360.dp)
+                        .widthIn(max = 385.dp)
                         .padding(24.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(text = "Inicializar imágenes")
-                    Text(
-                        text = "Pronto podrás ejecutar la inicialización desde esta ventana.",
-                        color = Color.DarkGray
-                    )
+                    
                     ImageInputButtonGroup(
                         label = "Archivo de imagen",
                         value = initImagePath,
