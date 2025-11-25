@@ -453,7 +453,7 @@ fun MainScreen(
                         ) {
                             Column(
                                 modifier = Modifier
-                                    .widthIn(max = 385.dp)
+                                    .widthIn(max = 470.dp)
                                     .padding(24.dp),
                                 verticalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
