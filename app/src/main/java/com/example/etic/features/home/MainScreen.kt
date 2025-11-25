@@ -1,6 +1,9 @@
 package com.example.etic.features.home
 
+import android.graphics.Bitmap
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -74,6 +77,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.example.etic.ui.theme.FontSizeOption
+import java.io.File
+import java.io.FileOutputStream
 import kotlin.math.max
 
 private enum class HomeSection { Inspection, Reports }
@@ -268,6 +273,19 @@ fun MainScreen(
         ProvideCurrentUser {
             ProvideCurrentInspection {
                 val currentInspection = LocalCurrentInspection.current
+                fun saveCameraBitmap(prefix: String, bmp: Bitmap): String? {
+                    return try {
+                        val dir = File(appContext.filesDir, "Imagenes").apply { mkdirs() }
+                        val name = "${prefix}_${System.currentTimeMillis()}.jpg"
+                        val file = File(dir, name)
+                        FileOutputStream(file).use { out ->
+                            bmp.compress(Bitmap.CompressFormat.JPEG, 92, out)
+                        }
+                        name
+                    } catch (_: Exception) {
+                        null
+                    }
+                }
                 fun loadInitialImageFromDb(isThermal: Boolean, onResult: (String) -> Unit) {
                     val inspId = currentInspection?.idInspeccion
                     if (inspId.isNullOrBlank()) {
@@ -293,6 +311,36 @@ fun MainScreen(
                                 Toast.LENGTH_SHORT
                             ).show()
                         }
+                    }
+                }
+                val thermalCameraLauncher = rememberLauncherForActivityResult(
+                    ActivityResultContracts.TakePicturePreview()
+                ) { bmp ->
+                    if (bmp != null) {
+                        val name = saveCameraBitmap("IR", bmp)
+                        if (name != null) {
+                            initThermalPath = ""
+                            initThermalPath = name
+                        } else {
+                            Toast.makeText(appContext, "No se pudo guardar la imagen térmica.", Toast.LENGTH_SHORT).show()
+                        }
+                    } else {
+                        Toast.makeText(appContext, "La cámara no devolvió imagen.", Toast.LENGTH_SHORT).show()
+                    }
+                }
+                val digitalCameraLauncher = rememberLauncherForActivityResult(
+                    ActivityResultContracts.TakePicturePreview()
+                ) { bmp ->
+                    if (bmp != null) {
+                        val name = saveCameraBitmap("DIG", bmp)
+                        if (name != null) {
+                            initDigitalPath = ""
+                            initDigitalPath = name
+                        } else {
+                            Toast.makeText(appContext, "No se pudo guardar la imagen digital.", Toast.LENGTH_SHORT).show()
+                        }
+                    } else {
+                        Toast.makeText(appContext, "La cámara no devolvió imagen.", Toast.LENGTH_SHORT).show()
                     }
                 }
 
@@ -422,7 +470,7 @@ fun MainScreen(
                         onMoveDown = { initThermalPath = adjustImageSequence(initThermalPath, -1) },
                         onDotsClick = { loadInitialImageFromDb(true) { initThermalPath = it } },
                         onFolderClick = { /* TODO: IR explorador */ },
-                        onCameraClick = { /* TODO: IR cámara */ }
+                        onCameraClick = { thermalCameraLauncher.launch(null) }
                     )
                                 Text(text = "Imagen digital", style = MaterialTheme.typography.titleSmall)
                     ImageInputButtonGroup(
@@ -435,7 +483,7 @@ fun MainScreen(
                         onMoveDown = { initDigitalPath = adjustImageSequence(initDigitalPath, -1) },
                         onDotsClick = { loadInitialImageFromDb(false) { initDigitalPath = it } },
                         onFolderClick = { /* TODO: ID explorador */ },
-                        onCameraClick = { /* TODO: ID cámara */ }
+                        onCameraClick = { digitalCameraLauncher.launch(null) }
                     )
                                 Button(
                                     onClick = { showInitImagesDialog = false },
