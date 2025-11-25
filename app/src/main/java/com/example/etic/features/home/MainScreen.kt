@@ -605,7 +605,7 @@ fun LoadingOverlay(message: String) {
 
 private data class ImageNameParts(
     val prefix: String,
-    val number: Int,
+    val number: Long,
     val digits: Int,
     val suffix: String
 )
@@ -619,7 +619,7 @@ private fun parseImageName(raw: String): ImageNameParts {
         val prefix = match.groupValues[1]
         val digitsStr = match.groupValues[2]
         val suffix = match.groupValues[3]
-        val number = digitsStr.toIntOrNull() ?: 0
+        val number = digitsStr.toLongOrNull() ?: 0L
         ImageNameParts(prefix, number, digitsStr.length, suffix)
     } else {
         ImageNameParts(trimmed, 0, 0, "")
@@ -643,7 +643,8 @@ private fun composeImageName(parts: ImageNameParts): String {
 private fun adjustImageSequence(current: String, delta: Int): String {
     if (delta == 0) return current
     val parts = parseImageName(current)
-    val newNumber = (parts.number + delta).coerceAtLeast(0)
+    if (parts.digits == 0 && parts.number == 0L) return current
+    val newNumber = (parts.number + delta.toLong()).coerceAtLeast(0)
     val fallbackDigits = max(
         1,
         max(parts.number.toString().length, newNumber.toString().length)
