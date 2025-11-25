@@ -101,6 +101,7 @@ import com.example.etic.features.inspection.tree.descendantIds
 import com.example.etic.features.inspection.tree.findById
 import com.example.etic.features.inspection.tree.findPathByBarcode
 import com.example.etic.features.inspection.tree.titlePathForId
+import com.example.etic.features.inspection.ui.problem.VisualProblemDialog
 import androidx.compose.ui.window.Dialog
 
 // Centralizamos algunos "magic numbers" para facilitar ajuste futuro
@@ -260,7 +261,11 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             var showNoSelectionDialog by rememberSaveable { mutableStateOf(false) }
             var showProblemTypeDialog by rememberSaveable { mutableStateOf(false) }
             var showBaselineRestrictionDialog by rememberSaveable { mutableStateOf(false) }
+            var showVisualInspectionWarning by rememberSaveable { mutableStateOf(false) }
             var showVisualInspectionDialog by rememberSaveable { mutableStateOf(false) }
+            var pendingProblemEquipmentName by rememberSaveable { mutableStateOf<String?>(null) }
+            var pendingProblemType by rememberSaveable { mutableStateOf("Visual") }
+            var pendingProblemNumber by rememberSaveable { mutableStateOf("Pendiente") }
             var selectedProblemType by rememberSaveable { mutableStateOf("Eléctrico") }
             var showInvalidParentDialog by rememberSaveable { mutableStateOf(false) }
             var showNewUbDialog by remember { mutableStateOf(false) }
@@ -485,9 +490,9 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                 )
             }
 
-            if (showVisualInspectionDialog) {
+            if (showVisualInspectionWarning) {
                 AlertDialog(
-                    onDismissRequest = { showVisualInspectionDialog = false },
+                    onDismissRequest = { showVisualInspectionWarning = false },
                     title = { Text("Inspección visual") },
                     text = {
                         Text(
@@ -499,12 +504,27 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     },
                     confirmButton = {
                         Button(onClick = {
-                            showVisualInspectionDialog = false
-                            Toast.makeText(ctx, "Inspección visual en desarrollo.", Toast.LENGTH_SHORT).show()
+                            showVisualInspectionWarning = false
+                            showVisualInspectionDialog = true
                         }) { Text("Continuar") }
                     },
                     dismissButton = {
-                        TextButton(onClick = { showVisualInspectionDialog = false }) { Text("Cancelar") }
+                        TextButton(onClick = { showVisualInspectionWarning = false }) { Text("Cancelar") }
+                    }
+                )
+            }
+
+            if (showVisualInspectionDialog && pendingProblemEquipmentName != null) {
+                val inspectionNumber = currentInspection?.noInspeccion?.toString() ?: "-"
+                VisualProblemDialog(
+                    inspectionNumber = inspectionNumber,
+                    problemNumber = pendingProblemNumber,
+                    problemType = pendingProblemType,
+                    equipmentName = pendingProblemEquipmentName ?: "-",
+                    onDismiss = { showVisualInspectionDialog = false },
+                    onContinue = {
+                        showVisualInspectionDialog = false
+                        Toast.makeText(ctx, "Formulario de problema visual en desarrollo.", Toast.LENGTH_SHORT).show()
                     }
                 )
             }
@@ -2051,9 +2071,13 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                     showBaselineRestrictionDialog = true
                                 } else if (node.verified) {
                                     selectedProblemType = "Eléctrico"
+                                    pendingProblemEquipmentName = node.title
+                                    pendingProblemType = selectedProblemType
                                     showProblemTypeDialog = true
                                 } else {
-                                    showVisualInspectionDialog = true
+                                    pendingProblemEquipmentName = node.title
+                                    pendingProblemType = "Visual"
+                                    showVisualInspectionWarning = true
                                 }
                             }
                         }
