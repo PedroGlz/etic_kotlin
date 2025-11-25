@@ -17,6 +17,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import android.widget.Toast
+import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.outlined.Delete
@@ -1959,7 +1961,15 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     },
                     baselineRefreshTick = baselineRefreshTick,
                     onBaselineChanged = { baselineRefreshTick++ },
-                    modifier = Modifier.fillMaxSize()  // asegura ocupar todo el espacio
+                    modifier = Modifier.fillMaxSize(),  // asegura ocupar todo el espacio
+                    onNewProblem = {
+                        val currentSelection = selectedId
+                        if (currentSelection.isNullOrBlank() || currentSelection.startsWith("root:")) {
+                            showNoSelectionDialog = true
+                        } else {
+                            Toast.makeText(ctx, "Funcionalidad de nuevo problema en desarrollo.", Toast.LENGTH_SHORT).show()
+                        }
+                    }
                 )
             }
         }
@@ -2208,12 +2218,33 @@ private fun ListTabs(
     onDeleteBaseline: (Baseline) -> Unit,
     baselineRefreshTick: Int,
     onBaselineChanged: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onNewProblem: (() -> Unit)? = null
 ) {
     // Nota: mostramos versiones ligadas a BD; no usamos listas calculadas por nodo aqu?
     var tab by rememberSaveable { mutableStateOf(0) }
 
     Column(Modifier.fillMaxSize()) {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .padding(bottom = 8.dp),
+            horizontalArrangement = Arrangement.End,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Button(
+                onClick = { onNewProblem?.invoke() },
+                enabled = onNewProblem != null,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.error,
+                    contentColor = MaterialTheme.colorScheme.onError
+                )
+            ) {
+                Icon(Icons.Filled.Build, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text("Nuevo Problema")
+            }
+        }
         TabRow(selectedTabIndex = tab) {
             Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text(stringResource(com.example.etic.R.string.tab_problemas)) })
             Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text(stringResource(com.example.etic.R.string.tab_baseline)) })
