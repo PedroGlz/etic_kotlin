@@ -66,6 +66,7 @@ import com.example.etic.core.current.LocalCurrentInspection
 import com.example.etic.core.current.ProvideCurrentInspection
 import com.example.etic.core.current.ProvideCurrentUser
 import com.example.etic.core.export.exportRoomDbToDownloads
+import com.example.etic.data.local.DbProvider
 import com.example.etic.features.components.ImageInputButtonGroup
 import com.example.etic.features.inspection.ui.home.InspectionScreen
 import kotlinx.coroutines.Dispatchers
@@ -88,6 +89,7 @@ fun MainScreen(
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val appContext = LocalContext.current
+    val inspeccionDao = remember { DbProvider.get(appContext).inspeccionDao() }
     var showLogoutDialog by rememberSaveable { mutableStateOf(false) }
     var section by rememberSaveable { mutableStateOf(HomeSection.Inspection) }
     var isLoading by rememberSaveable { mutableStateOf(true) }
@@ -264,6 +266,31 @@ fun MainScreen(
     ) {
         ProvideCurrentUser {
             ProvideCurrentInspection {
+                val currentInspection = LocalCurrentInspection.current
+                fun loadInitialImageFromDb(isThermal: Boolean, onResult: (String) -> Unit) {
+                    val inspId = currentInspection?.idInspeccion
+                    if (inspId.isNullOrBlank()) {
+                        Toast.makeText(appContext, "No hay inspección activa.", Toast.LENGTH_SHORT).show()
+                        return
+                    }
+                    scope.launch {
+                        val value = withContext(Dispatchers.IO) {
+                            runCatching { inspeccionDao.getById(inspId) }
+                                .getOrNull()
+                                ?.let { if (isThermal) it.irImagenInicial else it.digImagenInicial }
+                        }
+                        if (!value.isNullOrBlank()) {
+                            onResult(value)
+                        } else {
+                            val label = if (isThermal) "IR" else "digital"
+                            Toast.makeText(
+                                appContext,
+                                "No se encontró imagen $label inicial.",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    }
+                }
 
                 // BLUR para TODO el Scaffold (header + contenido)
                 val blurModifier =
@@ -340,85 +367,85 @@ fun MainScreen(
                     }
                 }
 
-            } // ProvideCurrentInspection
-        } // ProvideCurrentUser
-    }
-
-    if (showLogoutDialog) {
-        AlertDialog(
-            onDismissRequest = { showLogoutDialog = false },
-            title = { Text("Cerrar sesión") },
-            text = { Text("¿Seguro que deseas cerrar sesión?") },
-            dismissButton = {
-                TextButton(onClick = { showLogoutDialog = false }) {
-                    Text("Cancelar")
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = {
-                    showLogoutDialog = false
-                    onLogout()
-                }) {
-                    Text("Cerrar sesión")
-                }
-            }
-        )
-    }
-
-    if (showInitImagesDialog) {
-        Dialog(
-            onDismissRequest = { /* bloqueo: solo botones cierran */ },
-            properties = DialogProperties(
-                dismissOnClickOutside = false,
-                dismissOnBackPress = false
-            )
-        ) {
-            Card(
-                colors = CardDefaults.cardColors()
-            ) {
-                Column(
-                    modifier = Modifier
-                        .widthIn(max = 385.dp)
-                        .padding(24.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Text(text = "Inicializar imágenes")
-                    
-                    Text(text = "Imagen térmica", style = MaterialTheme.typography.titleSmall)
-                    ImageInputButtonGroup(
-                        label = "Archivo IR",
-                        value = initThermalPath,
-                        onValueChange = { initThermalPath = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        isRequired = true,
-                        onMoveUp = { /* TODO: IR hacia arriba */ },
-                        onMoveDown = { /* TODO: IR hacia abajo */ },
-                        onDotsClick = { /* TODO: IR acciones */ },
-                        onFolderClick = { /* TODO: IR explorador */ },
-                        onCameraClick = { /* TODO: IR cámara */ }
+                if (showLogoutDialog) {
+                    AlertDialog(
+                        onDismissRequest = { showLogoutDialog = false },
+                        title = { Text("Cerrar sesión") },
+                        text = { Text("¿Seguro que deseas cerrar sesión?") },
+                        dismissButton = {
+                            TextButton(onClick = { showLogoutDialog = false }) {
+                                Text("Cancelar")
+                            }
+                        },
+                        confirmButton = {
+                            TextButton(onClick = {
+                                showLogoutDialog = false
+                                onLogout()
+                            }) {
+                                Text("Cerrar sesión")
+                            }
+                        }
                     )
-                    Text(text = "Imagen digital", style = MaterialTheme.typography.titleSmall)
-                    ImageInputButtonGroup(
-                        label = "Archivo ID",
-                        value = initDigitalPath,
-                        onValueChange = { initDigitalPath = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        isRequired = true,
-                        onMoveUp = { /* TODO: ID hacia arriba */ },
-                        onMoveDown = { /* TODO: ID hacia abajo */ },
-                        onDotsClick = { /* TODO: ID acciones */ },
-                        onFolderClick = { /* TODO: ID explorador */ },
-                        onCameraClick = { /* TODO: ID cámara */ }
-                    )
-                    Button(
-                        onClick = { showInitImagesDialog = false },
-                        modifier = Modifier.align(Alignment.End)
+                }
+
+                if (showInitImagesDialog) {
+                    Dialog(
+                        onDismissRequest = { /* bloqueo: solo botones cierran */ },
+                        properties = DialogProperties(
+                            dismissOnClickOutside = false,
+                            dismissOnBackPress = false
+                        )
                     ) {
-                        Text("Cerrar")
+                        Card(
+                            colors = CardDefaults.cardColors()
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .widthIn(max = 385.dp)
+                                    .padding(24.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Text(text = "Inicializar imágenes")
+
+                                Text(text = "Imagen térmica", style = MaterialTheme.typography.titleSmall)
+                                ImageInputButtonGroup(
+                                    label = "Archivo IR",
+                                    value = initThermalPath,
+                                    onValueChange = { initThermalPath = it },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    isRequired = true,
+                                    onMoveUp = { /* TODO: IR hacia arriba */ },
+                                    onMoveDown = { /* TODO: IR hacia abajo */ },
+                                    onDotsClick = { loadInitialImageFromDb(true) { initThermalPath = it } },
+                                    onFolderClick = { /* TODO: IR explorador */ },
+                                    onCameraClick = { /* TODO: IR cámara */ }
+                                )
+                                Text(text = "Imagen digital", style = MaterialTheme.typography.titleSmall)
+                                ImageInputButtonGroup(
+                                    label = "Archivo ID",
+                                    value = initDigitalPath,
+                                    onValueChange = { initDigitalPath = it },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    isRequired = true,
+                                    onMoveUp = { /* TODO: ID hacia arriba */ },
+                                    onMoveDown = { /* TODO: ID hacia abajo */ },
+                                    onDotsClick = { loadInitialImageFromDb(false) { initDigitalPath = it } },
+                                    onFolderClick = { /* TODO: ID explorador */ },
+                                    onCameraClick = { /* TODO: ID cámara */ }
+                                )
+                                Button(
+                                    onClick = { showInitImagesDialog = false },
+                                    modifier = Modifier.align(Alignment.End)
+                                ) {
+                                    Text("Cerrar")
+                                }
+                            }
+                        }
                     }
                 }
-            }
-        }
+
+            } // ProvideCurrentInspection
+        } // ProvideCurrentUser
     }
 }
 
