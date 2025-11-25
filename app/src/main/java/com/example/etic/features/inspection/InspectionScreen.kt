@@ -43,11 +43,13 @@ import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -256,6 +258,9 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             }
             var searchMessage by remember { mutableStateOf<String?>(null) }
             var showNoSelectionDialog by rememberSaveable { mutableStateOf(false) }
+            var showProblemTypeDialog by rememberSaveable { mutableStateOf(false) }
+            var showVisualInspectionDialog by rememberSaveable { mutableStateOf(false) }
+            var selectedProblemType by rememberSaveable { mutableStateOf("Eléctrico") }
             var showInvalidParentDialog by rememberSaveable { mutableStateOf(false) }
             var showNewUbDialog by remember { mutableStateOf(false) }
             var isSavingNewUb by remember { mutableStateOf(false) }
@@ -433,6 +438,62 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     },
                     title = { Text("Informacion") },
                     text = { Text("Debes seleccionar una ubicacion para agregar un nuevo elemento.") }
+                )
+            }
+
+            if (showProblemTypeDialog) {
+                AlertDialog(
+                    onDismissRequest = { showProblemTypeDialog = false },
+                    confirmButton = {
+                        Button(onClick = {
+                            showProblemTypeDialog = false
+                            Toast.makeText(ctx, "Tipo seleccionado: $selectedProblemType", Toast.LENGTH_SHORT).show()
+                        }) { Text("Aceptar") }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showProblemTypeDialog = false }) { Text("Cancelar") }
+                    },
+                    title = { Text("Tipo de problema") },
+                    text = {
+                        Column {
+                            Text("Selecciona un tipo:")
+                            val options = listOf("Eléctrico", "Visual", "Mecánico")
+                            options.forEach { opt ->
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    RadioButton(
+                                        selected = selectedProblemType == opt,
+                                        onClick = { selectedProblemType = opt }
+                                    )
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(opt)
+                                }
+                            }
+                        }
+                    }
+                )
+            }
+
+            if (showVisualInspectionDialog) {
+                AlertDialog(
+                    onDismissRequest = { showVisualInspectionDialog = false },
+                    title = { Text("Inspección visual") },
+                    text = {
+                        Text(
+                            "Está a punto de crear un registro de inspección visual.\n\n" +
+                                    "Actualmente tiene una ubicación seleccionada (en lugar de equipo). " +
+                                    "Solo puede crear registros de inspección visual para ubicaciones.\n\n" +
+                                    "¿Le gustaría agregar un registro de inspección visual?"
+                        )
+                    },
+                    confirmButton = {
+                        Button(onClick = {
+                            showVisualInspectionDialog = false
+                            Toast.makeText(ctx, "Inspección visual en desarrollo.", Toast.LENGTH_SHORT).show()
+                        }) { Text("Continuar") }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showVisualInspectionDialog = false }) { Text("Cancelar") }
+                    }
                 )
             }
 
@@ -1964,10 +2025,14 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     modifier = Modifier.fillMaxSize(),  // asegura ocupar todo el espacio
                     onNewProblem = {
                         val currentSelection = selectedId
-                        if (currentSelection.isNullOrBlank() || currentSelection.startsWith("root:")) {
+                        val node = currentSelection?.let { findById(it, nodes) }
+                        if (currentSelection.isNullOrBlank() || currentSelection.startsWith("root:") || node == null) {
                             showNoSelectionDialog = true
+                        } else if (node.verified) {
+                            selectedProblemType = "Eléctrico"
+                            showProblemTypeDialog = true
                         } else {
-                            Toast.makeText(ctx, "Funcionalidad de nuevo problema en desarrollo.", Toast.LENGTH_SHORT).show()
+                            showVisualInspectionDialog = true
                         }
                     }
                 )
