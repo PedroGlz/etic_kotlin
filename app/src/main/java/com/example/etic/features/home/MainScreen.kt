@@ -103,6 +103,7 @@ fun MainScreen(
     var showInitImagesDialog by rememberSaveable { mutableStateOf(false) }
     var initThermalPath by rememberSaveable { mutableStateOf("") }
     var initDigitalPath by rememberSaveable { mutableStateOf("") }
+    var isSavingInitImages by rememberSaveable { mutableStateOf(false) }
 
     val drawerItemColors = NavigationDrawerItemDefaults.colors(
         selectedContainerColor = Color(0xFF202327),
@@ -478,23 +479,69 @@ fun MainScreen(
                         onCameraClick = { thermalCameraLauncher.launch(null) }
                     )
                                 Text(text = "Imagen digital", style = MaterialTheme.typography.titleSmall)
-                    ImageInputButtonGroup(
-                        label = "Archivo ID",
-                        value = initDigitalPath,
-                        onValueChange = { initDigitalPath = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        isRequired = true,
-                        onMoveUp = { initDigitalPath = adjustImageSequence(initDigitalPath, +1) },
-                        onMoveDown = { initDigitalPath = adjustImageSequence(initDigitalPath, -1) },
-                        onDotsClick = { loadInitialImageFromDb(false) { initDigitalPath = it } },
-                        onFolderClick = { /* TODO: ID explorador */ },
-                        onCameraClick = { digitalCameraLauncher.launch(null) }
-                    )
-                                Button(
-                                    onClick = { showInitImagesDialog = false },
-                                    modifier = Modifier.align(Alignment.End)
+                                ImageInputButtonGroup(
+                                    label = "Archivo ID",
+                                    value = initDigitalPath,
+                                    onValueChange = { initDigitalPath = it },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    isRequired = true,
+                                    onMoveUp = { initDigitalPath = adjustImageSequence(initDigitalPath, +1) },
+                                    onMoveDown = { initDigitalPath = adjustImageSequence(initDigitalPath, -1) },
+                                    onDotsClick = { loadInitialImageFromDb(false) { initDigitalPath = it } },
+                                    onFolderClick = { /* TODO: ID explorador */ },
+                                    onCameraClick = { digitalCameraLauncher.launch(null) }
+                                )
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
-                                    Text("Cerrar")
+                                    TextButton(
+                                        enabled = !isSavingInitImages,
+                                        onClick = {
+                                            if (!isSavingInitImages) {
+                                                showInitImagesDialog = false
+                                            }
+                                        }
+                                    ) {
+                                        Text("Cancelar")
+                                    }
+                                    Button(
+                                        enabled = initThermalPath.isNotBlank() && initDigitalPath.isNotBlank() && !isSavingInitImages,
+                                        onClick = {
+                                            if (isSavingInitImages) return@Button
+                                            val inspId = currentInspection?.idInspeccion
+                                            if (inspId.isNullOrBlank()) {
+                                                Toast.makeText(appContext, "No hay inspección activa.", Toast.LENGTH_SHORT).show()
+                                                return@Button
+                                            }
+                                            scope.launch {
+                                                isSavingInitImages = true
+                                                val result = withContext(Dispatchers.IO) {
+                                                    runCatching {
+                                                        val dao = inspeccionDao
+                                                        val existing = dao.getById(inspId)
+                                                        if (existing != null) {
+                                                            val updated = existing.copy(
+                                                                irImagenInicial = initThermalPath.trim(),
+                                                                digImagenInicial = initDigitalPath.trim()
+                                                            )
+                                                            dao.update(updated)
+                                                            true
+                                                        } else false
+                                                    }.getOrDefault(false)
+                                                }
+                                                isSavingInitImages = false
+                                                if (result) {
+                                                    Toast.makeText(appContext, "Imágenes iniciales actualizadas.", Toast.LENGTH_SHORT).show()
+                                                    showInitImagesDialog = false
+                                                } else {
+                                                    Toast.makeText(appContext, "No se pudo actualizar la inspección.", Toast.LENGTH_SHORT).show()
+                                                }
+                                            }
+                                        }
+                                    ) {
+                                        Text("Guardar")
+                                    }
                                 }
                             }
                         }
