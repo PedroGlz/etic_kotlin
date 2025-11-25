@@ -259,6 +259,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             var searchMessage by remember { mutableStateOf<String?>(null) }
             var showNoSelectionDialog by rememberSaveable { mutableStateOf(false) }
             var showProblemTypeDialog by rememberSaveable { mutableStateOf(false) }
+            var showBaselineRestrictionDialog by rememberSaveable { mutableStateOf(false) }
             var showVisualInspectionDialog by rememberSaveable { mutableStateOf(false) }
             var selectedProblemType by rememberSaveable { mutableStateOf("Eléctrico") }
             var showInvalidParentDialog by rememberSaveable { mutableStateOf(false) }
@@ -470,6 +471,17 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                             }
                         }
                     }
+                )
+            }
+
+            if (showBaselineRestrictionDialog) {
+                AlertDialog(
+                    onDismissRequest = { showBaselineRestrictionDialog = false },
+                    confirmButton = {
+                        Button(onClick = { showBaselineRestrictionDialog = false }) { Text("Aceptar") }
+                    },
+                    title = { Text("No se puede crear hallazgos") },
+                    text = { Text("Este equipo contiene Baseline") }
                 )
             }
 
@@ -2028,11 +2040,22 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                         val node = currentSelection?.let { findById(it, nodes) }
                         if (currentSelection.isNullOrBlank() || currentSelection.startsWith("root:") || node == null) {
                             showNoSelectionDialog = true
-                        } else if (node.verified) {
-                            selectedProblemType = "Eléctrico"
-                            showProblemTypeDialog = true
                         } else {
-                            showVisualInspectionDialog = true
+                            scope.launch {
+                                val hasBaseline = withContext(Dispatchers.IO) {
+                                    runCatching {
+                                        lineaBaseDaoGlobal.existsActiveByUbicacion(currentSelection)
+                                    }.getOrDefault(false)
+                                }
+                                if (hasBaseline) {
+                                    showBaselineRestrictionDialog = true
+                                } else if (node.verified) {
+                                    selectedProblemType = "Eléctrico"
+                                    showProblemTypeDialog = true
+                                } else {
+                                    showVisualInspectionDialog = true
+                                }
+                            }
                         }
                     }
                 )
