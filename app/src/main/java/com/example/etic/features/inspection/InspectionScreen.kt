@@ -453,7 +453,16 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     confirmButton = {
                         Button(onClick = {
                             showProblemTypeDialog = false
-                            Toast.makeText(ctx, "Tipo seleccionado: $selectedProblemType", Toast.LENGTH_SHORT).show()
+                            if (selectedProblemType.equals("Visual", ignoreCase = true)) {
+                                pendingProblemType = "Visual"
+                                if (pendingProblemEquipmentName.isNullOrBlank()) {
+                                    val node = selectedId?.let { findById(it, nodes) }
+                                    pendingProblemEquipmentName = node?.title ?: "-"
+                                }
+                                showVisualInspectionDialog = true
+                            } else {
+                                Toast.makeText(ctx, "Tipo seleccionado: $selectedProblemType", Toast.LENGTH_SHORT).show()
+                            }
                         }) { Text("Aceptar") }
                     },
                     dismissButton = {
