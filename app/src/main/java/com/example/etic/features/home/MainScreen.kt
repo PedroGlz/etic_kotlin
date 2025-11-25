@@ -33,6 +33,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationDrawerItem
@@ -40,7 +41,6 @@ import androidx.compose.material3.NavigationDrawerItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
@@ -74,6 +74,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.example.etic.ui.theme.FontSizeOption
+import kotlin.math.max
 
 private enum class HomeSection { Inspection, Reports }
 
@@ -280,8 +281,11 @@ fun MainScreen(
                                 ?.let { if (isThermal) it.irImagenInicial else it.digImagenInicial }
                         }
                         if (!value.isNullOrBlank()) {
-                            onResult(value)
+                            val normalized = composeImageName(parseImageName(value))
+                            onResult("")
+                            onResult(normalized)
                         } else {
+                            onResult("")
                             val label = if (isThermal) "IR" else "digital"
                             Toast.makeText(
                                 appContext,
@@ -408,31 +412,31 @@ fun MainScreen(
                                 Text(text = "Inicializar imágenes")
 
                                 Text(text = "Imagen térmica", style = MaterialTheme.typography.titleSmall)
-                                ImageInputButtonGroup(
-                                    label = "Archivo IR",
-                                    value = initThermalPath,
-                                    onValueChange = { initThermalPath = it },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    isRequired = true,
-                                    onMoveUp = { /* TODO: IR hacia arriba */ },
-                                    onMoveDown = { /* TODO: IR hacia abajo */ },
-                                    onDotsClick = { loadInitialImageFromDb(true) { initThermalPath = it } },
-                                    onFolderClick = { /* TODO: IR explorador */ },
-                                    onCameraClick = { /* TODO: IR cámara */ }
-                                )
+                    ImageInputButtonGroup(
+                        label = "Archivo IR",
+                        value = initThermalPath,
+                        onValueChange = { initThermalPath = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        isRequired = true,
+                        onMoveUp = { initThermalPath = adjustImageSequence(initThermalPath, +1) },
+                        onMoveDown = { initThermalPath = adjustImageSequence(initThermalPath, -1) },
+                        onDotsClick = { loadInitialImageFromDb(true) { initThermalPath = it } },
+                        onFolderClick = { /* TODO: IR explorador */ },
+                        onCameraClick = { /* TODO: IR cámara */ }
+                    )
                                 Text(text = "Imagen digital", style = MaterialTheme.typography.titleSmall)
-                                ImageInputButtonGroup(
-                                    label = "Archivo ID",
-                                    value = initDigitalPath,
-                                    onValueChange = { initDigitalPath = it },
-                                    modifier = Modifier.fillMaxWidth(),
-                                    isRequired = true,
-                                    onMoveUp = { /* TODO: ID hacia arriba */ },
-                                    onMoveDown = { /* TODO: ID hacia abajo */ },
-                                    onDotsClick = { loadInitialImageFromDb(false) { initDigitalPath = it } },
-                                    onFolderClick = { /* TODO: ID explorador */ },
-                                    onCameraClick = { /* TODO: ID cámara */ }
-                                )
+                    ImageInputButtonGroup(
+                        label = "Archivo ID",
+                        value = initDigitalPath,
+                        onValueChange = { initDigitalPath = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        isRequired = true,
+                        onMoveUp = { initDigitalPath = adjustImageSequence(initDigitalPath, +1) },
+                        onMoveDown = { initDigitalPath = adjustImageSequence(initDigitalPath, -1) },
+                        onDotsClick = { loadInitialImageFromDb(false) { initDigitalPath = it } },
+                        onFolderClick = { /* TODO: ID explorador */ },
+                        onCameraClick = { /* TODO: ID cámara */ }
+                    )
                                 Button(
                                     onClick = { showInitImagesDialog = false },
                                     modifier = Modifier.align(Alignment.End)
@@ -549,4 +553,53 @@ fun LoadingOverlay(message: String) {
             }
         }
     }
+}
+
+private data class ImageNameParts(
+    val prefix: String,
+    val number: Int,
+    val digits: Int,
+    val suffix: String
+)
+
+private fun parseImageName(raw: String): ImageNameParts {
+    val trimmed = raw.trim()
+    if (trimmed.isEmpty()) return ImageNameParts("", 0, 0, "")
+    val regex = Regex("^(.*?)(\\d+)(.*)$")
+    val match = regex.find(trimmed)
+    return if (match != null) {
+        val prefix = match.groupValues[1]
+        val digitsStr = match.groupValues[2]
+        val suffix = match.groupValues[3]
+        val number = digitsStr.toIntOrNull() ?: 0
+        ImageNameParts(prefix, number, digitsStr.length, suffix)
+    } else {
+        ImageNameParts(trimmed, 0, 0, "")
+    }
+}
+
+private fun composeImageName(parts: ImageNameParts): String {
+    val safeNumber = parts.number.coerceAtLeast(0)
+    val formattedNumber = when {
+        parts.digits > 0 -> safeNumber.toString().padStart(parts.digits, '0')
+        safeNumber > 0 -> safeNumber.toString()
+        else -> ""
+    }
+    return buildString {
+        append(parts.prefix)
+        append(formattedNumber)
+        append(parts.suffix)
+    }
+}
+
+private fun adjustImageSequence(current: String, delta: Int): String {
+    if (delta == 0) return current
+    val parts = parseImageName(current)
+    val newNumber = (parts.number + delta).coerceAtLeast(0)
+    val fallbackDigits = max(
+        1,
+        max(parts.number.toString().length, newNumber.toString().length)
+    )
+    val digits = if (parts.digits > 0) parts.digits else fallbackDigits
+    return composeImageName(parts.copy(number = newNumber, digits = digits))
 }
