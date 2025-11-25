@@ -299,9 +299,14 @@ fun MainScreen(
                                 ?.let { if (isThermal) it.irImagenInicial else it.digImagenInicial }
                         }
                         if (!value.isNullOrBlank()) {
-                            val normalized = composeImageName(parseImageName(value))
+                            val parts = parseImageName(value)
+                            val incremented = if (parts.digits == 0 && parts.number == 0L) {
+                                value
+                            } else {
+                                composeImageName(parts.copy(number = parts.number + 1))
+                            }
                             onResult("")
-                            onResult(normalized)
+                            onResult(incremented)
                         } else {
                             onResult("")
                             val label = if (isThermal) "IR" else "digital"
