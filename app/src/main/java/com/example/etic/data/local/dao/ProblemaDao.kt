@@ -18,4 +18,19 @@ interface ProblemaDao {
 
     @Query("SELECT * FROM problemas WHERE Id_Inspeccion = :idInspeccion AND Estatus = 'Activo'")
     suspend fun getByInspeccionActivos(idInspeccion: String): List<Problema>
+
+    @Query(
+        """
+        SELECT Numero_Problema FROM problemas
+        WHERE Id_Inspeccion = :idInspeccion
+          AND Id_Tipo_Inspeccion = :idTipoInspeccion
+          AND Estatus = 'Activo'
+        ORDER BY Numero_Problema DESC
+        LIMIT 1
+        """
+    )
+    suspend fun getLastNumberByInspectionAndType(
+        idInspeccion: String,
+        idTipoInspeccion: String
+    ): Int?
 }

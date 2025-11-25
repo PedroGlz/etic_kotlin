@@ -117,6 +117,11 @@ private const val SURFACE_VARIANT_ALPHA: Float = 0.4f
 private const val SELECT_ALPHA: Float = 0.10f
 private val ICON_EQUIPO_COLOR: Color = Color(0xFFFFC107)     // Amarillo (Traffic)
 private val ICON_NO_EQUIPO_COLOR: Color = Color(0xFF4CAF50)  // Verde (DragIndicator)
+private val PROBLEM_TYPE_IDS = mapOf(
+    "Eléctrico" to "0D32B331-76C3-11D3-82BF-00104BC75DC2",
+    "Visual" to "0D32B333-76C3-11D3-82BF-00104BC75DC2",
+    "Mecánico" to "0D32B334-76C3-11D3-82BF-00104BC75DC2"
+)
 
 // Ajustes de compacidad para filas del arbol
 private val TREE_TOGGLE_SIZE: Dp = 20.dp   // Tamano del icono de expandir/colapsar
@@ -266,6 +271,16 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             var pendingProblemEquipmentName by rememberSaveable { mutableStateOf<String?>(null) }
             var pendingProblemType by rememberSaveable { mutableStateOf("Visual") }
             var pendingProblemNumber by rememberSaveable { mutableStateOf("Pendiente") }
+
+            suspend fun fetchNextProblemNumber(problemType: String): String {
+                val inspId = currentInspection?.idInspeccion ?: return "1"
+                val typeId = PROBLEM_TYPE_IDS[problemType] ?: return "1"
+                val last = withContext(Dispatchers.IO) {
+                    runCatching { problemaDao.getLastNumberByInspectionAndType(inspId, typeId) }
+                        .getOrNull()
+                }
+                return ((last ?: 0) + 1).toString()
+            }
             var selectedProblemType by rememberSaveable { mutableStateOf("Eléctrico") }
             var showInvalidParentDialog by rememberSaveable { mutableStateOf(false) }
             var showNewUbDialog by remember { mutableStateOf(false) }
@@ -452,15 +467,19 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     onDismissRequest = { showProblemTypeDialog = false },
                     confirmButton = {
                         Button(onClick = {
-                            showProblemTypeDialog = false
                             if (selectedProblemType.equals("Visual", ignoreCase = true)) {
-                                pendingProblemType = "Visual"
-                                if (pendingProblemEquipmentName.isNullOrBlank()) {
-                                    val node = selectedId?.let { findById(it, nodes) }
-                                    pendingProblemEquipmentName = node?.title ?: "-"
+                                scope.launch {
+                                    showProblemTypeDialog = false
+                                    pendingProblemType = "Visual"
+                                    if (pendingProblemEquipmentName.isNullOrBlank()) {
+                                        val node = selectedId?.let { findById(it, nodes) }
+                                        pendingProblemEquipmentName = node?.title ?: "-"
+                                    }
+                                    pendingProblemNumber = fetchNextProblemNumber("Visual")
+                                    showVisualInspectionDialog = true
                                 }
-                                showVisualInspectionDialog = true
                             } else {
+                                showProblemTypeDialog = false
                                 Toast.makeText(ctx, "Tipo seleccionado: $selectedProblemType", Toast.LENGTH_SHORT).show()
                             }
                         }) { Text("Aceptar") }
@@ -2086,6 +2105,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                 } else {
                                     pendingProblemEquipmentName = node.title
                                     pendingProblemType = "Visual"
+                                    pendingProblemNumber = fetchNextProblemNumber("Visual")
                                     showVisualInspectionWarning = true
                                 }
                             }
