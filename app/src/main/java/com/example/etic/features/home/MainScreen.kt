@@ -104,6 +104,7 @@ fun MainScreen(
     var initThermalPath by rememberSaveable { mutableStateOf("") }
     var initDigitalPath by rememberSaveable { mutableStateOf("") }
     var isSavingInitImages by rememberSaveable { mutableStateOf(false) }
+    val imageExtensionRegex = remember { Regex("\\.(jpg|jpeg|png|bmp|gif)$", RegexOption.IGNORE_CASE) }
 
     val drawerItemColors = NavigationDrawerItemDefaults.colors(
         selectedContainerColor = Color(0xFF202327),
@@ -466,10 +467,10 @@ fun MainScreen(
                                 Text(text = "Inicializar imágenes")
 
                                 Text(text = "Imagen térmica", style = MaterialTheme.typography.titleSmall)
-                    ImageInputButtonGroup(
-                        label = "Archivo IR",
-                        value = initThermalPath,
-                        onValueChange = { initThermalPath = it },
+                                ImageInputButtonGroup(
+                                    label = "Archivo IR",
+                                    value = initThermalPath,
+                                    onValueChange = { initThermalPath = it },
                         modifier = Modifier.fillMaxWidth(),
                         isRequired = true,
                         onMoveUp = { initThermalPath = adjustImageSequence(initThermalPath, +1) },
@@ -505,8 +506,13 @@ fun MainScreen(
                                     ) {
                                         Text("Cancelar")
                                     }
+                                    val canSave = initThermalPath.isNotBlank() &&
+                                            initDigitalPath.isNotBlank() &&
+                                            imageExtensionRegex.containsMatchIn(initThermalPath.trim()) &&
+                                            imageExtensionRegex.containsMatchIn(initDigitalPath.trim()) &&
+                                            !isSavingInitImages
                                     Button(
-                                        enabled = initThermalPath.isNotBlank() && initDigitalPath.isNotBlank() && !isSavingInitImages,
+                                        enabled = canSave,
                                         onClick = {
                                             if (isSavingInitImages) return@Button
                                             val inspId = currentInspection?.idInspeccion
