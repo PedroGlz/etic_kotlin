@@ -764,24 +764,38 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     onDismiss = { showVisualInspectionDialog = false },
                     onContinue = {
                         if (isSavingVisualProblem) return@VisualProblemDialog
-                        val inspection = currentInspection
-                        val ubicacionId = pendingProblemUbicacionId
+                        val inspection = currentInspection ?: return@VisualProblemDialog
+                        val ubicacionId = pendingProblemUbicacionId ?: selectedId
                         val hazardId = pendingHazardId
                         val severityId = pendingSeverityId
                         val thermal = pendingThermalImage
                         val digital = pendingDigitalImage
                         val typeId = PROBLEM_TYPE_IDS["Visual"]
-                        if (inspection == null || typeId == null || ubicacionId.isNullOrBlank() || hazardId.isNullOrBlank() ||
-                            severityId.isNullOrBlank() || thermal.isBlank() || digital.isBlank()
-                        ) {
-                            Toast.makeText(ctx, "Completa la información obligatoria.", Toast.LENGTH_SHORT).show()
+                        if (typeId == null) {
+                            Toast.makeText(ctx, "No se encontró el tipo Visual.", Toast.LENGTH_SHORT).show()
+                            return@VisualProblemDialog
+                        }
+                        if (ubicacionId.isNullOrBlank()) {
+                            Toast.makeText(ctx, "Selecciona un equipo.", Toast.LENGTH_SHORT).show()
+                            return@VisualProblemDialog
+                        }
+                        val missing = buildList {
+                            if (hazardId.isNullOrBlank()) add("Problema")
+                            if (severityId.isNullOrBlank()) add("Severidad")
+                            if (thermal.isBlank()) add("Imagen térmica")
+                            if (digital.isBlank()) add("Imagen digital")
+                        }
+                        if (missing.isNotEmpty()) {
+                            Toast.makeText(ctx, "Completa: ${missing.joinToString()}", Toast.LENGTH_SHORT).show()
                             return@VisualProblemDialog
                         }
                         scope.launch {
                             if (isSavingVisualProblem) return@launch
                             isSavingVisualProblem = true
                             try {
-                                val numero = fetchNextProblemNumber("Visual").toIntOrNull() ?: 1
+                                val numero = pendingProblemNumber.toIntOrNull()
+                                    ?: fetchNextProblemNumber("Visual").toIntOrNull()
+                                    ?: 1
                             val detId = withContext(Dispatchers.IO) {
                                 runCatching {
                                     inspeccionDetDao.getByUbicacion(ubicacionId)
@@ -808,7 +822,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                 componentComment = comment,
                                 ruta = pendingProblemRoute,
                                 estatusProblema = "Abierto",
-                                esCronico = "No",
+                                esCronico = "NO",
                                 cerradoEnInspeccion = "No",
                                 estatus = "Activo",
                                 irFile = thermal,
@@ -816,10 +830,10 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                 creadoPor = currentUser?.idUsuario,
                                 fechaCreacion = nowTs
                             )
-                                val success = runCatching {
+                            val insertResult = runCatching {
                                 withContext(Dispatchers.IO) { problemaDao.insert(problema) }
-                            }.isSuccess
-                            if (success) {
+                            }
+                            if (insertResult.isSuccess) {
                                 showVisualInspectionDialog = false
                                 pendingProblemNumber = (numero + 1).toString()
                                 pendingHazardId = null
@@ -830,7 +844,13 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                 Toast.makeText(ctx, "Problema visual guardado.", Toast.LENGTH_SHORT).show()
                                 refreshTree(preserveSelection = selectedId)
                             } else {
-                                Toast.makeText(ctx, "No se pudo guardar el problema visual.", Toast.LENGTH_LONG).show()
+                                val message = insertResult.exceptionOrNull()?.localizedMessage
+                                    ?: "Error desconocido"
+                                Toast.makeText(
+                                    ctx,
+                                    "No se pudo guardar el problema visual: $message",
+                                    Toast.LENGTH_LONG
+                                ).show()
                             }
                             } finally {
                                 isSavingVisualProblem = false
