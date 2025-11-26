@@ -26,13 +26,17 @@ import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.Divider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -112,43 +116,69 @@ fun VisualProblemDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                Spacer(Modifier.height(16.dp))
-                DropdownField(
-                    label = "Problema",
-                    options = hazardIssues,
-                    selectedId = selectedHazardIssue,
-                    placeholder = "Selecciona una falla",
-                    onSelected = onHazardSelected,
-                    modifier = Modifier.fillMaxWidth()
-                )
-                Spacer(Modifier.height(8.dp))
-                DropdownField(
-                    label = "Severidad",
-                    options = severities,
-                    selectedId = selectedSeverity,
-                    placeholder = "Selecciona severidad",
-                    onSelected = onSeveritySelected,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                var selectedTab by remember { mutableStateOf(0) }
+                TabRow(selectedTabIndex = selectedTab) {
+                    Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }, text = { Text("Datos") })
+                    Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }, text = { Text("Imágenes") })
+                }
 
                 Spacer(Modifier.height(16.dp))
-                TextField(
-                    value = observations,
-                    onValueChange = onObservationsChange,
-                    label = { Text("Observaciones") },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .wrapContentHeight(),
-                    minLines = 2
-                )
+                when (selectedTab) {
+                    0 -> {
+                        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                DropdownField(
+                                    label = "Problema",
+                                    options = hazardIssues,
+                                    selectedId = selectedHazardIssue,
+                                    placeholder = "Selecciona una falla",
+                                    onSelected = onHazardSelected,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                DropdownField(
+                                    label = "Severidad",
+                                    options = severities,
+                                    selectedId = selectedSeverity,
+                                    placeholder = "Selecciona severidad",
+                                    onSelected = onSeveritySelected,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
 
-                Spacer(Modifier.height(16.dp))
-                Text("Historia de este problema", style = MaterialTheme.typography.labelLarge)
-                Spacer(Modifier.height(8.dp))
-                HistorySection(
-                    rows = historyRows,
-                    isLoading = historyLoading
-                )
+                            TextField(
+                                value = observations,
+                                onValueChange = onObservationsChange,
+                                label = { Text("Observaciones") },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .wrapContentHeight(),
+                                minLines = 2
+                            )
+
+                            Column {
+                                Text("Historia de este problema", style = MaterialTheme.typography.labelLarge)
+                                Spacer(Modifier.height(8.dp))
+                                HistorySection(
+                                    rows = historyRows,
+                                    isLoading = historyLoading
+                                )
+                            }
+                        }
+                    }
+                    else -> {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                "Sección de imágenes en desarrollo.",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+                        }
+                    }
+                }
 
                 Spacer(Modifier.height(24.dp))
                 Row(
