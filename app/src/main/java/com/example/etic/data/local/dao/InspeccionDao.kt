@@ -15,4 +15,7 @@ interface InspeccionDao {
 
     @Update
     suspend fun update(item: Inspeccion)
+
+    @Query("UPDATE inspecciones SET IR_Imagen_Inicial = :ir, DIG_Imagen_Inicial = :dig WHERE Id_Inspeccion = :id")
+    suspend fun updateInitialImages(id: String, ir: String?, dig: String?)
 }

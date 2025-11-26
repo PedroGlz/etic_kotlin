@@ -421,6 +421,12 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     }
                 }
             }
+            suspend fun updateInspectionInitialImages(irName: String?, digName: String?) {
+                val inspId = currentInspection?.idInspeccion ?: return
+                withContext(Dispatchers.IO) {
+                    runCatching { inspeccionDao.updateInitialImages(inspId, irName, digName) }
+                }
+            }
             LaunchedEffect(showVisualInspectionDialog, pendingProblemUbicacionId) {
                 if (showVisualInspectionDialog) {
                     pendingThermalImage = ""
@@ -796,13 +802,13 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                 val numero = pendingProblemNumber.toIntOrNull()
                                     ?: fetchNextProblemNumber("Visual").toIntOrNull()
                                     ?: 1
-                            val detId = withContext(Dispatchers.IO) {
+                            val detRow = withContext(Dispatchers.IO) {
                                 runCatching {
                                     inspeccionDetDao.getByUbicacion(ubicacionId)
                                         .firstOrNull { it.idInspeccion == inspection.idInspeccion }
-                                        ?.idInspeccionDet
                                 }.getOrNull()
                             }
+                            val detId = detRow?.idInspeccionDet
                             val hazardLabel = visualHazardOptions.firstOrNull { it.first == hazardId }?.second
                             val comment = pendingObservation.ifBlank {
                                 buildVisualObservation(hazardId, pendingProblemEquipmentName)
@@ -834,6 +840,18 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                 withContext(Dispatchers.IO) { problemaDao.insert(problema) }
                             }
                             if (insertResult.isSuccess) {
+                                if (detRow != null) {
+                                    val updatedDet = detRow.copy(
+                                        idStatusInspeccionDet = "568798D2-76BB-11D3-82BF-00104BC75DC2",
+                                        idEstatusColorText = 2,
+                                        modificadoPor = currentUser?.idUsuario,
+                                        fechaMod = nowTs
+                                    )
+                                    runCatching {
+                                        withContext(Dispatchers.IO) { inspeccionDetDao.update(updatedDet) }
+                                    }
+                                }
+                                updateInspectionInitialImages(thermal, digital)
                                 showVisualInspectionDialog = false
                                 pendingProblemNumber = (numero + 1).toString()
                                 pendingHazardId = null
