@@ -88,15 +88,8 @@ fun VisualProblemDialog(
                     .padding(24.dp)
             ) {
                 Text("Problema Visual", style = MaterialTheme.typography.headlineSmall)
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    "Completa la clasificación y agrega contexto antes de registrar el hallazgo.",
-                    style = MaterialTheme.typography.bodyMedium
-                )
-
+                
                 Spacer(Modifier.height(16.dp))
-                Text("Información general", style = MaterialTheme.typography.labelLarge)
-                Spacer(Modifier.height(8.dp))
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -120,8 +113,6 @@ fun VisualProblemDialog(
                 )
 
                 Spacer(Modifier.height(16.dp))
-                Text("Clasificación visual", style = MaterialTheme.typography.labelLarge)
-                Spacer(Modifier.height(8.dp))
                 DropdownField(
                     label = "Problema",
                     options = hazardIssues,
@@ -227,6 +218,16 @@ private fun DropdownField(
             expanded = expanded.value,
             onDismissRequest = { expanded.value = false }
         ) {
+            DropdownMenuItem(
+                text = { Text("Seleccionar...") },
+                onClick = {
+                    expanded.value = false
+                    onSelected("")
+                }
+            )
+            if (options.isNotEmpty()) {
+                Divider()
+            }
             options.forEach { (id, text) ->
                 DropdownMenuItem(
                     text = { Text(text) },

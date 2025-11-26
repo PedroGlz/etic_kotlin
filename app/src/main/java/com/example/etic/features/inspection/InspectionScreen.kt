@@ -322,10 +322,10 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
 
             fun ensureVisualDefaults() {
                 if (visualHazardOptions.isNotEmpty() && visualHazardOptions.none { it.first == pendingHazardId }) {
-                    pendingHazardId = visualHazardOptions.first().first
+                    pendingHazardId = null
                 }
                 if (visualSeverityOptions.isNotEmpty() && visualSeverityOptions.none { it.first == pendingSeverityId }) {
-                    pendingSeverityId = visualSeverityOptions.first().first
+                    pendingSeverityId = null
                 }
                 pendingObservation = buildVisualObservation(pendingHazardId, pendingProblemEquipmentName)
             }
@@ -650,11 +650,14 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     onObservationsChange = { pendingObservation = it },
                     historyRows = visualProblemHistory,
                     historyLoading = isHistoryLoading,
-                    onHazardSelected = {
-                        pendingHazardId = it
-                        pendingObservation = buildVisualObservation(it, pendingProblemEquipmentName)
+                    onHazardSelected = { selected ->
+                        val normalized = selected.takeIf { it.isNotBlank() }
+                        pendingHazardId = normalized
+                        pendingObservation = buildVisualObservation(normalized, pendingProblemEquipmentName)
                     },
-                    onSeveritySelected = { pendingSeverityId = it },
+                    onSeveritySelected = { selected ->
+                        pendingSeverityId = selected.takeIf { it.isNotBlank() }
+                    },
                     onDismiss = { showVisualInspectionDialog = false },
                     onContinue = {
                         showVisualInspectionDialog = false
