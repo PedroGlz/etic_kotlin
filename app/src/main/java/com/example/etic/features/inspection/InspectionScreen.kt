@@ -85,6 +85,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.collections.LinkedHashSet
 import kotlin.collections.buildList
+import kotlin.math.max
 import com.example.etic.features.inspection.data.InspectionRepository
 import com.example.etic.features.inspection.data.UbicacionSaveContext
 import com.example.etic.features.inspection.ui.components.InspectionHeader
@@ -290,6 +291,8 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             var pendingSeverityId by rememberSaveable { mutableStateOf<String?>(null) }
             var pendingProblemUbicacionId by rememberSaveable { mutableStateOf<String?>(null) }
             var pendingObservation by rememberSaveable { mutableStateOf("") }
+            var pendingThermalImage by rememberSaveable { mutableStateOf("") }
+            var pendingDigitalImage by rememberSaveable { mutableStateOf("") }
 
             LaunchedEffect(showEditUbDialog) {
                 if (!showEditUbDialog) {
@@ -353,6 +356,28 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                 } else {
                     visualProblemHistory = emptyList()
                     isHistoryLoading = false
+                }
+            }
+
+            LaunchedEffect(showVisualInspectionDialog, pendingProblemNumber) {
+                if (showVisualInspectionDialog) {
+                    val inspId = currentInspection?.idInspeccion
+                    val typeId = PROBLEM_TYPE_IDS["Visual"]
+                    if (!inspId.isNullOrBlank() && typeId != null) {
+                        val (nextThermal, nextDigital) = withContext(Dispatchers.IO) {
+                            val lastThermal = runCatching {
+                                problemaDao.getLastThermalImageName(inspId, typeId)
+                            }.getOrNull()
+                            val lastDigital = runCatching {
+                                problemaDao.getLastDigitalImageName(inspId, typeId)
+                            }.getOrNull()
+                            val defaultThermal = nextImageName(lastThermal, "IR")
+                            val defaultDigital = nextImageName(lastDigital, "ID")
+                            defaultThermal to defaultDigital
+                        }
+                        pendingThermalImage = nextThermal
+                        pendingDigitalImage = nextDigital
+                    }
                 }
             }
 
@@ -650,6 +675,14 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     onObservationsChange = { pendingObservation = it },
                     historyRows = visualProblemHistory,
                     historyLoading = isHistoryLoading,
+                    thermalImageName = pendingThermalImage,
+                    digitalImageName = pendingDigitalImage,
+                    onThermalImageChange = { pendingThermalImage = it },
+                    onDigitalImageChange = { pendingDigitalImage = it },
+                    onThermalSequenceUp = { pendingThermalImage = adjustImageSequence(pendingThermalImage, +1) },
+                    onThermalSequenceDown = { pendingThermalImage = adjustImageSequence(pendingThermalImage, -1) },
+                    onDigitalSequenceUp = { pendingDigitalImage = adjustImageSequence(pendingDigitalImage, +1) },
+                    onDigitalSequenceDown = { pendingDigitalImage = adjustImageSequence(pendingDigitalImage, -1) },
                     onHazardSelected = { selected ->
                         val normalized = selected.takeIf { it.isNotBlank() }
                         pendingHazardId = normalized
@@ -2363,6 +2396,64 @@ private fun SimpleTreeView(
             }
         }
     }
+}
+
+private data class ImageNameParts(val prefix: String, val number: Long, val digits: Int, val suffix: String)
+
+private fun parseImageName(raw: String): ImageNameParts {
+    val trimmed = raw.trim()
+    if (trimmed.isEmpty()) return ImageNameParts("", 0, 0, "")
+    var numberStart = trimmed.length
+    while (numberStart > 0 && trimmed[numberStart - 1].isDigit()) {
+        numberStart--
+    }
+    val prefix = trimmed.substring(0, numberStart)
+    val numericPart = trimmed.substring(numberStart)
+    val number = numericPart.toLongOrNull() ?: 0L
+    val suffixIndex = prefix.lastIndexOfAny(charArrayOf('.', '_', '-'))
+    val adjustedPrefix: String
+    val suffix: String
+    if (suffixIndex >= 0 && suffixIndex < prefix.lastIndex) {
+        adjustedPrefix = prefix.substring(0, suffixIndex + 1)
+        suffix = prefix.substring(suffixIndex + 1)
+    } else {
+        adjustedPrefix = prefix
+        suffix = ""
+    }
+    return ImageNameParts(adjustedPrefix, number, numericPart.length, suffix)
+}
+
+private fun composeImageName(parts: ImageNameParts): String {
+    val safeNumber = parts.number.coerceAtLeast(0)
+    val formattedNumber = when {
+        parts.digits > 0 -> safeNumber.toString().padStart(parts.digits, '0')
+        safeNumber > 0 -> safeNumber.toString()
+        else -> ""
+    }
+    return buildString {
+        append(parts.prefix)
+        append(formattedNumber)
+        append(parts.suffix)
+    }
+}
+
+private fun adjustImageSequence(current: String, delta: Int): String {
+    if (delta == 0) return current
+    val parts = parseImageName(current)
+    if (parts.digits == 0 && parts.number == 0L) return current
+    val newNumber = (parts.number + delta.toLong()).coerceAtLeast(0)
+    val fallbackDigits = max(
+        1,
+        max(parts.number.toString().length, newNumber.toString().length)
+    )
+    val digits = if (parts.digits > 0) parts.digits else fallbackDigits
+    return composeImageName(parts.copy(number = newNumber, digits = digits))
+}
+
+private fun nextImageName(lastName: String?, prefix: String): String {
+    val base = lastName?.takeIf { it.isNotBlank() } ?: "${prefix}0000"
+    val next = adjustImageSequence(base, +1)
+    return if (next == base) "${prefix}0001" else next
 }
 
 // -------------------------

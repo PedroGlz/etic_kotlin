@@ -55,6 +55,38 @@ interface ProblemaDao {
         ubicacionId: String,
         tipoInspeccionId: String
     ): List<VisualProblemHistoryRow>
+
+    @Query(
+        """
+        SELECT Ir_File FROM problemas
+        WHERE Id_Inspeccion = :idInspeccion
+          AND Id_Tipo_Inspeccion = :idTipoInspeccion
+          AND Ir_File IS NOT NULL
+          AND Ir_File != ''
+        ORDER BY Fecha_Creacion DESC
+        LIMIT 1
+        """
+    )
+    suspend fun getLastThermalImageName(
+        idInspeccion: String,
+        idTipoInspeccion: String
+    ): String?
+
+    @Query(
+        """
+        SELECT Photo_File FROM problemas
+        WHERE Id_Inspeccion = :idInspeccion
+          AND Id_Tipo_Inspeccion = :idTipoInspeccion
+          AND Photo_File IS NOT NULL
+          AND Photo_File != ''
+        ORDER BY Fecha_Creacion DESC
+        LIMIT 1
+        """
+    )
+    suspend fun getLastDigitalImageName(
+        idInspeccion: String,
+        idTipoInspeccion: String
+    ): String?
 }
 
 data class VisualProblemHistoryRow(

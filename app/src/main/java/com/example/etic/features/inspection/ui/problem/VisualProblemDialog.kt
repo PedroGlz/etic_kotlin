@@ -1,19 +1,10 @@
 package com.example.etic.features.inspection.ui.problem
 
+import android.graphics.BitmapFactory
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.IntrinsicSize
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.defaultMinSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -24,6 +15,9 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Image
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
@@ -39,11 +33,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.etic.data.local.dao.VisualProblemHistoryRow
+import com.example.etic.features.components.ImageInputButtonGroup
+import java.io.File
 
 private val DIALOG_MIN_WIDTH = 720.dp
 private val DIALOG_MAX_WIDTH = 980.dp
@@ -66,6 +64,14 @@ fun VisualProblemDialog(
     onObservationsChange: (String) -> Unit,
     historyRows: List<VisualProblemHistoryRow>,
     historyLoading: Boolean,
+    thermalImageName: String,
+    digitalImageName: String,
+    onThermalImageChange: (String) -> Unit,
+    onDigitalImageChange: (String) -> Unit,
+    onThermalSequenceUp: () -> Unit,
+    onThermalSequenceDown: () -> Unit,
+    onDigitalSequenceUp: () -> Unit,
+    onDigitalSequenceDown: () -> Unit,
     onHazardSelected: (String) -> Unit,
     onSeveritySelected: (String) -> Unit,
     onDismiss: () -> Unit,
@@ -166,16 +172,31 @@ fun VisualProblemDialog(
                         }
                     }
                     else -> {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(
-                                "Sección de imágenes en desarrollo.",
-                                style = MaterialTheme.typography.bodyMedium
-                            )
+                        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                            Text("Cargas de imágenes", style = MaterialTheme.typography.labelLarge)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                ImageInputColumn(
+                                    title = "Imagen térmica",
+                                    label = "Archivo IR",
+                                    value = thermalImageName,
+                                    onValueChange = onThermalImageChange,
+                                    onIncrement = onThermalSequenceUp,
+                                    onDecrement = onThermalSequenceDown,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                ImageInputColumn(
+                                    title = "Imagen digital",
+                                    label = "Archivo ID",
+                                    value = digitalImageName,
+                                    onValueChange = onDigitalImageChange,
+                                    onIncrement = onDigitalSequenceUp,
+                                    onDecrement = onDigitalSequenceDown,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
                         }
                     }
                 }
@@ -346,6 +367,79 @@ private fun HistoryRow(
                 modifier = Modifier.weight(weights.getOrElse(index) { 1f }),
                 maxLines = if (isHeader) 1 else 3
             )
+        }
+    }
+}
+
+@Composable
+private fun ImageInputColumn(
+    title: String,
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    onIncrement: () -> Unit,
+    onDecrement: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Text(title, style = MaterialTheme.typography.titleSmall)
+        ImageInputButtonGroup(
+            label = label,
+            value = value,
+            onValueChange = onValueChange,
+            modifier = Modifier.fillMaxWidth(),
+            isRequired = true,
+            onMoveUp = onIncrement,
+            onMoveDown = onDecrement,
+            onDotsClick = null,
+            onFolderClick = null,
+            onCameraClick = null
+        )
+        ImagePreviewBox(fileName = value)
+    }
+}
+
+@Composable
+private fun ImagePreviewBox(fileName: String) {
+    val ctx = LocalContext.current
+    val bitmap = remember(fileName) {
+        if (fileName.isBlank()) null
+        else {
+            val file = File(ctx.filesDir, "Imagenes/$fileName")
+            if (file.exists()) BitmapFactory.decodeFile(file.absolutePath)?.asImageBitmap() else null
+        }
+    }
+    if (bitmap != null) {
+        Image(
+            bitmap = bitmap,
+            contentDescription = null,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(200.dp)
+        )
+    } else {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(200.dp)
+                .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(
+                    imageVector = Icons.Outlined.Image,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = if (fileName.isBlank()) "Sin imagen" else "Imagen no encontrada",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }
