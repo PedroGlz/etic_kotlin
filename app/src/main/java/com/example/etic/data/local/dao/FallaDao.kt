@@ -11,5 +11,20 @@ interface FallaDao {
 
     @Query("SELECT * FROM fallas WHERE Id_Falla = :id AND Estatus = 'Activo' LIMIT 1")
     suspend fun getByIdActivo(id: String): Falla?
+
+    @Query(
+        """
+        SELECT f.Id_Falla AS idFalla, f.Falla AS falla, tf.Id_Tipo_Inspeccion AS idTipoInspeccion
+        FROM fallas f
+        LEFT JOIN tipo_fallas tf ON tf.Id_Tipo_Falla = f.Id_Tipo_Falla
+        WHERE f.Estatus = 'Activo'
+        """
+    )
+    suspend fun getAllWithTipoInspeccion(): List<FallaWithTipoInspeccion>
 }
 
+data class FallaWithTipoInspeccion(
+    val idFalla: String,
+    val falla: String?,
+    val idTipoInspeccion: String?
+)

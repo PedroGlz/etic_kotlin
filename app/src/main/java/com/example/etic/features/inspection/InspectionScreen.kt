@@ -108,7 +108,6 @@ import com.example.etic.features.inspection.tree.findById
 import com.example.etic.features.inspection.tree.findPathByBarcode
 import com.example.etic.features.inspection.tree.titlePathForId
 import com.example.etic.features.inspection.ui.problem.VisualProblemDialog
-import com.example.etic.data.local.entities.Falla
 import com.example.etic.data.local.entities.Severidad
 import com.example.etic.data.local.dao.VisualProblemHistoryRow
 import androidx.compose.ui.window.Dialog
@@ -183,8 +182,8 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
     var highlightedId by remember { mutableStateOf<String?>(null) }
     var baselineRefreshTick by remember { mutableStateOf(0) }
     var hasSignaledReady by rememberSaveable { mutableStateOf(false) }
-    var hazardCatalog by remember { mutableStateOf<List<Falla>>(emptyList()) }
     var severityCatalog by remember { mutableStateOf<List<Severidad>>(emptyList()) }
+    var visualHazardOptions by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
     val treeScope = rememberCoroutineScope()
     val onSelectNode: (String) -> Unit = { id ->
         selectedId = id
@@ -198,9 +197,21 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
         }
     }
     LaunchedEffect(Unit) {
-        hazardCatalog = runCatching {
-            withContext(Dispatchers.IO) { fallaDao.getAllActivos() }
-        }.getOrElse { emptyList() }
+        val visualTypeId = PROBLEM_TYPE_IDS["Visual"]
+        if (visualTypeId != null) {
+            visualHazardOptions = runCatching {
+                withContext(Dispatchers.IO) {
+                    fallaDao.getAllWithTipoInspeccion()
+                        .asSequence()
+                        .filter { it.idTipoInspeccion.equals(visualTypeId, true) }
+                        .map { it.idFalla to (it.falla ?: it.idFalla) }
+                        .sortedBy { it.second.lowercase() }
+                        .toList()
+                }
+            }.getOrElse { emptyList() }
+        } else {
+            visualHazardOptions = emptyList()
+        }
         severityCatalog = runCatching {
             withContext(Dispatchers.IO) { severidadDao.getAll() }
         }.getOrElse { emptyList() }
@@ -350,13 +361,6 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                 }
             }
 
-            val visualHazardOptions = remember(hazardCatalog) {
-                val typeId = PROBLEM_TYPE_IDS["Visual"]
-                hazardCatalog
-                    .filter { it.idTipoInspeccion.equals(typeId, true) }
-                    .sortedBy { it.falla?.lowercase() ?: "" }
-                    .map { it.idFalla to (it.falla ?: it.idFalla) }
-            }
             val visualSeverityOptions = remember(severityCatalog) {
                 val map = severityCatalog.associateBy { it.idSeveridad }
                 VISUAL_SEVERITY_OPTIONS.map { (id, fallback) ->
