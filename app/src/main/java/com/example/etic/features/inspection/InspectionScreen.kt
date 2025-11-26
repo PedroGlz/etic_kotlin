@@ -17,7 +17,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import android.content.Context
+import android.graphics.Bitmap
+import android.net.Uri
 import android.widget.Toast
+import java.io.File
+import java.io.FileOutputStream
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.ExpandMore
@@ -161,6 +166,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
     val vistaUbicacionArbolDao = remember { com.example.etic.data.local.DbProvider.get(ctx).vistaUbicacionArbolDao() }
     val usuarioDao = remember { com.example.etic.data.local.DbProvider.get(ctx).usuarioDao() }
     val inspeccionDetDao = remember { com.example.etic.data.local.DbProvider.get(ctx).inspeccionDetDao() }
+    val inspeccionDao = remember { com.example.etic.data.local.DbProvider.get(ctx).inspeccionDao() }
     val inspectionRepository = remember {
         InspectionRepository(ubicacionDao, inspeccionDetDao, vistaUbicacionArbolDao)
     }
@@ -293,6 +299,50 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             var pendingObservation by rememberSaveable { mutableStateOf("") }
             var pendingThermalImage by rememberSaveable { mutableStateOf("") }
             var pendingDigitalImage by rememberSaveable { mutableStateOf("") }
+            val thermalCameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { bmp ->
+                if (bmp != null) {
+                    val saved = saveProblemBitmap(ctx, bmp, "IR")
+                    if (saved != null) {
+                        pendingThermalImage = saved
+                    } else {
+                        Toast.makeText(ctx, "No se pudo guardar la imagen térmica.", Toast.LENGTH_SHORT).show()
+                    }
+                } else {
+                    Toast.makeText(ctx, "La cámara no devolvió imagen.", Toast.LENGTH_SHORT).show()
+                }
+            }
+            val digitalCameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { bmp ->
+                if (bmp != null) {
+                    val saved = saveProblemBitmap(ctx, bmp, "ID")
+                    if (saved != null) {
+                        pendingDigitalImage = saved
+                    } else {
+                        Toast.makeText(ctx, "No se pudo guardar la imagen digital.", Toast.LENGTH_SHORT).show()
+                    }
+                } else {
+                    Toast.makeText(ctx, "La cámara no devolvió imagen.", Toast.LENGTH_SHORT).show()
+                }
+            }
+            val thermalFolderLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+                if (uri != null) {
+                    val saved = copyProblemImageFromUri(ctx, uri, "IR")
+                    if (saved != null) {
+                        pendingThermalImage = saved
+                    } else {
+                        Toast.makeText(ctx, "No se pudo importar la imagen térmica.", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
+            val digitalFolderLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+                if (uri != null) {
+                    val saved = copyProblemImageFromUri(ctx, uri, "ID")
+                    if (saved != null) {
+                        pendingDigitalImage = saved
+                    } else {
+                        Toast.makeText(ctx, "No se pudo importar la imagen digital.", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
 
             LaunchedEffect(showEditUbDialog) {
                 if (!showEditUbDialog) {
@@ -338,6 +388,33 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
 
             var visualProblemHistory by remember { mutableStateOf<List<VisualProblemHistoryRow>>(emptyList()) }
             var isHistoryLoading by remember { mutableStateOf(false) }
+            val loadInitialImageScope = rememberCoroutineScope()
+            fun loadInitialImageFromInspection(isThermal: Boolean, onResult: (String) -> Unit) {
+                val inspId = currentInspection?.idInspeccion
+                if (inspId.isNullOrBlank()) {
+                    Toast.makeText(ctx, "No hay inspección activa.", Toast.LENGTH_SHORT).show()
+                    return
+                }
+                loadInitialImageScope.launch {
+                    val initial = withContext(Dispatchers.IO) {
+                        runCatching { inspeccionDao.getById(inspId) }.getOrNull()?.let {
+                            if (isThermal) it.irImagenInicial else it.digImagenInicial
+                        }
+                    }
+                    if (!initial.isNullOrBlank()) {
+                        val parts = parseImageName(initial)
+                        val suggestion = if (parts.digits == 0 && parts.number == 0L) {
+                            initial
+                        } else {
+                            composeImageName(parts.copy(number = parts.number + 1))
+                        }
+                        onResult(suggestion)
+                    } else {
+                        val label = if (isThermal) "térmica" else "digital"
+                        Toast.makeText(ctx, "No se encontró imagen $label inicial.", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
             LaunchedEffect(showVisualInspectionDialog, pendingProblemUbicacionId) {
                 if (showVisualInspectionDialog) {
                     val ubicacionId = pendingProblemUbicacionId
@@ -683,6 +760,12 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     onThermalSequenceDown = { pendingThermalImage = adjustImageSequence(pendingThermalImage, -1) },
                     onDigitalSequenceUp = { pendingDigitalImage = adjustImageSequence(pendingDigitalImage, +1) },
                     onDigitalSequenceDown = { pendingDigitalImage = adjustImageSequence(pendingDigitalImage, -1) },
+                    onThermalPickInitial = { loadInitialImageFromInspection(true) { pendingThermalImage = it } },
+                    onDigitalPickInitial = { loadInitialImageFromInspection(false) { pendingDigitalImage = it } },
+                    onThermalFolder = { thermalFolderLauncher.launch("image/*") },
+                    onDigitalFolder = { digitalFolderLauncher.launch("image/*") },
+                    onThermalCamera = { thermalCameraLauncher.launch(null) },
+                    onDigitalCamera = { digitalCameraLauncher.launch(null) },
                     onHazardSelected = { selected ->
                         val normalized = selected.takeIf { it.isNotBlank() }
                         pendingHazardId = normalized
@@ -2403,24 +2486,17 @@ private data class ImageNameParts(val prefix: String, val number: Long, val digi
 private fun parseImageName(raw: String): ImageNameParts {
     val trimmed = raw.trim()
     if (trimmed.isEmpty()) return ImageNameParts("", 0, 0, "")
-    var numberStart = trimmed.length
-    while (numberStart > 0 && trimmed[numberStart - 1].isDigit()) {
-        numberStart--
-    }
-    val prefix = trimmed.substring(0, numberStart)
-    val numericPart = trimmed.substring(numberStart)
-    val number = numericPart.toLongOrNull() ?: 0L
-    val suffixIndex = prefix.lastIndexOfAny(charArrayOf('.', '_', '-'))
-    val adjustedPrefix: String
-    val suffix: String
-    if (suffixIndex >= 0 && suffixIndex < prefix.lastIndex) {
-        adjustedPrefix = prefix.substring(0, suffixIndex + 1)
-        suffix = prefix.substring(suffixIndex + 1)
+    val regex = Regex("^(.*?)(\\d+)(.*)$")
+    val match = regex.find(trimmed)
+    return if (match != null) {
+        val prefix = match.groupValues[1]
+        val digitsStr = match.groupValues[2]
+        val suffix = match.groupValues[3]
+        val number = digitsStr.toLongOrNull() ?: 0L
+        ImageNameParts(prefix, number, digitsStr.length, suffix)
     } else {
-        adjustedPrefix = prefix
-        suffix = ""
+        ImageNameParts(trimmed, 0, 0, "")
     }
-    return ImageNameParts(adjustedPrefix, number, numericPart.length, suffix)
 }
 
 private fun composeImageName(parts: ImageNameParts): String {
@@ -2454,6 +2530,43 @@ private fun nextImageName(lastName: String?, prefix: String): String {
     val base = lastName?.takeIf { it.isNotBlank() } ?: "${prefix}0000"
     val next = adjustImageSequence(base, +1)
     return if (next == base) "${prefix}0001" else next
+}
+
+private fun saveProblemBitmap(ctx: Context, bmp: Bitmap, prefix: String): String? {
+    return try {
+        val dir = File(ctx.filesDir, "Imagenes").apply { mkdirs() }
+        val name = "$prefix-${System.currentTimeMillis()}.jpg"
+        val file = File(dir, name)
+        FileOutputStream(file).use { out ->
+            bmp.compress(Bitmap.CompressFormat.JPEG, 92, out)
+        }
+        name
+    } catch (_: Exception) {
+        null
+    }
+}
+
+private fun copyProblemImageFromUri(ctx: Context, uri: Uri, prefix: String): String? {
+    return try {
+        val dir = File(ctx.filesDir, "Imagenes").apply { mkdirs() }
+        val ext = ctx.contentResolver.getType(uri)?.let {
+            when {
+                it.contains("png") -> ".png"
+                it.contains("jpeg") || it.contains("jpg") -> ".jpg"
+                else -> ".jpg"
+            }
+        } ?: ".jpg"
+        val name = "$prefix-${System.currentTimeMillis()}$ext"
+        val file = File(dir, name)
+        ctx.contentResolver.openInputStream(uri)?.use { input ->
+            FileOutputStream(file).use { output ->
+                input.copyTo(output)
+            }
+        } ?: return null
+        name
+    } catch (_: Exception) {
+        null
+    }
 }
 
 // -------------------------

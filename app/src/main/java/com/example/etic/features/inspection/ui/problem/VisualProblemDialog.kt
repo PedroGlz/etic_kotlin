@@ -72,6 +72,12 @@ fun VisualProblemDialog(
     onThermalSequenceDown: () -> Unit,
     onDigitalSequenceUp: () -> Unit,
     onDigitalSequenceDown: () -> Unit,
+    onThermalPickInitial: () -> Unit,
+    onDigitalPickInitial: () -> Unit,
+    onThermalFolder: () -> Unit,
+    onDigitalFolder: () -> Unit,
+    onThermalCamera: () -> Unit,
+    onDigitalCamera: () -> Unit,
     onHazardSelected: (String) -> Unit,
     onSeveritySelected: (String) -> Unit,
     onDismiss: () -> Unit,
@@ -185,6 +191,9 @@ fun VisualProblemDialog(
                                     onValueChange = onThermalImageChange,
                                     onIncrement = onThermalSequenceUp,
                                     onDecrement = onThermalSequenceDown,
+                                    onPickInitial = onThermalPickInitial,
+                                    onFolder = onThermalFolder,
+                                    onCamera = onThermalCamera,
                                     modifier = Modifier.weight(1f)
                                 )
                                 ImageInputColumn(
@@ -194,6 +203,9 @@ fun VisualProblemDialog(
                                     onValueChange = onDigitalImageChange,
                                     onIncrement = onDigitalSequenceUp,
                                     onDecrement = onDigitalSequenceDown,
+                                    onPickInitial = onDigitalPickInitial,
+                                    onFolder = onDigitalFolder,
+                                    onCamera = onDigitalCamera,
                                     modifier = Modifier.weight(1f)
                                 )
                             }
@@ -379,6 +391,9 @@ private fun ImageInputColumn(
     onValueChange: (String) -> Unit,
     onIncrement: () -> Unit,
     onDecrement: () -> Unit,
+    onPickInitial: () -> Unit,
+    onFolder: () -> Unit,
+    onCamera: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -394,9 +409,9 @@ private fun ImageInputColumn(
             isRequired = true,
             onMoveUp = onIncrement,
             onMoveDown = onDecrement,
-            onDotsClick = null,
-            onFolderClick = null,
-            onCameraClick = null
+            onDotsClick = onPickInitial,
+            onFolderClick = onFolder,
+            onCameraClick = onCamera
         )
         ImagePreviewBox(fileName = value)
     }
