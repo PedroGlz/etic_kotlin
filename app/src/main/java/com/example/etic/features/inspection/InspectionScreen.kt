@@ -421,6 +421,8 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             }
             LaunchedEffect(showVisualInspectionDialog, pendingProblemUbicacionId) {
                 if (showVisualInspectionDialog) {
+                    pendingThermalImage = ""
+                    pendingDigitalImage = ""
                     val ubicacionId = pendingProblemUbicacionId
                     val tipoId = PROBLEM_TYPE_IDS["Visual"]
                     if (!ubicacionId.isNullOrBlank() && tipoId != null) {
@@ -440,27 +442,6 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                 }
             }
 
-            LaunchedEffect(showVisualInspectionDialog, pendingProblemNumber) {
-                if (showVisualInspectionDialog) {
-                    val inspId = currentInspection?.idInspeccion
-                    val typeId = PROBLEM_TYPE_IDS["Visual"]
-                    if (!inspId.isNullOrBlank() && typeId != null) {
-                        val (nextThermal, nextDigital) = withContext(Dispatchers.IO) {
-                            val lastThermal = runCatching {
-                                problemaDao.getLastThermalImageName(inspId, typeId)
-                            }.getOrNull()
-                            val lastDigital = runCatching {
-                                problemaDao.getLastDigitalImageName(inspId, typeId)
-                            }.getOrNull()
-                            val defaultThermal = nextImageName(lastThermal, "IR")
-                            val defaultDigital = nextImageName(lastDigital, "ID")
-                            defaultThermal to defaultDigital
-                        }
-                        pendingThermalImage = nextThermal
-                        pendingDigitalImage = nextDigital
-                    }
-                }
-            }
 
             suspend fun fetchNextProblemNumber(problemType: String): String {
                 val inspId = currentInspection?.idInspeccion ?: return "1"

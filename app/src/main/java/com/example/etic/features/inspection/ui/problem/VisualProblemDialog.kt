@@ -135,25 +135,31 @@ fun VisualProblemDialog(
                 }
 
                 Spacer(Modifier.height(16.dp))
+                val hazardError = selectedHazardIssue.isNullOrBlank()
+                val severityError = selectedSeverity.isNullOrBlank()
+                val thermalError = thermalImageName.isBlank()
+                val digitalError = digitalImageName.isBlank()
                 when (selectedTab) {
                     0 -> {
                         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 DropdownField(
-                                    label = "Problema",
+                                    label = "Problema *",
                                     options = hazardIssues,
                                     selectedId = selectedHazardIssue,
-                                    placeholder = "Selecciona una falla",
                                     onSelected = onHazardSelected,
-                                    modifier = Modifier.fillMaxWidth()
+                                    modifier = Modifier.fillMaxWidth(),
+                                    isError = hazardError,
+                                    placeholder = ""
                                 )
                                 DropdownField(
-                                    label = "Severidad",
+                                    label = "Severidad *",
                                     options = severities,
                                     selectedId = selectedSeverity,
-                                    placeholder = "Selecciona severidad",
                                     onSelected = onSeveritySelected,
-                                    modifier = Modifier.fillMaxWidth()
+                                    modifier = Modifier.fillMaxWidth(),
+                                    isError = severityError,
+                                    placeholder = ""
                                 )
                             }
 
@@ -185,7 +191,6 @@ fun VisualProblemDialog(
                                 horizontalArrangement = Arrangement.spacedBy(16.dp)
                             ) {
                                 ImageInputColumn(
-                                    title = "Imagen térmica",
                                     label = "Archivo IR",
                                     value = thermalImageName,
                                     onValueChange = onThermalImageChange,
@@ -194,10 +199,11 @@ fun VisualProblemDialog(
                                     onPickInitial = onThermalPickInitial,
                                     onFolder = onThermalFolder,
                                     onCamera = onThermalCamera,
-                                    modifier = Modifier.weight(1f)
+                                    modifier = Modifier.weight(1f),
+                                    isError = thermalError,
+                                    title = ""
                                 )
                                 ImageInputColumn(
-                                    title = "Imagen digital",
                                     label = "Archivo ID",
                                     value = digitalImageName,
                                     onValueChange = onDigitalImageChange,
@@ -206,22 +212,24 @@ fun VisualProblemDialog(
                                     onPickInitial = onDigitalPickInitial,
                                     onFolder = onDigitalFolder,
                                     onCamera = onDigitalCamera,
-                                    modifier = Modifier.weight(1f)
+                                    modifier = Modifier.weight(1f),
+                                    isError = digitalError,
+                                    title = ""
                                 )
                             }
                         }
                     }
                 }
 
+                val canSave = !hazardError && !severityError && !thermalError && !digitalError
                 Spacer(Modifier.height(24.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End,
+                    horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     TextButton(onClick = onDismiss) { Text("Cancelar") }
-                    Spacer(Modifier.width(8.dp))
-                    Button(onClick = onContinue) { Text("Continuar") }
+                    Button(onClick = onContinue, enabled = canSave) { Text("Guardar") }
                 }
             }
         }
@@ -254,7 +262,8 @@ private fun DropdownField(
     selectedId: String?,
     placeholder: String,
     onSelected: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isError: Boolean = false
 ) {
     val expanded = remember { mutableStateOf(false) }
     val currentLabel = options.firstOrNull { it.first == selectedId }?.second ?: placeholder
@@ -275,7 +284,8 @@ private fun DropdownField(
             modifier = Modifier
                 .menuAnchor()
                 .fillMaxWidth(),
-            colors = ExposedDropdownMenuDefaults.textFieldColors()
+            colors = ExposedDropdownMenuDefaults.textFieldColors(),
+            isError = isError
         )
         DropdownMenu(
             expanded = expanded.value,
@@ -300,6 +310,13 @@ private fun DropdownField(
                     }
                 )
             }
+        }
+        if (isError) {
+            Text(
+                text = "",
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall
+            )
         }
     }
 }
@@ -394,7 +411,8 @@ private fun ImageInputColumn(
     onPickInitial: () -> Unit,
     onFolder: () -> Unit,
     onCamera: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isError: Boolean = false
 ) {
     Column(
         modifier = modifier,
@@ -407,12 +425,20 @@ private fun ImageInputColumn(
             onValueChange = onValueChange,
             modifier = Modifier.fillMaxWidth(),
             isRequired = true,
+            enabled = true,
             onMoveUp = onIncrement,
             onMoveDown = onDecrement,
             onDotsClick = onPickInitial,
             onFolderClick = onFolder,
             onCameraClick = onCamera
         )
+        if (isError) {
+            Text(
+                text = "",
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall
+            )
+        }
         ImagePreviewBox(fileName = value)
     }
 }
