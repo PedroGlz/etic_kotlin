@@ -182,6 +182,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
     var selectedId by rememberSaveable { mutableStateOf<String?>(null) }
     var highlightedId by remember { mutableStateOf<String?>(null) }
     var baselineRefreshTick by remember { mutableStateOf(0) }
+    var problemsRefreshTick by remember { mutableStateOf(0) }
     var hasSignaledReady by rememberSaveable { mutableStateOf(false) }
     var severityCatalog by remember { mutableStateOf<List<Severidad>>(emptyList()) }
     var visualHazardOptions by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
@@ -859,6 +860,8 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                 pendingObservation = ""
                                 pendingThermalImage = ""
                                 pendingDigitalImage = ""
+                                pendingProblemUbicacionId = null
+                                problemsRefreshTick++
                                 Toast.makeText(ctx, "Problema visual guardado.", Toast.LENGTH_SHORT).show()
                                 refreshTree(preserveSelection = selectedId)
                             } else {
@@ -2403,6 +2406,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     },
                     baselineRefreshTick = baselineRefreshTick,
                     onBaselineChanged = { baselineRefreshTick++ },
+                    problemsRefreshTick = problemsRefreshTick,
                     modifier = Modifier.fillMaxSize(),  // asegura ocupar todo el espacio
                     onNewProblem = {
                         val currentSelection = selectedId
@@ -2428,6 +2432,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                 } else {
                                     pendingProblemEquipmentName = node.title
                                     pendingProblemRoute = titlePathForId(nodes, currentSelection).joinToString(" / ")
+                                    pendingProblemUbicacionId = currentSelection
                                     pendingProblemType = "Visual"
                                     pendingProblemNumber = fetchNextProblemNumber("Visual")
                                     ensureVisualDefaults()
@@ -2772,6 +2777,7 @@ private fun ListTabs(
     onDeleteBaseline: (Baseline) -> Unit,
     baselineRefreshTick: Int,
     onBaselineChanged: () -> Unit,
+    problemsRefreshTick: Int,
     modifier: Modifier = Modifier,
     onNewProblem: (() -> Unit)? = null
 ) {
@@ -2808,6 +2814,7 @@ private fun ListTabs(
         Box(Modifier.fillMaxSize()) {
             ProblemsTableFromDatabase(
                 selectedId = node?.id,
+                refreshTick = problemsRefreshTick,
                 modifier = Modifier
                     .fillMaxSize()
                     .alpha(if (showProblems) 1f else 0f)
@@ -2955,7 +2962,11 @@ private fun PreviewInspection() { EticTheme { InspectionScreen() } }
 // -------------------------
 
 @Composable
-private fun ProblemsTableFromDatabase(selectedId: String?, modifier: Modifier = Modifier) {
+private fun ProblemsTableFromDatabase(
+    selectedId: String?,
+    refreshTick: Int,
+    modifier: Modifier = Modifier
+) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val dao = remember { com.example.etic.data.local.DbProvider.get(ctx).problemaDao() }
     val ubicacionDao = remember { com.example.etic.data.local.DbProvider.get(ctx).ubicacionDao() }
@@ -2965,7 +2976,7 @@ private fun ProblemsTableFromDatabase(selectedId: String?, modifier: Modifier = 
     val tipoInspDao = remember { com.example.etic.data.local.DbProvider.get(ctx).tipoInspeccionDao() }
 
     var problemsCache by remember { mutableStateOf(emptyList<Problem>()) }
-    val uiProblems by produceState(initialValue = problemsCache, selectedId) {
+    val uiProblems by produceState(initialValue = problemsCache, selectedId, refreshTick) {
         val rows = try { dao.getAllActivos() } catch (_: Exception) { emptyList() }
         val ubicaciones = try { ubicacionDao.getAll() } catch (_: Exception) { emptyList() }
         val filteredRows = when {
