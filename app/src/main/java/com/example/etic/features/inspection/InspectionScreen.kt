@@ -96,6 +96,7 @@ import com.example.etic.features.inspection.data.UbicacionSaveContext
 import com.example.etic.features.inspection.ui.components.InspectionHeader
 import com.example.etic.features.inspection.ui.components.NewLocationDialog
 import com.example.etic.features.inspection.ui.state.rememberLocationFormState
+import com.example.etic.features.inspection.logic.VisualProblemEditor
 import com.example.etic.features.inspection.tree.Baseline
 import com.example.etic.features.inspection.tree.Problem
 import com.example.etic.features.inspection.tree.TreeNode
@@ -313,6 +314,21 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             var pendingThermalImage by rememberSaveable { mutableStateOf("") }
             var pendingDigitalImage by rememberSaveable { mutableStateOf("") }
             var isSavingVisualProblem by remember { mutableStateOf(false) }
+            var editingProblemId by rememberSaveable { mutableStateOf<String?>(null) }
+            var editingProblemOriginal by remember { mutableStateOf<Problema?>(null) }
+            fun resetVisualProblemForm() {
+                editingProblemId = null
+                editingProblemOriginal = null
+                pendingProblemType = "Visual"
+                pendingHazardId = null
+                pendingSeverityId = null
+                pendingObservation = ""
+                pendingThermalImage = ""
+                pendingDigitalImage = ""
+                pendingProblemUbicacionId = null
+                pendingProblemEquipmentName = null
+                pendingProblemRoute = null
+            }
             val thermalCameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { bmp ->
                 if (bmp != null) {
                     val saved = saveProblemBitmap(ctx, bmp, "IR")
@@ -380,22 +396,25 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                 return parts.joinToString(", ").uppercase(Locale.getDefault())
             }
 
-            fun ensureVisualDefaults() {
+            fun ensureVisualDefaults(allowObservationUpdate: Boolean = true) {
                 if (visualHazardOptions.isNotEmpty() && visualHazardOptions.none { it.first == pendingHazardId }) {
                     pendingHazardId = null
                 }
                 if (visualSeverityOptions.isNotEmpty() && visualSeverityOptions.none { it.first == pendingSeverityId }) {
                     pendingSeverityId = null
                 }
-                pendingObservation = buildVisualObservation(pendingHazardId, pendingProblemEquipmentName)
+                if (allowObservationUpdate) {
+                    pendingObservation = buildVisualObservation(pendingHazardId, pendingProblemEquipmentName)
+                }
             }
-            LaunchedEffect(visualHazardOptions, visualSeverityOptions) {
-                ensureVisualDefaults()
+            LaunchedEffect(visualHazardOptions, visualSeverityOptions, editingProblemId) {
+                ensureVisualDefaults(allowObservationUpdate = editingProblemId == null)
             }
 
             var visualProblemHistory by remember { mutableStateOf<List<VisualProblemHistoryRow>>(emptyList()) }
             var isHistoryLoading by remember { mutableStateOf(false) }
             val loadInitialImageScope = rememberCoroutineScope()
+            val scope = rememberCoroutineScope()
             fun loadInitialImageFromInspection(isThermal: Boolean, onResult: (String) -> Unit) {
                 val inspId = currentInspection?.idInspeccion
                 if (inspId.isNullOrBlank()) {
@@ -428,10 +447,12 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     runCatching { inspeccionDao.updateInitialImages(inspId, irName, digName) }
                 }
             }
-            LaunchedEffect(showVisualInspectionDialog, pendingProblemUbicacionId) {
+            LaunchedEffect(showVisualInspectionDialog, pendingProblemUbicacionId, editingProblemId) {
                 if (showVisualInspectionDialog) {
-                    pendingThermalImage = ""
-                    pendingDigitalImage = ""
+                    if (editingProblemId == null) {
+                        pendingThermalImage = ""
+                        pendingDigitalImage = ""
+                    }
                     val ubicacionId = pendingProblemUbicacionId
                     val tipoId = PROBLEM_TYPE_IDS["Visual"]
                     if (!ubicacionId.isNullOrBlank() && tipoId != null) {
@@ -461,6 +482,58 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                 }
                 return ((last ?: 0) + 1).toString()
             }
+            fun startVisualProblemEdit(problem: Problem) {
+                val visualTypeId = PROBLEM_TYPE_IDS["Visual"]
+                if (visualTypeId.isNullOrBlank()) {
+                    Toast.makeText(ctx, "No se encontro el tipo Visual.", Toast.LENGTH_SHORT).show()
+                    return
+                }
+                scope.launch {
+                    resetVisualProblemForm()
+                    val draft = withContext(Dispatchers.IO) {
+                        runCatching {
+                            VisualProblemEditor.loadDraft(
+                                problemId = problem.id,
+                                problemaDao = problemaDao,
+                                ubicacionDao = ubicacionDao,
+                                visualTypeId = visualTypeId
+                            )
+                        }.getOrNull()
+                    }
+                    if (draft == null) {
+                        Toast.makeText(ctx, "Solo se pueden editar problemas visuales.", Toast.LENGTH_SHORT).show()
+                        return@launch
+                    }
+                    val entity = draft.problema
+                    val ubId = entity.idUbicacion
+                    if (ubId.isNullOrBlank()) {
+                        Toast.makeText(ctx, "El problema no tiene una ubicacion asociada.", Toast.LENGTH_SHORT).show()
+                        return@launch
+                    }
+                    val fallbackRoute = titlePathForId(nodes, ubId).joinToString(" / ")
+                    val equipmentName = draft.equipmentName
+                        ?: problem.equipo.takeIf { it.isNotBlank() }
+                        ?: ubId
+                    val resolvedRoute = draft.route ?: if (fallbackRoute.isNotBlank()) fallbackRoute else entity.ruta ?: "-"
+                    pendingProblemEquipmentName = equipmentName
+                    pendingProblemRoute = resolvedRoute
+                    pendingProblemUbicacionId = ubId
+                    pendingProblemNumber = entity.numeroProblema?.toString() ?: problem.no.toString()
+                    pendingHazardId = entity.idFalla?.takeIf { !it.isNullOrBlank() }
+                        ?: visualHazardOptions.firstOrNull { option ->
+                            entity.hazardIssue?.equals(option.second, ignoreCase = true) == true
+                        }?.first
+                    pendingSeverityId = entity.idSeveridad
+                    pendingObservation = entity.componentComment.orEmpty()
+                    pendingThermalImage = entity.irFile.orEmpty()
+                    pendingDigitalImage = entity.photoFile.orEmpty()
+                    pendingProblemType = "Visual"
+                    editingProblemId = entity.idProblema
+                    editingProblemOriginal = entity
+                    ensureVisualDefaults(allowObservationUpdate = false)
+                    showVisualInspectionDialog = true
+                }
+            }
             var selectedProblemType by rememberSaveable { mutableStateOf("Eléctrico") }
             var showInvalidParentDialog by rememberSaveable { mutableStateOf(false) }
             var showNewUbDialog by remember { mutableStateOf(false) }
@@ -475,7 +548,6 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             var deleteUbInfoMessage by remember { mutableStateOf<String?>(null) }
             var pendingDeleteUbId by remember { mutableStateOf<String?>(null) }
     var deleteUbConfirmNode by remember { mutableStateOf<TreeNode?>(null) }
-    val scope = rememberCoroutineScope()
 
     suspend fun refreshTree(
         selectIfAvailable: String? = null,
@@ -651,6 +723,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                 scope.launch {
                                     showProblemTypeDialog = false
                                     pendingProblemType = "Visual"
+                                    resetVisualProblemForm()
                                     if (pendingProblemEquipmentName.isNullOrBlank()) {
                                         val node = selectedId?.let { findById(it, nodes) }
                                         pendingProblemEquipmentName = node?.title ?: "-"
@@ -768,7 +841,10 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     onSeveritySelected = { selected ->
                         pendingSeverityId = selected.takeIf { it.isNotBlank() }
                     },
-                    onDismiss = { showVisualInspectionDialog = false },
+                    onDismiss = {
+                        showVisualInspectionDialog = false
+                        resetVisualProblemForm()
+                    },
                     onContinue = {
                         if (isSavingVisualProblem) return@VisualProblemDialog
                         val inspection = currentInspection ?: return@VisualProblemDialog
@@ -800,79 +876,110 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                             if (isSavingVisualProblem) return@launch
                             isSavingVisualProblem = true
                             try {
-                                val numero = pendingProblemNumber.toIntOrNull()
-                                    ?: fetchNextProblemNumber("Visual").toIntOrNull()
-                                    ?: 1
-                            val detRow = withContext(Dispatchers.IO) {
-                                runCatching {
-                                    inspeccionDetDao.getByUbicacion(ubicacionId)
-                                        .firstOrNull { it.idInspeccion == inspection.idInspeccion }
-                                }.getOrNull()
-                            }
-                            val detId = detRow?.idInspeccionDet
-                            val hazardLabel = visualHazardOptions.firstOrNull { it.first == hazardId }?.second
-                            val comment = pendingObservation.ifBlank {
-                                buildVisualObservation(hazardId, pendingProblemEquipmentName)
-                            }
-                            val nowTs = java.time.LocalDateTime.now()
-                                .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
-                            val problema = Problema(
-                                idProblema = java.util.UUID.randomUUID().toString().uppercase(),
-                                numeroProblema = numero,
-                                idTipoInspeccion = typeId,
-                                idSitio = inspection.idSitio,
-                                idInspeccion = inspection.idInspeccion,
-                                idInspeccionDet = detId,
-                                idUbicacion = ubicacionId,
-                                hazardIssue = hazardLabel ?: hazardId,
-                                idSeveridad = severityId,
-                                componentComment = comment,
-                                ruta = pendingProblemRoute,
-                                estatusProblema = "Abierto",
-                                esCronico = "NO",
-                                cerradoEnInspeccion = "No",
-                                estatus = "Activo",
-                                irFile = thermal,
-                                photoFile = digital,
-                                creadoPor = currentUser?.idUsuario,
-                                fechaCreacion = nowTs
-                            )
-                            val insertResult = runCatching {
-                                withContext(Dispatchers.IO) { problemaDao.insert(problema) }
-                            }
-                            if (insertResult.isSuccess) {
-                                if (detRow != null) {
-                                    val updatedDet = detRow.copy(
-                                        idStatusInspeccionDet = "568798D2-76BB-11D3-82BF-00104BC75DC2",
-                                        idEstatusColorText = 2,
-                                        modificadoPor = currentUser?.idUsuario,
-                                        fechaMod = nowTs
+                                val editingId = editingProblemId
+                                val resolvedRoute = pendingProblemRoute
+                                    ?: ubicacionId?.let { titlePathForId(nodes, it).joinToString(" / ") }
+                                    ?: "-"
+                                val hazardLabel = visualHazardOptions.firstOrNull { it.first == hazardId }?.second
+                                val comment = pendingObservation.ifBlank {
+                                    buildVisualObservation(hazardId, pendingProblemEquipmentName)
+                                }
+                                val nowTs = java.time.LocalDateTime.now()
+                                    .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+                                val detRow = withContext(Dispatchers.IO) {
+                                    runCatching {
+                                        inspeccionDetDao.getByUbicacion(ubicacionId)
+                                            .firstOrNull { it.idInspeccion == inspection.idInspeccion }
+                                    }.getOrNull()
+                                }
+                                val detId = detRow?.idInspeccionDet
+                                val operationResult = if (editingId == null) {
+                                    val numero = pendingProblemNumber.toIntOrNull()
+                                        ?: fetchNextProblemNumber("Visual").toIntOrNull()
+                                        ?: 1
+                                    val problema = Problema(
+                                        idProblema = java.util.UUID.randomUUID().toString().uppercase(),
+                                        numeroProblema = numero,
+                                        idTipoInspeccion = typeId,
+                                        idSitio = inspection.idSitio,
+                                        idInspeccion = inspection.idInspeccion,
+                                        idInspeccionDet = detId,
+                                        idUbicacion = ubicacionId,
+                                        hazardIssue = hazardLabel ?: hazardId,
+                                        idFalla = hazardId,
+                                        idSeveridad = severityId,
+                                        componentComment = comment,
+                                        ruta = resolvedRoute,
+                                        estatusProblema = "Abierto",
+                                        esCronico = "NO",
+                                        cerradoEnInspeccion = "No",
+                                        estatus = "Activo",
+                                        irFile = thermal,
+                                        photoFile = digital,
+                                        creadoPor = currentUser?.idUsuario,
+                                        fechaCreacion = nowTs
                                     )
                                     runCatching {
-                                        withContext(Dispatchers.IO) { inspeccionDetDao.update(updatedDet) }
+                                        withContext(Dispatchers.IO) { problemaDao.insert(problema) }
                                     }
+                                } else {
+                                    val base = editingProblemOriginal ?: withContext(Dispatchers.IO) {
+                                        runCatching { problemaDao.getById(editingId) }.getOrNull()
+                                    }
+                                    if (base == null) {
+                                        Toast.makeText(ctx, "No se pudo cargar el problema a editar.", Toast.LENGTH_SHORT).show()
+                                        null
+                                    } else {
+                                        val updated = base.copy(
+                                            idInspeccionDet = detId,
+                                            idUbicacion = ubicacionId,
+                                            hazardIssue = hazardLabel ?: hazardId,
+                                            idFalla = hazardId,
+                                            idSeveridad = severityId,
+                                            componentComment = comment,
+                                            ruta = resolvedRoute,
+                                            irFile = thermal,
+                                            photoFile = digital,
+                                            modificadoPor = currentUser?.idUsuario,
+                                            fechaMod = nowTs
+                                        )
+                                        runCatching {
+                                            withContext(Dispatchers.IO) { problemaDao.update(updated) }
+                                        }
+                                    }
+                                } ?: return@launch
+                                if (operationResult.isSuccess) {
+                                    if (detRow != null) {
+                                        val updatedDet = detRow.copy(
+                                            idStatusInspeccionDet = "568798D2-76BB-11D3-82BF-00104BC75DC2",
+                                            idEstatusColorText = 2,
+                                            modificadoPor = currentUser?.idUsuario,
+                                            fechaMod = nowTs
+                                        )
+                                        runCatching {
+                                            withContext(Dispatchers.IO) { inspeccionDetDao.update(updatedDet) }
+                                        }
+                                    }
+                                    updateInspectionInitialImages(thermal, digital)
+                                    showVisualInspectionDialog = false
+                                    pendingProblemNumber = fetchNextProblemNumber("Visual")
+                                    problemsRefreshTick++
+                                    Toast.makeText(
+                                        ctx,
+                                        if (editingId == null) "Problema visual guardado." else "Problema visual actualizado.",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                    refreshTree(preserveSelection = ubicacionId)
+                                    resetVisualProblemForm()
+                                } else {
+                                    val message = operationResult.exceptionOrNull()?.localizedMessage
+                                        ?: "Error desconocido"
+                                    Toast.makeText(
+                                        ctx,
+                                        "No se pudo guardar el problema visual: $message",
+                                        Toast.LENGTH_LONG
+                                    ).show()
                                 }
-                                updateInspectionInitialImages(thermal, digital)
-                                showVisualInspectionDialog = false
-                                pendingProblemNumber = (numero + 1).toString()
-                                pendingHazardId = null
-                                pendingSeverityId = null
-                                pendingObservation = ""
-                                pendingThermalImage = ""
-                                pendingDigitalImage = ""
-                                pendingProblemUbicacionId = null
-                                problemsRefreshTick++
-                                Toast.makeText(ctx, "Problema visual guardado.", Toast.LENGTH_SHORT).show()
-                                refreshTree(preserveSelection = selectedId)
-                            } else {
-                                val message = insertResult.exceptionOrNull()?.localizedMessage
-                                    ?: "Error desconocido"
-                                Toast.makeText(
-                                    ctx,
-                                    "No se pudo guardar el problema visual: $message",
-                                    Toast.LENGTH_LONG
-                                ).show()
-                            }
                             } finally {
                                 isSavingVisualProblem = false
                             }
@@ -2408,6 +2515,9 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     onBaselineChanged = { baselineRefreshTick++ },
                     problemsRefreshTick = problemsRefreshTick,
                     modifier = Modifier.fillMaxSize(),  // asegura ocupar todo el espacio
+                    onProblemDoubleTap = { problem ->
+                        startVisualProblemEdit(problem)
+                    },
                     onNewProblem = {
                         val currentSelection = selectedId
                         val node = currentSelection?.let { findById(it, nodes) }
@@ -2415,6 +2525,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                             showNoSelectionDialog = true
                         } else {
                             scope.launch {
+                                resetVisualProblemForm()
                                 val hasBaseline = withContext(Dispatchers.IO) {
                                     runCatching {
                                         lineaBaseDaoGlobal.existsActiveByUbicacion(currentSelection)
@@ -2779,6 +2890,7 @@ private fun ListTabs(
     onBaselineChanged: () -> Unit,
     problemsRefreshTick: Int,
     modifier: Modifier = Modifier,
+    onProblemDoubleTap: ((Problem) -> Unit)? = null,
     onNewProblem: (() -> Unit)? = null
 ) {
     // Nota: mostramos versiones ligadas a BD; no usamos listas calculadas por nodo aqu?
@@ -2818,7 +2930,8 @@ private fun ListTabs(
                 modifier = Modifier
                     .fillMaxSize()
                     .alpha(if (showProblems) 1f else 0f)
-                    .zIndex(if (showProblems) 1f else 0f)
+                    .zIndex(if (showProblems) 1f else 0f),
+                onProblemDoubleTap = onProblemDoubleTap
             )
             BaselineTableFromDatabase(
                 selectedId = node?.id,
@@ -2834,7 +2947,11 @@ private fun ListTabs(
 }
 
 @Composable
-private fun ProblemsTable(problems: List<Problem>, onDelete: (Problem) -> Unit) {
+private fun ProblemsTable(
+    problems: List<Problem>,
+    onDelete: (Problem) -> Unit,
+    onDoubleTap: ((Problem) -> Unit)? = null
+) {
     @Composable
     fun RowScope.cell(flex: Int, content: @Composable () -> Unit) =
         Box(Modifier.weight(flex.toFloat()), contentAlignment = Alignment.CenterStart) { content() }
@@ -2870,6 +2987,9 @@ private fun ProblemsTable(problems: List<Problem>, onDelete: (Problem) -> Unit) 
                         Modifier
                             .fillMaxWidth()
                             .padding(vertical = 6.dp, horizontal = 8.dp)
+                            .pointerInput(p.id) {
+                                detectTapGestures(onDoubleTap = { onDoubleTap?.invoke(p) })
+                            }
                     ) {
                         cell(1) { Text("${p.no}") }
                         cell(2) { Text(p.fecha.toString()) }
@@ -2965,7 +3085,8 @@ private fun PreviewInspection() { EticTheme { InspectionScreen() } }
 private fun ProblemsTableFromDatabase(
     selectedId: String?,
     refreshTick: Int,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onProblemDoubleTap: ((Problem) -> Unit)? = null
 ) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val dao = remember { com.example.etic.data.local.DbProvider.get(ctx).problemaDao() }
@@ -3025,7 +3146,7 @@ private fun ProblemsTableFromDatabase(
     }
 
     Box(modifier) {
-        ProblemsTable(problems = uiProblems, onDelete = { /* no-op: from DB */ })
+        ProblemsTable(problems = uiProblems, onDelete = { /* no-op: from DB */ }, onDoubleTap = onProblemDoubleTap)
     }
 }
 

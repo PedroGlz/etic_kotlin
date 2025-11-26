@@ -3,6 +3,7 @@ package com.example.etic.data.local.dao
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.Query
+import androidx.room.Update
 import com.example.etic.data.local.entities.Problema
 
 @Dao
@@ -10,6 +11,12 @@ interface ProblemaDao {
 
     @Insert
     suspend fun insert(problema: Problema)
+
+    @Update
+    suspend fun update(problema: Problema)
+
+    @Query("SELECT * FROM problemas WHERE Id_Problema = :problemId LIMIT 1")
+    suspend fun getById(problemId: String): Problema?
 
     @Query("SELECT * FROM problemas")
     suspend fun getAll(): List<Problema>
