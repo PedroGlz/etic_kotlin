@@ -104,7 +104,9 @@ import com.example.etic.features.inspection.tree.titlePathForId
 import com.example.etic.features.inspection.ui.problem.VisualProblemDialog
 import com.example.etic.data.local.entities.Falla
 import com.example.etic.data.local.entities.Severidad
+import com.example.etic.data.local.dao.VisualProblemHistoryRow
 import androidx.compose.ui.window.Dialog
+import java.util.Locale
 
 // Centralizamos algunos "magic numbers" para facilitar ajuste futuro
 private const val MIN_FRAC: Float = 0.2f     // Limite inferior de los splitters
@@ -286,6 +288,8 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             var pendingProblemNumber by rememberSaveable { mutableStateOf("Pendiente") }
             var pendingHazardId by rememberSaveable { mutableStateOf<String?>(null) }
             var pendingSeverityId by rememberSaveable { mutableStateOf<String?>(null) }
+            var pendingProblemUbicacionId by rememberSaveable { mutableStateOf<String?>(null) }
+            var pendingObservation by rememberSaveable { mutableStateOf("") }
 
             LaunchedEffect(showEditUbDialog) {
                 if (!showEditUbDialog) {
@@ -307,6 +311,15 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                 }
             }
 
+            fun buildVisualObservation(hazardId: String?, equipmentName: String?): String {
+                val hazardText = hazardId?.let { id ->
+                    visualHazardOptions.firstOrNull { it.first == id }?.second
+                }
+                val equipment = equipmentName?.takeUnless { it.isBlank() }
+                val parts = listOfNotNull(hazardText, equipment).filter { it.isNotBlank() }
+                return parts.joinToString(", ").uppercase(Locale.getDefault())
+            }
+
             fun ensureVisualDefaults() {
                 if (visualHazardOptions.isNotEmpty() && visualHazardOptions.none { it.first == pendingHazardId }) {
                     pendingHazardId = visualHazardOptions.first().first
@@ -314,9 +327,33 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                 if (visualSeverityOptions.isNotEmpty() && visualSeverityOptions.none { it.first == pendingSeverityId }) {
                     pendingSeverityId = visualSeverityOptions.first().first
                 }
+                pendingObservation = buildVisualObservation(pendingHazardId, pendingProblemEquipmentName)
             }
             LaunchedEffect(visualHazardOptions, visualSeverityOptions) {
                 ensureVisualDefaults()
+            }
+
+            var visualProblemHistory by remember { mutableStateOf<List<VisualProblemHistoryRow>>(emptyList()) }
+            var isHistoryLoading by remember { mutableStateOf(false) }
+            LaunchedEffect(showVisualInspectionDialog, pendingProblemUbicacionId) {
+                if (showVisualInspectionDialog) {
+                    val ubicacionId = pendingProblemUbicacionId
+                    val tipoId = PROBLEM_TYPE_IDS["Visual"]
+                    if (!ubicacionId.isNullOrBlank() && tipoId != null) {
+                        isHistoryLoading = true
+                        visualProblemHistory = withContext(Dispatchers.IO) {
+                            runCatching { problemaDao.getVisualHistoryFor(ubicacionId, tipoId) }
+                                .getOrDefault(emptyList())
+                        }
+                        isHistoryLoading = false
+                    } else {
+                        visualProblemHistory = emptyList()
+                        isHistoryLoading = false
+                    }
+                } else {
+                    visualProblemHistory = emptyList()
+                    isHistoryLoading = false
+                }
             }
 
             suspend fun fetchNextProblemNumber(problemType: String): String {
@@ -521,9 +558,13 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                     if (pendingProblemEquipmentName.isNullOrBlank()) {
                                         val node = selectedId?.let { findById(it, nodes) }
                                         pendingProblemEquipmentName = node?.title ?: "-"
+                                        pendingProblemUbicacionId = node?.id ?: selectedId
                                     }
                                     if (pendingProblemRoute.isNullOrBlank()) {
                                         pendingProblemRoute = selectedId?.let { titlePathForId(nodes, it).joinToString(" / ") } ?: "-"
+                                    }
+                                    if (pendingProblemUbicacionId.isNullOrBlank()) {
+                                        pendingProblemUbicacionId = selectedId
                                     }
                                     pendingProblemNumber = fetchNextProblemNumber("Visual")
                                     ensureVisualDefaults()
@@ -605,7 +646,14 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     severities = visualSeverityOptions,
                     selectedHazardIssue = pendingHazardId,
                     selectedSeverity = pendingSeverityId,
-                    onHazardSelected = { pendingHazardId = it },
+                    observations = pendingObservation,
+                    onObservationsChange = { pendingObservation = it },
+                    historyRows = visualProblemHistory,
+                    historyLoading = isHistoryLoading,
+                    onHazardSelected = {
+                        pendingHazardId = it
+                        pendingObservation = buildVisualObservation(it, pendingProblemEquipmentName)
+                    },
                     onSeveritySelected = { pendingSeverityId = it },
                     onDismiss = { showVisualInspectionDialog = false },
                     onContinue = {

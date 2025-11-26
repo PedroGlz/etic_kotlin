@@ -33,4 +33,34 @@ interface ProblemaDao {
         idInspeccion: String,
         idTipoInspeccion: String
     ): Int?
+
+    @Query(
+        """
+        SELECT 
+            p.Numero_Problema AS numero,
+            i.No_Inspeccion AS numeroInspeccion,
+            p.Fecha_Creacion AS fecha,
+            s.Severidad AS severidad,
+            p.Component_Comment AS comentario
+        FROM problemas p
+        LEFT JOIN inspecciones i ON i.Id_Inspeccion = p.Id_Inspeccion
+        LEFT JOIN severidades s ON s.Id_Severidad = p.Id_Severidad
+        WHERE p.Id_Ubicacion = :ubicacionId
+          AND p.Id_Tipo_Inspeccion = :tipoInspeccionId
+          AND p.Estatus = 'Activo'
+        ORDER BY i.No_Inspeccion DESC, p.Fecha_Creacion DESC
+        """
+    )
+    suspend fun getVisualHistoryFor(
+        ubicacionId: String,
+        tipoInspeccionId: String
+    ): List<VisualProblemHistoryRow>
 }
+
+data class VisualProblemHistoryRow(
+    val numero: Int?,
+    val numeroInspeccion: Int?,
+    val fecha: String?,
+    val severidad: String?,
+    val comentario: String?
+)

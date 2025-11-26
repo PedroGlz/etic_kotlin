@@ -1,21 +1,24 @@
 package com.example.etic.features.inspection.ui.problem
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -26,17 +29,20 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
+import androidx.compose.material3.Divider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.example.etic.data.local.dao.VisualProblemHistoryRow
 
-private val DIALOG_MIN_WIDTH = 650.dp
-private val DIALOG_MAX_WIDTH = 670.dp
+private val DIALOG_MIN_WIDTH = 720.dp
+private val DIALOG_MAX_WIDTH = 980.dp
 private val INFO_FIELD_MIN_WIDTH = 130.dp
 private val INFO_FIELD_MAX_WIDTH = 220.dp
 
@@ -52,6 +58,10 @@ fun VisualProblemDialog(
     severities: List<Pair<String, String>>,
     selectedHazardIssue: String?,
     selectedSeverity: String?,
+    observations: String,
+    onObservationsChange: (String) -> Unit,
+    historyRows: List<VisualProblemHistoryRow>,
+    historyLoading: Boolean,
     onHazardSelected: (String) -> Unit,
     onSeveritySelected: (String) -> Unit,
     onDismiss: () -> Unit,
@@ -67,7 +77,7 @@ fun VisualProblemDialog(
     ) {
         Surface(
             shape = RoundedCornerShape(12.dp),
-            tonalElevation = 4.dp
+            tonalElevation = 6.dp
         ) {
             val scrollState = rememberScrollState()
             val infoRowScroll = rememberScrollState()
@@ -78,9 +88,15 @@ fun VisualProblemDialog(
                     .padding(24.dp)
             ) {
                 Text("Problema Visual", style = MaterialTheme.typography.headlineSmall)
-                
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "Completa la clasificación y agrega contexto antes de registrar el hallazgo.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+
                 Spacer(Modifier.height(16.dp))
-                
+                Text("Información general", style = MaterialTheme.typography.labelLarge)
+                Spacer(Modifier.height(8.dp))
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -88,26 +104,10 @@ fun VisualProblemDialog(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    InfoField(
-                        label = "Inspección No.",
-                        value = inspectionNumber,
-                        modifier = Modifier.width(118.dp)
-                    )
-                    InfoField(
-                        label = "Problema No.",
-                        value = problemNumber,
-                        modifier = Modifier.width(117.dp)
-                    )
-                    InfoField(
-                        label = "Tipo",
-                        value = problemType,
-                        modifier = Modifier.width(100.dp)
-                    )
-                    InfoField(
-                        label = "Equipo",
-                        value = equipmentName,
-                        modifier = Modifier.weight(1f)
-                    )
+                    InfoField("Inspección No.", inspectionNumber)
+                    InfoField("Problema No.", problemNumber)
+                    InfoField("Tipo de problema", problemType)
+                    InfoField("Equipo", equipmentName)
                 }
 
                 Spacer(Modifier.height(12.dp))
@@ -120,6 +120,8 @@ fun VisualProblemDialog(
                 )
 
                 Spacer(Modifier.height(16.dp))
+                Text("Clasificación visual", style = MaterialTheme.typography.labelLarge)
+                Spacer(Modifier.height(8.dp))
                 DropdownField(
                     label = "Problema",
                     options = hazardIssues,
@@ -138,6 +140,25 @@ fun VisualProblemDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
 
+                Spacer(Modifier.height(16.dp))
+                TextField(
+                    value = observations,
+                    onValueChange = onObservationsChange,
+                    label = { Text("Observaciones") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .wrapContentHeight(),
+                    minLines = 2
+                )
+
+                Spacer(Modifier.height(16.dp))
+                Text("Historia de este problema", style = MaterialTheme.typography.labelLarge)
+                Spacer(Modifier.height(8.dp))
+                HistorySection(
+                    rows = historyRows,
+                    isLoading = historyLoading
+                )
+
                 Spacer(Modifier.height(24.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -154,10 +175,11 @@ fun VisualProblemDialog(
 }
 
 @Composable
-private fun InfoField(label: String, value: String, modifier: Modifier = Modifier) {
+private fun InfoField(label: String, value: String) {
     Column(
-        modifier
-            .width(IntrinsicSize.Min)
+        Modifier
+            .widthIn(min = INFO_FIELD_MIN_WIDTH, max = INFO_FIELD_MAX_WIDTH)
+            .defaultMinSize(minWidth = INFO_FIELD_MIN_WIDTH)
     ) {
         TextField(
             value = value,
@@ -165,9 +187,7 @@ private fun InfoField(label: String, value: String, modifier: Modifier = Modifie
             readOnly = true,
             singleLine = true,
             label = { Text(label) },
-            modifier = Modifier
-                .widthIn(min = INFO_FIELD_MIN_WIDTH, max = INFO_FIELD_MAX_WIDTH)
-                .defaultMinSize(minWidth = INFO_FIELD_MIN_WIDTH)
+            modifier = Modifier.widthIn(min = INFO_FIELD_MIN_WIDTH, max = INFO_FIELD_MAX_WIDTH)
         )
     }
 }
@@ -216,6 +236,85 @@ private fun DropdownField(
                     }
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun HistorySection(rows: List<VisualProblemHistoryRow>, isLoading: Boolean) {
+    when {
+        isLoading -> {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.height(20.dp))
+                Text("Cargando historial...")
+            }
+        }
+        rows.isEmpty() -> {
+            Text("Sin registros previos para esta ubicación.", style = MaterialTheme.typography.bodyMedium)
+        }
+        else -> {
+            HistoryTable(rows = rows)
+        }
+    }
+}
+
+@Composable
+private fun HistoryTable(rows: List<VisualProblemHistoryRow>) {
+    val outline = MaterialTheme.colorScheme.outline
+    val headerStyle = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.SemiBold)
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .border(1.dp, outline, RoundedCornerShape(8.dp))
+    ) {
+        HistoryRow(
+            cells = listOf("No", "No. Inspección", "Fecha", "Severidad", "Comentarios"),
+            isHeader = true,
+            textStyle = headerStyle
+        )
+        Divider()
+        rows.forEach { row ->
+            HistoryRow(
+                cells = listOf(
+                    row.numero?.toString().orEmpty().ifBlank { "-" },
+                    row.numeroInspeccion?.toString().orEmpty().ifBlank { "-" },
+                    row.fecha.orEmpty().ifBlank { "-" },
+                    row.severidad.orEmpty().ifBlank { "-" },
+                    row.comentario.orEmpty().ifBlank { "-" }
+                ),
+                isHeader = false,
+                textStyle = MaterialTheme.typography.bodySmall
+            )
+        }
+    }
+}
+
+@Composable
+private fun HistoryRow(
+    cells: List<String>,
+    isHeader: Boolean,
+    textStyle: androidx.compose.ui.text.TextStyle
+) {
+    val weights = listOf(0.8f, 1f, 1.2f, 1f, 2f)
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        cells.forEachIndexed { index, cell ->
+            Text(
+                text = cell,
+                style = textStyle,
+                modifier = Modifier.weight(weights.getOrElse(index) { 1f }),
+                maxLines = if (isHeader) 1 else 3
+            )
         }
     }
 }
