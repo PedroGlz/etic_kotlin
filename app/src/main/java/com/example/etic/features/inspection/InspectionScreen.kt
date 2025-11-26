@@ -102,6 +102,8 @@ import com.example.etic.features.inspection.tree.findById
 import com.example.etic.features.inspection.tree.findPathByBarcode
 import com.example.etic.features.inspection.tree.titlePathForId
 import com.example.etic.features.inspection.ui.problem.VisualProblemDialog
+import com.example.etic.data.local.entities.Falla
+import com.example.etic.data.local.entities.Severidad
 import androidx.compose.ui.window.Dialog
 
 // Centralizamos algunos "magic numbers" para facilitar ajuste futuro
@@ -121,6 +123,13 @@ private val PROBLEM_TYPE_IDS = mapOf(
     "Eléctrico" to "0D32B331-76C3-11D3-82BF-00104BC75DC2",
     "Visual" to "0D32B333-76C3-11D3-82BF-00104BC75DC2",
     "Mecánico" to "0D32B334-76C3-11D3-82BF-00104BC75DC2"
+)
+private val VISUAL_SEVERITY_OPTIONS = listOf(
+    "1D56EDB0-8D6E-11D3-9270-006008A19766" to "Crítico",
+    "1D56EDB1-8D6E-11D3-9270-006008A19766" to "Serio",
+    "1D56EDB2-8D6E-11D3-9270-006008A19766" to "Importante",
+    "1D56EDB3-8D6E-11D3-9270-006008A19766" to "Menor",
+    "1D56EDB4-8D6E-11D3-9270-006008A19766" to "Normal"
 )
 
 // Ajustes de compacidad para filas del arbol
@@ -154,6 +163,8 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
     }
     val problemaDao = remember { com.example.etic.data.local.DbProvider.get(ctx).problemaDao() }
     val lineaBaseDaoGlobal = remember { com.example.etic.data.local.DbProvider.get(ctx).lineaBaseDao() }
+    val fallaDao = remember { com.example.etic.data.local.DbProvider.get(ctx).fallaDao() }
+    val severidadDao = remember { com.example.etic.data.local.DbProvider.get(ctx).severidadDao() }
     val currentInspection = LocalCurrentInspection.current
     val rootTitle = currentInspection?.nombreSitio ?: "Sitio"
     val rootId = remember(currentInspection?.idSitio) { (currentInspection?.idSitio?.let { "root:$it" } ?: "root:site") }
@@ -163,6 +174,8 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
     var highlightedId by remember { mutableStateOf<String?>(null) }
     var baselineRefreshTick by remember { mutableStateOf(0) }
     var hasSignaledReady by rememberSaveable { mutableStateOf(false) }
+    var hazardCatalog by remember { mutableStateOf<List<Falla>>(emptyList()) }
+    var severityCatalog by remember { mutableStateOf<List<Severidad>>(emptyList()) }
     val treeScope = rememberCoroutineScope()
     val onSelectNode: (String) -> Unit = { id ->
         selectedId = id
@@ -174,6 +187,14 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                 }
             }
         }
+    }
+    LaunchedEffect(Unit) {
+        hazardCatalog = runCatching {
+            withContext(Dispatchers.IO) { fallaDao.getAllActivos() }
+        }.getOrElse { emptyList() }
+        severityCatalog = runCatching {
+            withContext(Dispatchers.IO) { severidadDao.getAll() }
+        }.getOrElse { emptyList() }
     }
     // Reconstruir el arbol cuando llegue/ cambie la Inspeccion actual
     LaunchedEffect(rootId, rootTitle, currentInspection?.idInspeccion) {
@@ -223,18 +244,6 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
 
     val borderColor = DividerDefaults.color
 
-    // ---------- Estados NUEVOS para el dialogo de edicion con tabs ----------
-    var showEditUbDialog by remember { mutableStateOf(false) }
-    var isSavingEditUb by remember { mutableStateOf(false) }
-    var editTab by rememberSaveable { mutableStateOf(0) }
-    // -----------------------------------------------------------------------
-
-    LaunchedEffect(showEditUbDialog) {
-        if (!showEditUbDialog) {
-            isSavingEditUb = false
-        }
-    }
-
     BoxWithConstraints(Modifier.fillMaxSize()) {
         // Convierte dimensiones del BoxWithConstraints a pixeles de forma segura
         val density = LocalDensity.current
@@ -268,9 +277,47 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             var showBaselineRestrictionDialog by rememberSaveable { mutableStateOf(false) }
             var showVisualInspectionWarning by rememberSaveable { mutableStateOf(false) }
             var showVisualInspectionDialog by rememberSaveable { mutableStateOf(false) }
+            var showEditUbDialog by remember { mutableStateOf(false) }
+            var isSavingEditUb by remember { mutableStateOf(false) }
+            var editTab by rememberSaveable { mutableStateOf(0) }
             var pendingProblemEquipmentName by rememberSaveable { mutableStateOf<String?>(null) }
+            var pendingProblemRoute by rememberSaveable { mutableStateOf<String?>(null) }
             var pendingProblemType by rememberSaveable { mutableStateOf("Visual") }
             var pendingProblemNumber by rememberSaveable { mutableStateOf("Pendiente") }
+            var pendingHazardId by rememberSaveable { mutableStateOf<String?>(null) }
+            var pendingSeverityId by rememberSaveable { mutableStateOf<String?>(null) }
+
+            LaunchedEffect(showEditUbDialog) {
+                if (!showEditUbDialog) {
+                    isSavingEditUb = false
+                }
+            }
+
+            val visualHazardOptions = remember(hazardCatalog) {
+                val typeId = PROBLEM_TYPE_IDS["Visual"]
+                hazardCatalog
+                    .filter { it.idTipoInspeccion.equals(typeId, true) }
+                    .sortedBy { it.falla?.lowercase() ?: "" }
+                    .map { it.idFalla to (it.falla ?: it.idFalla) }
+            }
+            val visualSeverityOptions = remember(severityCatalog) {
+                val map = severityCatalog.associateBy { it.idSeveridad }
+                VISUAL_SEVERITY_OPTIONS.map { (id, fallback) ->
+                    id to (map[id]?.severidad ?: fallback)
+                }
+            }
+
+            fun ensureVisualDefaults() {
+                if (visualHazardOptions.isNotEmpty() && visualHazardOptions.none { it.first == pendingHazardId }) {
+                    pendingHazardId = visualHazardOptions.first().first
+                }
+                if (visualSeverityOptions.isNotEmpty() && visualSeverityOptions.none { it.first == pendingSeverityId }) {
+                    pendingSeverityId = visualSeverityOptions.first().first
+                }
+            }
+            LaunchedEffect(visualHazardOptions, visualSeverityOptions) {
+                ensureVisualDefaults()
+            }
 
             suspend fun fetchNextProblemNumber(problemType: String): String {
                 val inspId = currentInspection?.idInspeccion ?: return "1"
@@ -475,7 +522,11 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                         val node = selectedId?.let { findById(it, nodes) }
                                         pendingProblemEquipmentName = node?.title ?: "-"
                                     }
+                                    if (pendingProblemRoute.isNullOrBlank()) {
+                                        pendingProblemRoute = selectedId?.let { titlePathForId(nodes, it).joinToString(" / ") } ?: "-"
+                                    }
                                     pendingProblemNumber = fetchNextProblemNumber("Visual")
+                                    ensureVisualDefaults()
                                     showVisualInspectionDialog = true
                                 }
                             } else {
@@ -549,6 +600,13 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     problemNumber = pendingProblemNumber,
                     problemType = pendingProblemType,
                     equipmentName = pendingProblemEquipmentName ?: "-",
+                    equipmentRoute = pendingProblemRoute ?: "-",
+                    hazardIssues = visualHazardOptions,
+                    severities = visualSeverityOptions,
+                    selectedHazardIssue = pendingHazardId,
+                    selectedSeverity = pendingSeverityId,
+                    onHazardSelected = { pendingHazardId = it },
+                    onSeveritySelected = { pendingSeverityId = it },
                     onDismiss = { showVisualInspectionDialog = false },
                     onContinue = {
                         showVisualInspectionDialog = false
@@ -2100,12 +2158,16 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                 } else if (node.verified) {
                                     selectedProblemType = "Eléctrico"
                                     pendingProblemEquipmentName = node.title
+                                    pendingProblemRoute = titlePathForId(nodes, currentSelection).joinToString(" / ")
                                     pendingProblemType = selectedProblemType
+                                    ensureVisualDefaults()
                                     showProblemTypeDialog = true
                                 } else {
                                     pendingProblemEquipmentName = node.title
+                                    pendingProblemRoute = titlePathForId(nodes, currentSelection).joinToString(" / ")
                                     pendingProblemType = "Visual"
                                     pendingProblemNumber = fetchNextProblemNumber("Visual")
+                                    ensureVisualDefaults()
                                     showVisualInspectionWarning = true
                                 }
                             }
