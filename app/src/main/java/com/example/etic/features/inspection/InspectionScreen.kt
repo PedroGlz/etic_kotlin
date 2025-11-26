@@ -109,6 +109,7 @@ import com.example.etic.features.inspection.tree.findPathByBarcode
 import com.example.etic.features.inspection.tree.titlePathForId
 import com.example.etic.features.inspection.ui.problem.VisualProblemDialog
 import com.example.etic.data.local.entities.Severidad
+import com.example.etic.data.local.entities.Problema
 import com.example.etic.data.local.dao.VisualProblemHistoryRow
 import androidx.compose.ui.window.Dialog
 import java.util.Locale
@@ -310,6 +311,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             var pendingObservation by rememberSaveable { mutableStateOf("") }
             var pendingThermalImage by rememberSaveable { mutableStateOf("") }
             var pendingDigitalImage by rememberSaveable { mutableStateOf("") }
+            var isSavingVisualProblem by remember { mutableStateOf(false) }
             val thermalCameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { bmp ->
                 if (bmp != null) {
                     val saved = saveProblemBitmap(ctx, bmp, "IR")
@@ -761,8 +763,79 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     },
                     onDismiss = { showVisualInspectionDialog = false },
                     onContinue = {
-                        showVisualInspectionDialog = false
-                        Toast.makeText(ctx, "Formulario de problema visual en desarrollo.", Toast.LENGTH_SHORT).show()
+                        if (isSavingVisualProblem) return@VisualProblemDialog
+                        val inspection = currentInspection
+                        val ubicacionId = pendingProblemUbicacionId
+                        val hazardId = pendingHazardId
+                        val severityId = pendingSeverityId
+                        val thermal = pendingThermalImage
+                        val digital = pendingDigitalImage
+                        val typeId = PROBLEM_TYPE_IDS["Visual"]
+                        if (inspection == null || typeId == null || ubicacionId.isNullOrBlank() || hazardId.isNullOrBlank() ||
+                            severityId.isNullOrBlank() || thermal.isBlank() || digital.isBlank()
+                        ) {
+                            Toast.makeText(ctx, "Completa la información obligatoria.", Toast.LENGTH_SHORT).show()
+                            return@VisualProblemDialog
+                        }
+                        scope.launch {
+                            if (isSavingVisualProblem) return@launch
+                            isSavingVisualProblem = true
+                            try {
+                                val numero = fetchNextProblemNumber("Visual").toIntOrNull() ?: 1
+                            val detId = withContext(Dispatchers.IO) {
+                                runCatching {
+                                    inspeccionDetDao.getByUbicacion(ubicacionId)
+                                        .firstOrNull { it.idInspeccion == inspection.idInspeccion }
+                                        ?.idInspeccionDet
+                                }.getOrNull()
+                            }
+                            val hazardLabel = visualHazardOptions.firstOrNull { it.first == hazardId }?.second
+                            val comment = pendingObservation.ifBlank {
+                                buildVisualObservation(hazardId, pendingProblemEquipmentName)
+                            }
+                            val nowTs = java.time.LocalDateTime.now()
+                                .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+                            val problema = Problema(
+                                idProblema = java.util.UUID.randomUUID().toString().uppercase(),
+                                numeroProblema = numero,
+                                idTipoInspeccion = typeId,
+                                idSitio = inspection.idSitio,
+                                idInspeccion = inspection.idInspeccion,
+                                idInspeccionDet = detId,
+                                idUbicacion = ubicacionId,
+                                hazardIssue = hazardLabel ?: hazardId,
+                                idSeveridad = severityId,
+                                componentComment = comment,
+                                ruta = pendingProblemRoute,
+                                estatusProblema = "Abierto",
+                                esCronico = "No",
+                                cerradoEnInspeccion = "No",
+                                estatus = "Activo",
+                                irFile = thermal,
+                                photoFile = digital,
+                                creadoPor = currentUser?.idUsuario,
+                                fechaCreacion = nowTs
+                            )
+                                val success = runCatching {
+                                withContext(Dispatchers.IO) { problemaDao.insert(problema) }
+                            }.isSuccess
+                            if (success) {
+                                showVisualInspectionDialog = false
+                                pendingProblemNumber = (numero + 1).toString()
+                                pendingHazardId = null
+                                pendingSeverityId = null
+                                pendingObservation = ""
+                                pendingThermalImage = ""
+                                pendingDigitalImage = ""
+                                Toast.makeText(ctx, "Problema visual guardado.", Toast.LENGTH_SHORT).show()
+                                refreshTree(preserveSelection = selectedId)
+                            } else {
+                                Toast.makeText(ctx, "No se pudo guardar el problema visual.", Toast.LENGTH_LONG).show()
+                            }
+                            } finally {
+                                isSavingVisualProblem = false
+                            }
+                        }
                     }
                 )
             }

@@ -1,11 +1,15 @@
 package com.example.etic.data.local.dao
 
 import androidx.room.Dao
+import androidx.room.Insert
 import androidx.room.Query
 import com.example.etic.data.local.entities.Problema
 
 @Dao
 interface ProblemaDao {
+
+    @Insert
+    suspend fun insert(problema: Problema)
 
     @Query("SELECT * FROM problemas")
     suspend fun getAll(): List<Problema>
