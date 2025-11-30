@@ -17,9 +17,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.Divider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
@@ -65,6 +66,8 @@ fun ElectricProblemDialog(
         ) {
             val scrollState = rememberScrollState()
             val infoRowScrollState = rememberScrollState()
+
+            var selectedTab by rememberSaveable { mutableStateOf(0) }
 
             var componentTemperature by rememberSaveable { mutableStateOf("") }
             var componentPhase by rememberSaveable { mutableStateOf("") }
@@ -120,185 +123,186 @@ fun ElectricProblemDialog(
                 )
 
                 Spacer(Modifier.height(16.dp))
-                Divider()
-
-                Spacer(Modifier.height(12.dp))
-                SectionRow {
-                    Column(Modifier.weight(0.5f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text("Temperatura", style = MaterialTheme.typography.titleSmall)
-                        LabeledField(
-                            label = "*Componente con anomalía",
-                            value = componentTemperature,
-                            onValueChange = { componentTemperature = it },
-                            unit = "°C"
-                        )
-                        LabeledField(
-                            label = "*Componente de referencia",
-                            value = referenceTemperature,
-                            onValueChange = { referenceTemperature = it },
-                            unit = "°C"
-                        )
-                    }
-                    Column(Modifier.weight(0.3f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text("Elemento", style = MaterialTheme.typography.titleSmall)
-                        SimpleField(
-                            label = "*Elemento",
-                            value = componentPhase,
-                            onValueChange = { componentPhase = it }
-                        )
-                        SimpleField(
-                            label = "*Fase de referencia",
-                            value = referencePhase,
-                            onValueChange = { referencePhase = it }
-                        )
-                    }
-                    Column(Modifier.weight(0.2f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        Text("I RMS", style = MaterialTheme.typography.titleSmall)
-                        LabeledField(
-                            label = "I RMS",
-                            value = componentRms,
-                            onValueChange = { componentRms = it },
-                            unit = "A"
-                        )
-                        LabeledField(
-                            label = "I RMS Ref.",
-                            value = referenceRms,
-                            onValueChange = { referenceRms = it },
-                            unit = "A"
-                        )
-                    }
-                }
-
-                Spacer(Modifier.height(12.dp))
-                Divider()
-                Spacer(Modifier.height(12.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(Modifier.weight(0.5f)) {
-                        Text("Información adicional", style = MaterialTheme.typography.bodyMedium)
-                    }
-                    Column(Modifier.weight(0.3f)) {
-                        SimpleField(
-                            label = "Selección",
-                            value = additionalInfo,
-                            onValueChange = { additionalInfo = it }
-                        )
-                    }
-                    Column(Modifier.weight(0.2f)) {
-                        LabeledField(
-                            label = "I RMS",
-                            value = additionalRms,
-                            onValueChange = { additionalRms = it },
-                            unit = "A"
-                        )
-                    }
+                TabRow(selectedTabIndex = selectedTab) {
+                    Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }, text = { Text("Datos") })
+                    Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }, text = { Text("Imágenes") })
                 }
 
                 Spacer(Modifier.height(16.dp))
-                Divider()
-                Spacer(Modifier.height(12.dp))
+                when (selectedTab) {
+                    0 -> {
+                        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                            SectionRow {
+                                Column(Modifier.weight(0.5f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    Text("Temperatura", style = MaterialTheme.typography.titleSmall)
+                                    LabeledField(
+                                        label = "*Componente con anomalía",
+                                        value = componentTemperature,
+                                        onValueChange = { componentTemperature = it },
+                                        unit = "°C"
+                                    )
+                                    LabeledField(
+                                        label = "*Componente de referencia",
+                                        value = referenceTemperature,
+                                        onValueChange = { referenceTemperature = it },
+                                        unit = "°C"
+                                    )
+                                }
+                                Column(Modifier.weight(0.3f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    Text("Elemento", style = MaterialTheme.typography.titleSmall)
+                                    SimpleField(
+                                        label = "*Elemento",
+                                        value = componentPhase,
+                                        onValueChange = { componentPhase = it }
+                                    )
+                                    SimpleField(
+                                        label = "*Fase de referencia",
+                                        value = referencePhase,
+                                        onValueChange = { referencePhase = it }
+                                    )
+                                }
+                                Column(Modifier.weight(0.2f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    Text("I RMS", style = MaterialTheme.typography.titleSmall)
+                                    LabeledField(
+                                        label = "I RMS",
+                                        value = componentRms,
+                                        onValueChange = { componentRms = it },
+                                        unit = "A"
+                                    )
+                                    LabeledField(
+                                        label = "I RMS Ref.",
+                                        value = referenceRms,
+                                        onValueChange = { referenceRms = it },
+                                        unit = "A"
+                                    )
+                                }
+                            }
 
-                SectionRow {
-                    Column(Modifier.weight(0.5f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        CheckboxField(
-                            label = "Emisividad",
-                            checked = emissivityChecked,
-                            onCheckedChange = { emissivityChecked = it },
-                            trailing = {
-                                LabeledField(
-                                    label = "Emisividad",
-                                    value = emissivity,
-                                    onValueChange = { emissivity = it }
-                                )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(Modifier.weight(0.5f)) {
+                                    Text("Información adicional", style = MaterialTheme.typography.bodyMedium)
+                                }
+                                Column(Modifier.weight(0.3f)) {
+                                    SimpleField(
+                                        label = "Selección",
+                                        value = additionalInfo,
+                                        onValueChange = { additionalInfo = it }
+                                    )
+                                }
+                                Column(Modifier.weight(0.2f)) {
+                                    LabeledField(
+                                        label = "I RMS",
+                                        value = additionalRms,
+                                        onValueChange = { additionalRms = it },
+                                        unit = "A"
+                                    )
+                                }
                             }
-                        )
-                        CheckboxField(
-                            label = "Temp. indirecta",
-                            checked = indirectTempChecked,
-                            onCheckedChange = { indirectTempChecked = it }
-                        )
-                        CheckboxField(
-                            label = "Temp. ambiente",
-                            checked = ambientTempChecked,
-                            onCheckedChange = { ambientTempChecked = it },
-                            trailing = {
-                                LabeledField(
-                                    label = "Temp. ambiente",
-                                    value = ambientTemp,
-                                    onValueChange = { ambientTemp = it },
-                                    unit = "°C"
-                                )
+
+                            SectionRow {
+                                Column(Modifier.weight(0.5f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    CheckboxField(
+                                        label = "Emisividad",
+                                        checked = emissivityChecked,
+                                        onCheckedChange = { emissivityChecked = it },
+                                        trailing = {
+                                            LabeledField(
+                                                label = "Emisividad",
+                                                value = emissivity,
+                                                onValueChange = { emissivity = it }
+                                            )
+                                        }
+                                    )
+                                    CheckboxField(
+                                        label = "Temp. indirecta",
+                                        checked = indirectTempChecked,
+                                        onCheckedChange = { indirectTempChecked = it }
+                                    )
+                                    CheckboxField(
+                                        label = "Temp. ambiente",
+                                        checked = ambientTempChecked,
+                                        onCheckedChange = { ambientTempChecked = it },
+                                        trailing = {
+                                            LabeledField(
+                                                label = "Temp. ambiente",
+                                                value = ambientTemp,
+                                                onValueChange = { ambientTemp = it },
+                                                unit = "°C"
+                                            )
+                                        }
+                                    )
+                                    CheckboxField(
+                                        label = "Tipo ambiente",
+                                        checked = environmentChecked,
+                                        onCheckedChange = { environmentChecked = it },
+                                        trailing = {
+                                            SimpleField(
+                                                label = "Ambiente",
+                                                value = environment,
+                                                onValueChange = { environment = it }
+                                            )
+                                        }
+                                    )
+                                }
+                                Column(Modifier.weight(0.5f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    CheckboxField(
+                                        label = "Velocidad del viento",
+                                        checked = windSpeedChecked,
+                                        onCheckedChange = { windSpeedChecked = it },
+                                        trailing = {
+                                            LabeledField(
+                                                label = "Velocidad viento",
+                                                value = windSpeed,
+                                                onValueChange = { windSpeed = it },
+                                                unit = "m/s"
+                                            )
+                                        }
+                                    )
+                                    SimpleField(
+                                        label = "Fabricante",
+                                        value = manufacturer,
+                                        onValueChange = { manufacturer = it }
+                                    )
+                                    Text("Especificación eléctrica", style = MaterialTheme.typography.titleMedium)
+                                    LabeledField(
+                                        label = "Corriente nominal (A)",
+                                        value = ratedLoad,
+                                        onValueChange = { ratedLoad = it },
+                                        unit = "A"
+                                    )
+                                    LabeledField(
+                                        label = "Voltaje nominal (V)",
+                                        value = circuitVoltage,
+                                        onValueChange = { circuitVoltage = it },
+                                        unit = "V"
+                                    )
+                                }
                             }
-                        )
-                        CheckboxField(
-                            label = "Tipo ambiente",
-                            checked = environmentChecked,
-                            onCheckedChange = { environmentChecked = it },
-                            trailing = {
-                                SimpleField(
-                                    label = "Ambiente",
-                                    value = environment,
-                                    onValueChange = { environment = it }
-                                )
-                            }
-                        )
+
+                            Text("Comentarios", style = MaterialTheme.typography.bodyMedium)
+                            TextField(
+                                value = comments,
+                                onValueChange = { comments = it },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(120.dp),
+                                label = { Text("Comentarios") }
+                            )
+                        }
                     }
-                    Column(Modifier.weight(0.5f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                        CheckboxField(
-                            label = "Velocidad del viento",
-                            checked = windSpeedChecked,
-                            onCheckedChange = { windSpeedChecked = it },
-                            trailing = {
-                                LabeledField(
-                                    label = "Velocidad viento",
-                                    value = windSpeed,
-                                    onValueChange = { windSpeed = it },
-                                    unit = "m/s"
-                                )
-                            }
-                        )
-                        SimpleField(
-                            label = "Fabricante",
-                            value = manufacturer,
-                            onValueChange = { manufacturer = it }
-                        )
-                        Divider()
-                        Text("Especificación eléctrica", style = MaterialTheme.typography.titleMedium)
-                        LabeledField(
-                            label = "Corriente nominal (A)",
-                            value = ratedLoad,
-                            onValueChange = { ratedLoad = it },
-                            unit = "A"
-                        )
-                        LabeledField(
-                            label = "Voltaje nominal (V)",
-                            value = circuitVoltage,
-                            onValueChange = { circuitVoltage = it },
-                            unit = "V"
-                        )
+                    1 -> {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            content()
+                        }
                     }
                 }
-
-                Spacer(Modifier.height(16.dp))
-                Divider()
-                Spacer(Modifier.height(12.dp))
-
-                Text("Comentarios", style = MaterialTheme.typography.bodyMedium)
-                TextField(
-                    value = comments,
-                    onValueChange = { comments = it },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(120.dp),
-                    label = { Text("Comentarios") }
-                )
-
-                Spacer(Modifier.height(16.dp))
-                content()
 
                 Spacer(Modifier.height(24.dp))
                 Row(
