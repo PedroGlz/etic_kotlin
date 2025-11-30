@@ -1,4 +1,4 @@
-package com.example.etic.features.inspection.ui.problem
+﻿package com.example.etic.features.inspection.ui.problem
 
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -15,6 +15,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.Divider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -26,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.foundation.layout.RowScope
 
 private val DIALOG_MIN_WIDTH = 720.dp
 private val DIALOG_MAX_WIDTH = 980.dp
@@ -64,7 +66,7 @@ fun ElectricProblemDialog(
                     .verticalScroll(scrollState)
                     .padding(24.dp)
             ) {
-                Text("Problema Eléctrico", style = MaterialTheme.typography.headlineSmall)
+                Text("Problema ElÃ©ctrico", style = MaterialTheme.typography.headlineSmall)
 
                 Spacer(Modifier.height(16.dp))
                 Row(
@@ -74,7 +76,7 @@ fun ElectricProblemDialog(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    InfoField("Inspección No.", inspectionNumber)
+                    InfoField("InspecciÃ³n No.", inspectionNumber)
                     InfoField("Problema No.", problemNumber)
                     InfoField("Tipo de problema", problemType)
                     InfoField("Equipo", equipmentName)
@@ -89,6 +91,17 @@ fun ElectricProblemDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
 
+                Spacer(Modifier.height(16.dp))
+                Divider()
+                Spacer(Modifier.height(12.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    SummaryColumn(title = "Temperatura")
+                    SummaryColumn(title = "Elemento")
+                    SummaryColumn(title = "I RMS")
+                }
                 Spacer(Modifier.height(16.dp))
                 content()
 
@@ -120,6 +133,21 @@ private fun InfoField(label: String, value: String) {
             singleLine = true,
             label = { Text(label) },
             modifier = Modifier.widthIn(min = INFO_FIELD_MIN_WIDTH, max = INFO_FIELD_MAX_WIDTH)
+        )
+    }
+}
+
+@Composable
+private fun RowScope.SummaryColumn(title: String) {
+    Column(
+        modifier = Modifier.weight(1f),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        Text(title, style = MaterialTheme.typography.titleSmall)
+        Text(
+            text = "-",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }
