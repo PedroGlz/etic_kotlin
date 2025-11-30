@@ -66,7 +66,7 @@ fun ElectricProblemDialog(
                     .verticalScroll(scrollState)
                     .padding(24.dp)
             ) {
-                Text("Problema ElÃ©ctrico", style = MaterialTheme.typography.headlineSmall)
+                Text("Problema Eléctrico", style = MaterialTheme.typography.headlineSmall)
 
                 Spacer(Modifier.height(16.dp))
                 Row(
@@ -76,7 +76,7 @@ fun ElectricProblemDialog(
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    InfoField("InspecciÃ³n No.", inspectionNumber)
+                    InfoField("Inspección No.", inspectionNumber)
                     InfoField("Problema No.", problemNumber)
                     InfoField("Tipo de problema", problemType)
                     InfoField("Equipo", equipmentName)
