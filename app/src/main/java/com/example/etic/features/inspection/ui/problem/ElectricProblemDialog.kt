@@ -1,10 +1,11 @@
-﻿package com.example.etic.features.inspection.ui.problem
+package com.example.etic.features.inspection.ui.problem
 
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -14,20 +15,28 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Calculate
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Divider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import androidx.compose.foundation.layout.RowScope
 
 private val DIALOG_MIN_WIDTH = 720.dp
 private val DIALOG_MAX_WIDTH = 980.dp
@@ -60,6 +69,29 @@ fun ElectricProblemDialog(
         ) {
             val scrollState = rememberScrollState()
             val infoRowScrollState = rememberScrollState()
+
+            var componentTemperature by rememberSaveable { mutableStateOf("") }
+            var componentPhase by rememberSaveable { mutableStateOf("") }
+            var componentRms by rememberSaveable { mutableStateOf("") }
+            var referenceTemperature by rememberSaveable { mutableStateOf("") }
+            var referencePhase by rememberSaveable { mutableStateOf("") }
+            var referenceRms by rememberSaveable { mutableStateOf("") }
+            var additionalInfo by rememberSaveable { mutableStateOf("") }
+            var additionalRms by rememberSaveable { mutableStateOf("") }
+            var emissivityChecked by rememberSaveable { mutableStateOf(false) }
+            var emissivity by rememberSaveable { mutableStateOf("") }
+            var indirectTempChecked by rememberSaveable { mutableStateOf(false) }
+            var ambientTempChecked by rememberSaveable { mutableStateOf(false) }
+            var ambientTemp by rememberSaveable { mutableStateOf("") }
+            var environmentChecked by rememberSaveable { mutableStateOf(false) }
+            var environment by rememberSaveable { mutableStateOf("") }
+            var windSpeedChecked by rememberSaveable { mutableStateOf(false) }
+            var windSpeed by rememberSaveable { mutableStateOf("") }
+            var manufacturer by rememberSaveable { mutableStateOf("") }
+            var ratedLoad by rememberSaveable { mutableStateOf("") }
+            var circuitVoltage by rememberSaveable { mutableStateOf("") }
+            var comments by rememberSaveable { mutableStateOf("") }
+
             Column(
                 Modifier
                     .widthIn(min = DIALOG_MIN_WIDTH, max = DIALOG_MAX_WIDTH)
@@ -93,15 +125,192 @@ fun ElectricProblemDialog(
 
                 Spacer(Modifier.height(16.dp))
                 Divider()
+
                 Spacer(Modifier.height(12.dp))
+                SectionRow {
+                    Column(Modifier.weight(0.5f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text("Temperatura", style = MaterialTheme.typography.titleSmall)
+                        LabeledField(
+                            label = "*Componente con anomalía",
+                            value = componentTemperature,
+                            onValueChange = { componentTemperature = it },
+                            unit = "°C",
+                            showCalculator = true
+                        )
+                        LabeledField(
+                            label = "*Componente de referencia",
+                            value = referenceTemperature,
+                            onValueChange = { referenceTemperature = it },
+                            unit = "°C",
+                            showCalculator = true
+                        )
+                    }
+                    Column(Modifier.weight(0.3f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text("Elemento", style = MaterialTheme.typography.titleSmall)
+                        SimpleField(
+                            label = "*Elemento",
+                            value = componentPhase,
+                            onValueChange = { componentPhase = it }
+                        )
+                        SimpleField(
+                            label = "*Fase de referencia",
+                            value = referencePhase,
+                            onValueChange = { referencePhase = it }
+                        )
+                    }
+                    Column(Modifier.weight(0.2f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        Text("I RMS", style = MaterialTheme.typography.titleSmall)
+                        LabeledField(
+                            label = "I RMS",
+                            value = componentRms,
+                            onValueChange = { componentRms = it },
+                            unit = "A",
+                            showCalculator = true
+                        )
+                        LabeledField(
+                            label = "I RMS Ref.",
+                            value = referenceRms,
+                            onValueChange = { referenceRms = it },
+                            unit = "A",
+                            showCalculator = true
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(12.dp))
+                Divider()
+                Spacer(Modifier.height(12.dp))
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp)
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    SummaryColumn(title = "Temperatura")
-                    SummaryColumn(title = "Elemento")
-                    SummaryColumn(title = "I RMS")
+                    Column(Modifier.weight(0.6f)) {
+                        Text("Información adicional", style = MaterialTheme.typography.bodyMedium)
+                    }
+                    Column(Modifier.weight(0.25f)) {
+                        SimpleField(
+                            label = "Selección",
+                            value = additionalInfo,
+                            onValueChange = { additionalInfo = it }
+                        )
+                    }
+                    Column(Modifier.weight(0.15f)) {
+                        LabeledField(
+                            label = "I RMS",
+                            value = additionalRms,
+                            onValueChange = { additionalRms = it },
+                            unit = "A",
+                            showCalculator = true
+                        )
+                    }
                 }
+
+                Spacer(Modifier.height(16.dp))
+                Divider()
+                Spacer(Modifier.height(12.dp))
+
+                SectionRow {
+                    Column(Modifier.weight(0.5f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        CheckboxField(
+                            label = "Emisividad",
+                            checked = emissivityChecked,
+                            onCheckedChange = { emissivityChecked = it },
+                            trailing = {
+                                LabeledField(
+                                    label = "Emisividad",
+                                    value = emissivity,
+                                    onValueChange = { emissivity = it },
+                                    showCalculator = true
+                                )
+                            }
+                        )
+                        CheckboxField(
+                            label = "Temp. indirecta",
+                            checked = indirectTempChecked,
+                            onCheckedChange = { indirectTempChecked = it }
+                        )
+                        CheckboxField(
+                            label = "Temp. ambiente",
+                            checked = ambientTempChecked,
+                            onCheckedChange = { ambientTempChecked = it },
+                            trailing = {
+                                LabeledField(
+                                    label = "Temp. ambiente",
+                                    value = ambientTemp,
+                                    onValueChange = { ambientTemp = it },
+                                    unit = "°C",
+                                    showCalculator = true
+                                )
+                            }
+                        )
+                        CheckboxField(
+                            label = "Tipo ambiente",
+                            checked = environmentChecked,
+                            onCheckedChange = { environmentChecked = it },
+                            trailing = {
+                                SimpleField(
+                                    label = "Ambiente",
+                                    value = environment,
+                                    onValueChange = { environment = it }
+                                )
+                            }
+                        )
+                    }
+                    Column(Modifier.weight(0.5f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        CheckboxField(
+                            label = "Velocidad del viento",
+                            checked = windSpeedChecked,
+                            onCheckedChange = { windSpeedChecked = it },
+                            trailing = {
+                                LabeledField(
+                                    label = "Velocidad viento",
+                                    value = windSpeed,
+                                    onValueChange = { windSpeed = it },
+                                    unit = "m/s",
+                                    showCalculator = true
+                                )
+                            }
+                        )
+                        SimpleField(
+                            label = "Fabricante",
+                            value = manufacturer,
+                            onValueChange = { manufacturer = it }
+                        )
+                        Divider()
+                        Text("Especificación eléctrica", style = MaterialTheme.typography.titleMedium)
+                        LabeledField(
+                            label = "Corriente nominal (A)",
+                            value = ratedLoad,
+                            onValueChange = { ratedLoad = it },
+                            unit = "A",
+                            showCalculator = true
+                        )
+                        LabeledField(
+                            label = "Voltaje nominal (V)",
+                            value = circuitVoltage,
+                            onValueChange = { circuitVoltage = it },
+                            unit = "V",
+                            showCalculator = true
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(16.dp))
+                Divider()
+                Spacer(Modifier.height(12.dp))
+
+                Text("Comentarios", style = MaterialTheme.typography.bodyMedium)
+                TextField(
+                    value = comments,
+                    onValueChange = { comments = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(120.dp),
+                    label = { Text("Comentarios") }
+                )
+
                 Spacer(Modifier.height(16.dp))
                 content()
 
@@ -138,16 +347,77 @@ private fun InfoField(label: String, value: String) {
 }
 
 @Composable
-private fun RowScope.SummaryColumn(title: String) {
-    Column(
-        modifier = Modifier.weight(1f),
-        verticalArrangement = Arrangement.spacedBy(4.dp)
+private fun SectionRow(content: @Composable RowScope.() -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        Text(title, style = MaterialTheme.typography.titleSmall)
-        Text(
-            text = "-",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
+        content()
+    }
+}
+
+@Composable
+private fun LabeledField(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    unit: String? = null,
+    showCalculator: Boolean = false
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        TextField(
+            value = value,
+            onValueChange = onValueChange,
+            modifier = Modifier.weight(1f),
+            label = { Text(label) }
         )
+        if (unit != null) {
+            Text(
+                text = unit,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        if (showCalculator) {
+            IconButton(onClick = { }) {
+                Icon(Icons.Outlined.Calculate, contentDescription = "Calculadora")
+            }
+        }
+    }
+}
+
+@Composable
+private fun SimpleField(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit
+) {
+    TextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = Modifier.fillMaxWidth(),
+        label = { Text(label) }
+    )
+}
+
+@Composable
+private fun CheckboxField(
+    label: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    trailing: (@Composable () -> Unit)? = null
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Checkbox(checked = checked, onCheckedChange = onCheckedChange)
+        Text(label, style = MaterialTheme.typography.bodyMedium)
+        trailing?.invoke()
     }
 }
