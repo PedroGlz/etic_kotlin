@@ -178,17 +178,17 @@ fun ElectricProblemDialog(
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(Modifier.weight(0.6f)) {
+                    Column(Modifier.weight(0.5f)) {
                         Text("Información adicional", style = MaterialTheme.typography.bodyMedium)
                     }
-                    Column(Modifier.weight(0.25f)) {
+                    Column(Modifier.weight(0.3f)) {
                         SimpleField(
                             label = "Selección",
                             value = additionalInfo,
                             onValueChange = { additionalInfo = it }
                         )
                     }
-                    Column(Modifier.weight(0.15f)) {
+                    Column(Modifier.weight(0.2f)) {
                         LabeledField(
                             label = "I RMS",
                             value = additionalRms,
