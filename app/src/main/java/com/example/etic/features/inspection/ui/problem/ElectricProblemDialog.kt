@@ -17,6 +17,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Divider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -28,6 +33,7 @@ import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -48,6 +54,9 @@ fun ElectricProblemDialog(
     problemType: String,
     equipmentName: String,
     equipmentRoute: String,
+    phaseOptions: List<Pair<String, String>>,
+    environmentOptions: List<Pair<String, String>>,
+    manufacturerOptions: List<Pair<String, String>>,
     onDismiss: () -> Unit,
     onContinue: () -> Unit,
     continueEnabled: Boolean = true,
@@ -69,14 +78,13 @@ fun ElectricProblemDialog(
             val infoRowScrollState = rememberScrollState()
 
             var selectedTab by rememberSaveable { mutableStateOf(0) }
-
             var componentTemperature by rememberSaveable { mutableStateOf("") }
-            var componentPhase by rememberSaveable { mutableStateOf("") }
+            var componentPhaseId by rememberSaveable { mutableStateOf<String?>(null) }
             var componentRms by rememberSaveable { mutableStateOf("") }
             var referenceTemperature by rememberSaveable { mutableStateOf("") }
-            var referencePhase by rememberSaveable { mutableStateOf("") }
+            var referencePhaseId by rememberSaveable { mutableStateOf<String?>(null) }
             var referenceRms by rememberSaveable { mutableStateOf("") }
-            var additionalInfo by rememberSaveable { mutableStateOf("") }
+            var additionalInfoId by rememberSaveable { mutableStateOf<String?>(null) }
             var additionalRms by rememberSaveable { mutableStateOf("") }
             var emissivityChecked by rememberSaveable { mutableStateOf(false) }
             var emissivity by rememberSaveable { mutableStateOf("") }
@@ -84,10 +92,10 @@ fun ElectricProblemDialog(
             var ambientTempChecked by rememberSaveable { mutableStateOf(false) }
             var ambientTemp by rememberSaveable { mutableStateOf("") }
             var environmentChecked by rememberSaveable { mutableStateOf(false) }
-            var environment by rememberSaveable { mutableStateOf("") }
+            var environmentId by rememberSaveable { mutableStateOf<String?>(null) }
             var windSpeedChecked by rememberSaveable { mutableStateOf(false) }
             var windSpeed by rememberSaveable { mutableStateOf("") }
-            var manufacturer by rememberSaveable { mutableStateOf("") }
+            var manufacturerId by rememberSaveable { mutableStateOf<String?>(null) }
             var ratedLoad by rememberSaveable { mutableStateOf("") }
             var circuitVoltage by rememberSaveable { mutableStateOf("") }
             var comments by rememberSaveable { mutableStateOf("") }
@@ -151,15 +159,17 @@ fun ElectricProblemDialog(
                                 }
                                 Column(Modifier.weight(0.3f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                                     Text("Elemento", style = MaterialTheme.typography.titleSmall)
-                                    SimpleField(
+                                    DropdownSelector(
                                         label = "*Elemento",
-                                        value = componentPhase,
-                                        onValueChange = { componentPhase = it }
+                                        options = phaseOptions,
+                                        selectedId = componentPhaseId,
+                                        onSelected = { componentPhaseId = it }
                                     )
-                                    SimpleField(
+                                    DropdownSelector(
                                         label = "*Fase de referencia",
-                                        value = referencePhase,
-                                        onValueChange = { referencePhase = it }
+                                        options = phaseOptions,
+                                        selectedId = referencePhaseId,
+                                        onSelected = { referencePhaseId = it }
                                     )
                                 }
                                 Column(Modifier.weight(0.2f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -188,23 +198,24 @@ fun ElectricProblemDialog(
                                     Text("Información adicional", style = MaterialTheme.typography.bodyMedium)
                                 }
                                 Column(Modifier.weight(0.3f)) {
-                                    SimpleField(
+                                    DropdownSelector(
                                         label = "Selección",
-                                        value = additionalInfo,
-                                        onValueChange = { additionalInfo = it }
+                                        options = phaseOptions,
+                                        selectedId = additionalInfoId,
+                                        onSelected = { additionalInfoId = it }
                                     )
                                 }
-                            Column(Modifier.weight(0.2f)) {
-                                LabeledField(
-                                    label = "I RMS",
-                                    value = additionalRms,
-                                    onValueChange = { additionalRms = it },
-                                    unit = "A"
-                                )
+                                Column(Modifier.weight(0.2f)) {
+                                    LabeledField(
+                                        label = "I RMS",
+                                        value = additionalRms,
+                                        onValueChange = { additionalRms = it },
+                                        unit = "A"
+                                    )
+                                }
                             }
-                        }
 
-                        Divider()
+                            Divider()
 
                             SectionRow {
                                 Column(Modifier.weight(0.5f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -243,10 +254,11 @@ fun ElectricProblemDialog(
                                         checked = environmentChecked,
                                         onCheckedChange = { environmentChecked = it },
                                         trailing = {
-                                            SimpleField(
+                                            DropdownSelector(
                                                 label = "Ambiente",
-                                                value = environment,
-                                                onValueChange = { environment = it }
+                                                options = environmentOptions,
+                                                selectedId = environmentId,
+                                                onSelected = { environmentId = it }
                                             )
                                         }
                                     )
@@ -265,10 +277,11 @@ fun ElectricProblemDialog(
                                             )
                                         }
                                     )
-                                    SimpleField(
+                                    DropdownSelector(
                                         label = "Fabricante",
-                                        value = manufacturer,
-                                        onValueChange = { manufacturer = it }
+                                        options = manufacturerOptions,
+                                        selectedId = manufacturerId,
+                                        onSelected = { manufacturerId = it }
                                     )
                                     Text("Especificación eléctrica", style = MaterialTheme.typography.titleMedium)
                                     LabeledField(
@@ -297,7 +310,7 @@ fun ElectricProblemDialog(
                             )
                         }
                     }
-                    1 -> {
+                    else -> {
                         Column(
                             modifier = Modifier.fillMaxWidth(),
                             verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -378,20 +391,6 @@ private fun LabeledField(
 }
 
 @Composable
-private fun SimpleField(
-    label: String,
-    value: String,
-    onValueChange: (String) -> Unit
-) {
-    TextField(
-        value = value,
-        onValueChange = onValueChange,
-        modifier = Modifier.fillMaxWidth(),
-        label = { Text(label) }
-    )
-}
-
-@Composable
 private fun CheckboxField(
     label: String,
     checked: Boolean,
@@ -406,5 +405,48 @@ private fun CheckboxField(
         Checkbox(checked = checked, onCheckedChange = onCheckedChange)
         Text(label, style = MaterialTheme.typography.bodyMedium)
         trailing?.invoke()
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun DropdownSelector(
+    label: String,
+    options: List<Pair<String, String>>,
+    selectedId: String?,
+    onSelected: (String) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val selectedLabel = options.firstOrNull { it.first == selectedId }?.second.orEmpty()
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { if (options.isNotEmpty()) expanded = !expanded }
+    ) {
+        TextField(
+            value = selectedLabel,
+            onValueChange = {},
+            readOnly = true,
+            label = { Text(label) },
+            placeholder = { Text("Seleccionar") },
+            modifier = Modifier
+                .menuAnchor()
+                .fillMaxWidth(),
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            colors = ExposedDropdownMenuDefaults.textFieldColors()
+        )
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            options.forEach { (id, text) ->
+                DropdownMenuItem(
+                    text = { Text(text.ifBlank { id }) },
+                    onClick = {
+                        expanded = false
+                        onSelected(id)
+                    }
+                )
+            }
+        }
     }
 }

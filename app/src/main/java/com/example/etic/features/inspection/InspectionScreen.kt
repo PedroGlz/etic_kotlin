@@ -316,14 +316,28 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             LaunchedEffect(Unit) {
                 statusOptions = runCatching { estatusDao.getAll() }.getOrElse { emptyList() }
             }
-            // Tipo de prioridad y fabricantes
+            // Tipo de prioridad, fabricantes y catálogos para problema eléctrico
             var prioridadOptions by remember { mutableStateOf<List<com.example.etic.data.local.entities.TipoPrioridad>>(emptyList()) }
             var fabricanteOptions by remember { mutableStateOf<List<com.example.etic.data.local.entities.Fabricante>>(emptyList()) }
+            var electricPhaseOptions by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
+            var electricEnvironmentOptions by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
             val prioridadDao = remember { com.example.etic.data.local.DbProvider.get(ctx).tipoPrioridadDao() }
             val fabricanteDao = remember { com.example.etic.data.local.DbProvider.get(ctx).fabricanteDao() }
+            val faseDao = remember { com.example.etic.data.local.DbProvider.get(ctx).faseDao() }
+            val tipoAmbienteDao = remember { com.example.etic.data.local.DbProvider.get(ctx).tipoAmbienteDao() }
             LaunchedEffect(Unit) {
                 prioridadOptions = runCatching { prioridadDao.getAllActivas() }.getOrElse { emptyList() }
                 fabricanteOptions = runCatching { fabricanteDao.getAllActivos() }.getOrElse { emptyList() }
+                electricPhaseOptions = runCatching {
+                    withContext(Dispatchers.IO) { faseDao.getAllActivos() }
+                }.getOrElse { emptyList() }
+                    .sortedBy { it.nombreFase?.lowercase(Locale.getDefault()) ?: "" }
+                    .map { it.idFase to (it.nombreFase ?: it.idFase) }
+                electricEnvironmentOptions = runCatching {
+                    withContext(Dispatchers.IO) { tipoAmbienteDao.getAllActivos() }
+                }.getOrElse { emptyList() }
+                    .sortedBy { it.nombre?.lowercase(Locale.getDefault()) ?: "" }
+                    .map { it.idTipoAmbiente to (it.nombre ?: it.idTipoAmbiente) }
             }
             var searchMessage by remember { mutableStateOf<String?>(null) }
             var showNoSelectionDialog by rememberSaveable { mutableStateOf(false) }
@@ -1048,12 +1062,18 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
 
             if (showElectricProblemDialog && pendingProblemEquipmentName != null) {
                 val inspectionNumber = currentInspection?.noInspeccion?.toString() ?: "-"
+                val manufacturerOptionsPairs = fabricanteOptions
+                    .sortedBy { it.fabricante?.lowercase(Locale.getDefault()) ?: "" }
+                    .map { it.idFabricante to (it.fabricante ?: it.idFabricante) }
                 ElectricProblemDialog(
                     inspectionNumber = inspectionNumber,
                     problemNumber = pendingProblemNumber,
                     problemType = pendingProblemType,
                     equipmentName = pendingProblemEquipmentName ?: "-",
                     equipmentRoute = pendingProblemRoute ?: "-",
+                    phaseOptions = electricPhaseOptions,
+                    environmentOptions = electricEnvironmentOptions,
+                    manufacturerOptions = manufacturerOptionsPairs,
                     onDismiss = {
                         showElectricProblemDialog = false
                     },
