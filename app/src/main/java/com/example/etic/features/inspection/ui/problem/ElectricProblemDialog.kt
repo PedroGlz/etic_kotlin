@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.Divider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
@@ -193,15 +194,17 @@ fun ElectricProblemDialog(
                                         onValueChange = { additionalInfo = it }
                                     )
                                 }
-                                Column(Modifier.weight(0.2f)) {
-                                    LabeledField(
-                                        label = "I RMS",
-                                        value = additionalRms,
-                                        onValueChange = { additionalRms = it },
-                                        unit = "A"
-                                    )
-                                }
+                            Column(Modifier.weight(0.2f)) {
+                                LabeledField(
+                                    label = "I RMS",
+                                    value = additionalRms,
+                                    onValueChange = { additionalRms = it },
+                                    unit = "A"
+                                )
                             }
+                        }
+
+                        Divider()
 
                             SectionRow {
                                 Column(Modifier.weight(0.5f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
