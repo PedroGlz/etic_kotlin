@@ -15,13 +15,9 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Calculate
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Divider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -134,15 +130,13 @@ fun ElectricProblemDialog(
                             label = "*Componente con anomalía",
                             value = componentTemperature,
                             onValueChange = { componentTemperature = it },
-                            unit = "°C",
-                            showCalculator = true
+                            unit = "°C"
                         )
                         LabeledField(
                             label = "*Componente de referencia",
                             value = referenceTemperature,
                             onValueChange = { referenceTemperature = it },
-                            unit = "°C",
-                            showCalculator = true
+                            unit = "°C"
                         )
                     }
                     Column(Modifier.weight(0.3f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -164,15 +158,13 @@ fun ElectricProblemDialog(
                             label = "I RMS",
                             value = componentRms,
                             onValueChange = { componentRms = it },
-                            unit = "A",
-                            showCalculator = true
+                            unit = "A"
                         )
                         LabeledField(
                             label = "I RMS Ref.",
                             value = referenceRms,
                             onValueChange = { referenceRms = it },
-                            unit = "A",
-                            showCalculator = true
+                            unit = "A"
                         )
                     }
                 }
@@ -201,8 +193,7 @@ fun ElectricProblemDialog(
                             label = "I RMS",
                             value = additionalRms,
                             onValueChange = { additionalRms = it },
-                            unit = "A",
-                            showCalculator = true
+                            unit = "A"
                         )
                     }
                 }
@@ -221,8 +212,7 @@ fun ElectricProblemDialog(
                                 LabeledField(
                                     label = "Emisividad",
                                     value = emissivity,
-                                    onValueChange = { emissivity = it },
-                                    showCalculator = true
+                                    onValueChange = { emissivity = it }
                                 )
                             }
                         )
@@ -240,8 +230,7 @@ fun ElectricProblemDialog(
                                     label = "Temp. ambiente",
                                     value = ambientTemp,
                                     onValueChange = { ambientTemp = it },
-                                    unit = "°C",
-                                    showCalculator = true
+                                    unit = "°C"
                                 )
                             }
                         )
@@ -268,8 +257,7 @@ fun ElectricProblemDialog(
                                     label = "Velocidad viento",
                                     value = windSpeed,
                                     onValueChange = { windSpeed = it },
-                                    unit = "m/s",
-                                    showCalculator = true
+                                    unit = "m/s"
                                 )
                             }
                         )
@@ -284,15 +272,13 @@ fun ElectricProblemDialog(
                             label = "Corriente nominal (A)",
                             value = ratedLoad,
                             onValueChange = { ratedLoad = it },
-                            unit = "A",
-                            showCalculator = true
+                            unit = "A"
                         )
                         LabeledField(
                             label = "Voltaje nominal (V)",
                             value = circuitVoltage,
                             onValueChange = { circuitVoltage = it },
-                            unit = "V",
-                            showCalculator = true
+                            unit = "V"
                         )
                     }
                 }
@@ -361,8 +347,7 @@ private fun LabeledField(
     label: String,
     value: String,
     onValueChange: (String) -> Unit,
-    unit: String? = null,
-    showCalculator: Boolean = false
+    unit: String? = null
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -381,11 +366,6 @@ private fun LabeledField(
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
-        }
-        if (showCalculator) {
-            IconButton(onClick = { }) {
-                Icon(Icons.Outlined.Calculate, contentDescription = "Calculadora")
-            }
         }
     }
 }
