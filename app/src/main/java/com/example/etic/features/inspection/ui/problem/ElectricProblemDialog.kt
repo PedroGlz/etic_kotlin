@@ -17,12 +17,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.Divider
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.Divider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
@@ -54,6 +54,7 @@ fun ElectricProblemDialog(
     problemType: String,
     equipmentName: String,
     equipmentRoute: String,
+    failureOptions: List<Pair<String, String>>,
     phaseOptions: List<Pair<String, String>>,
     environmentOptions: List<Pair<String, String>>,
     manufacturerOptions: List<Pair<String, String>>,
@@ -78,6 +79,7 @@ fun ElectricProblemDialog(
             val infoRowScrollState = rememberScrollState()
 
             var selectedTab by rememberSaveable { mutableStateOf(0) }
+            var failureId by rememberSaveable { mutableStateOf<String?>(null) }
             var componentTemperature by rememberSaveable { mutableStateOf("") }
             var componentPhaseId by rememberSaveable { mutableStateOf<String?>(null) }
             var componentRms by rememberSaveable { mutableStateOf("") }
@@ -142,7 +144,15 @@ fun ElectricProblemDialog(
                     0 -> {
                         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                             SectionRow {
-                                Column(Modifier.weight(0.5f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                Column(Modifier.weight(0.3f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    Text("Falla", style = MaterialTheme.typography.titleSmall)
+                                    DropdownSelector(
+                                        label = "*Falla",
+                                        options = failureOptions,
+                                        selectedId = failureId,
+                                    ) { failureId = it }
+                                }
+                                Column(Modifier.weight(0.3f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                                     Text("Temperatura", style = MaterialTheme.typography.titleSmall)
                                     LabeledField(
                                         label = "*Componente con anomalía",
@@ -157,20 +167,18 @@ fun ElectricProblemDialog(
                                         unit = "°C"
                                     )
                                 }
-                                Column(Modifier.weight(0.3f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                Column(Modifier.weight(0.2f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                                     Text("Elemento", style = MaterialTheme.typography.titleSmall)
                                     DropdownSelector(
                                         label = "*Elemento",
                                         options = phaseOptions,
                                         selectedId = componentPhaseId,
-                                        onSelected = { componentPhaseId = it }
-                                    )
+                                    ) { componentPhaseId = it }
                                     DropdownSelector(
                                         label = "*Fase de referencia",
                                         options = phaseOptions,
                                         selectedId = referencePhaseId,
-                                        onSelected = { referencePhaseId = it }
-                                    )
+                                    ) { referencePhaseId = it }
                                 }
                                 Column(Modifier.weight(0.2f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                                     Text("I RMS", style = MaterialTheme.typography.titleSmall)
@@ -202,8 +210,7 @@ fun ElectricProblemDialog(
                                         label = "Selección",
                                         options = phaseOptions,
                                         selectedId = additionalInfoId,
-                                        onSelected = { additionalInfoId = it }
-                                    )
+                                    ) { additionalInfoId = it }
                                 }
                                 Column(Modifier.weight(0.2f)) {
                                     LabeledField(
@@ -258,8 +265,7 @@ fun ElectricProblemDialog(
                                                 label = "Ambiente",
                                                 options = environmentOptions,
                                                 selectedId = environmentId,
-                                                onSelected = { environmentId = it }
-                                            )
+                                            ) { environmentId = it }
                                         }
                                     )
                                 }
@@ -281,8 +287,7 @@ fun ElectricProblemDialog(
                                         label = "Fabricante",
                                         options = manufacturerOptions,
                                         selectedId = manufacturerId,
-                                        onSelected = { manufacturerId = it }
-                                    )
+                                    ) { manufacturerId = it }
                                     Text("Especificación eléctrica", style = MaterialTheme.typography.titleMedium)
                                     LabeledField(
                                         label = "Corriente nominal (A)",

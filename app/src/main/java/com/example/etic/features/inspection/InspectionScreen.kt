@@ -321,11 +321,13 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             var fabricanteOptions by remember { mutableStateOf<List<com.example.etic.data.local.entities.Fabricante>>(emptyList()) }
             var electricPhaseOptions by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
             var electricEnvironmentOptions by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
+            var electricHazardOptions by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
             val prioridadDao = remember { com.example.etic.data.local.DbProvider.get(ctx).tipoPrioridadDao() }
             val fabricanteDao = remember { com.example.etic.data.local.DbProvider.get(ctx).fabricanteDao() }
             val faseDao = remember { com.example.etic.data.local.DbProvider.get(ctx).faseDao() }
             val tipoAmbienteDao = remember { com.example.etic.data.local.DbProvider.get(ctx).tipoAmbienteDao() }
             LaunchedEffect(Unit) {
+                val electricTypeId = PROBLEM_TYPE_IDS["El�ctrico"]
                 prioridadOptions = runCatching { prioridadDao.getAllActivas() }.getOrElse { emptyList() }
                 fabricanteOptions = runCatching { fabricanteDao.getAllActivos() }.getOrElse { emptyList() }
                 electricPhaseOptions = runCatching {
@@ -338,6 +340,12 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                 }.getOrElse { emptyList() }
                     .sortedBy { it.nombre?.lowercase(Locale.getDefault()) ?: "" }
                     .map { it.idTipoAmbiente to (it.nombre ?: it.idTipoAmbiente) }
+                electricHazardOptions = runCatching {
+                    withContext(Dispatchers.IO) { fallaDao.getAllWithTipoInspeccion() }
+                }.getOrElse { emptyList() }
+                    .filter { electricTypeId != null && it.idTipoInspeccion.equals(electricTypeId, ignoreCase = true) }
+                    .sortedBy { it.falla?.lowercase(Locale.getDefault()) ?: "" }
+                    .map { it.idFalla to (it.falla ?: it.idFalla) }
             }
             var searchMessage by remember { mutableStateOf<String?>(null) }
             var showNoSelectionDialog by rememberSaveable { mutableStateOf(false) }
@@ -1071,6 +1079,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     problemType = pendingProblemType,
                     equipmentName = pendingProblemEquipmentName ?: "-",
                     equipmentRoute = pendingProblemRoute ?: "-",
+                    failureOptions = electricHazardOptions,
                     phaseOptions = electricPhaseOptions,
                     environmentOptions = electricEnvironmentOptions,
                     manufacturerOptions = manufacturerOptionsPairs,
