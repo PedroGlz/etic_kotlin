@@ -30,6 +30,7 @@ import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
+import com.example.etic.features.components.ImageInputButtonGroup
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -58,10 +59,23 @@ fun ElectricProblemDialog(
     phaseOptions: List<Pair<String, String>>,
     environmentOptions: List<Pair<String, String>>,
     manufacturerOptions: List<Pair<String, String>>,
+    thermalImageName: String,
+    digitalImageName: String,
+    onThermalImageChange: (String) -> Unit,
+    onDigitalImageChange: (String) -> Unit,
+    onThermalSequenceUp: () -> Unit,
+    onThermalSequenceDown: () -> Unit,
+    onDigitalSequenceUp: () -> Unit,
+    onDigitalSequenceDown: () -> Unit,
+    onThermalPickInitial: () -> Unit,
+    onDigitalPickInitial: () -> Unit,
+    onThermalFolder: () -> Unit,
+    onDigitalFolder: () -> Unit,
+    onThermalCamera: () -> Unit,
+    onDigitalCamera: () -> Unit,
     onDismiss: () -> Unit,
     onContinue: () -> Unit,
-    continueEnabled: Boolean = true,
-    content: @Composable ColumnScope.() -> Unit = {}
+    continueEnabled: Boolean = true
 ) {
     Dialog(
         onDismissRequest = onDismiss,
@@ -316,11 +330,37 @@ fun ElectricProblemDialog(
                         }
                     }
                     else -> {
-                        Column(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            content()
+                        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                            Text("Cargas de imágenes", style = MaterialTheme.typography.labelLarge)
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                ImageInputColumn(
+                                    title = "",
+                                    label = "Archivo IR",
+                                    value = thermalImageName,
+                                    onValueChange = onThermalImageChange,
+                                    onIncrement = onThermalSequenceUp,
+                                    onDecrement = onThermalSequenceDown,
+                                    onPickInitial = onThermalPickInitial,
+                                    onFolder = onThermalFolder,
+                                    onCamera = onThermalCamera,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                ImageInputColumn(
+                                    title = "",
+                                    label = "Archivo ID",
+                                    value = digitalImageName,
+                                    onValueChange = onDigitalImageChange,
+                                    onIncrement = onDigitalSequenceUp,
+                                    onDecrement = onDigitalSequenceDown,
+                                    onPickInitial = onDigitalPickInitial,
+                                    onFolder = onDigitalFolder,
+                                    onCamera = onDigitalCamera,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
                         }
                     }
                 }
@@ -410,6 +450,42 @@ private fun CheckboxField(
         Checkbox(checked = checked, onCheckedChange = onCheckedChange)
         Text(label, style = MaterialTheme.typography.bodyMedium)
         trailing?.invoke()
+    }
+}
+
+@Composable
+private fun ImageInputColumn(
+    title: String,
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    onIncrement: () -> Unit,
+    onDecrement: () -> Unit,
+    onPickInitial: () -> Unit,
+    onFolder: () -> Unit,
+    onCamera: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        if (title.isNotBlank()) {
+            Text(title, style = MaterialTheme.typography.titleSmall)
+        }
+        ImageInputButtonGroup(
+            label = label,
+            value = value,
+            onValueChange = onValueChange,
+            modifier = Modifier.fillMaxWidth(),
+            isRequired = true,
+            enabled = true,
+            onMoveUp = onIncrement,
+            onMoveDown = onDecrement,
+            onDotsClick = onPickInitial,
+            onFolderClick = onFolder,
+            onCameraClick = onCamera
+        )
     }
 }
 
