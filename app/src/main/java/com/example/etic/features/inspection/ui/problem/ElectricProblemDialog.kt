@@ -1,36 +1,28 @@
-package com.example.etic.features.inspection.ui.problem
+﻿package com.example.etic.features.inspection.ui.problem
 
+import android.graphics.BitmapFactory
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.border
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.defaultMinSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Divider
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextField
-import com.example.etic.features.components.ImageInputButtonGroup
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -39,9 +31,16 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.foundation.layout.RowScope
+import java.io.File
+import com.example.etic.features.components.ImageInputButtonGroup
+import androidx.compose.foundation.clickable
 
 private val DIALOG_MIN_WIDTH = 720.dp
 private val DIALOG_MAX_WIDTH = 980.dp
@@ -122,9 +121,9 @@ fun ElectricProblemDialog(
                     .verticalScroll(scrollState)
                     .padding(24.dp)
             ) {
-                Text("Problema Eléctrico", style = MaterialTheme.typography.headlineSmall)
+                Text("Problema Eléctrico", style = MaterialTheme.typography.titleMedium)
 
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(12.dp))
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -138,36 +137,51 @@ fun ElectricProblemDialog(
                     InfoField("Equipo", equipmentName)
                 }
 
-                Spacer(Modifier.height(12.dp))
-                TextField(
+                Spacer(Modifier.height(8.dp))
+                ReadOnlyFormField(
+                    label = "Ruta del equipo",
                     value = equipmentRoute,
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("Ruta del equipo") },
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                Spacer(Modifier.height(16.dp))
-                TabRow(selectedTabIndex = selectedTab) {
-                    Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }, text = { Text("Datos") })
-                    Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }, text = { Text("Imágenes") })
+                Spacer(Modifier.height(12.dp))
+                TabRow(
+                    selectedTabIndex = selectedTab,
+                    divider = {}
+                ) {
+                    Tab(
+                        selected = selectedTab == 0,
+                        onClick = { selectedTab = 0 },
+                        text = { Text("Datos", style = MaterialTheme.typography.bodySmall) }
+                    )
+                    Tab(
+                        selected = selectedTab == 1,
+                        onClick = { selectedTab = 1 },
+                        text = { Text("Imágenes", style = MaterialTheme.typography.bodySmall) }
+                    )
                 }
 
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(12.dp))
                 when (selectedTab) {
                     0 -> {
-                        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                             SectionRow {
-                                Column(Modifier.weight(0.3f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    Text("Falla", style = MaterialTheme.typography.titleSmall)
+                                Column(
+                                    Modifier.weight(0.3f),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Text("Falla", style = MaterialTheme.typography.labelSmall)
                                     DropdownSelector(
                                         label = "*Falla",
                                         options = failureOptions,
                                         selectedId = failureId,
                                     ) { failureId = it }
                                 }
-                                Column(Modifier.weight(0.3f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    Text("Temperatura", style = MaterialTheme.typography.titleSmall)
+                                Column(
+                                    Modifier.weight(0.3f),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Text("Temperatura", style = MaterialTheme.typography.labelSmall)
                                     LabeledField(
                                         label = "*Componente con anomalía",
                                         value = componentTemperature,
@@ -181,8 +195,11 @@ fun ElectricProblemDialog(
                                         unit = "°C"
                                     )
                                 }
-                                Column(Modifier.weight(0.2f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    Text("Elemento", style = MaterialTheme.typography.titleSmall)
+                                Column(
+                                    Modifier.weight(0.2f),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Text("Elemento", style = MaterialTheme.typography.labelSmall)
                                     DropdownSelector(
                                         label = "*Elemento",
                                         options = phaseOptions,
@@ -194,8 +211,11 @@ fun ElectricProblemDialog(
                                         selectedId = referencePhaseId,
                                     ) { referencePhaseId = it }
                                 }
-                                Column(Modifier.weight(0.2f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    Text("I RMS", style = MaterialTheme.typography.titleSmall)
+                                Column(
+                                    Modifier.weight(0.2f),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Text("I RMS", style = MaterialTheme.typography.labelSmall)
                                     LabeledField(
                                         label = "I RMS",
                                         value = componentRms,
@@ -217,7 +237,10 @@ fun ElectricProblemDialog(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Column(Modifier.weight(0.5f)) {
-                                    Text("Información adicional", style = MaterialTheme.typography.bodyMedium)
+                                    Text(
+                                        "Información adicional",
+                                        style = MaterialTheme.typography.labelMedium
+                                    )
                                 }
                                 Column(Modifier.weight(0.3f)) {
                                     DropdownSelector(
@@ -239,13 +262,16 @@ fun ElectricProblemDialog(
                             Divider()
 
                             SectionRow {
-                                Column(Modifier.weight(0.5f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                Column(
+                                    Modifier.weight(0.5f),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
                                     CheckboxField(
                                         label = "Emisividad",
                                         checked = emissivityChecked,
                                         onCheckedChange = { emissivityChecked = it },
                                         trailing = {
-                                            LabeledField(
+                                            SimpleField(
                                                 label = "Emisividad",
                                                 value = emissivity,
                                                 onValueChange = { emissivity = it }
@@ -283,7 +309,10 @@ fun ElectricProblemDialog(
                                         }
                                     )
                                 }
-                                Column(Modifier.weight(0.5f), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                Column(
+                                    Modifier.weight(0.5f),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
                                     CheckboxField(
                                         label = "Velocidad del viento",
                                         checked = windSpeedChecked,
@@ -302,7 +331,10 @@ fun ElectricProblemDialog(
                                         options = manufacturerOptions,
                                         selectedId = manufacturerId,
                                     ) { manufacturerId = it }
-                                    Text("Especificación eléctrica", style = MaterialTheme.typography.titleMedium)
+                                    Text(
+                                        "Especificación eléctrica",
+                                        style = MaterialTheme.typography.labelMedium
+                                    )
                                     LabeledField(
                                         label = "Corriente nominal (A)",
                                         value = ratedLoad,
@@ -318,20 +350,20 @@ fun ElectricProblemDialog(
                                 }
                             }
 
-                            Text("Comentarios", style = MaterialTheme.typography.bodyMedium)
-                            TextField(
+                            Text("Comentarios", style = MaterialTheme.typography.labelMedium)
+                            MultilineField(
                                 value = comments,
                                 onValueChange = { comments = it },
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(120.dp),
-                                label = { Text("Comentarios") }
+                                    .height(96.dp)
                             )
                         }
                     }
+
                     else -> {
-                        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                            Text("Cargas de imágenes", style = MaterialTheme.typography.labelLarge)
+                        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Text("Cargas de imágenes", style = MaterialTheme.typography.labelMedium)
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(16.dp)
@@ -365,7 +397,7 @@ fun ElectricProblemDialog(
                     }
                 }
 
-                Spacer(Modifier.height(24.dp))
+                Spacer(Modifier.height(16.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -384,16 +416,55 @@ private fun InfoField(label: String, value: String) {
     Column(
         Modifier
             .widthIn(min = INFO_FIELD_MIN_WIDTH, max = INFO_FIELD_MAX_WIDTH)
-            .defaultMinSize(minWidth = INFO_FIELD_MIN_WIDTH)
     ) {
-        TextField(
-            value = value,
-            onValueChange = {},
-            readOnly = true,
-            singleLine = true,
-            label = { Text(label) },
-            modifier = Modifier.widthIn(min = INFO_FIELD_MIN_WIDTH, max = INFO_FIELD_MAX_WIDTH)
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall
         )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(32.dp)
+                .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(4.dp))
+                .padding(horizontal = 8.dp),
+            contentAlignment = Alignment.CenterStart
+        ) {
+            Text(
+                text = value,
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+@Composable
+private fun ReadOnlyFormField(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall
+        )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(32.dp)
+                .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(4.dp))
+                .padding(horizontal = 8.dp),
+            contentAlignment = Alignment.CenterStart
+        ) {
+            Text(
+                text = value,
+                style = MaterialTheme.typography.bodySmall,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
     }
 }
 
@@ -414,24 +485,97 @@ private fun LabeledField(
     onValueChange: (String) -> Unit,
     unit: String? = null
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        TextField(
-            value = value,
-            onValueChange = onValueChange,
-            modifier = Modifier.weight(1f),
-            label = { Text(label) }
+    Column(Modifier.fillMaxWidth()) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall
         )
-        if (unit != null) {
-            Text(
-                text = unit,
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(32.dp)
+                    .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(4.dp))
+                    .padding(horizontal = 8.dp),
+                contentAlignment = Alignment.CenterStart
+            ) {
+                BasicTextField(
+                    value = value,
+                    onValueChange = onValueChange,
+                    singleLine = true,
+                    textStyle = MaterialTheme.typography.bodySmall.copy(
+                        color = MaterialTheme.colorScheme.onSurface
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+            if (unit != null) {
+                Text(
+                    text = unit,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SimpleField(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit
+) {
+    Column(Modifier.fillMaxWidth()) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall
+        )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(32.dp)
+                .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(4.dp))
+                .padding(horizontal = 8.dp),
+            contentAlignment = Alignment.CenterStart
+        ) {
+            BasicTextField(
+                value = value,
+                onValueChange = onValueChange,
+                singleLine = true,
+                textStyle = MaterialTheme.typography.bodySmall.copy(
+                    color = MaterialTheme.colorScheme.onSurface
+                ),
+                modifier = Modifier.fillMaxWidth()
             )
         }
+    }
+}
+
+@Composable
+private fun MultilineField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(4.dp))
+            .padding(horizontal = 8.dp, vertical = 4.dp)
+    ) {
+        BasicTextField(
+            value = value,
+            onValueChange = onValueChange,
+            singleLine = false,
+            textStyle = MaterialTheme.typography.bodySmall.copy(
+                color = MaterialTheme.colorScheme.onSurface
+            ),
+            modifier = Modifier.fillMaxSize()
+        )
     }
 }
 
@@ -448,8 +592,50 @@ private fun CheckboxField(
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Checkbox(checked = checked, onCheckedChange = onCheckedChange)
-        Text(label, style = MaterialTheme.typography.bodyMedium)
+        Text(label, style = MaterialTheme.typography.bodySmall)
         trailing?.invoke()
+    }
+}
+
+@Composable
+private fun ImagePreviewBox(fileName: String) {
+    val ctx = LocalContext.current
+    val bitmap = remember(fileName) {
+        if (fileName.isBlank()) null
+        else {
+            val file = File(ctx.filesDir, "Imagenes/$fileName")
+            if (file.exists()) BitmapFactory.decodeFile(file.absolutePath)?.asImageBitmap() else null
+        }
+    }
+    if (bitmap != null) {
+        Image(
+            bitmap = bitmap,
+            contentDescription = null,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(200.dp)
+        )
+    } else {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(200.dp)
+                .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(
+                    imageVector = Icons.Outlined.Image,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = if (fileName.isBlank()) "Sin imagen" else "Imagen no encontrada",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
     }
 }
 
@@ -471,7 +657,7 @@ private fun ImageInputColumn(
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         if (title.isNotBlank()) {
-            Text(title, style = MaterialTheme.typography.titleSmall)
+            Text(title, style = MaterialTheme.typography.labelMedium)
         }
         ImageInputButtonGroup(
             label = label,
@@ -486,10 +672,10 @@ private fun ImageInputColumn(
             onFolderClick = onFolder,
             onCameraClick = onCamera
         )
+        ImagePreviewBox(fileName = value)
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DropdownSelector(
     label: String,
@@ -499,29 +685,52 @@ private fun DropdownSelector(
 ) {
     var expanded by remember { mutableStateOf(false) }
     val selectedLabel = options.firstOrNull { it.first == selectedId }?.second.orEmpty()
-    ExposedDropdownMenuBox(
-        expanded = expanded,
-        onExpandedChange = { if (options.isNotEmpty()) expanded = !expanded }
-    ) {
-        TextField(
-            value = selectedLabel,
-            onValueChange = {},
-            readOnly = true,
-            label = { Text(label) },
-            placeholder = { Text("Seleccionar") },
-            modifier = Modifier
-                .menuAnchor()
-                .fillMaxWidth(),
-            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-            colors = ExposedDropdownMenuDefaults.textFieldColors()
+
+    Column(Modifier.fillMaxWidth()) {
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall
         )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(32.dp)
+                .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(4.dp))
+                .padding(horizontal = 8.dp)
+                .clickable { expanded = true },
+            contentAlignment = Alignment.CenterStart
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = if (selectedLabel.isNotBlank()) selectedLabel else "Seleccionar",
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.weight(1f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = "▼",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+
         DropdownMenu(
             expanded = expanded,
             onDismissRequest = { expanded = false }
         ) {
             options.forEach { (id, text) ->
                 DropdownMenuItem(
-                    text = { Text(text.ifBlank { id }) },
+                    text = {
+                        Text(
+                            text = text.ifBlank { id },
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    },
                     onClick = {
                         expanded = false
                         onSelected(id)
