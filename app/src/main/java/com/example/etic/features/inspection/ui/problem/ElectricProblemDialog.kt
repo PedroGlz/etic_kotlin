@@ -165,102 +165,198 @@ fun ElectricProblemDialog(
                 when (selectedTab) {
                     0 -> {
                         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                            SectionRow {
-                                Column(
-                                    Modifier.weight(0.3f),
-                                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Text("Falla", style = MaterialTheme.typography.labelSmall)
-                                    DropdownSelector(
-                                        label = "*Falla",
-                                        options = failureOptions,
-                                        selectedId = failureId,
-                                    ) { failureId = it }
-                                }
-                                Column(
-                                    Modifier.weight(0.3f),
-                                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Text("Temperatura", style = MaterialTheme.typography.labelSmall)
-                                    LabeledField(
-                                        label = "*Componente con anomalía",
-                                        value = componentTemperature,
-                                        onValueChange = { componentTemperature = it },
-                                        unit = "°C"
-                                    )
-                                    LabeledField(
-                                        label = "*Componente de referencia",
-                                        value = referenceTemperature,
-                                        onValueChange = { referenceTemperature = it },
-                                        unit = "°C"
-                                    )
-                                }
-                                Column(
-                                    Modifier.weight(0.2f),
-                                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Text("Elemento", style = MaterialTheme.typography.labelSmall)
-                                    DropdownSelector(
-                                        label = "*Elemento",
-                                        options = phaseOptions,
-                                        selectedId = componentPhaseId,
-                                    ) { componentPhaseId = it }
-                                    DropdownSelector(
-                                        label = "*Fase de referencia",
-                                        options = phaseOptions,
-                                        selectedId = referencePhaseId,
-                                    ) { referencePhaseId = it }
-                                }
-                                Column(
-                                    Modifier.weight(0.2f),
-                                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Text("I RMS", style = MaterialTheme.typography.labelSmall)
-                                    LabeledField(
-                                        label = "I RMS",
-                                        value = componentRms,
-                                        onValueChange = { componentRms = it },
-                                        unit = "A"
-                                    )
-                                    LabeledField(
-                                        label = "I RMS Ref.",
-                                        value = referenceRms,
-                                        onValueChange = { referenceRms = it },
-                                        unit = "A"
-                                    )
-                                }
-                            }
 
+                            // ─────────────────────────────
+                            // Fila independiente para *Falla
+                            // ─────────────────────────────
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Column(Modifier.weight(0.5f)) {
+                                Column(Modifier.weight(0.3f)) {
                                     Text(
-                                        "Información adicional",
-                                        style = MaterialTheme.typography.labelMedium
+                                        text = "*Falla",
+                                        style = MaterialTheme.typography.labelSmall
                                     )
                                 }
-                                Column(Modifier.weight(0.3f)) {
-                                    DropdownSelector(
-                                        label = "Selección",
-                                        options = phaseOptions,
-                                        selectedId = additionalInfoId,
-                                    ) { additionalInfoId = it }
-                                }
-                                Column(Modifier.weight(0.2f)) {
-                                    LabeledField(
-                                        label = "I RMS",
-                                        value = additionalRms,
-                                        onValueChange = { additionalRms = it },
-                                        unit = "A"
+                                Column(Modifier.weight(0.7f)) {
+                                    DropdownSelectorNoLabel(
+                                        options = failureOptions,
+                                        selectedId = failureId,
+                                        onSelected = { failureId = it }
                                     )
                                 }
                             }
 
+                            // ─────────────────────────────
+// Tabla de 4 columnas x 3 filas
+// Col1: títulos de fila
+// Col2: Temperatura
+// Col3: Elemento
+// Col4: I RMS
+// ─────────────────────────────
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                // Encabezados de columnas 2, 3 y 4
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    // Columna 1: vacío (solo títulos de fila)
+                                    Column(Modifier.weight(0.3f)) {
+                                        // Sin título
+                                    }
+                                    Column(Modifier.weight(0.3f)) {
+                                        Text(
+                                            text = "Temperatura",
+                                            style = MaterialTheme.typography.labelSmall
+                                        )
+                                    }
+                                    Column(Modifier.weight(0.2f)) {
+                                        Text(
+                                            text = "Elemento",
+                                            style = MaterialTheme.typography.labelSmall
+                                        )
+                                    }
+                                    Column(Modifier.weight(0.2f)) {
+                                        Text(
+                                            text = "I RMS",
+                                            style = MaterialTheme.typography.labelSmall
+                                        )
+                                    }
+                                }
+
+                                Divider()
+
+                                // Fila 1: *Componente con anomalía
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    // Columna 1: título de fila
+                                    Column(Modifier.weight(0.3f)) {
+                                        Text(
+                                            text = "*Componente con anomalía",
+                                            style = MaterialTheme.typography.labelSmall
+                                        )
+                                    }
+                                    // Columna 2: temperatura del componente
+                                    Column(Modifier.weight(0.3f)) {
+                                        ValueFieldNoLabel(
+                                            value = componentTemperature,
+                                            onValueChange = { componentTemperature = it },
+                                            unit = "°C"
+                                        )
+                                    }
+                                    // Columna 3: fase del componente
+                                    Column(Modifier.weight(0.2f)) {
+                                        DropdownSelectorNoLabel(
+                                            options = phaseOptions,
+                                            selectedId = componentPhaseId,
+                                            onSelected = { componentPhaseId = it }
+                                        )
+                                    }
+                                    // Columna 4: I RMS componente
+                                    Column(Modifier.weight(0.2f)) {
+                                        ValueFieldNoLabel(
+                                            value = componentRms,
+                                            onValueChange = { componentRms = it },
+                                            unit = "A"
+                                        )
+                                    }
+                                }
+
+                                Divider()
+
+                                // Fila 2: *Componente de referencia
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    // Columna 1: título de fila
+                                    Column(Modifier.weight(0.3f)) {
+                                        Text(
+                                            text = "*Componente de referencia",
+                                            style = MaterialTheme.typography.labelSmall
+                                        )
+                                    }
+                                    // Columna 2: temperatura de referencia
+                                    Column(Modifier.weight(0.3f)) {
+                                        ValueFieldNoLabel(
+                                            value = referenceTemperature,
+                                            onValueChange = { referenceTemperature = it },
+                                            unit = "°C"
+                                        )
+                                    }
+                                    // Columna 3: fase de referencia
+                                    Column(Modifier.weight(0.2f)) {
+                                        DropdownSelectorNoLabel(
+                                            options = phaseOptions,
+                                            selectedId = referencePhaseId,
+                                            onSelected = { referencePhaseId = it }
+                                        )
+                                    }
+                                    // Columna 4: I RMS referencia
+                                    Column(Modifier.weight(0.2f)) {
+                                        ValueFieldNoLabel(
+                                            value = referenceRms,
+                                            onValueChange = { referenceRms = it },
+                                            unit = "A"
+                                        )
+                                    }
+                                }
+
+                                Divider()
+
+                                // Fila 3: Información adicional
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    // Columna 1: título de fila
+                                    Column(Modifier.weight(0.3f)) {
+                                        Text(
+                                            text = "Información adicional",
+                                            style = MaterialTheme.typography.labelSmall
+                                        )
+                                    }
+                                    // Columna 2: vacío para que todo se alinee a la derecha
+                                    Column(Modifier.weight(0.3f)) {
+                                        // Intencionalmente vacío para alinear con columnas 3 y 4
+                                    }
+                                    // Columna 3: selección adicional (alineada con "Elemento")
+                                    Column(Modifier.weight(0.2f)) {
+                                        DropdownSelectorNoLabel(
+                                            options = phaseOptions,
+                                            selectedId = additionalInfoId,
+                                            onSelected = { additionalInfoId = it }
+                                        )
+                                    }
+                                    // Columna 4: I RMS adicional (alineado con I RMS)
+                                    Column(Modifier.weight(0.2f)) {
+                                        ValueFieldNoLabel(
+                                            value = additionalRms,
+                                            onValueChange = { additionalRms = it },
+                                            unit = "A"
+                                        )
+                                    }
+                                }
+
+                                Divider()
+                            }
+
                             Divider()
 
+                            // ─────────────────────────────
+                            // Resto de la sección (emisividad, ambiente, etc.)
+                            // ─────────────────────────────
                             SectionRow {
                                 Column(
                                     Modifier.weight(0.5f),
@@ -520,6 +616,104 @@ private fun LabeledField(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun ValueFieldNoLabel(
+    value: String,
+    onValueChange: (String) -> Unit,
+    unit: String? = null
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .height(32.dp)
+                .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(4.dp))
+                .padding(horizontal = 8.dp),
+            contentAlignment = Alignment.CenterStart
+        ) {
+            BasicTextField(
+                value = value,
+                onValueChange = onValueChange,
+                singleLine = true,
+                textStyle = MaterialTheme.typography.bodySmall.copy(
+                    color = MaterialTheme.colorScheme.onSurface
+                ),
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+        if (unit != null) {
+            Text(
+                text = unit,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+private fun DropdownSelectorNoLabel(
+    options: List<Pair<String, String>>,
+    selectedId: String?,
+    onSelected: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val selectedLabel = options.firstOrNull { it.first == selectedId }?.second.orEmpty()
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(32.dp)
+            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(4.dp))
+            .padding(horizontal = 8.dp)
+            .clickable { expanded = true },
+        contentAlignment = Alignment.CenterStart
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = if (selectedLabel.isNotBlank()) selectedLabel else "Seleccionar",
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.weight(1f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = "▼",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+
+    DropdownMenu(
+        expanded = expanded,
+        onDismissRequest = { expanded = false }
+    ) {
+        options.forEach { (id, text) ->
+            DropdownMenuItem(
+                text = {
+                    Text(
+                        text = text.ifBlank { id },
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                },
+                onClick = {
+                    expanded = false
+                    onSelected(id)
+                }
+            )
         }
     }
 }
