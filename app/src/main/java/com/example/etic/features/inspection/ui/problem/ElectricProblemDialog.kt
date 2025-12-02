@@ -42,6 +42,8 @@ import java.io.File
 import com.example.etic.features.components.ImageInputButtonGroup
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 
 private val DIALOG_MIN_WIDTH = 720.dp
 private val DIALOG_MAX_WIDTH = 980.dp
@@ -600,6 +602,9 @@ private fun LabeledField(
                     textStyle = MaterialTheme.typography.bodySmall.copy(
                         color = MaterialTheme.colorScheme.onSurface
                     ),
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Number
+                    ),
                     modifier = Modifier.fillMaxWidth()
                 )
             }
@@ -639,6 +644,9 @@ private fun ValueFieldNoLabel(
                 singleLine = true,
                 textStyle = MaterialTheme.typography.bodySmall.copy(
                     color = MaterialTheme.colorScheme.onSurface
+                ),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Number
                 ),
                 modifier = Modifier.fillMaxWidth()
             )
@@ -737,6 +745,9 @@ private fun SimpleField(
                 singleLine = true,
                 textStyle = MaterialTheme.typography.bodySmall.copy(
                     color = MaterialTheme.colorScheme.onSurface
+                ),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Number
                 ),
                 modifier = Modifier.fillMaxWidth()
             )
