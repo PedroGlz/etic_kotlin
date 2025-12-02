@@ -41,6 +41,7 @@ import androidx.compose.foundation.layout.RowScope
 import java.io.File
 import com.example.etic.features.components.ImageInputButtonGroup
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
 
 private val DIALOG_MIN_WIDTH = 720.dp
 private val DIALOG_MAX_WIDTH = 980.dp
@@ -190,62 +191,71 @@ fun ElectricProblemDialog(
                             }
 
                             // ─────────────────────────────
-// Tabla de 4 columnas x 3 filas
-// Col1: títulos de fila
-// Col2: Temperatura
-// Col3: Elemento
-// Col4: I RMS
-// ─────────────────────────────
+                            // Tabla de 4 columnas x 3 filas
+                            // Col1: títulos de fila
+                            // Col2: Temperatura
+                            // Col3: Elemento
+                            // Col4: I RMS
+                            // ─────────────────────────────
+                            // Color suave para encabezado
+                            val headerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.30f)
+
+                            // Color suave para divisores
+                            val lineColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.23f)
+
                             Column(
                                 modifier = Modifier.fillMaxWidth(),
                                 verticalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
-                                // Encabezados de columnas 2, 3 y 4
+
+                                // ───────────── Encabezados ─────────────
                                 Row(
-                                    modifier = Modifier.fillMaxWidth(),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(headerColor)
+                                        .padding(vertical = 4.dp),
                                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    // Columna 1: vacío (solo títulos de fila)
-                                    Column(Modifier.weight(0.3f)) {
-                                        // Sin título
+                                    // Columna 1 vacía
+                                    Column(Modifier.weight(0.3f)) {}
+
+                                    // Columna 2
+                                    Column(
+                                        Modifier.weight(0.3f),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Text("Temperatura", style = MaterialTheme.typography.labelSmall)
                                     }
-                                    Column(Modifier.weight(0.3f)) {
-                                        Text(
-                                            text = "Temperatura",
-                                            style = MaterialTheme.typography.labelSmall
-                                        )
+
+                                    // Columna 3
+                                    Column(
+                                        Modifier.weight(0.2f),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Text("Elemento", style = MaterialTheme.typography.labelSmall)
                                     }
-                                    Column(Modifier.weight(0.2f)) {
-                                        Text(
-                                            text = "Elemento",
-                                            style = MaterialTheme.typography.labelSmall
-                                        )
-                                    }
-                                    Column(Modifier.weight(0.2f)) {
-                                        Text(
-                                            text = "I RMS",
-                                            style = MaterialTheme.typography.labelSmall
-                                        )
+
+                                    // Columna 4
+                                    Column(
+                                        Modifier.weight(0.2f),
+                                        horizontalAlignment = Alignment.CenterHorizontally
+                                    ) {
+                                        Text("I RMS", style = MaterialTheme.typography.labelSmall)
                                     }
                                 }
 
-                                Divider()
+                                Divider(color = lineColor, thickness = 1.dp)
 
-                                // Fila 1: *Componente con anomalía
+                                // ───────────── Fila 1 ─────────────
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    // Columna 1: título de fila
                                     Column(Modifier.weight(0.3f)) {
-                                        Text(
-                                            text = "*Componente con anomalía",
-                                            style = MaterialTheme.typography.labelSmall
-                                        )
+                                        Text("*Componente con anomalía", style = MaterialTheme.typography.labelSmall)
                                     }
-                                    // Columna 2: temperatura del componente
                                     Column(Modifier.weight(0.3f)) {
                                         ValueFieldNoLabel(
                                             value = componentTemperature,
@@ -253,7 +263,6 @@ fun ElectricProblemDialog(
                                             unit = "°C"
                                         )
                                     }
-                                    // Columna 3: fase del componente
                                     Column(Modifier.weight(0.2f)) {
                                         DropdownSelectorNoLabel(
                                             options = phaseOptions,
@@ -261,7 +270,6 @@ fun ElectricProblemDialog(
                                             onSelected = { componentPhaseId = it }
                                         )
                                     }
-                                    // Columna 4: I RMS componente
                                     Column(Modifier.weight(0.2f)) {
                                         ValueFieldNoLabel(
                                             value = componentRms,
@@ -271,22 +279,17 @@ fun ElectricProblemDialog(
                                     }
                                 }
 
-                                Divider()
+                                Divider(color = lineColor, thickness = 1.dp)
 
-                                // Fila 2: *Componente de referencia
+                                // ───────────── Fila 2 ─────────────
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    // Columna 1: título de fila
                                     Column(Modifier.weight(0.3f)) {
-                                        Text(
-                                            text = "*Componente de referencia",
-                                            style = MaterialTheme.typography.labelSmall
-                                        )
+                                        Text("*Componente de referencia", style = MaterialTheme.typography.labelSmall)
                                     }
-                                    // Columna 2: temperatura de referencia
                                     Column(Modifier.weight(0.3f)) {
                                         ValueFieldNoLabel(
                                             value = referenceTemperature,
@@ -294,7 +297,6 @@ fun ElectricProblemDialog(
                                             unit = "°C"
                                         )
                                     }
-                                    // Columna 3: fase de referencia
                                     Column(Modifier.weight(0.2f)) {
                                         DropdownSelectorNoLabel(
                                             options = phaseOptions,
@@ -302,7 +304,6 @@ fun ElectricProblemDialog(
                                             onSelected = { referencePhaseId = it }
                                         )
                                     }
-                                    // Columna 4: I RMS referencia
                                     Column(Modifier.weight(0.2f)) {
                                         ValueFieldNoLabel(
                                             value = referenceRms,
@@ -312,26 +313,21 @@ fun ElectricProblemDialog(
                                     }
                                 }
 
-                                Divider()
+                                Divider(color = lineColor, thickness = 1.dp)
 
-                                // Fila 3: Información adicional
+                                // ───────────── Fila 3 (Información adicional) ─────────────
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    // Columna 1: título de fila
                                     Column(Modifier.weight(0.3f)) {
-                                        Text(
-                                            text = "Información adicional",
-                                            style = MaterialTheme.typography.labelSmall
-                                        )
+                                        Text("Información adicional", style = MaterialTheme.typography.labelSmall)
                                     }
-                                    // Columna 2: vacío para que todo se alinee a la derecha
-                                    Column(Modifier.weight(0.3f)) {
-                                        // Intencionalmente vacío para alinear con columnas 3 y 4
-                                    }
-                                    // Columna 3: selección adicional (alineada con "Elemento")
+
+                                    // Columna vacía para alinear a la derecha
+                                    Column(Modifier.weight(0.3f)) {}
+
                                     Column(Modifier.weight(0.2f)) {
                                         DropdownSelectorNoLabel(
                                             options = phaseOptions,
@@ -339,7 +335,7 @@ fun ElectricProblemDialog(
                                             onSelected = { additionalInfoId = it }
                                         )
                                     }
-                                    // Columna 4: I RMS adicional (alineado con I RMS)
+
                                     Column(Modifier.weight(0.2f)) {
                                         ValueFieldNoLabel(
                                             value = additionalRms,
@@ -348,8 +344,6 @@ fun ElectricProblemDialog(
                                         )
                                     }
                                 }
-
-                                Divider()
                             }
 
                             Divider()
