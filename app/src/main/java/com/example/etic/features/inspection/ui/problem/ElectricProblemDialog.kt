@@ -358,18 +358,75 @@ fun ElectricProblemDialog(
                                     Modifier.weight(0.5f),
                                     verticalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
-                                    CheckboxField(
-                                        label = "Emisividad",
-                                        checked = emissivityChecked,
-                                        onCheckedChange = { emissivityChecked = it },
-                                        trailing = {
-                                            SimpleField(
-                                                label = "Emisividad",
-                                                value = emissivity,
-                                                onValueChange = { emissivity = it }
-                                            )
+                                    // ───────────── Emisividad (tabla 2x2 compacta) ─────────────
+                                    Column(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                                    ) {
+
+                                        // ----- Fila 1 -----
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            // Columna 1 vacía
+                                            Box(modifier = Modifier.weight(0.15f)) {}
+
+                                            // Columna 2: Label centrado
+                                            Box(
+                                                modifier = Modifier.weight(0.85f),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Text(
+                                                    text = "Emisividad",
+                                                    style = MaterialTheme.typography.labelSmall
+                                                )
+                                            }
                                         }
-                                    )
+
+                                        // ----- Fila 2 -----
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            // Columna 1: checkbox pegado a la izquierda
+                                            Box(
+                                                modifier = Modifier.weight(0.15f),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Checkbox(
+                                                    checked = emissivityChecked,
+                                                    onCheckedChange = { emissivityChecked = it }
+                                                )
+                                            }
+
+                                            // Columna 2: textfield numérico pegado al checkbox
+                                            Box(
+                                                modifier = Modifier
+                                                    .weight(0.85f)
+                                                    .height(32.dp)
+                                                    .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(4.dp))
+                                                    .padding(horizontal = 8.dp),
+                                                contentAlignment = Alignment.CenterStart
+                                            ) {
+                                                BasicTextField(
+                                                    value = emissivity,
+                                                    onValueChange = { emissivity = it },
+                                                    singleLine = true,
+                                                    textStyle = MaterialTheme.typography.bodySmall.copy(
+                                                        color = MaterialTheme.colorScheme.onSurface
+                                                    ),
+                                                    keyboardOptions = KeyboardOptions(
+                                                        keyboardType = KeyboardType.Number
+                                                    ),
+                                                    modifier = Modifier.fillMaxWidth()
+                                                )
+                                            }
+                                        }
+                                    }
+
                                     CheckboxField(
                                         label = "Temp. indirecta",
                                         checked = indirectTempChecked,
