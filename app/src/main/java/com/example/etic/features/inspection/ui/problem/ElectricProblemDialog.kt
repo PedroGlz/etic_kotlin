@@ -354,44 +354,25 @@ fun ElectricProblemDialog(
                             // Resto de la sección (emisividad, ambiente, etc.)
                             // ─────────────────────────────
                             SectionRow {
+                                // ───────── Columna 1: Emisividad + Temp. indirecta ─────────
                                 Column(
-                                    Modifier.weight(0.5f),
+                                    Modifier.weight(0.25f),
                                     verticalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
-                                    // ───────────── Emisividad (tabla 2x2 compacta) ─────────────
+                                    // Emisividad (estilo final que tú definiste: checkbox + SimpleField)
                                     Column(
                                         modifier = Modifier.fillMaxWidth(),
                                         verticalArrangement = Arrangement.spacedBy(2.dp)
                                     ) {
+                                        // Spacer para alinear con los campos de la columna 4
+                                        Spacer(Modifier.height(16.dp))
 
-                                        // ----- Fila 1 -----
                                         Row(
                                             modifier = Modifier.fillMaxWidth(),
                                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
-                                            // Columna 1 vacía
-                                            Box(modifier = Modifier.weight(0.15f)) {}
-
-                                            // Columna 2: Label centrado
-                                            Box(
-                                                modifier = Modifier.weight(0.85f),
-                                                contentAlignment = Alignment.Center
-                                            ) {
-                                                Text(
-                                                    text = "Emisividad",
-                                                    style = MaterialTheme.typography.labelSmall
-                                                )
-                                            }
-                                        }
-
-                                        // ----- Fila 2 -----
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            // Columna 1: checkbox pegado a la izquierda
+                                            // Columna 1: checkbox
                                             Box(
                                                 modifier = Modifier.weight(0.15f),
                                                 contentAlignment = Alignment.Center
@@ -402,84 +383,213 @@ fun ElectricProblemDialog(
                                                 )
                                             }
 
-                                            // Columna 2: textfield numérico pegado al checkbox
+                                            // Columna 2: campo numérico con label interno "Emisividad"
                                             Box(
-                                                modifier = Modifier
-                                                    .weight(0.85f)
-                                                    .height(32.dp)
-                                                    .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(4.dp))
-                                                    .padding(horizontal = 8.dp),
+                                                modifier = Modifier.weight(0.85f),
                                                 contentAlignment = Alignment.CenterStart
                                             ) {
-                                                BasicTextField(
+                                                SimpleField(
+                                                    label = "Emisividad",
                                                     value = emissivity,
-                                                    onValueChange = { emissivity = it },
-                                                    singleLine = true,
-                                                    textStyle = MaterialTheme.typography.bodySmall.copy(
-                                                        color = MaterialTheme.colorScheme.onSurface
-                                                    ),
-                                                    keyboardOptions = KeyboardOptions(
-                                                        keyboardType = KeyboardType.Number
-                                                    ),
-                                                    modifier = Modifier.fillMaxWidth()
+                                                    onValueChange = { emissivity = it }
                                                 )
                                             }
                                         }
                                     }
 
+                                    // Temp. indirecta (solo checkbox)
                                     CheckboxField(
                                         label = "Temp. indirecta",
                                         checked = indirectTempChecked,
                                         onCheckedChange = { indirectTempChecked = it }
                                     )
-                                    CheckboxField(
-                                        label = "Temp. ambiente",
-                                        checked = ambientTempChecked,
-                                        onCheckedChange = { ambientTempChecked = it },
-                                        trailing = {
-                                            LabeledField(
-                                                label = "Temp. ambiente",
-                                                value = ambientTemp,
-                                                onValueChange = { ambientTemp = it },
-                                                unit = "°C"
-                                            )
-                                        }
-                                    )
-                                    CheckboxField(
-                                        label = "Tipo ambiente",
-                                        checked = environmentChecked,
-                                        onCheckedChange = { environmentChecked = it },
-                                        trailing = {
-                                            DropdownSelector(
-                                                label = "Ambiente",
-                                                options = environmentOptions,
-                                                selectedId = environmentId,
-                                            ) { environmentId = it }
-                                        }
-                                    )
                                 }
+
+                                // ───────── Columna 2: Temp. ambiente + Tipo ambiente ─────────
                                 Column(
-                                    Modifier.weight(0.5f),
+                                    Modifier.weight(0.25f),
                                     verticalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
-                                    CheckboxField(
-                                        label = "Velocidad del viento",
-                                        checked = windSpeedChecked,
-                                        onCheckedChange = { windSpeedChecked = it },
-                                        trailing = {
-                                            LabeledField(
-                                                label = "Velocidad viento",
-                                                value = windSpeed,
-                                                onValueChange = { windSpeed = it },
-                                                unit = "m/s"
-                                            )
+                                    // Temp. ambiente (mismo estilo que Emisividad)
+                                    Column(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                                    ) {
+                                        Spacer(Modifier.height(16.dp))
+
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            // Columna 1: checkbox
+                                            Box(
+                                                modifier = Modifier.weight(0.15f),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Checkbox(
+                                                    checked = ambientTempChecked,
+                                                    onCheckedChange = { ambientTempChecked = it }
+                                                )
+                                            }
+
+                                            // Columna 2: campo numérico con label interno "Temp. ambiente"
+                                            Box(
+                                                modifier = Modifier.weight(0.85f),
+                                                contentAlignment = Alignment.CenterStart
+                                            ) {
+                                                SimpleField(
+                                                    label = "Temp. ambiente",
+                                                    value = ambientTemp,
+                                                    onValueChange = { ambientTemp = it }
+                                                )
+                                            }
                                         }
-                                    )
+                                    }
+
+                                    // Tipo ambiente (mismo patrón: checkbox + campo con label interno)
+                                    Column(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            // Columna 1: checkbox
+                                            Box(
+                                                modifier = Modifier.weight(0.15f),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Checkbox(
+                                                    checked = environmentChecked,
+                                                    onCheckedChange = { environmentChecked = it }
+                                                )
+                                            }
+
+                                            // Columna 2: dropdown con label interno "Tipo ambiente"
+                                            Box(
+                                                modifier = Modifier.weight(0.85f),
+                                                contentAlignment = Alignment.CenterStart
+                                            ) {
+                                                Column(Modifier.fillMaxWidth()) {
+                                                    Text(
+                                                        text = "Tipo ambiente",
+                                                        style = MaterialTheme.typography.labelSmall
+                                                    )
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .fillMaxWidth()
+                                                            .height(32.dp)
+                                                            .border(
+                                                                1.dp,
+                                                                MaterialTheme.colorScheme.outline,
+                                                                RoundedCornerShape(4.dp)
+                                                            )
+                                                            .padding(horizontal = 8.dp),
+                                                        contentAlignment = Alignment.CenterStart
+                                                    ) {
+                                                        DropdownSelectorNoLabel(
+                                                            options = environmentOptions,
+                                                            selectedId = environmentId,
+                                                            onSelected = { environmentId = it },
+                                                            modifier = Modifier.fillMaxWidth()
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // ───────── Columna 3: Velocidad del viento + Fabricante ─────────
+                                Column(
+                                    Modifier.weight(0.25f),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    // Velocidad del viento con mismo estilo base (checkbox + campo con label interno)
+                                    Column(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                                    ) {
+                                        Spacer(Modifier.height(16.dp))
+
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            // Columna 1: checkbox
+                                            Box(
+                                                modifier = Modifier.weight(0.15f),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Checkbox(
+                                                    checked = windSpeedChecked,
+                                                    onCheckedChange = { windSpeedChecked = it }
+                                                )
+                                            }
+
+                                            // Columna 2: campo numérico + unidad "m/s"
+                                            Box(
+                                                modifier = Modifier.weight(0.85f),
+                                                contentAlignment = Alignment.CenterStart
+                                            ) {
+                                                Column(Modifier.fillMaxWidth()) {
+                                                    Text(
+                                                        text = "Velocidad del viento",
+                                                        style = MaterialTheme.typography.labelSmall
+                                                    )
+                                                    Row(
+                                                        modifier = Modifier
+                                                            .fillMaxWidth()
+                                                            .height(32.dp)
+                                                            .border(
+                                                                1.dp,
+                                                                MaterialTheme.colorScheme.outline,
+                                                                RoundedCornerShape(4.dp)
+                                                            )
+                                                            .padding(horizontal = 8.dp),
+                                                        verticalAlignment = Alignment.CenterVertically,
+                                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                                    ) {
+                                                        BasicTextField(
+                                                            value = windSpeed,
+                                                            onValueChange = { windSpeed = it },
+                                                            singleLine = true,
+                                                            textStyle = MaterialTheme.typography.bodySmall.copy(
+                                                                color = MaterialTheme.colorScheme.onSurface
+                                                            ),
+                                                            keyboardOptions = KeyboardOptions(
+                                                                keyboardType = KeyboardType.Number
+                                                            ),
+                                                            modifier = Modifier.weight(1f)
+                                                        )
+                                                        Text(
+                                                            "m/s",
+                                                            style = MaterialTheme.typography.bodySmall,
+                                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    // Fabricante debajo, sin título de columna
                                     DropdownSelector(
                                         label = "Fabricante",
                                         options = manufacturerOptions,
                                         selectedId = manufacturerId,
                                     ) { manufacturerId = it }
+                                }
+
+                                // ───────── Columna 4: Especificación eléctrica (única con título) ─────────
+                                Column(
+                                    Modifier.weight(0.25f),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
                                     Text(
                                         "Especificación eléctrica",
                                         style = MaterialTheme.typography.labelMedium
@@ -499,14 +609,13 @@ fun ElectricProblemDialog(
                                 }
                             }
 
-                            Text("Comentarios", style = MaterialTheme.typography.labelMedium)
                             MultilineField(
+                                label = "Comentarios",
                                 value = comments,
                                 onValueChange = { comments = it },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(96.dp)
+                                modifier = Modifier.fillMaxWidth()
                             )
+
                         }
                     }
 
@@ -814,24 +923,44 @@ private fun SimpleField(
 
 @Composable
 private fun MultilineField(
+    label: String,
     value: String,
     onValueChange: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Box(
-        modifier = modifier
-            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(4.dp))
-            .padding(horizontal = 8.dp, vertical = 4.dp)
-    ) {
-        BasicTextField(
-            value = value,
-            onValueChange = onValueChange,
-            singleLine = false,
-            textStyle = MaterialTheme.typography.bodySmall.copy(
-                color = MaterialTheme.colorScheme.onSurface
-            ),
-            modifier = Modifier.fillMaxSize()
+    Column(modifier = modifier.fillMaxWidth()) {
+
+        // Label arriba
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurface
         )
+
+        Spacer(Modifier.height(4.dp))
+
+        // Caja del campo multilínea
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(64.dp)   // Ajustable
+                .border(
+                    1.dp,
+                    MaterialTheme.colorScheme.outline,
+                    RoundedCornerShape(4.dp)
+                )
+                .padding(horizontal = 8.dp, vertical = 6.dp)
+        ) {
+            BasicTextField(
+                value = value,
+                onValueChange = onValueChange,
+                singleLine = false,
+                textStyle = MaterialTheme.typography.bodySmall.copy(
+                    color = MaterialTheme.colorScheme.onSurface
+                ),
+                modifier = Modifier.fillMaxSize()
+            )
+        }
     }
 }
 
