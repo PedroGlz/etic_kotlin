@@ -363,7 +363,8 @@ fun ElectricProblemDialog(
                                     Column(
                                         modifier = Modifier.fillMaxWidth(),
                                         verticalArrangement = Arrangement.spacedBy(2.dp)
-                                    ) {
+                                    )
+                                    {
                                         // Spacer para alinear con los campos de la columna 4
                                         Spacer(Modifier.height(16.dp))
 
