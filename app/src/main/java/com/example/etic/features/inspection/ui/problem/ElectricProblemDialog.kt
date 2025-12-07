@@ -399,11 +399,35 @@ fun ElectricProblemDialog(
                                     }
 
                                     // Temp. indirecta (solo checkbox)
-                                    CheckboxField(
-                                        label = "Temp. indirecta",
-                                        checked = indirectTempChecked,
-                                        onCheckedChange = { indirectTempChecked = it }
-                                    )
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+
+                                        // Columna 1: checkbox (igual que Emisividad)
+                                        Box(
+                                            modifier = Modifier.weight(0.15f),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Checkbox(
+                                                checked = indirectTempChecked,
+                                                onCheckedChange = { indirectTempChecked = it }
+                                            )
+                                        }
+
+                                        // Columna 2: label alineado a la izquierda
+                                        Box(
+                                            modifier = Modifier.weight(0.85f),
+                                            contentAlignment = Alignment.CenterStart
+                                        ) {
+                                            Text(
+                                                text = "Temp. indirecta",
+                                                style = MaterialTheme.typography.labelSmall
+                                            )
+                                        }
+                                    }
+
                                 }
 
                                 // ───────── Columna 2: Temp. ambiente + Tipo ambiente ─────────
