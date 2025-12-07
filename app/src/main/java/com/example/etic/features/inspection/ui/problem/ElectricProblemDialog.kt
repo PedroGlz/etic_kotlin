@@ -351,61 +351,31 @@ fun ElectricProblemDialog(
                             Divider()
 
                             // ─────────────────────────────
-                            // Resto de la sección (emisividad, ambiente, etc.)
-                            // ─────────────────────────────
+// Resto de la sección (emisividad, ambiente, etc.)
+// ─────────────────────────────
                             SectionRow {
+
                                 // ───────── Columna 1: Emisividad + Temp. indirecta ─────────
                                 Column(
                                     Modifier.weight(0.25f),
                                     verticalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
-                                    // Emisividad (estilo final que tú definiste: checkbox + SimpleField)
-                                    Column(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                                    Spacer(Modifier.height(16.dp))
+
+                                    CheckboxNumericRow(
+                                        label = "Emisividad",
+                                        checked = emissivityChecked,
+                                        onCheckedChange = { emissivityChecked = it },
+                                        value = emissivity,
+                                        onValueChange = { emissivity = it }
                                     )
-                                    {
-                                        // Spacer para alinear con los campos de la columna 4
-                                        Spacer(Modifier.height(16.dp))
 
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            // Columna 1: checkbox
-                                            Box(
-                                                modifier = Modifier.weight(0.15f),
-                                                contentAlignment = Alignment.Center
-                                            ) {
-                                                Checkbox(
-                                                    checked = emissivityChecked,
-                                                    onCheckedChange = { emissivityChecked = it }
-                                                )
-                                            }
-
-                                            // Columna 2: campo numérico con label interno "Emisividad"
-                                            Box(
-                                                modifier = Modifier.weight(0.85f),
-                                                contentAlignment = Alignment.CenterStart
-                                            ) {
-                                                SimpleField(
-                                                    label = "Emisividad",
-                                                    value = emissivity,
-                                                    onValueChange = { emissivity = it }
-                                                )
-                                            }
-                                        }
-                                    }
-
-                                    // Temp. indirecta (solo checkbox)
+                                    // Temp. indirecta (solo checkbox alineado a la misma columna de los demás)
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
                                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-
-                                        // Columna 1: checkbox (igual que Emisividad)
                                         Box(
                                             modifier = Modifier.weight(0.15f),
                                             contentAlignment = Alignment.Center
@@ -415,8 +385,6 @@ fun ElectricProblemDialog(
                                                 onCheckedChange = { indirectTempChecked = it }
                                             )
                                         }
-
-                                        // Columna 2: label alineado a la izquierda
                                         Box(
                                             modifier = Modifier.weight(0.85f),
                                             contentAlignment = Alignment.CenterStart
@@ -427,7 +395,6 @@ fun ElectricProblemDialog(
                                             )
                                         }
                                     }
-
                                 }
 
                                 // ───────── Columna 2: Temp. ambiente + Tipo ambiente ─────────
@@ -435,97 +402,25 @@ fun ElectricProblemDialog(
                                     Modifier.weight(0.25f),
                                     verticalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
-                                    // Temp. ambiente (mismo estilo que Emisividad)
-                                    Column(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        verticalArrangement = Arrangement.spacedBy(2.dp)
-                                    ) {
-                                        Spacer(Modifier.height(16.dp))
+                                    Spacer(Modifier.height(16.dp))
 
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            // Columna 1: checkbox
-                                            Box(
-                                                modifier = Modifier.weight(0.15f),
-                                                contentAlignment = Alignment.Center
-                                            ) {
-                                                Checkbox(
-                                                    checked = ambientTempChecked,
-                                                    onCheckedChange = { ambientTempChecked = it }
-                                                )
-                                            }
+                                    CheckboxNumericRow(
+                                        label = "Temp. ambiente",
+                                        checked = ambientTempChecked,
+                                        onCheckedChange = { ambientTempChecked = it },
+                                        value = ambientTemp,
+                                        onValueChange = { ambientTemp = it },
+                                        unit = "°C"
+                                    )
 
-                                            // Columna 2: campo numérico con label interno "Temp. ambiente"
-                                            Box(
-                                                modifier = Modifier.weight(0.85f),
-                                                contentAlignment = Alignment.CenterStart
-                                            ) {
-                                                SimpleField(
-                                                    label = "Temp. ambiente",
-                                                    value = ambientTemp,
-                                                    onValueChange = { ambientTemp = it }
-                                                )
-                                            }
-                                        }
-                                    }
-
-                                    // Tipo ambiente (mismo patrón: checkbox + campo con label interno)
-                                    Column(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        verticalArrangement = Arrangement.spacedBy(2.dp)
-                                    ) {
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            // Columna 1: checkbox
-                                            Box(
-                                                modifier = Modifier.weight(0.15f),
-                                                contentAlignment = Alignment.Center
-                                            ) {
-                                                Checkbox(
-                                                    checked = environmentChecked,
-                                                    onCheckedChange = { environmentChecked = it }
-                                                )
-                                            }
-
-                                            // Columna 2: dropdown con label interno "Tipo ambiente"
-                                            Box(
-                                                modifier = Modifier.weight(0.85f),
-                                                contentAlignment = Alignment.CenterStart
-                                            ) {
-                                                Column(Modifier.fillMaxWidth()) {
-                                                    Text(
-                                                        text = "Tipo ambiente",
-                                                        style = MaterialTheme.typography.labelSmall
-                                                    )
-                                                    Box(
-                                                        modifier = Modifier
-                                                            .fillMaxWidth()
-                                                            .height(32.dp)
-                                                            .border(
-                                                                1.dp,
-                                                                MaterialTheme.colorScheme.outline,
-                                                                RoundedCornerShape(4.dp)
-                                                            )
-                                                            .padding(horizontal = 8.dp),
-                                                        contentAlignment = Alignment.CenterStart
-                                                    ) {
-                                                        DropdownSelectorNoLabel(
-                                                            options = environmentOptions,
-                                                            selectedId = environmentId,
-                                                            onSelected = { environmentId = it },
-                                                            modifier = Modifier.fillMaxWidth()
-                                                        )
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
+                                    CheckboxDropdownRow(
+                                        label = "Tipo ambiente",
+                                        checked = environmentChecked,
+                                        onCheckedChange = { environmentChecked = it },
+                                        options = environmentOptions,
+                                        selectedId = environmentId,
+                                        onSelected = { environmentId = it }
+                                    )
                                 }
 
                                 // ───────── Columna 3: Velocidad del viento + Fabricante ─────────
@@ -533,76 +428,17 @@ fun ElectricProblemDialog(
                                     Modifier.weight(0.25f),
                                     verticalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
-                                    // Velocidad del viento con mismo estilo base (checkbox + campo con label interno)
-                                    Column(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        verticalArrangement = Arrangement.spacedBy(2.dp)
-                                    ) {
-                                        Spacer(Modifier.height(16.dp))
+                                    Spacer(Modifier.height(16.dp))
 
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            // Columna 1: checkbox
-                                            Box(
-                                                modifier = Modifier.weight(0.15f),
-                                                contentAlignment = Alignment.Center
-                                            ) {
-                                                Checkbox(
-                                                    checked = windSpeedChecked,
-                                                    onCheckedChange = { windSpeedChecked = it }
-                                                )
-                                            }
+                                    CheckboxNumericRow(
+                                        label = "Velocidad del viento",
+                                        checked = windSpeedChecked,
+                                        onCheckedChange = { windSpeedChecked = it },
+                                        value = windSpeed,
+                                        onValueChange = { windSpeed = it },
+                                        unit = "m/s"
+                                    )
 
-                                            // Columna 2: campo numérico + unidad "m/s"
-                                            Box(
-                                                modifier = Modifier.weight(0.85f),
-                                                contentAlignment = Alignment.CenterStart
-                                            ) {
-                                                Column(Modifier.fillMaxWidth()) {
-                                                    Text(
-                                                        text = "Velocidad del viento",
-                                                        style = MaterialTheme.typography.labelSmall
-                                                    )
-                                                    Row(
-                                                        modifier = Modifier
-                                                            .fillMaxWidth()
-                                                            .height(32.dp)
-                                                            .border(
-                                                                1.dp,
-                                                                MaterialTheme.colorScheme.outline,
-                                                                RoundedCornerShape(4.dp)
-                                                            )
-                                                            .padding(horizontal = 8.dp),
-                                                        verticalAlignment = Alignment.CenterVertically,
-                                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                                    ) {
-                                                        BasicTextField(
-                                                            value = windSpeed,
-                                                            onValueChange = { windSpeed = it },
-                                                            singleLine = true,
-                                                            textStyle = MaterialTheme.typography.bodySmall.copy(
-                                                                color = MaterialTheme.colorScheme.onSurface
-                                                            ),
-                                                            keyboardOptions = KeyboardOptions(
-                                                                keyboardType = KeyboardType.Number
-                                                            ),
-                                                            modifier = Modifier.weight(1f)
-                                                        )
-                                                        Text(
-                                                            "m/s",
-                                                            style = MaterialTheme.typography.bodySmall,
-                                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                        )
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-
-                                    // Fabricante debajo, sin título de columna
                                     DropdownSelector(
                                         label = "Fabricante",
                                         options = manufacturerOptions,
@@ -633,6 +469,7 @@ fun ElectricProblemDialog(
                                     )
                                 }
                             }
+
 
                             MultilineField(
                                 label = "Comentarios",
@@ -947,6 +784,45 @@ private fun SimpleField(
 }
 
 @Composable
+private fun CheckboxWithSimpleFieldRow(
+    label: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    value: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Columna 1: checkbox
+        Box(
+            modifier = Modifier.weight(0.15f),
+            contentAlignment = Alignment.Center
+        ) {
+            Checkbox(
+                checked = checked,
+                onCheckedChange = onCheckedChange
+            )
+        }
+
+        // Columna 2: SimpleField (label + borde interno)
+        Box(
+            modifier = Modifier.weight(0.85f),
+            contentAlignment = Alignment.CenterStart
+        ) {
+            SimpleField(
+                label = label,
+                value = value,
+                onValueChange = onValueChange
+            )
+        }
+    }
+}
+
+@Composable
 private fun MultilineField(
     label: String,
     value: String,
@@ -1150,3 +1026,169 @@ private fun DropdownSelector(
         }
     }
 }
+
+@Composable
+private fun CheckboxNumericRow(
+    label: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    value: String,
+    onValueChange: (String) -> Unit,
+    unit: String? = null,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Columna 1: checkbox alineado con el resto
+        Box(
+            modifier = Modifier.weight(0.15f),
+            contentAlignment = Alignment.Center
+        ) {
+            Checkbox(
+                checked = checked,
+                onCheckedChange = onCheckedChange
+            )
+        }
+
+        // Columna 2: label + caja con borde + valor numérico (+ unidad opcional)
+        Column(
+            modifier = Modifier.weight(0.85f)
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall
+            )
+            Spacer(Modifier.height(4.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(32.dp)
+                    .border(
+                        1.dp,
+                        MaterialTheme.colorScheme.outline,
+                        RoundedCornerShape(4.dp)
+                    )
+                    .padding(horizontal = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                BasicTextField(
+                    value = value,
+                    onValueChange = onValueChange,
+                    singleLine = true,
+                    textStyle = MaterialTheme.typography.bodySmall.copy(
+                        color = MaterialTheme.colorScheme.onSurface
+                    ),
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Number
+                    ),
+                    modifier = Modifier.weight(1f)
+                )
+                if (unit != null) {
+                    Text(
+                        unit,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun CheckboxDropdownRow(
+    label: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    options: List<Pair<String, String>>,
+    selectedId: String?,
+    onSelected: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val selectedLabel = options.firstOrNull { it.first == selectedId }?.second.orEmpty()
+
+    Row(
+        modifier = modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Columna 1: checkbox
+        Box(
+            modifier = Modifier.weight(0.15f),
+            contentAlignment = Alignment.Center
+        ) {
+            Checkbox(
+                checked = checked,
+                onCheckedChange = onCheckedChange
+            )
+        }
+
+        // Columna 2: label + caja clickable con borde + texto seleccionado
+        Column(
+            modifier = Modifier.weight(0.85f)
+        ) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall
+            )
+            Spacer(Modifier.height(4.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(32.dp)
+                    .border(
+                        1.dp,
+                        MaterialTheme.colorScheme.outline,
+                        RoundedCornerShape(4.dp)
+                    )
+                    .clickable { expanded = true }
+                    .padding(horizontal = 8.dp),
+                contentAlignment = Alignment.CenterStart
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = if (selectedLabel.isNotBlank()) selectedLabel else "Seleccionar",
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.weight(1f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = "▼",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
+                options.forEach { (id, text) ->
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                text = text.ifBlank { id },
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        },
+                        onClick = {
+                            expanded = false
+                            onSelected(id)
+                        }
+                    )
+                }
+            }
+        }
+    }
+}
+
