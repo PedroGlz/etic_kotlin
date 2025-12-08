@@ -141,11 +141,39 @@ fun ElectricProblemDialog(
                 }
 
                 Spacer(Modifier.height(8.dp))
-                ReadOnlyFormField(
-                    label = "Ruta del equipo",
-                    value = equipmentRoute,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Columna 1: *Falla (más angosta)
+                    Column(
+                        modifier = Modifier.weight(0.20f)
+                    )
+                    {
+                        Text(
+                            text = "*Falla",
+                            style = MaterialTheme.typography.labelSmall
+                        )
+                        DropdownSelectorNoLabel(
+                            options = failureOptions,
+                            selectedId = failureId,
+                            onSelected = { failureId = it }
+                        )
+                    }
+
+                    // Columna 2: Ruta del equipo (más ancha)
+                    Column(
+                        modifier = Modifier.weight(0.80f)
+                    )
+                    {
+                        ReadOnlyFormField(
+                            label = "Ruta del equipo",
+                            value = equipmentRoute,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
 
                 Spacer(Modifier.height(12.dp))
                 TabRow(
@@ -168,30 +196,6 @@ fun ElectricProblemDialog(
                 when (selectedTab) {
                     0 -> {
                         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-
-                            // ─────────────────────────────
-                            // Fila independiente para *Falla
-                            // ─────────────────────────────
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Column(Modifier.weight(0.3f)) {
-                                    Text(
-                                        text = "*Falla",
-                                        style = MaterialTheme.typography.labelSmall
-                                    )
-                                }
-                                Column(Modifier.weight(0.7f)) {
-                                    DropdownSelectorNoLabel(
-                                        options = failureOptions,
-                                        selectedId = failureId,
-                                        onSelected = { failureId = it }
-                                    )
-                                }
-                            }
-
                             // ─────────────────────────────
                             // Tabla de 4 columnas x 3 filas
                             // Col1: títulos de fila
