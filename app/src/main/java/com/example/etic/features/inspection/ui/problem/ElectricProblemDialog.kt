@@ -208,7 +208,8 @@ fun ElectricProblemDialog(
                             Column(
                                 modifier = Modifier.fillMaxWidth(),
                                 verticalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
+                            )
+                            {
 
                                 // ───────────── Encabezados ─────────────
                                 Row(
@@ -351,8 +352,8 @@ fun ElectricProblemDialog(
                             Divider()
 
                             // ─────────────────────────────
-// Resto de la sección (emisividad, ambiente, etc.)
-// ─────────────────────────────
+                            // Resto de la sección (emisividad, ambiente, etc.)
+                            // ─────────────────────────────
                             SectionRow {
 
                                 // ───────── Columna 1: Emisividad + Temp. indirecta ─────────
@@ -610,18 +611,18 @@ private fun LabeledField(
             text = label,
             style = MaterialTheme.typography.labelSmall
         )
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(32.dp)
+                .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(4.dp))
+                .padding(horizontal = 8.dp),
+            contentAlignment = Alignment.CenterStart
         ) {
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .height(32.dp)
-                    .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(4.dp))
-                    .padding(horizontal = 8.dp),
-                contentAlignment = Alignment.CenterStart
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 BasicTextField(
                     value = value,
@@ -633,15 +634,15 @@ private fun LabeledField(
                     keyboardOptions = KeyboardOptions(
                         keyboardType = KeyboardType.Number
                     ),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.weight(1f)
                 )
-            }
-            if (unit != null) {
-                Text(
-                    text = unit,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                if (unit != null) {
+                    Text(
+                        text = unit,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
     }
@@ -653,18 +654,18 @@ private fun ValueFieldNoLabel(
     onValueChange: (String) -> Unit,
     unit: String? = null
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(32.dp)
+            .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(4.dp))
+            .padding(horizontal = 8.dp),
+        contentAlignment = Alignment.CenterStart
     ) {
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .height(32.dp)
-                .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(4.dp))
-                .padding(horizontal = 8.dp),
-            contentAlignment = Alignment.CenterStart
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
             BasicTextField(
                 value = value,
@@ -676,15 +677,15 @@ private fun ValueFieldNoLabel(
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Number
                 ),
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier.weight(1f)
             )
-        }
-        if (unit != null) {
-            Text(
-                text = unit,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            if (unit != null) {
+                Text(
+                    text = unit,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }
@@ -1061,7 +1062,6 @@ private fun CheckboxNumericRow(
                 text = label,
                 style = MaterialTheme.typography.labelSmall
             )
-            Spacer(Modifier.height(4.dp))
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1136,7 +1136,6 @@ private fun CheckboxDropdownRow(
                 text = label,
                 style = MaterialTheme.typography.labelSmall
             )
-            Spacer(Modifier.height(4.dp))
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
