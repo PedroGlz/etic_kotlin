@@ -108,6 +108,7 @@ fun ElectricProblemDialog(
             var additionalRms by rememberSaveable { mutableStateOf("") }
             var emissivityChecked by rememberSaveable { mutableStateOf(false) }
             var emissivity by rememberSaveable { mutableStateOf("") }
+            var emissivityError by rememberSaveable { mutableStateOf<String?>(null) }
             var indirectTempChecked by rememberSaveable { mutableStateOf(false) }
             var ambientTempChecked by rememberSaveable { mutableStateOf(false) }
             var ambientTemp by rememberSaveable { mutableStateOf("") }
@@ -140,6 +141,40 @@ fun ElectricProblemDialog(
                 } else if (!commentsTouched) {
                     comments = ""
                     lastAutoComment = ""
+                }
+            }
+            val handleEmissivityInput: (String) -> Unit = { input ->
+                val filtered = input.filter { it.isDigit() || it == '.' || it == ',' }
+                val normalized = filtered.replace(',', '.')
+                val number = normalized.toDoubleOrNull()
+                val shouldValidate = emissivityChecked
+                when {
+                    filtered.isBlank() -> {
+                        emissivity = ""
+                        emissivityError = if (shouldValidate) "Fuera del rango valido" else null
+                    }
+                    number == null -> {
+                        emissivityError = if (shouldValidate) "Fuera del rango valido" else null
+                    }
+                    number < 0.0 -> {
+                        emissivityError = if (shouldValidate) "Ingresar valor entre 0.00 y 1.00" else null
+                    }
+                    number > 1.0 -> {
+                        emissivityError = if (shouldValidate) "Ingresar valor entre 0.00 y 1.00" else null
+                    }
+                    else -> {
+                        emissivity = filtered
+                        emissivityError = null
+                    }
+                }
+            }
+            LaunchedEffect(emissivityChecked) {
+                if (emissivityChecked) {
+                    if (emissivity.isBlank()) {
+                        emissivityError = "Fuera del rango valido"
+                    }
+                } else {
+                    emissivityError = null
                 }
             }
 
@@ -392,13 +427,24 @@ fun ElectricProblemDialog(
                                 ) {
                                     Spacer(Modifier.height(16.dp))
 
+                                val currentEmissivityError = emissivityError
+                                Column {
                                     CheckboxNumericRow(
                                         label = "Emisividad",
                                         checked = emissivityChecked,
-                                        onCheckedChange = { emissivityChecked = it },
-                                        value = emissivity,
-                                        onValueChange = { emissivity = it }
-                                    )
+                                            onCheckedChange = { emissivityChecked = it },
+                                            value = emissivity,
+                                            onValueChange = handleEmissivityInput
+                                        )
+                                    if (currentEmissivityError != null) {
+                                        Spacer(Modifier.height(2.dp))
+                                        Text(
+                                            text = currentEmissivityError,
+                                            style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.error
+                                            )
+                                        }
+                                    }
 
                                     // Temp. indirecta (solo checkbox alineado a la misma columna de los demás)
                                     Row(
@@ -558,6 +604,7 @@ fun ElectricProblemDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     TextButton(onClick = onDismiss) { Text("Cancelar") }
+                    val canSubmit = continueEnabled && emissivityError == null
                     Button(
                         onClick = {
                             onContinue(
@@ -583,11 +630,13 @@ fun ElectricProblemDialog(
                                     manufacturerId = manufacturerId,
                                     ratedLoad = ratedLoad,
                                     circuitVoltage = circuitVoltage,
-                                    comments = comments
+                                    comments = comments,
+                                    rpm = "",
+                                    bearingType = ""
                                 )
                             )
                         },
-                        enabled = continueEnabled
+                        enabled = canSubmit
                     ) {
                         Text("Guardar")
                     }

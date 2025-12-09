@@ -681,6 +681,18 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                         val phaseLabel = formData.componentPhaseId?.let { id ->
                             electricPhaseOptions.firstOrNull { it.first == id }?.second
                         }
+                        val emissivityInput = formData.emissivity.trim()
+                        val emissivityValue = emissivityInput.replace(',', '.').toDoubleOrNull()
+                        if (formData.emissivityChecked) {
+                            if (emissivityValue == null || emissivityValue < 0.0 || emissivityValue > 1.0) {
+                                Toast.makeText(
+                                    ctx,
+                                    "La emisividad debe estar entre 0.00 y 1.00.",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                                return@launch
+                            }
+                        }
                         val autoComment = buildList {
                             failureLabel?.takeIf { it.isNotBlank() }?.let { add(it) }
                             phaseLabel?.takeIf { it.isNotBlank() }?.let { add(it) }
@@ -712,14 +724,14 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                             referenceRms = formData.referenceRms.toDoubleOrNull(),
                             additionalInfo = formData.additionalInfoId,
                             additionalRms = formData.additionalRms.toDoubleOrNull(),
-                            emissivityCheck = if (formData.emissivityChecked) "on" else "off",
-                            emissivity = formData.emissivity.toDoubleOrNull(),
-                            indirectTempCheck = if (formData.indirectTempChecked) "on" else "off",
-                            tempAmbientCheck = if (formData.ambientTempChecked) "on" else "off",
+                            emissivityCheck = if (formData.emissivityChecked) "SI" else "NO",
+                            emissivity = emissivityValue,
+                            indirectTempCheck = if (formData.indirectTempChecked) "SI" else "NO",
+                            tempAmbientCheck = if (formData.ambientTempChecked) "SI" else "NO",
                             tempAmbient = formData.ambientTemp.toDoubleOrNull(),
-                            environmentCheck = if (formData.environmentChecked) "on" else "off",
+                            environmentCheck = if (formData.environmentChecked) "SI" else "NO",
                             environment = formData.environmentId,
-                            windSpeedCheck = if (formData.windSpeedChecked) "on" else "off",
+                            windSpeedCheck = if (formData.windSpeedChecked) "SI" else "NO",
                             windSpeed = formData.windSpeed.toDoubleOrNull(),
                             idFabricante = formData.manufacturerId,
                             ratedLoadCheck = "off",
