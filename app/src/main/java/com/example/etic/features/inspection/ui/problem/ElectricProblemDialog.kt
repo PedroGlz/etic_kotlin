@@ -35,6 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -120,10 +121,13 @@ fun ElectricProblemDialog(
             var comments by rememberSaveable { mutableStateOf("") }
             var commentsTouched by rememberSaveable { mutableStateOf(false) }
             var lastAutoComment by rememberSaveable { mutableStateOf("") }
+            val failureLabel = failureOptions.firstOrNull { it.first == failureId }?.second
+                ?.takeIf { it.isNotBlank() }
+            val phaseLabel = phaseOptions.firstOrNull { it.first == componentPhaseId }?.second
+                ?.takeIf { it.isNotBlank() }
             val autoCommentText = buildList {
-                failureOptions.firstOrNull { it.first == failureId }?.second
-                    ?.takeIf { it.isNotBlank() }?.let { add(it) }
-                componentPhaseId?.takeIf { it.isNotBlank() }?.let { add(it) }
+                failureLabel?.let { add(it) }
+                phaseLabel?.let { add(it) }
                 equipmentName.takeUnless { it.isBlank() }?.let { add(it) }
             }.joinToString(", ")
             LaunchedEffect(autoCommentText) {
@@ -497,15 +501,16 @@ fun ElectricProblemDialog(
                             }
 
 
-                            MultilineField(
-                                label = "Comentarios",
-                                value = comments,
-                                onValueChange = {
-                                    commentsTouched = true
-                                    comments = it
-                                },
-                                modifier = Modifier.fillMaxWidth()
-                            )
+            MultilineField(
+                label = "Comentarios",
+                value = comments,
+                onValueChange = {
+                    commentsTouched = true
+                    comments = it
+                },
+                modifier = Modifier.fillMaxWidth(),
+                fieldHeight = 48.dp
+            )
 
                         }
                     }
@@ -915,7 +920,8 @@ private fun MultilineField(
     label: String,
     value: String,
     onValueChange: (String) -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    fieldHeight: Dp = 64.dp
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
 
@@ -932,7 +938,7 @@ private fun MultilineField(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(64.dp)   // Ajustable
+                .height(fieldHeight)
                 .border(
                     1.dp,
                     MaterialTheme.colorScheme.outline,

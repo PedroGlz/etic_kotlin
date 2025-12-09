@@ -678,9 +678,12 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                         val failureLabel = formData.failureId?.let { id ->
                             electricHazardOptions.firstOrNull { it.first == id }?.second
                         }
+                        val phaseLabel = formData.componentPhaseId?.let { id ->
+                            electricPhaseOptions.firstOrNull { it.first == id }?.second
+                        }
                         val autoComment = buildList {
                             failureLabel?.takeIf { it.isNotBlank() }?.let { add(it) }
-                            formData.componentPhaseId?.takeIf { it.isNotBlank() }?.let { add(it) }
+                            phaseLabel?.takeIf { it.isNotBlank() }?.let { add(it) }
                             pendingProblemEquipmentName?.takeIf { it.isNotBlank() }?.let { add(it) }
                         }.joinToString(", ")
                         val finalComment = formData.comments.takeIf { it.isNotBlank() } ?: autoComment
