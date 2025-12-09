@@ -1,4 +1,4 @@
-﻿package com.example.etic.features.inspection.ui.home
+package com.example.etic.features.inspection.ui.home
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.rememberScrollState
@@ -165,7 +165,7 @@ private fun String.canonicalProblemLabel(): String =
         else -> this
     }
 private val VISUAL_SEVERITY_OPTIONS = listOf(
-    "1D56EDB0-8D6E-11D3-9270-006008A19766" to "CrÃ­tico",
+    "1D56EDB0-8D6E-11D3-9270-006008A19766" to "Crítico",
     "1D56EDB1-8D6E-11D3-9270-006008A19766" to "Serio",
     "1D56EDB2-8D6E-11D3-9270-006008A19766" to "Importante",
     "1D56EDB3-8D6E-11D3-9270-006008A19766" to "Menor",
@@ -327,7 +327,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             val faseDao = remember { com.example.etic.data.local.DbProvider.get(ctx).faseDao() }
             val tipoAmbienteDao = remember { com.example.etic.data.local.DbProvider.get(ctx).tipoAmbienteDao() }
             LaunchedEffect(Unit) {
-                val electricTypeId = PROBLEM_TYPE_IDS["El�ctrico"]
+                val electricTypeId = PROBLEM_TYPE_IDS["El?ctrico"]
                 prioridadOptions = runCatching { prioridadDao.getAllActivas() }.getOrElse { emptyList() }
                 fabricanteOptions = runCatching { fabricanteDao.getAllActivos() }.getOrElse { emptyList() }
                 electricPhaseOptions = runCatching {
@@ -368,6 +368,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             var pendingThermalImage by rememberSaveable { mutableStateOf("") }
             var pendingDigitalImage by rememberSaveable { mutableStateOf("") }
             var isSavingVisualProblem by remember { mutableStateOf(false) }
+            var isSavingElectricProblem by remember { mutableStateOf(false) }
             var editingProblemId by rememberSaveable { mutableStateOf<String?>(null) }
             var editingProblemOriginal by remember { mutableStateOf<Problema?>(null) }
             fun resetVisualProblemForm() {
@@ -389,10 +390,10 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     if (saved != null) {
                         pendingThermalImage = saved
                     } else {
-                        Toast.makeText(ctx, "No se pudo guardar la imagen tÃ©rmica.", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(ctx, "No se pudo guardar la imagen térmica.", Toast.LENGTH_SHORT).show()
                     }
                 } else {
-                    Toast.makeText(ctx, "La cÃ¡mara no devolviÃ³ imagen.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(ctx, "La cámara no devolvió imagen.", Toast.LENGTH_SHORT).show()
                 }
             }
             val digitalCameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { bmp ->
@@ -404,7 +405,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                         Toast.makeText(ctx, "No se pudo guardar la imagen digital.", Toast.LENGTH_SHORT).show()
                     }
                 } else {
-                    Toast.makeText(ctx, "La cÃ¡mara no devolviÃ³ imagen.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(ctx, "La cámara no devolvió imagen.", Toast.LENGTH_SHORT).show()
                 }
             }
             val thermalFolderLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
@@ -413,7 +414,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     if (saved != null) {
                         pendingThermalImage = saved
                     } else {
-                        Toast.makeText(ctx, "No se pudo importar la imagen tÃ©rmica.", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(ctx, "No se pudo importar la imagen térmica.", Toast.LENGTH_SHORT).show()
                     }
                 }
             }
@@ -472,7 +473,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             fun loadInitialImageFromInspection(isThermal: Boolean, onResult: (String) -> Unit) {
                 val inspId = currentInspection?.idInspeccion
                 if (inspId.isNullOrBlank()) {
-                    Toast.makeText(ctx, "No hay inspecciÃ³n activa.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(ctx, "No hay inspección activa.", Toast.LENGTH_SHORT).show()
                     return
                 }
                 loadInitialImageScope.launch {
@@ -490,8 +491,8 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                         }
                         onResult(suggestion)
                     } else {
-                        val label = if (isThermal) "tÃ©rmica" else "digital"
-                        Toast.makeText(ctx, "No se encontrÃ³ imagen $label inicial.", Toast.LENGTH_SHORT).show()
+                        val label = if (isThermal) "térmica" else "digital"
+                        Toast.makeText(ctx, "No se encontró imagen $label inicial.", Toast.LENGTH_SHORT).show()
                     }
                 }
             }
@@ -638,6 +639,61 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
     }
             // Lee el usuario actual del CompositionLocal en contexto @Composable
             val currentUser = LocalCurrentUser.current
+            fun saveElectricProblem() {
+                val inspection = currentInspection
+                if (inspection == null) {
+                    Toast.makeText(ctx, "No hay inspección activa.", Toast.LENGTH_SHORT).show()
+                    return
+                }
+                val locationId = pendingProblemUbicacionId ?: selectedId
+                if (locationId.isNullOrBlank()) {
+                    Toast.makeText(ctx, "Selecciona un equipo.", Toast.LENGTH_SHORT).show()
+                    return
+                }
+                val typeId = ELECTRIC_PROBLEM_TYPE_ID ?: "0D32B331-76C3-11D3-82BF-00104BC75DC2"
+                val numero = pendingProblemNumber.toIntOrNull() ?: 1
+                scope.launch {
+                    if (isSavingElectricProblem) return@launch
+                    isSavingElectricProblem = true
+                    try {
+                        val detRow = withContext(Dispatchers.IO) {
+                            runCatching {
+                                inspeccionDetDao.getByUbicacion(locationId)
+                                    .firstOrNull { it.idInspeccion == inspection.idInspeccion }
+                            }.getOrNull()
+                        }
+                        val detId = detRow?.idInspeccionDet
+                        val nowTs = java.time.LocalDateTime.now()
+                            .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+                        val problema = Problema(
+                            idProblema = java.util.UUID.randomUUID().toString().uppercase(),
+                            numeroProblema = numero,
+                            idTipoInspeccion = typeId,
+                            idSitio = inspection.idSitio,
+                            idInspeccion = inspection.idInspeccion,
+                            idInspeccionDet = detId,
+                            idUbicacion = locationId,
+                            estatusProblema = "Abierto",
+                            estatus = "Activo",
+                            esCronico = "NO",
+                            creadoPor = currentUser?.idUsuario,
+                            fechaCreacion = nowTs
+                        )
+                        val result = withContext(Dispatchers.IO) {
+                            runCatching { problemaDao.insert(problema) }
+                        }
+                        if (result.isSuccess) {
+                            Toast.makeText(ctx, "Problema eléctrico guardado.", Toast.LENGTH_SHORT).show()
+                            showElectricProblemDialog = false
+                        } else {
+                            val message = result.exceptionOrNull()?.localizedMessage ?: "Error desconocido"
+                            Toast.makeText(ctx, "No se pudo guardar el problema eléctrico: $message", Toast.LENGTH_LONG).show()
+                        }
+                    } finally {
+                        isSavingElectricProblem = false
+                    }
+                }
+            }
 
             LaunchedEffect(showNewUbDialog) {
                 if (showNewUbDialog) {
@@ -819,7 +875,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                 }
                                 else -> {
                                     showProblemTypeDialog = false
-                                    Toast.makeText(ctx, "Selecciona un tipo vÃ¡lido.", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(ctx, "Selecciona un tipo válido.", Toast.LENGTH_SHORT).show()
                                 }
                             }
                         }) { Text("Aceptar") }
@@ -935,7 +991,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                         val digital = pendingDigitalImage
                         val typeId = PROBLEM_TYPE_IDS["Visual"]
                         if (typeId == null) {
-                            Toast.makeText(ctx, "No se encontrÃ³ el tipo Visual.", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(ctx, "No se encontró el tipo Visual.", Toast.LENGTH_SHORT).show()
                             return@VisualProblemDialog
                         }
                         if (ubicacionId.isNullOrBlank()) {
@@ -945,7 +1001,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                         val missing = buildList {
                             if (hazardId.isNullOrBlank()) add("Problema")
                             if (severityId.isNullOrBlank()) add("Severidad")
-                            if (thermal.isBlank()) add("Imagen tÃ©rmica")
+                            if (thermal.isBlank()) add("Imagen térmica")
                             if (digital.isBlank()) add("Imagen digital")
                         }
                         if (missing.isNotEmpty()) {
@@ -1101,9 +1157,9 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                         showElectricProblemDialog = false
                     },
                     onContinue = {
-                        showElectricProblemDialog = false
-                        Toast.makeText(ctx, "Formulario elÃ©ctrico en desarrollo.", Toast.LENGTH_SHORT).show()
-                    }
+                        saveElectricProblem()
+                    },
+                    continueEnabled = !isSavingElectricProblem
                 )
             }
 
@@ -1284,10 +1340,10 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             // -------------------------------------------------------------------------------
 
             // =====================================================================
-            // DIÃLOGO COMPLETO: EDITAR UBICACIÃ“N EN 2 COLUMNAS
-            //   - DiÃ¡logo mÃ¡s ancho
+            // DIÁLOGO COMPLETO: EDITAR UBICACIÓN EN 2 COLUMNAS
+            //   - Diálogo más ancho
             //   - Columna izquierda angosta (formulario)
-            //   - Columna derecha ancha (Baseline / HistÃ³rico)
+            //   - Columna derecha ancha (Baseline / Histórico)
             // =====================================================================
             if (showEditUbDialog) {
 
@@ -1296,12 +1352,12 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     properties = DialogProperties(
                         dismissOnClickOutside = false,
                         dismissOnBackPress = false,
-                        usePlatformDefaultWidth = false   // ahora sÃ­ usamos TODO el tamaÃ±o disponible
+                        usePlatformDefaultWidth = false   // ahora sí usamos TODO el tamaño disponible
                     )
                 ) {
 
                     // ---------------------------------------------------------------
-                    // BOX QUE CONTROLA EL ANCHO REAL DEL DIÃLOGO
+                    // BOX QUE CONTROLA EL ANCHO REAL DEL DIÁLOGO
                     // fillMaxWidth(0.98f) = usa casi toda la pantalla
                     // ---------------------------------------------------------------
                     Box(
@@ -1313,12 +1369,12 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     ) {
 
                         // ---------------------------------------------------------------
-                        // CARD PRINCIPAL DEL DIÃLOGO
+                        // CARD PRINCIPAL DEL DIÁLOGO
                         // Se expande a todo el ancho permitido por el Box
                         // ---------------------------------------------------------------
                         androidx.compose.material3.Card(
                             modifier = Modifier
-                                .fillMaxSize(),    // â† importante: usa TODO el Box (que ya es 98% x 98%)
+                                .fillMaxSize(),    // ← importante: usa TODO el Box (que ya es 98% x 98%)
                             shape = RoundedCornerShape(12.dp)
                         ) {
 
@@ -1332,16 +1388,16 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                             ) {
 
                                 // ---------------------------------------------------------------
-                                // TÃTULO DEL DIÃLOGO
+                                // TÍTULO DEL DIÁLOGO
                                 // ---------------------------------------------------------------
-                                Text("Editar ubicaciÃ³n", style = MaterialTheme.typography.titleLarge)
+                                Text("Editar ubicación", style = MaterialTheme.typography.titleLarge)
                                 Spacer(Modifier.height(8.dp))
 
 
                                 // ===============================================================
                                 // FILA PRINCIPAL EN DOS COLUMNAS
-                                //   IZQUIERDA: formulario de ubicaciÃ³n
-                                //   DERECHA: tabs Baseline / HistÃ³rico
+                                //   IZQUIERDA: formulario de ubicación
+                                //   DERECHA: tabs Baseline / Histórico
                                 // ===============================================================
                                 Row(
                                     modifier = Modifier
@@ -1352,13 +1408,13 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
 
 
                                     // ===========================================================
-                                    // COLUMNA IZQUIERDA  (Formulario de UbicaciÃ³n)
-                                    // MÃS ANGOSTA â†’ 35%
+                                    // COLUMNA IZQUIERDA  (Formulario de Ubicación)
+                                    // MÁS ANGOSTA → 35%
                                     // ===========================================================
                                     val scrollForm = rememberScrollState()
                                     Column(
                                         modifier = Modifier
-                                            .weight(0.32f)   // â† columna angosta
+                                            .weight(0.32f)   // ← columna angosta
                                             .fillMaxHeight()
                                             .verticalScroll(scrollForm),
                                         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -1593,17 +1649,17 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
 
 
                                     // ===========================================================
-                                    // COLUMNA DERECHA  (Baseline / HistÃ³rico)
-                                    // MÃS ANCHA â†’ 65%
+                                    // COLUMNA DERECHA  (Baseline / Histórico)
+                                    // MÁS ANCHA → 65%
                                     // ===========================================================
                                     Column(
                                         modifier = Modifier
-                                            .weight(0.68f)  // â† columna mÃ¡s ancha
+                                            .weight(0.68f)  // ← columna más ancha
                                             .fillMaxHeight()
                                     ) {
 
                                         // ---------------------------------------------------------------
-                                        // TABS DERECHA (ya NO mostramos tab de UbicaciÃ³n)
+                                        // TABS DERECHA (ya NO mostramos tab de Ubicación)
                                         // ---------------------------------------------------------------
 
                                         val editingRoute = remember(editingUbId, nodes, rootTitle) {
@@ -1637,7 +1693,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                             Tab(
                                                 selected = editTab == 1,
                                                 onClick = { editTab = 1 },
-                                                text = { Text("HistÃ³rico") }
+                                                text = { Text("Histórico") }
                                             )
                                         }
 
@@ -1651,7 +1707,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
 
 
                                             // -----------------------------------------------------------
-                                            // TAB 0 â†’ BASELINE
+                                            // TAB 0 → BASELINE
                                             // -----------------------------------------------------------
                                             0 -> {
                                                 val lineaBaseDao = remember { com.example.etic.data.local.DbProvider.get(ctx).lineaBaseDao() }
@@ -1758,10 +1814,10 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                                     }
                                                 }
 
-                                                // Layout con cabecera fija (botÃ³n arriba) + cuerpo con tabla
+                                                // Layout con cabecera fija (botón arriba) + cuerpo con tabla
                                                 Column(Modifier.fillMaxSize()) {
 
-                                                    // BotÃ³n "Nuevo Baseline" siempre visible
+                                                    // Botón "Nuevo Baseline" siempre visible
                                                     Row(
                                                         Modifier.fillMaxWidth(),
                                                         horizontalArrangement = Arrangement.End,
@@ -1800,7 +1856,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                                             Text("Notas", style = MaterialTheme.typography.bodySmall)
                                                         }
 
-                                                        // Columna Op: ancho justo para el botÃ³n
+                                                        // Columna Op: ancho justo para el botón
                                                         Box(
                                                             modifier = Modifier
                                                                 .width(56.dp),
@@ -1879,7 +1935,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                                                         )
                                                                     }
 
-                                                                    // Columna Op con botÃ³n de eliminar (icono rojo)
+                                                                    // Columna Op con botón de eliminar (icono rojo)
                                                                     Box(
                                                                         modifier = Modifier.width(56.dp),
                                                                         contentAlignment = Alignment.Center
@@ -1898,7 +1954,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                                         }
                                                     }
 
-                                                    // DiÃ¡logo de confirmaciÃ³n de borrado (igual que ya tenÃ­as)
+                                                    // Diálogo de confirmación de borrado (igual que ya tenías)
                                                     if (confirmDeleteId != null) {
                                                         AlertDialog(
                                                             onDismissRequest = { confirmDeleteId = null },
@@ -2385,7 +2441,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
 
 
                                             // -----------------------------------------------------------
-                                            // TAB 1 â†’ HISTÃ“RICO
+                                            // TAB 1 → HISTÓRICO
                                             // -----------------------------------------------------------
                                             1 -> {
                                                 val scroll = rememberScrollState()
@@ -2403,7 +2459,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
 
 
                                 // ===============================================================
-                                // BOTÃ“N CERRAR EN EL PIE DEL DIÃLOGO
+                                // BOTÓN CERRAR EN EL PIE DEL DIÁLOGO
                                 // ===============================================================
                                 Spacer(Modifier.height(12.dp))
                                 Row(
@@ -3437,15 +3493,3 @@ private fun BaselineTableFromDatabase(
         }
     }
 }
-
-
-
-
-
-
-
-
-
-
-
-
