@@ -109,6 +109,7 @@ import com.example.etic.features.inspection.tree.findById
 import com.example.etic.features.inspection.tree.findPathByBarcode
 import com.example.etic.features.inspection.tree.titlePathForId
 import com.example.etic.features.inspection.ui.problem.ElectricProblemDialog
+import com.example.etic.features.inspection.ui.problem.ElectricProblemFormData
 import com.example.etic.features.inspection.ui.problem.VisualProblemDialog
 import com.example.etic.data.local.entities.Severidad
 import com.example.etic.data.local.entities.Problema
@@ -327,7 +328,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             val faseDao = remember { com.example.etic.data.local.DbProvider.get(ctx).faseDao() }
             val tipoAmbienteDao = remember { com.example.etic.data.local.DbProvider.get(ctx).tipoAmbienteDao() }
             LaunchedEffect(Unit) {
-                val electricTypeId = PROBLEM_TYPE_IDS["El?ctrico"]
+                val electricTypeId = ELECTRIC_PROBLEM_TYPE_ID
                 prioridadOptions = runCatching { prioridadDao.getAllActivas() }.getOrElse { emptyList() }
                 fabricanteOptions = runCatching { fabricanteDao.getAllActivos() }.getOrElse { emptyList() }
                 electricPhaseOptions = runCatching {
@@ -341,9 +342,11 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     .sortedBy { it.nombre?.lowercase(Locale.getDefault()) ?: "" }
                     .map { it.idTipoAmbiente to (it.nombre ?: it.idTipoAmbiente) }
                 electricHazardOptions = runCatching {
-                    withContext(Dispatchers.IO) { fallaDao.getAllWithTipoInspeccion() }
+                    withContext(Dispatchers.IO) {
+                        if (electricTypeId.isNullOrBlank()) emptyList()
+                        else fallaDao.getByTipoInspeccion(electricTypeId)
+                    }
                 }.getOrElse { emptyList() }
-                    .filter { electricTypeId != null && it.idTipoInspeccion.equals(electricTypeId, ignoreCase = true) }
                     .sortedBy { it.falla?.lowercase(Locale.getDefault()) ?: "" }
                     .map { it.idFalla to (it.falla ?: it.idFalla) }
             }
@@ -639,7 +642,17 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
     }
             // Lee el usuario actual del CompositionLocal en contexto @Composable
             val currentUser = LocalCurrentUser.current
-            fun saveElectricProblem() {
+            fun calculateSeverityId(difference: Double?): String? {
+                if (difference == null) return null
+                return when {
+                    difference < 1 -> "1D56EDB4-8D6E-11D3-9270-006008A19766"
+                    difference < 4 -> "1D56EDB3-8D6E-11D3-9270-006008A19766"
+                    difference < 9 -> "1D56EDB2-8D6E-11D3-9270-006008A19766"
+                    difference < 16 -> "1D56EDB1-8D6E-11D3-9270-006008A19766"
+                    else -> "1D56EDB0-8D6E-11D3-9270-006008A19766"
+                }
+            }
+            fun saveElectricProblem(formData: ElectricProblemFormData) {
                 val inspection = currentInspection
                 if (inspection == null) {
                     Toast.makeText(ctx, "No hay inspección activa.", Toast.LENGTH_SHORT).show()
@@ -656,6 +669,21 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     if (isSavingElectricProblem) return@launch
                     isSavingElectricProblem = true
                     try {
+                        val componentTemp = formData.componentTemperature.toDoubleOrNull()
+                        val referenceTemp = formData.referenceTemperature.toDoubleOrNull()
+                        val difference = componentTemp?.let { comp ->
+                            referenceTemp?.let { ref -> comp - ref }
+                        }
+                        val severityId = calculateSeverityId(difference)
+                        val failureLabel = formData.failureId?.let { id ->
+                            electricHazardOptions.firstOrNull { it.first == id }?.second
+                        }
+                        val autoComment = buildList {
+                            failureLabel?.takeIf { it.isNotBlank() }?.let { add(it) }
+                            formData.componentPhaseId?.takeIf { it.isNotBlank() }?.let { add(it) }
+                            pendingProblemEquipmentName?.takeIf { it.isNotBlank() }?.let { add(it) }
+                        }.joinToString(", ")
+                        val finalComment = formData.comments.takeIf { it.isNotBlank() } ?: autoComment
                         val detRow = withContext(Dispatchers.IO) {
                             runCatching {
                                 inspeccionDetDao.getByUbicacion(locationId)
@@ -673,9 +701,40 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                             idInspeccion = inspection.idInspeccion,
                             idInspeccionDet = detId,
                             idUbicacion = locationId,
+                            problemTemperature = componentTemp,
+                            referenceTemperature = referenceTemp,
+                            problemPhase = formData.componentPhaseId,
+                            referencePhase = formData.referencePhaseId,
+                            problemRms = formData.componentRms.toDoubleOrNull(),
+                            referenceRms = formData.referenceRms.toDoubleOrNull(),
+                            additionalInfo = formData.additionalInfoId,
+                            additionalRms = formData.additionalRms.toDoubleOrNull(),
+                            emissivityCheck = if (formData.emissivityChecked) "on" else "off",
+                            emissivity = formData.emissivity.toDoubleOrNull(),
+                            indirectTempCheck = if (formData.indirectTempChecked) "on" else "off",
+                            tempAmbientCheck = if (formData.ambientTempChecked) "on" else "off",
+                            tempAmbient = formData.ambientTemp.toDoubleOrNull(),
+                            environmentCheck = if (formData.environmentChecked) "on" else "off",
+                            environment = formData.environmentId,
+                            windSpeedCheck = if (formData.windSpeedChecked) "on" else "off",
+                            windSpeed = formData.windSpeed.toDoubleOrNull(),
+                            idFabricante = formData.manufacturerId,
+                            ratedLoadCheck = "off",
+                            ratedLoad = formData.ratedLoad.takeIf { it.isNotBlank() },
+                            circuitVoltageCheck = "off",
+                            circuitVoltage = formData.circuitVoltage.takeIf { it.isNotBlank() },
+                            idFalla = formData.failureId,
+                            componentComment = finalComment,
                             estatusProblema = "Abierto",
+                            aumentoTemperatura = difference,
+                            idSeveridad = severityId,
+                            ruta = pendingProblemRoute ?: pendingProblemEquipmentName ?: "-",
                             estatus = "Activo",
                             esCronico = "NO",
+                            rpm = 0.0,
+                            bearingType = "",
+                            irFile = pendingThermalImage,
+                            photoFile = pendingDigitalImage,
                             creadoPor = currentUser?.idUsuario,
                             fechaCreacion = nowTs
                         )
@@ -687,7 +746,11 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                             showElectricProblemDialog = false
                         } else {
                             val message = result.exceptionOrNull()?.localizedMessage ?: "Error desconocido"
-                            Toast.makeText(ctx, "No se pudo guardar el problema eléctrico: $message", Toast.LENGTH_LONG).show()
+                            Toast.makeText(
+                                ctx,
+                                "No se pudo guardar el problema eléctrico: $message",
+                                Toast.LENGTH_LONG
+                            ).show()
                         }
                     } finally {
                         isSavingElectricProblem = false
@@ -1156,9 +1219,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     onDismiss = {
                         showElectricProblemDialog = false
                     },
-                    onContinue = {
-                        saveElectricProblem()
-                    },
+                    onContinue = { saveElectricProblem(it) },
                     continueEnabled = !isSavingElectricProblem
                 )
             }

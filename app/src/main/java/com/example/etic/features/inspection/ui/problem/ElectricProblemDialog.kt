@@ -25,6 +25,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -76,7 +77,7 @@ fun ElectricProblemDialog(
     onThermalCamera: () -> Unit,
     onDigitalCamera: () -> Unit,
     onDismiss: () -> Unit,
-    onContinue: () -> Unit,
+    onContinue: (ElectricProblemFormData) -> Unit,
     continueEnabled: Boolean = true
 ) {
     Dialog(
@@ -117,6 +118,26 @@ fun ElectricProblemDialog(
             var ratedLoad by rememberSaveable { mutableStateOf("") }
             var circuitVoltage by rememberSaveable { mutableStateOf("") }
             var comments by rememberSaveable { mutableStateOf("") }
+            var commentsTouched by rememberSaveable { mutableStateOf(false) }
+            var lastAutoComment by rememberSaveable { mutableStateOf("") }
+            val autoCommentText = buildList {
+                failureOptions.firstOrNull { it.first == failureId }?.second
+                    ?.takeIf { it.isNotBlank() }?.let { add(it) }
+                componentPhaseId?.takeIf { it.isNotBlank() }?.let { add(it) }
+                equipmentName.takeUnless { it.isBlank() }?.let { add(it) }
+            }.joinToString(", ")
+            LaunchedEffect(autoCommentText) {
+                if (autoCommentText.isNotBlank()) {
+                    if (!commentsTouched || comments == lastAutoComment || comments.isBlank()) {
+                        comments = autoCommentText
+                        lastAutoComment = autoCommentText
+                        commentsTouched = false
+                    }
+                } else if (!commentsTouched) {
+                    comments = ""
+                    lastAutoComment = ""
+                }
+            }
 
             Column(
                 Modifier
@@ -479,7 +500,10 @@ fun ElectricProblemDialog(
                             MultilineField(
                                 label = "Comentarios",
                                 value = comments,
-                                onValueChange = { comments = it },
+                                onValueChange = {
+                                    commentsTouched = true
+                                    comments = it
+                                },
                                 modifier = Modifier.fillMaxWidth()
                             )
 
@@ -529,12 +553,71 @@ fun ElectricProblemDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     TextButton(onClick = onDismiss) { Text("Cancelar") }
-                    Button(onClick = onContinue, enabled = continueEnabled) { Text("Guardar") }
+                    Button(
+                        onClick = {
+                            onContinue(
+                                ElectricProblemFormData(
+                                    failureId = failureId?.takeIf { it.isNotBlank() },
+                                    componentTemperature = componentTemperature,
+                                    componentPhaseId = componentPhaseId,
+                                    componentRms = componentRms,
+                                    referenceTemperature = referenceTemperature,
+                                    referencePhaseId = referencePhaseId,
+                                    referenceRms = referenceRms,
+                                    additionalInfoId = additionalInfoId,
+                                    additionalRms = additionalRms,
+                                    emissivityChecked = emissivityChecked,
+                                    emissivity = emissivity,
+                                    indirectTempChecked = indirectTempChecked,
+                                    ambientTempChecked = ambientTempChecked,
+                                    ambientTemp = ambientTemp,
+                                    environmentChecked = environmentChecked,
+                                    environmentId = environmentId,
+                                    windSpeedChecked = windSpeedChecked,
+                                    windSpeed = windSpeed,
+                                    manufacturerId = manufacturerId,
+                                    ratedLoad = ratedLoad,
+                                    circuitVoltage = circuitVoltage,
+                                    comments = comments
+                                )
+                            )
+                        },
+                        enabled = continueEnabled
+                    ) {
+                        Text("Guardar")
+                    }
                 }
             }
         }
     }
 }
+
+data class ElectricProblemFormData(
+    val failureId: String? = null,
+    val componentTemperature: String = "",
+    val componentPhaseId: String? = null,
+    val componentRms: String = "",
+    val referenceTemperature: String = "",
+    val referencePhaseId: String? = null,
+    val referenceRms: String = "",
+    val additionalInfoId: String? = null,
+    val additionalRms: String = "",
+    val emissivityChecked: Boolean = false,
+    val emissivity: String = "",
+    val indirectTempChecked: Boolean = false,
+    val ambientTempChecked: Boolean = false,
+    val ambientTemp: String = "",
+    val environmentChecked: Boolean = false,
+    val environmentId: String? = null,
+    val windSpeedChecked: Boolean = false,
+    val windSpeed: String = "",
+    val manufacturerId: String? = null,
+    val ratedLoad: String = "",
+    val circuitVoltage: String = "",
+    val comments: String = "",
+    val rpm: String = "",
+    val bearingType: String = ""
+)
 
 @Composable
 private fun InfoField(label: String, value: String) {

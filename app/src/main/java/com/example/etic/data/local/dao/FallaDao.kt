@@ -21,6 +21,17 @@ interface FallaDao {
         """
     )
     suspend fun getAllWithTipoInspeccion(): List<FallaWithTipoInspeccion>
+
+    @Query(
+        """
+        SELECT f.Id_Falla AS idFalla, f.Falla AS falla, tf.Id_Tipo_Inspeccion AS idTipoInspeccion
+        FROM fallas f
+        LEFT JOIN tipo_fallas tf ON tf.Id_Tipo_Falla = f.Id_Tipo_Falla
+        WHERE f.Estatus = 'Activo'
+        AND tf.Id_Tipo_Inspeccion = :tipoInspeccion
+        """
+    )
+    suspend fun getByTipoInspeccion(tipoInspeccion: String): List<FallaWithTipoInspeccion>
 }
 
 data class FallaWithTipoInspeccion(
