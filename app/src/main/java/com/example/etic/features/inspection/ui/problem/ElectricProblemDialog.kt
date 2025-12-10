@@ -2,9 +2,13 @@
 
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -24,8 +28,8 @@ import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -39,13 +43,10 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import androidx.compose.foundation.layout.RowScope
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.foundation.text.KeyboardOptions
 import java.io.File
 import com.example.etic.features.components.ImageInputButtonGroup
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.background
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.ui.text.input.KeyboardType
 
 private val DIALOG_MIN_WIDTH = 720.dp
 private val DIALOG_MAX_WIDTH = 980.dp
@@ -122,6 +123,7 @@ fun ElectricProblemDialog(
             var comments by rememberSaveable { mutableStateOf("") }
             var commentsTouched by rememberSaveable { mutableStateOf(false) }
             var lastAutoComment by rememberSaveable { mutableStateOf("") }
+
             val failureLabel = failureOptions.firstOrNull { it.first == failureId }?.second
                 ?.takeIf { it.isNotBlank() }
             val phaseLabel = phaseOptions.firstOrNull { it.first == componentPhaseId }?.second
@@ -131,6 +133,7 @@ fun ElectricProblemDialog(
                 phaseLabel?.let { add(it) }
                 equipmentName.takeUnless { it.isBlank() }?.let { add(it) }
             }.joinToString(", ")
+
             LaunchedEffect(autoCommentText) {
                 if (autoCommentText.isNotBlank()) {
                     if (!commentsTouched || comments == lastAutoComment || comments.isBlank()) {
@@ -143,6 +146,7 @@ fun ElectricProblemDialog(
                     lastAutoComment = ""
                 }
             }
+
             val handleEmissivityInput: (String) -> Unit = { input ->
                 val filtered = input.filter { it.isDigit() || it == '.' || it == ',' }
                 val normalized = filtered.replace(',', '.')
@@ -165,7 +169,7 @@ fun ElectricProblemDialog(
                         emissivityError = if (shouldValidate) "Ingresar valor entre 0.00 y 1.00" else null
                     }
                     hasTooManyDecimals -> {
-                        emissivityError = if (shouldValidate) "Ingresar valor con maximo 2 decimales" else null
+                        emissivityError = if (shouldValidate) "Ingresar valor con máximo 2 decimales" else null
                     }
                     else -> {
                         emissivity = filtered
@@ -173,6 +177,7 @@ fun ElectricProblemDialog(
                     }
                 }
             }
+
             LaunchedEffect(emissivityChecked) {
                 if (emissivityChecked) {
                     if (emissivity.isBlank()) {
@@ -211,11 +216,9 @@ fun ElectricProblemDialog(
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Columna 1: *Falla (más angosta)
                     Column(
                         modifier = Modifier.weight(0.20f)
-                    )
-                    {
+                    ) {
                         Text(
                             text = "*Falla",
                             style = MaterialTheme.typography.labelSmall
@@ -227,11 +230,9 @@ fun ElectricProblemDialog(
                         )
                     }
 
-                    // Columna 2: Ruta del equipo (más ancha)
                     Column(
                         modifier = Modifier.weight(0.80f)
-                    )
-                    {
+                    ) {
                         ReadOnlyFormField(
                             label = "Ruta del equipo",
                             value = equipmentRoute,
@@ -261,26 +262,20 @@ fun ElectricProblemDialog(
                 when (selectedTab) {
                     0 -> {
                         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+
                             // ─────────────────────────────
                             // Tabla de 4 columnas x 3 filas
-                            // Col1: títulos de fila
-                            // Col2: Temperatura
-                            // Col3: Elemento
-                            // Col4: I RMS
                             // ─────────────────────────────
-                            // Color suave para encabezado
-                            val headerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.30f)
-
-                            // Color suave para divisores
-                            val lineColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.23f)
+                            val headerColor =
+                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.30f)
+                            val lineColor =
+                                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.23f)
 
                             Column(
                                 modifier = Modifier.fillMaxWidth(),
                                 verticalArrangement = Arrangement.spacedBy(4.dp)
-                            )
-                            {
+                            ) {
 
-                                // ───────────── Encabezados ─────────────
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -289,26 +284,19 @@ fun ElectricProblemDialog(
                                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    // Columna 1 vacía
                                     Column(Modifier.weight(0.3f)) {}
-
-                                    // Columna 2
                                     Column(
                                         Modifier.weight(0.3f),
                                         horizontalAlignment = Alignment.CenterHorizontally
                                     ) {
                                         Text("Temperatura", style = MaterialTheme.typography.labelSmall)
                                     }
-
-                                    // Columna 3
                                     Column(
                                         Modifier.weight(0.2f),
                                         horizontalAlignment = Alignment.CenterHorizontally
                                     ) {
                                         Text("Elemento", style = MaterialTheme.typography.labelSmall)
                                     }
-
-                                    // Columna 4
                                     Column(
                                         Modifier.weight(0.2f),
                                         horizontalAlignment = Alignment.CenterHorizontally
@@ -319,7 +307,6 @@ fun ElectricProblemDialog(
 
                                 Divider(color = lineColor, thickness = 1.dp)
 
-                                // ───────────── Fila 1 ─────────────
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.spacedBy(16.dp),
@@ -353,7 +340,6 @@ fun ElectricProblemDialog(
 
                                 Divider(color = lineColor, thickness = 1.dp)
 
-                                // ───────────── Fila 2 ─────────────
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.spacedBy(16.dp),
@@ -387,7 +373,6 @@ fun ElectricProblemDialog(
 
                                 Divider(color = lineColor, thickness = 1.dp)
 
-                                // ───────────── Fila 3 (Información adicional) ─────────────
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.spacedBy(16.dp),
@@ -396,10 +381,7 @@ fun ElectricProblemDialog(
                                     Column(Modifier.weight(0.3f)) {
                                         Text("Información adicional", style = MaterialTheme.typography.labelSmall)
                                     }
-
-                                    // Columna vacía para alinear a la derecha
                                     Column(Modifier.weight(0.3f)) {}
-
                                     Column(Modifier.weight(0.2f)) {
                                         DropdownSelectorNoLabel(
                                             options = phaseOptions,
@@ -407,7 +389,6 @@ fun ElectricProblemDialog(
                                             onSelected = { additionalInfoId = it }
                                         )
                                     }
-
                                     Column(Modifier.weight(0.2f)) {
                                         ValueFieldNoLabel(
                                             value = additionalRms,
@@ -421,40 +402,48 @@ fun ElectricProblemDialog(
                             Divider()
 
                             // ─────────────────────────────
-                            // Resto de la sección (emisividad, ambiente, etc.)
+                            // Sección Emisividad / Ambiente / Viento / Especificación
                             // ─────────────────────────────
-                            SectionRow {
-
-                                // ───────── Columna 1: Emisividad + Temp. indirecta ─────────
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(IntrinsicSize.Min),
+                                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                // COLUMNA 1: Emisividad + Temp indirecta + Temp ambiente + Tipo ambiente
                                 Column(
-                                    Modifier.weight(0.25f),
-                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                    Modifier.weight(0.38f)
                                 ) {
-                                    Spacer(Modifier.height(16.dp))
+                                    // margen superior que quieres conservar
+                                    Spacer(Modifier.height(8.dp))
 
-                                val currentEmissivityError = emissivityError
-                                Column {
-                                    CheckboxNumericRow(
-                                        label = "Emisividad",
-                                        checked = emissivityChecked,
+                                    val currentEmissivityError = emissivityError
+
+                                    // Emisividad + error (muy compacto entre sí)
+                                    Column {
+                                        CheckboxNumericRow(
+                                            label = "Emisividad",
+                                            checked = emissivityChecked,
                                             onCheckedChange = { emissivityChecked = it },
                                             value = emissivity,
                                             onValueChange = handleEmissivityInput
                                         )
-                                    if (currentEmissivityError != null) {
-                                        Spacer(Modifier.height(2.dp))
-                                        Text(
-                                            text = currentEmissivityError,
-                                            style = MaterialTheme.typography.bodySmall,
+                                        if (currentEmissivityError != null) {
+                                            Spacer(Modifier.height(3.dp))
+                                            Text(
+                                                text = currentEmissivityError,
+                                                style = MaterialTheme.typography.bodySmall,
                                                 color = MaterialTheme.colorScheme.error
                                             )
                                         }
                                     }
 
-                                    // Temp. indirecta (solo checkbox alineado a la misma columna de los demás)
+                                    // Pequeño espacio entre Emisividad y Temp. indirecta
+                                    Spacer(Modifier.height(1.dp))
+
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(2.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Box(
@@ -476,14 +465,9 @@ fun ElectricProblemDialog(
                                             )
                                         }
                                     }
-                                }
 
-                                // ───────── Columna 2: Temp. ambiente + Tipo ambiente ─────────
-                                Column(
-                                    Modifier.weight(0.25f),
-                                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Spacer(Modifier.height(16.dp))
+                                    // Pequeño espacio entre Temp. indirecta y Temp. ambiente
+                                    Spacer(Modifier.height(1.dp))
 
                                     CheckboxNumericRow(
                                         label = "Temp. ambiente",
@@ -493,6 +477,9 @@ fun ElectricProblemDialog(
                                         onValueChange = { ambientTemp = it },
                                         unit = "°C"
                                     )
+
+                                    // Pequeño espacio entre Temp. ambiente y Tipo ambiente
+                                    Spacer(Modifier.height(1.dp))
 
                                     CheckboxDropdownRow(
                                         label = "Tipo ambiente",
@@ -504,12 +491,14 @@ fun ElectricProblemDialog(
                                     )
                                 }
 
-                                // ───────── Columna 3: Velocidad del viento + Fabricante ─────────
+                                VerticalDivider()
+
+                                // COLUMNA 2: Velocidad del viento + Fabricante
                                 Column(
-                                    Modifier.weight(0.25f),
+                                    Modifier.weight(0.30f),
                                     verticalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
-                                    Spacer(Modifier.height(16.dp))
+                                    Spacer(Modifier.height(8.dp))
 
                                     CheckboxNumericRow(
                                         label = "Velocidad del viento",
@@ -524,12 +513,15 @@ fun ElectricProblemDialog(
                                         label = "Fabricante",
                                         options = manufacturerOptions,
                                         selectedId = manufacturerId,
-                                    ) { manufacturerId = it }
+                                        onSelected = { manufacturerId = it }
+                                    )
                                 }
 
-                                // ───────── Columna 4: Especificación eléctrica (única con título) ─────────
+                                VerticalDivider()
+
+                                // COLUMNA 3: Especificación eléctrica
                                 Column(
-                                    Modifier.weight(0.25f),
+                                    Modifier.weight(0.32f),
                                     verticalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
                                     Text(
@@ -551,18 +543,16 @@ fun ElectricProblemDialog(
                                 }
                             }
 
-
-            MultilineField(
-                label = "Comentarios",
-                value = comments,
-                onValueChange = {
-                    commentsTouched = true
-                    comments = it
-                },
-                modifier = Modifier.fillMaxWidth(),
-                fieldHeight = 48.dp
-            )
-
+                            MultilineField(
+                                label = "Comentarios",
+                                value = comments,
+                                onValueChange = {
+                                    commentsTouched = true
+                                    comments = it
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                fieldHeight = 48.dp
+                            )
                         }
                     }
 
@@ -679,6 +669,20 @@ data class ElectricProblemFormData(
 )
 
 @Composable
+private fun VerticalDivider(
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier
+            .fillMaxHeight()
+            .width(1.dp)
+            .background(
+                MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+            )
+    )
+}
+
+@Composable
 private fun InfoField(label: String, value: String) {
     Column(
         Modifier
@@ -691,9 +695,9 @@ private fun InfoField(label: String, value: String) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(32.dp)
+                .height(25.dp)
                 .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(4.dp))
-                .padding(horizontal = 8.dp),
+                .padding(horizontal = 4.dp, vertical = 2.dp),
             contentAlignment = Alignment.CenterStart
         ) {
             Text(
@@ -720,9 +724,9 @@ private fun ReadOnlyFormField(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(32.dp)
+                .height(25.dp)
                 .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(4.dp))
-                .padding(horizontal = 8.dp),
+                .padding(horizontal = 4.dp, vertical = 2.dp),
             contentAlignment = Alignment.CenterStart
         ) {
             Text(
@@ -760,14 +764,14 @@ private fun LabeledField(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(32.dp)
+                .height(25.dp)
                 .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(4.dp))
-                .padding(horizontal = 8.dp),
+                .padding(horizontal = 4.dp, vertical = 2.dp),
             contentAlignment = Alignment.CenterStart
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 BasicTextField(
@@ -803,14 +807,14 @@ private fun ValueFieldNoLabel(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(32.dp)
+            .height(25.dp)
             .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(4.dp))
-            .padding(horizontal = 8.dp),
+            .padding(horizontal = 4.dp, vertical = 2.dp),
         contentAlignment = Alignment.CenterStart
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             BasicTextField(
@@ -849,9 +853,9 @@ private fun DropdownSelectorNoLabel(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .height(32.dp)
+            .height(25.dp)
             .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(4.dp))
-            .padding(horizontal = 8.dp)
+            .padding(horizontal = 4.dp, vertical = 2.dp)
             .clickable { expanded = true },
         contentAlignment = Alignment.CenterStart
     ) {
@@ -909,9 +913,9 @@ private fun SimpleField(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(32.dp)
+                .height(25.dp)
                 .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(4.dp))
-                .padding(horizontal = 8.dp),
+                .padding(horizontal = 4.dp, vertical = 2.dp),
             contentAlignment = Alignment.CenterStart
         ) {
             BasicTextField(
@@ -944,7 +948,6 @@ private fun CheckboxWithSimpleFieldRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Columna 1: checkbox
         Box(
             modifier = Modifier.weight(0.15f),
             contentAlignment = Alignment.Center
@@ -955,7 +958,6 @@ private fun CheckboxWithSimpleFieldRow(
             )
         }
 
-        // Columna 2: SimpleField (label + borde interno)
         Box(
             modifier = Modifier.weight(0.85f),
             contentAlignment = Alignment.CenterStart
@@ -975,11 +977,10 @@ private fun MultilineField(
     value: String,
     onValueChange: (String) -> Unit,
     modifier: Modifier = Modifier,
-    fieldHeight: Dp = 64.dp
+    fieldHeight: Dp = 48.dp
 ) {
     Column(modifier = modifier.fillMaxWidth()) {
 
-        // Label arriba
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall,
@@ -988,7 +989,6 @@ private fun MultilineField(
 
         Spacer(Modifier.height(4.dp))
 
-        // Caja del campo multilínea
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -998,7 +998,7 @@ private fun MultilineField(
                     MaterialTheme.colorScheme.outline,
                     RoundedCornerShape(4.dp)
                 )
-                .padding(horizontal = 8.dp, vertical = 6.dp)
+                .padding(horizontal = 4.dp, vertical = 2.dp)
         ) {
             BasicTextField(
                 value = value,
@@ -1128,9 +1128,9 @@ private fun DropdownSelector(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(32.dp)
+                .height(25.dp)
                 .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(4.dp))
-                .padding(horizontal = 8.dp)
+                .padding(horizontal = 4.dp, vertical = 2.dp)
                 .clickable { expanded = true },
             contentAlignment = Alignment.CenterStart
         ) {
@@ -1190,7 +1190,6 @@ private fun CheckboxNumericRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Columna 1: checkbox alineado con el resto
         Box(
             modifier = Modifier.weight(0.15f),
             contentAlignment = Alignment.Center
@@ -1201,7 +1200,6 @@ private fun CheckboxNumericRow(
             )
         }
 
-        // Columna 2: label + caja con borde + valor numérico (+ unidad opcional)
         Column(
             modifier = Modifier.weight(0.85f)
         ) {
@@ -1212,15 +1210,15 @@ private fun CheckboxNumericRow(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(32.dp)
+                    .height(25.dp)
                     .border(
                         1.dp,
                         MaterialTheme.colorScheme.outline,
                         RoundedCornerShape(4.dp)
                     )
-                    .padding(horizontal = 8.dp),
+                    .padding(horizontal = 4.dp, vertical = 2.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 BasicTextField(
                     value = value,
@@ -1264,7 +1262,6 @@ private fun CheckboxDropdownRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Columna 1: checkbox
         Box(
             modifier = Modifier.weight(0.15f),
             contentAlignment = Alignment.Center
@@ -1275,7 +1272,6 @@ private fun CheckboxDropdownRow(
             )
         }
 
-        // Columna 2: label + caja clickable con borde + texto seleccionado
         Column(
             modifier = Modifier.weight(0.85f)
         ) {
@@ -1286,14 +1282,14 @@ private fun CheckboxDropdownRow(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(32.dp)
+                    .height(25.dp)
                     .border(
                         1.dp,
                         MaterialTheme.colorScheme.outline,
                         RoundedCornerShape(4.dp)
                     )
                     .clickable { expanded = true }
-                    .padding(horizontal = 8.dp),
+                    .padding(horizontal = 4.dp, vertical = 2.dp),
                 contentAlignment = Alignment.CenterStart
             ) {
                 Row(
@@ -1337,4 +1333,3 @@ private fun CheckboxDropdownRow(
         }
     }
 }
-
