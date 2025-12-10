@@ -147,6 +147,8 @@ fun ElectricProblemDialog(
                 val filtered = input.filter { it.isDigit() || it == '.' || it == ',' }
                 val normalized = filtered.replace(',', '.')
                 val number = normalized.toDoubleOrNull()
+                val decimalDigits = normalized.substringAfter('.', "")
+                val hasTooManyDecimals = normalized.contains('.') && decimalDigits.length > 2
                 val shouldValidate = emissivityChecked
                 when {
                     filtered.isBlank() -> {
@@ -161,6 +163,9 @@ fun ElectricProblemDialog(
                     }
                     number > 1.0 -> {
                         emissivityError = if (shouldValidate) "Ingresar valor entre 0.00 y 1.00" else null
+                    }
+                    hasTooManyDecimals -> {
+                        emissivityError = if (shouldValidate) "Ingresar valor con maximo 2 decimales" else null
                     }
                     else -> {
                         emissivity = filtered
