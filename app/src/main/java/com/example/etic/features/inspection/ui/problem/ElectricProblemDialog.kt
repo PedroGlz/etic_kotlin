@@ -627,7 +627,6 @@ fun ElectricProblemDialog(
                                     circuitVoltage = circuitVoltage,
                                     comments = comments,
                                     rpm = "",
-                                    bearingType = ""
                                 )
                             )
                         },
@@ -665,7 +664,6 @@ data class ElectricProblemFormData(
     val circuitVoltage: String = "",
     val comments: String = "",
     val rpm: String = "",
-    val bearingType: String = ""
 )
 
 @Composable
