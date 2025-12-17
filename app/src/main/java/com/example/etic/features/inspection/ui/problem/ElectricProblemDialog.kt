@@ -167,6 +167,13 @@ fun ElectricProblemDialog(
 
             val failureLabel = failureOptions.firstOrNull { it.first == failureId }?.second?.takeIf { it.isNotBlank() }
             val phaseLabel = phaseOptions.firstOrNull { it.first == componentPhaseId }?.second?.takeIf { it.isNotBlank() }
+            val requiredFieldsFilled = listOf(
+                failureId?.isNotBlank() == true,
+                componentTemperature.trim().isNotBlank(),
+                componentPhaseId?.isNotBlank() == true,
+                referenceTemperature.trim().isNotBlank(),
+                referencePhaseId?.isNotBlank() == true
+            ).all { it }
 
             val autoCommentText = buildList {
                 failureLabel?.let { add(it) }
@@ -599,7 +606,7 @@ fun ElectricProblemDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ){
                     TextButton(onClick = onDismiss) { Text("Cancelar") }
-                    val canSubmit = continueEnabled && emissivityError == null
+                    val canSubmit = continueEnabled && emissivityError == null && requiredFieldsFilled
                     Button(
                         onClick = {
                             onContinue(
