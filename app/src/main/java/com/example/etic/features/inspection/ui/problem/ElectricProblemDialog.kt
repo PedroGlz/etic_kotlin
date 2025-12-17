@@ -109,9 +109,11 @@ fun ElectricProblemDialog(
     onDismiss: () -> Unit,
     onContinue: (ElectricProblemFormData) -> Unit,
     continueEnabled: Boolean = true,
+    initialFormData: ElectricProblemFormData? = null,
     dialogKey: Any = Unit
 ) {
     key(dialogKey) {
+        val initial = initialFormData ?: ElectricProblemFormData()
         Dialog(
             onDismissRequest = onDismiss,
             properties = DialogProperties(
@@ -121,49 +123,49 @@ fun ElectricProblemDialog(
             )
         ) {
             Surface(
-            shape = RoundedCornerShape(12.dp),
-            tonalElevation = 6.dp
-        ) {
-            val scrollState = rememberScrollState()
-            val infoRowScrollState = rememberScrollState()
+                shape = RoundedCornerShape(12.dp),
+                tonalElevation = 6.dp
+            ) {
+                val scrollState = rememberScrollState()
+                val infoRowScrollState = rememberScrollState()
 
-            var selectedTab by rememberSaveable { mutableStateOf(0) }
+                var selectedTab by rememberSaveable { mutableStateOf(0) }
 
-            var failureId by rememberSaveable { mutableStateOf<String?>(null) }
-            var componentTemperature by rememberSaveable { mutableStateOf("") }
-            var componentPhaseId by rememberSaveable { mutableStateOf<String?>(null) }
-            var componentRms by rememberSaveable { mutableStateOf("") }
+                var failureId by rememberSaveable { mutableStateOf(initial.failureId) }
+                var componentTemperature by rememberSaveable { mutableStateOf(initial.componentTemperature) }
+                var componentPhaseId by rememberSaveable { mutableStateOf(initial.componentPhaseId) }
+                var componentRms by rememberSaveable { mutableStateOf(initial.componentRms) }
 
-            var referenceTemperature by rememberSaveable { mutableStateOf("") }
-            var referencePhaseId by rememberSaveable { mutableStateOf<String?>(null) }
-            var referenceRms by rememberSaveable { mutableStateOf("") }
+                var referenceTemperature by rememberSaveable { mutableStateOf(initial.referenceTemperature) }
+                var referencePhaseId by rememberSaveable { mutableStateOf(initial.referencePhaseId) }
+                var referenceRms by rememberSaveable { mutableStateOf(initial.referenceRms) }
 
-            var additionalInfoId by rememberSaveable { mutableStateOf<String?>(null) }
-            var additionalRms by rememberSaveable { mutableStateOf("") }
+                var additionalInfoId by rememberSaveable { mutableStateOf(initial.additionalInfoId) }
+                var additionalRms by rememberSaveable { mutableStateOf(initial.additionalRms) }
 
-            var emissivityChecked by rememberSaveable { mutableStateOf(false) }
-            var emissivity by rememberSaveable { mutableStateOf("") }
-            var emissivityError by rememberSaveable { mutableStateOf<String?>(null) }
+                var emissivityChecked by rememberSaveable { mutableStateOf(initial.emissivityChecked) }
+                var emissivity by rememberSaveable { mutableStateOf(initial.emissivity) }
+                var emissivityError by rememberSaveable { mutableStateOf<String?>(null) }
 
-            var indirectTempChecked by rememberSaveable { mutableStateOf(false) }
+                var indirectTempChecked by rememberSaveable { mutableStateOf(initial.indirectTempChecked) }
 
-            var ambientTempChecked by rememberSaveable { mutableStateOf(false) }
-            var ambientTemp by rememberSaveable { mutableStateOf("") }
+                var ambientTempChecked by rememberSaveable { mutableStateOf(initial.ambientTempChecked) }
+                var ambientTemp by rememberSaveable { mutableStateOf(initial.ambientTemp) }
 
-            var environmentChecked by rememberSaveable { mutableStateOf(false) }
-            var environmentId by rememberSaveable { mutableStateOf<String?>(null) }
+                var environmentChecked by rememberSaveable { mutableStateOf(initial.environmentChecked) }
+                var environmentId by rememberSaveable { mutableStateOf(initial.environmentId) }
 
-            var windSpeedChecked by rememberSaveable { mutableStateOf(false) }
-            var windSpeed by rememberSaveable { mutableStateOf("") }
+                var windSpeedChecked by rememberSaveable { mutableStateOf(initial.windSpeedChecked) }
+                var windSpeed by rememberSaveable { mutableStateOf(initial.windSpeed) }
 
-            var manufacturerId by rememberSaveable { mutableStateOf<String?>(null) }
+                var manufacturerId by rememberSaveable { mutableStateOf(initial.manufacturerId) }
 
-            var ratedLoad by rememberSaveable { mutableStateOf("") }
-            var circuitVoltage by rememberSaveable { mutableStateOf("") }
+                var ratedLoad by rememberSaveable { mutableStateOf(initial.ratedLoad) }
+                var circuitVoltage by rememberSaveable { mutableStateOf(initial.circuitVoltage) }
 
-            var comments by rememberSaveable { mutableStateOf("") }
-            var commentsTouched by rememberSaveable { mutableStateOf(false) }
-            var lastAutoComment by rememberSaveable { mutableStateOf("") }
+                var comments by rememberSaveable { mutableStateOf(initial.comments) }
+                var commentsTouched by rememberSaveable { mutableStateOf(initial.comments.isNotBlank()) }
+                var lastAutoComment by rememberSaveable { mutableStateOf(initial.comments) }
 
             val failureLabel = failureOptions.firstOrNull { it.first == failureId }?.second?.takeIf { it.isNotBlank() }
             val phaseLabel = phaseOptions.firstOrNull { it.first == componentPhaseId }?.second?.takeIf { it.isNotBlank() }

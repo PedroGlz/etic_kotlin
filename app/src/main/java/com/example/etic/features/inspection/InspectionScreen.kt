@@ -388,6 +388,14 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                 pendingProblemEquipmentName = null
                 pendingProblemRoute = null
             }
+            var editingElectricProblemId by rememberSaveable { mutableStateOf<String?>(null) }
+            var editingElectricProblemOriginal by remember { mutableStateOf<Problema?>(null) }
+            fun resetElectricProblemState() {
+                editingElectricProblemId = null
+                editingElectricProblemOriginal = null
+                pendingThermalImage = ""
+                pendingDigitalImage = ""
+            }
             val thermalCameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { bmp ->
                 if (bmp != null) {
                     val saved = saveProblemBitmap(ctx, bmp, "IR")
@@ -593,6 +601,44 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     showVisualInspectionDialog = true
                 }
             }
+            fun startElectricProblemEdit(problem: Problem) {
+                val electricTypeId = ELECTRIC_PROBLEM_TYPE_ID
+                if (electricTypeId.isNullOrBlank()) {
+                    Toast.makeText(ctx, "No se encontro el tipo eléctrico.", Toast.LENGTH_SHORT).show()
+                    return
+                }
+                scope.launch {
+                    val entity = withContext(Dispatchers.IO) {
+                        runCatching { problemaDao.getById(problem.id) }.getOrNull()
+                    }
+                    if (entity == null || entity.idTipoInspeccion.isNullOrBlank()
+                        || !entity.idTipoInspeccion.equals(electricTypeId, ignoreCase = true)
+                    ) {
+                        Toast.makeText(ctx, "Solo se pueden editar problemas eléctricos.", Toast.LENGTH_SHORT).show()
+                        return@launch
+                    }
+                    val ubicacionId = entity.idUbicacion
+                    if (ubicacionId.isNullOrBlank()) {
+                        Toast.makeText(ctx, "El problema no tiene una ubicacion asociada.", Toast.LENGTH_SHORT).show()
+                        return@launch
+                    }
+                    resetElectricProblemState()
+                    editingElectricProblemOriginal = entity
+                    editingElectricProblemId = entity.idProblema
+                    val equipmentName = problem.equipo.takeIf { it.isNotBlank() } ?: ubicacionId
+                    val fallbackRoute = titlePathForId(nodes, ubicacionId).joinToString(" / ")
+                    val resolvedRoute = fallbackRoute.takeIf { it.isNotBlank() } ?: entity.ruta ?: "-"
+                    pendingProblemEquipmentName = equipmentName
+                    pendingProblemRoute = resolvedRoute
+                    pendingProblemUbicacionId = ubicacionId
+                    pendingProblemNumber = entity.numeroProblema?.toString() ?: problem.no.toString()
+                    pendingProblemType = problemTypeLabelForId(electricTypeId)
+                    pendingThermalImage = entity.irFile.orEmpty()
+                    pendingDigitalImage = entity.photoFile.orEmpty()
+                    electricProblemFormKey += 1
+                    showElectricProblemDialog = true
+                }
+            }
             var selectedProblemType by rememberSaveable { mutableStateOf(problemTypeLabelForId(ELECTRIC_PROBLEM_TYPE_ID)) }
             var showInvalidParentDialog by rememberSaveable { mutableStateOf(false) }
             var showNewUbDialog by remember { mutableStateOf(false) }
@@ -709,52 +755,90 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                         val detId = detRow?.idInspeccionDet
                         val nowTs = java.time.LocalDateTime.now()
                             .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
-                        val problema = Problema(
-                            idProblema = java.util.UUID.randomUUID().toString().uppercase(),
-                            numeroProblema = numero,
-                            idTipoInspeccion = typeId,
-                            idSitio = inspection.idSitio,
-                            idInspeccion = inspection.idInspeccion,
-                            idInspeccionDet = detId,
-                            idUbicacion = locationId,
-                            problemTemperature = componentTemp,
-                            referenceTemperature = referenceTemp,
-                            problemPhase = formData.componentPhaseId,
-                            referencePhase = formData.referencePhaseId,
-                            problemRms = formData.componentRms.toDoubleOrNull(),
-                            referenceRms = formData.referenceRms.toDoubleOrNull(),
-                            additionalInfo = formData.additionalInfoId,
-                            additionalRms = formData.additionalRms.toDoubleOrNull(),
-                            emissivityCheck = if (formData.emissivityChecked) "on" else "off",
-                            emissivity = emissivityValue,
-                            indirectTempCheck = if (formData.indirectTempChecked) "on" else "off",
-                            tempAmbientCheck = if (formData.ambientTempChecked) "on" else "off",
-                            tempAmbient = formData.ambientTemp.toDoubleOrNull(),
-                            environmentCheck = if (formData.environmentChecked) "on" else "off",
-                            environment = formData.environmentId,
-                            windSpeedCheck = if (formData.windSpeedChecked) "on" else "off",
-                            windSpeed = formData.windSpeed.toDoubleOrNull(),
-                            idFabricante = formData.manufacturerId,
-                            ratedLoadCheck = "off",
-                            ratedLoad = formData.ratedLoad.takeIf { it.isNotBlank() },
-                            circuitVoltageCheck = "off",
-                            circuitVoltage = formData.circuitVoltage.takeIf { it.isNotBlank() },
-                            idFalla = formData.failureId,
-                            componentComment = finalComment,
-                            estatusProblema = "Abierto",
-                            aumentoTemperatura = difference,
-                            idSeveridad = severityId,
-                            ruta = pendingProblemRoute ?: pendingProblemEquipmentName ?: "-",
-                            estatus = "Activo",
-                            esCronico = "NO",
-                            rpm = 0.0,
-                            irFile = pendingThermalImage,
-                            photoFile = pendingDigitalImage,
-                            creadoPor = currentUser?.idUsuario,
-                            fechaCreacion = nowTs
-                        )
+                        val editingElectricProblem = editingElectricProblemOriginal
+                        val isEditingElectricProblem = editingElectricProblem != null && editingElectricProblemId != null
+                        val problema = if (isEditingElectricProblem) {
+                            editingElectricProblem!!.copy(
+                                problemTemperature = componentTemp,
+                                referenceTemperature = referenceTemp,
+                                problemPhase = formData.componentPhaseId,
+                                referencePhase = formData.referencePhaseId,
+                                problemRms = formData.componentRms.toDoubleOrNull(),
+                                referenceRms = formData.referenceRms.toDoubleOrNull(),
+                                additionalInfo = formData.additionalInfoId,
+                                additionalRms = formData.additionalRms.toDoubleOrNull(),
+                                emissivityCheck = if (formData.emissivityChecked) "on" else "off",
+                                emissivity = emissivityValue,
+                                indirectTempCheck = if (formData.indirectTempChecked) "on" else "off",
+                                tempAmbientCheck = if (formData.ambientTempChecked) "on" else "off",
+                                tempAmbient = formData.ambientTemp.toDoubleOrNull(),
+                                environmentCheck = if (formData.environmentChecked) "on" else "off",
+                                environment = formData.environmentId,
+                                windSpeedCheck = if (formData.windSpeedChecked) "on" else "off",
+                                windSpeed = formData.windSpeed.toDoubleOrNull(),
+                                idFabricante = formData.manufacturerId,
+                                ratedLoad = formData.ratedLoad.takeIf { it.isNotBlank() },
+                                circuitVoltage = formData.circuitVoltage.takeIf { it.isNotBlank() },
+                                idFalla = formData.failureId,
+                                componentComment = finalComment,
+                                estatusProblema = editingElectricProblem.estatusProblema ?: "Abierto",
+                                aumentoTemperatura = difference,
+                                idSeveridad = severityId,
+                                ruta = pendingProblemRoute ?: pendingProblemEquipmentName ?: "-",
+                                irFile = pendingThermalImage,
+                                photoFile = pendingDigitalImage,
+                                modificadoPor = currentUser?.idUsuario,
+                                fechaMod = nowTs
+                            )
+                        } else {
+                            Problema(
+                                idProblema = java.util.UUID.randomUUID().toString().uppercase(),
+                                numeroProblema = numero,
+                                idTipoInspeccion = typeId,
+                                idSitio = inspection.idSitio,
+                                idInspeccion = inspection.idInspeccion,
+                                idInspeccionDet = detId,
+                                idUbicacion = locationId,
+                                problemTemperature = componentTemp,
+                                referenceTemperature = referenceTemp,
+                                problemPhase = formData.componentPhaseId,
+                                referencePhase = formData.referencePhaseId,
+                                problemRms = formData.componentRms.toDoubleOrNull(),
+                                referenceRms = formData.referenceRms.toDoubleOrNull(),
+                                additionalInfo = formData.additionalInfoId,
+                                additionalRms = formData.additionalRms.toDoubleOrNull(),
+                                emissivityCheck = if (formData.emissivityChecked) "on" else "off",
+                                emissivity = emissivityValue,
+                                indirectTempCheck = if (formData.indirectTempChecked) "on" else "off",
+                                tempAmbientCheck = if (formData.ambientTempChecked) "on" else "off",
+                                tempAmbient = formData.ambientTemp.toDoubleOrNull(),
+                                environmentCheck = if (formData.environmentChecked) "on" else "off",
+                                environment = formData.environmentId,
+                                windSpeedCheck = if (formData.windSpeedChecked) "on" else "off",
+                                windSpeed = formData.windSpeed.toDoubleOrNull(),
+                                idFabricante = formData.manufacturerId,
+                                ratedLoadCheck = "off",
+                                ratedLoad = formData.ratedLoad.takeIf { it.isNotBlank() },
+                                circuitVoltageCheck = "off",
+                                circuitVoltage = formData.circuitVoltage.takeIf { it.isNotBlank() },
+                                idFalla = formData.failureId,
+                                componentComment = finalComment,
+                                estatusProblema = "Abierto",
+                                aumentoTemperatura = difference,
+                                idSeveridad = severityId,
+                                ruta = pendingProblemRoute ?: pendingProblemEquipmentName ?: "-",
+                                estatus = "Activo",
+                                esCronico = "NO",
+                                rpm = 0.0,
+                                irFile = pendingThermalImage,
+                                photoFile = pendingDigitalImage,
+                                creadoPor = currentUser?.idUsuario,
+                                fechaCreacion = nowTs
+                            )
+                        }
                         val result = withContext(Dispatchers.IO) {
-                            runCatching { problemaDao.insert(problema) }
+                            if (isEditingElectricProblem) runCatching { problemaDao.update(problema) }
+                            else runCatching { problemaDao.insert(problema) }
                         }
                         if (result.isSuccess) {
                             if (detRow != null) {
@@ -768,7 +852,12 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                             }
                             problemsRefreshTick++
                             refreshTree(preserveSelection = locationId)
-                            Toast.makeText(ctx, "Problema eléctrico guardado.", Toast.LENGTH_SHORT).show()
+                            val successMessage = if (isEditingElectricProblem)
+                                "Problema eléctrico actualizado."
+                            else
+                                "Problema eléctrico guardado."
+                            Toast.makeText(ctx, successMessage, Toast.LENGTH_SHORT).show()
+                            resetElectricProblemState()
                             showElectricProblemDialog = false
                         } else {
                             val message = result.exceptionOrNull()?.localizedMessage ?: "Error desconocido"
@@ -1214,6 +1303,33 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                 )
             }
 
+            val electricProblemInitialData = editingElectricProblemOriginal?.let { entity ->
+                ElectricProblemFormData(
+                    failureId = entity.idFalla,
+                    componentTemperature = entity.problemTemperature?.toString() ?: "",
+                    componentPhaseId = entity.problemPhase,
+                    componentRms = entity.problemRms?.toString() ?: "",
+                    referenceTemperature = entity.referenceTemperature?.toString() ?: "",
+                    referencePhaseId = entity.referencePhase,
+                    referenceRms = entity.referenceRms?.toString() ?: "",
+                    additionalInfoId = entity.additionalInfo,
+                    additionalRms = entity.additionalRms?.toString() ?: "",
+                    emissivityChecked = (entity.emissivityCheck ?: "").equals("on", ignoreCase = true),
+                    emissivity = entity.emissivity?.toString() ?: "",
+                    indirectTempChecked = (entity.indirectTempCheck ?: "").equals("on", ignoreCase = true),
+                    ambientTempChecked = (entity.tempAmbientCheck ?: "").equals("on", ignoreCase = true),
+                    ambientTemp = entity.tempAmbient?.toString() ?: "",
+                    environmentChecked = (entity.environmentCheck ?: "").equals("on", ignoreCase = true),
+                    environmentId = entity.environment,
+                    windSpeedChecked = (entity.windSpeedCheck ?: "").equals("on", ignoreCase = true),
+                    windSpeed = entity.windSpeed?.toString() ?: "",
+                    manufacturerId = entity.idFabricante,
+                    ratedLoad = entity.ratedLoad ?: "",
+                    circuitVoltage = entity.circuitVoltage ?: "",
+                    comments = entity.componentComment ?: "",
+                    rpm = entity.rpm?.toString() ?: ""
+                )
+            }
             if (showElectricProblemDialog && pendingProblemEquipmentName != null) {
                 val inspectionNumber = currentInspection?.noInspeccion?.toString() ?: "-"
                 val manufacturerOptionsPairs = fabricanteOptions
@@ -1245,9 +1361,11 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     onDigitalCamera = { digitalCameraLauncher.launch(null) },
                     onDismiss = {
                         showElectricProblemDialog = false
+                        resetElectricProblemState()
                     },
                     onContinue = { saveElectricProblem(it) },
                     continueEnabled = !isSavingElectricProblem,
+                    initialFormData = electricProblemInitialData,
                     dialogKey = electricProblemFormKey
                 )
             }
@@ -2780,7 +2898,15 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     problemsRefreshTick = problemsRefreshTick,
                     modifier = Modifier.fillMaxSize(),  // asegura ocupar todo el espacio
                     onProblemDoubleTap = { problem ->
-                        startVisualProblemEdit(problem)
+                        when (problem.tipo?.normalizeProblemKey()) {
+                            "visual" -> startVisualProblemEdit(problem)
+                            "electrico" -> startElectricProblemEdit(problem)
+                            else -> Toast.makeText(
+                                ctx,
+                                "La edición de este tipo de problema no está disponible.",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
                     },
                     onNewProblem = {
                         val currentSelection = selectedId
