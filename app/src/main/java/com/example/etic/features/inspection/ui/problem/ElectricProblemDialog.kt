@@ -8,6 +8,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
@@ -54,6 +55,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -239,19 +241,21 @@ fun ElectricProblemDialog(
                     horizontalArrangement = Arrangement.spacedBy(ROW_GAP),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(modifier = Modifier.weight(0.20f)) {
+                    Column() {
                         Text(text = "*Falla", style = MaterialTheme.typography.labelSmall)
                         DropdownSelectorNoLabel(
                             options = failureOptions,
                             selectedId = failureId,
-                            onSelected = { failureId = it }
+                            onSelected = { failureId = it },
+                            ancho = 180.dp
                         )
                     }
-                    Column(modifier = Modifier.weight(0.80f)) {
+                    Column() {
                         ReadOnlyFormField(
                             label = "Ruta del equipo",
                             value = equipmentRoute,
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth(),
+                            ancho = 480.dp
                         )
                     }
                 }
@@ -290,17 +294,37 @@ fun ElectricProblemDialog(
                                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Column(Modifier.weight(0.1f)) {}
-                                    Column(Modifier.weight(0.1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Text("Temperatura", style = MaterialTheme.typography.labelSmall)
+                                    CenterCell(0.2f) {}
+
+                                    CenterCell(0.1f) {
+                                        Text(
+                                            text = "Temperatura",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            textAlign = TextAlign.Center,
+                                            modifier = Modifier.fillMaxWidth()
+                                        )
                                     }
-                                    Column(Modifier.weight(0.3f), horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Text("Elemento", style = MaterialTheme.typography.labelSmall)
+
+                                    CenterCell(0.3f) {
+                                        Text(
+                                            text = "Elemento",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            textAlign = TextAlign.Center,
+                                            modifier = Modifier.fillMaxWidth()
+                                        )
                                     }
-                                    Column(Modifier.weight(0.1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Text("I RMS", style = MaterialTheme.typography.labelSmall)
+
+                                    CenterCell(0.1f) {
+                                        Text(
+                                            text = "I RMS",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            textAlign = TextAlign.Center,
+                                            modifier = Modifier.fillMaxWidth()
+                                        )
                                     }
                                 }
+
+
 
                                 Divider(color = lineColor, thickness = 1.dp)
 
@@ -308,32 +332,42 @@ fun ElectricProblemDialog(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                                     verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Column(Modifier.weight(0.1f)) {
-                                        Text("*Componente con anomalía", style = MaterialTheme.typography.labelSmall)
+                                )
+                                {
+                                    // Columna 1: etiqueta
+                                    CenterCell(0.2f) {
+                                        Text(
+                                            "*Componente con anomalía",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            textAlign = TextAlign.Start,
+                                            modifier = Modifier.fillMaxWidth()
+                                        )
                                     }
-                                    Column(Modifier.weight(0.1f)) {
+
+                                    // Columna 2: temperatura
+                                    CenterCell(0.1f) {
                                         ValueFieldNoLabel(
                                             value = componentTemperature,
                                             onValueChange = { componentTemperature = it },
                                             unit = "°C",
-                                            ancho = 50.dp
                                         )
                                     }
-                                    Column(Modifier.weight(0.3f)) {
+
+                                    // Columna 3: elemento
+                                    CenterCell(0.3f) {
                                         DropdownSelectorNoLabel(
                                             options = phaseOptions,
                                             selectedId = componentPhaseId,
                                             onSelected = { componentPhaseId = it },
-                                            ancho = 180.dp
                                         )
                                     }
-                                    Column(Modifier.weight(0.1f)) {
+
+                                    // Columna 4: RMS
+                                    CenterCell(0.1f) {
                                         ValueFieldNoLabel(
                                             value = componentRms,
                                             onValueChange = { componentRms = it },
                                             unit = "A",
-                                            ancho = 50.dp
                                         )
                                     }
                                 }
@@ -345,7 +379,7 @@ fun ElectricProblemDialog(
                                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Column(Modifier.weight(0.1f)) {
+                                    Column(Modifier.weight(0.2f)) {
                                         Text("*Componente de referencia", style = MaterialTheme.typography.labelSmall)
                                     }
                                     Column(Modifier.weight(0.1f)) {
@@ -353,7 +387,6 @@ fun ElectricProblemDialog(
                                             value = referenceTemperature,
                                             onValueChange = { referenceTemperature = it },
                                             unit = "°C",
-                                            ancho = 50.dp
                                         )
                                     }
                                     Column(Modifier.weight(0.3f)) {
@@ -361,7 +394,6 @@ fun ElectricProblemDialog(
                                             options = phaseOptions,
                                             selectedId = referencePhaseId,
                                             onSelected = { referencePhaseId = it },
-                                            ancho = 180.dp
                                         )
                                     }
                                     Column(Modifier.weight(0.1f)) {
@@ -369,7 +401,6 @@ fun ElectricProblemDialog(
                                             value = referenceRms,
                                             onValueChange = { referenceRms = it },
                                             unit = "A",
-                                            ancho = 50.dp
                                         )
                                     }
                                 }
@@ -381,7 +412,7 @@ fun ElectricProblemDialog(
                                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Column(Modifier.weight(0.1f)) {
+                                    Column(Modifier.weight(0.2f)) {
                                         Text("Información adicional", style = MaterialTheme.typography.labelSmall)
                                     }
                                     Column(Modifier.weight(0.1f)) {}
@@ -390,7 +421,6 @@ fun ElectricProblemDialog(
                                             options = phaseOptions,
                                             selectedId = additionalInfoId,
                                             onSelected = { additionalInfoId = it },
-                                            ancho = 180.dp
                                         )
                                     }
                                     Column(Modifier.weight(0.1f)) {
@@ -398,7 +428,6 @@ fun ElectricProblemDialog(
                                             value = additionalRms,
                                             onValueChange = { additionalRms = it },
                                             unit = "A",
-                                            ancho = 50.dp
                                         )
                                     }
                                 }
@@ -687,14 +716,33 @@ private fun InfoField(label: String, value: String, ancho: Dp) {
 }
 
 @Composable
-private fun ReadOnlyFormField(label: String, value: String, modifier: Modifier = Modifier) {
+private fun ReadOnlyFormField(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier,
+    ancho: Dp? = null
+) {
     Column(modifier) {
-        Text(text = label, style = MaterialTheme.typography.labelSmall)
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall
+        )
+
         Box(
             modifier = Modifier
-                .fillMaxWidth()
+                .then(
+                    if (ancho != null) {
+                        Modifier.width(ancho)
+                    } else {
+                        Modifier.fillMaxWidth()
+                    }
+                )
                 .height(FIELD_HEIGHT)
-                .border(FIELD_BORDER, MaterialTheme.colorScheme.outline, RoundedCornerShape(FIELD_RADIUS))
+                .border(
+                    FIELD_BORDER,
+                    MaterialTheme.colorScheme.outline,
+                    RoundedCornerShape(FIELD_RADIUS)
+                )
                 .padding(FIELD_PADDING),
             contentAlignment = Alignment.CenterStart
         ) {
@@ -1075,5 +1123,18 @@ private fun ImageInputColumn(
         )
 
         ImagePreviewBox(fileName = value)
+    }
+}
+
+@Composable
+private fun RowScope.CenterCell(
+    weight: Float,
+    content: @Composable BoxScope.() -> Unit
+) {
+    Box(
+        modifier = Modifier.weight(weight),
+        contentAlignment = Alignment.Center
+    ) {
+        content()
     }
 }
