@@ -50,6 +50,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
@@ -107,17 +108,19 @@ fun ElectricProblemDialog(
     onDigitalCamera: () -> Unit,
     onDismiss: () -> Unit,
     onContinue: (ElectricProblemFormData) -> Unit,
-    continueEnabled: Boolean = true
+    continueEnabled: Boolean = true,
+    dialogKey: Any = Unit
 ) {
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(
-            usePlatformDefaultWidth = false,
-            dismissOnClickOutside = false,
-            dismissOnBackPress = false
-        )
-    ) {
-        Surface(
+    key(dialogKey) {
+        Dialog(
+            onDismissRequest = onDismiss,
+            properties = DialogProperties(
+                usePlatformDefaultWidth = false,
+                dismissOnClickOutside = false,
+                dismissOnBackPress = false
+            )
+        ) {
+            Surface(
             shape = RoundedCornerShape(12.dp),
             tonalElevation = 6.dp
         ) {
@@ -635,6 +638,7 @@ fun ElectricProblemDialog(
             }
         }
     }
+}
 }
 
 data class ElectricProblemFormData(

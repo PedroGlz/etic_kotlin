@@ -357,6 +357,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             var showVisualInspectionWarning by rememberSaveable { mutableStateOf(false) }
             var showVisualInspectionDialog by rememberSaveable { mutableStateOf(false) }
             var showElectricProblemDialog by rememberSaveable { mutableStateOf(false) }
+            var electricProblemFormKey by rememberSaveable { mutableStateOf(0) }
             var showEditUbDialog by remember { mutableStateOf(false) }
             var isSavingEditUb by remember { mutableStateOf(false) }
             var editTab by rememberSaveable { mutableStateOf(0) }
@@ -947,6 +948,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                             pendingProblemUbicacionId = selectedId
                                         }
                                         pendingProblemNumber = fetchNextProblemNumber(electricTypeId)
+                                        electricProblemFormKey += 1
                                         showElectricProblemDialog = true
                                     }
                                 }
@@ -1234,7 +1236,8 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                         showElectricProblemDialog = false
                     },
                     onContinue = { saveElectricProblem(it) },
-                    continueEnabled = !isSavingElectricProblem
+                    continueEnabled = !isSavingElectricProblem,
+                    dialogKey = electricProblemFormKey
                 )
             }
 
