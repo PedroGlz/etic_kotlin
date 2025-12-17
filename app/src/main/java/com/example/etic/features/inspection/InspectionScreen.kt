@@ -757,6 +757,17 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                             runCatching { problemaDao.insert(problema) }
                         }
                         if (result.isSuccess) {
+                            if (detRow != null) {
+                                val updatedDet = detRow.copy(
+                                    idStatusInspeccionDet = "568798D2-76BB-11D3-82BF-00104BC75DC2",
+                                    idEstatusColorText = 2,
+                                    modificadoPor = currentUser?.idUsuario,
+                                    fechaMod = nowTs
+                                )
+                                withContext(Dispatchers.IO) { runCatching { inspeccionDetDao.update(updatedDet) } }
+                            }
+                            problemsRefreshTick++
+                            refreshTree(preserveSelection = locationId)
                             Toast.makeText(ctx, "Problema eléctrico guardado.", Toast.LENGTH_SHORT).show()
                             showElectricProblemDialog = false
                         } else {
