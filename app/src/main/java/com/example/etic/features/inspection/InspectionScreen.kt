@@ -111,6 +111,8 @@ import com.example.etic.features.inspection.tree.titlePathForId
 import com.example.etic.features.inspection.ui.problem.ElectricProblemDialog
 import com.example.etic.features.inspection.ui.problem.ElectricProblemFormData
 import com.example.etic.features.inspection.ui.problem.VisualProblemDialog
+import com.example.etic.features.inspection.ui.problem.MechanicalProblemDialog
+import com.example.etic.features.inspection.ui.problem.MechanicalProblemFormData
 import com.example.etic.data.local.entities.Severidad
 import com.example.etic.data.local.entities.Problema
 import com.example.etic.data.local.dao.VisualProblemHistoryRow
@@ -139,6 +141,7 @@ private val PROBLEM_TYPE_IDS = mapOf(
 
 private val VISUAL_PROBLEM_TYPE_ID = PROBLEM_TYPE_IDS["Visual"]
 private val ELECTRIC_PROBLEM_TYPE_ID = PROBLEM_TYPE_IDS["Eléctrico"]
+private val MECHANICAL_PROBLEM_TYPE_ID = PROBLEM_TYPE_IDS["Mecánico"]
 
 private fun problemTypeLabelForId(typeId: String?): String {
     val fallback = PROBLEM_TYPE_IDS.entries.firstOrNull { it.key.contains("Visual", ignoreCase = true) }
@@ -358,6 +361,8 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             var showVisualInspectionDialog by rememberSaveable { mutableStateOf(false) }
             var showElectricProblemDialog by rememberSaveable { mutableStateOf(false) }
             var electricProblemFormKey by rememberSaveable { mutableStateOf(0) }
+            var showMechanicalProblemDialog by rememberSaveable { mutableStateOf(false) }
+            var mechanicalProblemFormKey by rememberSaveable { mutableStateOf(0) }
             var showEditUbDialog by remember { mutableStateOf(false) }
             var isSavingEditUb by remember { mutableStateOf(false) }
             var editTab by rememberSaveable { mutableStateOf(0) }
@@ -373,6 +378,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             var pendingDigitalImage by rememberSaveable { mutableStateOf("") }
             var isSavingVisualProblem by remember { mutableStateOf(false) }
             var isSavingElectricProblem by remember { mutableStateOf(false) }
+            var isSavingMechanicalProblem by remember { mutableStateOf(false) }
             var editingProblemId by rememberSaveable { mutableStateOf<String?>(null) }
             var editingProblemOriginal by remember { mutableStateOf<Problema?>(null) }
             fun resetVisualProblemForm() {
@@ -873,6 +879,17 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                 }
             }
 
+            fun saveMechanicalProblem(formData: MechanicalProblemFormData) {
+                if (isSavingMechanicalProblem) return
+                scope.launch {
+                    isSavingMechanicalProblem = true
+                    Toast.makeText(ctx, "Guardado mecánico aún no disponible.", Toast.LENGTH_SHORT).show()
+                    resetElectricProblemState()
+                    showMechanicalProblemDialog = false
+                    isSavingMechanicalProblem = false
+                }
+            }
+
             LaunchedEffect(showNewUbDialog) {
                 if (showNewUbDialog) {
                     // Siempre que se abre \"Nueva ubicacion\", forzamos modo creacion (no edicion)
@@ -1010,6 +1027,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                             val selectedTypeId = problemTypeIdFromLabel(selectedProblemType)
                             val visualTypeId = VISUAL_PROBLEM_TYPE_ID
                             val electricTypeId = ELECTRIC_PROBLEM_TYPE_ID
+                            val mechanicalTypeId = MECHANICAL_PROBLEM_TYPE_ID
                             when {
                                 selectedTypeId != null && visualTypeId != null && selectedTypeId.equals(visualTypeId, ignoreCase = true) -> {
                                     scope.launch {
@@ -1050,6 +1068,27 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                         pendingProblemNumber = fetchNextProblemNumber(electricTypeId)
                                         electricProblemFormKey += 1
                                         showElectricProblemDialog = true
+                                    }
+                                }
+                                selectedTypeId != null && mechanicalTypeId != null && selectedTypeId.equals(mechanicalTypeId, ignoreCase = true) -> {
+                                    scope.launch {
+                                        showProblemTypeDialog = false
+                                        val node = selectedId?.let { findById(it, nodes) }
+                                        resetElectricProblemState()
+                                        pendingProblemType = problemTypeLabelForId(mechanicalTypeId)
+                                        if (pendingProblemEquipmentName.isNullOrBlank()) {
+                                            pendingProblemEquipmentName = node?.title ?: "-"
+                                            pendingProblemUbicacionId = node?.id ?: selectedId
+                                        }
+                                        if (pendingProblemRoute.isNullOrBlank()) {
+                                            pendingProblemRoute = selectedId?.let { titlePathForId(nodes, it).joinToString(" / ") } ?: "-"
+                                        }
+                                        if (pendingProblemUbicacionId.isNullOrBlank()) {
+                                            pendingProblemUbicacionId = selectedId
+                                        }
+                                        pendingProblemNumber = fetchNextProblemNumber(mechanicalTypeId)
+                                        mechanicalProblemFormKey += 1
+                                        showMechanicalProblemDialog = true
                                     }
                                 }
                                 else -> {
@@ -1330,11 +1369,11 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     rpm = entity.rpm?.toString() ?: ""
                 )
             }
+            val inspectionNumber = currentInspection?.noInspeccion?.toString() ?: "-"
+            val manufacturerOptionsPairs = fabricanteOptions
+                .sortedBy { it.fabricante?.lowercase(Locale.getDefault()) ?: "" }
+                .map { it.idFabricante to (it.fabricante ?: it.idFabricante) }
             if (showElectricProblemDialog && pendingProblemEquipmentName != null) {
-                val inspectionNumber = currentInspection?.noInspeccion?.toString() ?: "-"
-                val manufacturerOptionsPairs = fabricanteOptions
-                    .sortedBy { it.fabricante?.lowercase(Locale.getDefault()) ?: "" }
-                    .map { it.idFabricante to (it.fabricante ?: it.idFabricante) }
                 ElectricProblemDialog(
                     inspectionNumber = inspectionNumber,
                     problemNumber = pendingProblemNumber,
@@ -1367,6 +1406,41 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     continueEnabled = !isSavingElectricProblem,
                     initialFormData = electricProblemInitialData,
                     dialogKey = electricProblemFormKey
+                )
+            }
+            if (showMechanicalProblemDialog && pendingProblemEquipmentName != null) {
+                MechanicalProblemDialog(
+                    inspectionNumber = inspectionNumber,
+                    problemNumber = pendingProblemNumber,
+                    problemType = pendingProblemType,
+                    equipmentName = pendingProblemEquipmentName ?: "-",
+                    equipmentRoute = pendingProblemRoute ?: "-",
+                    failureOptions = electricHazardOptions,
+                    phaseOptions = electricPhaseOptions,
+                    environmentOptions = electricEnvironmentOptions,
+                    manufacturerOptions = manufacturerOptionsPairs,
+                    thermalImageName = pendingThermalImage,
+                    digitalImageName = pendingDigitalImage,
+                    onThermalImageChange = { pendingThermalImage = it },
+                    onDigitalImageChange = { pendingDigitalImage = it },
+                    onThermalSequenceUp = { pendingThermalImage = adjustImageSequence(pendingThermalImage, +1) },
+                    onThermalSequenceDown = { pendingThermalImage = adjustImageSequence(pendingThermalImage, -1) },
+                    onDigitalSequenceUp = { pendingDigitalImage = adjustImageSequence(pendingDigitalImage, +1) },
+                    onDigitalSequenceDown = { pendingDigitalImage = adjustImageSequence(pendingDigitalImage, -1) },
+                    onThermalPickInitial = { loadInitialImageFromInspection(true) { pendingThermalImage = it } },
+                    onDigitalPickInitial = { loadInitialImageFromInspection(false) { pendingDigitalImage = it } },
+                    onThermalFolder = { thermalFolderLauncher.launch("image/*") },
+                    onDigitalFolder = { digitalFolderLauncher.launch("image/*") },
+                    onThermalCamera = { thermalCameraLauncher.launch(null) },
+                    onDigitalCamera = { digitalCameraLauncher.launch(null) },
+                    onDismiss = {
+                        showMechanicalProblemDialog = false
+                        resetElectricProblemState()
+                    },
+                    onContinue = { saveMechanicalProblem(it) },
+                    continueEnabled = !isSavingMechanicalProblem,
+                    initialFormData = null,
+                    dialogKey = mechanicalProblemFormKey
                 )
             }
 
