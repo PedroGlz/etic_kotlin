@@ -11,7 +11,7 @@
     <string name="label_descripcion">Descripción</string>
     <string name="col_numero">No</string>
     <string name="col_fecha">Fecha</string>
-    <string name="col_num_inspeccion">Num Inspección</string>
+    <string name="col_num_inspeccion">No. Insp</string>
     <string name="col_tipo">Tipo</string>
     <string name="col_estatus">Estatus</string>
     <string name="col_cronico">Crónico</string>

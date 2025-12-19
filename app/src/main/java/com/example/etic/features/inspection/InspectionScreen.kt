@@ -143,6 +143,14 @@ private val PROBLEM_TYPE_IDS = mapOf(
 private val VISUAL_PROBLEM_TYPE_ID = PROBLEM_TYPE_IDS["Visual"]
 private val ELECTRIC_PROBLEM_TYPE_ID = PROBLEM_TYPE_IDS["Eléctrico"]
 private val PROBLEM_DATE_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
+
+private enum class ProblemColumn {
+    NUMERO, FECHA, INSPECCION, TIPO, ESTATUS, CRONICO, TEMP_C, DELTA_T, SEVERIDAD, EQUIPO, COMENTARIOS
+}
+
+private enum class BaselineColumn {
+    INSPECCION, EQUIPO, FECHA, MTA, TEMP, AMB, IR, ID, NOTAS
+}
 private val MECHANICAL_PROBLEM_TYPE_ID = PROBLEM_TYPE_IDS["Mecánico"]
 
 private fun problemTypeLabelForId(typeId: String?): String {
@@ -3550,8 +3558,36 @@ private fun ProblemsTable(
     onDoubleTap: ((Problem) -> Unit)? = null
 ) {
     @Composable
-    fun RowScope.cell(flex: Int, content: @Composable () -> Unit) =
-        Box(Modifier.weight(flex.toFloat()), contentAlignment = Alignment.CenterStart) { content() }
+    fun RowScope.cell(flex: Int, modifier: Modifier = Modifier, content: @Composable () -> Unit) =
+        Box(Modifier.weight(flex.toFloat()).then(modifier), contentAlignment = Alignment.CenterStart) { content() }
+
+    var sortColumn by rememberSaveable { mutableStateOf(ProblemColumn.FECHA) }
+    var sortAsc by rememberSaveable { mutableStateOf(true) }
+
+    fun toggleSort(column: ProblemColumn) {
+        if (sortColumn == column) sortAsc = !sortAsc
+        else {
+            sortColumn = column
+            sortAsc = true
+        }
+    }
+
+    val sortedProblems = remember(problems, sortColumn, sortAsc) {
+        val baseComparator = when (sortColumn) {
+            ProblemColumn.NUMERO -> compareBy<Problem> { it.no }
+            ProblemColumn.FECHA -> compareBy { it.fecha }
+            ProblemColumn.INSPECCION -> compareBy { it.numInspeccion }
+            ProblemColumn.TIPO -> compareBy { it.tipo }
+            ProblemColumn.ESTATUS -> compareBy { it.estatus }
+            ProblemColumn.CRONICO -> compareBy { it.cronico }
+            ProblemColumn.TEMP_C -> compareBy { it.tempC }
+            ProblemColumn.DELTA_T -> compareBy { it.deltaTC }
+            ProblemColumn.SEVERIDAD -> compareBy { it.severidad }
+            ProblemColumn.EQUIPO -> compareBy { it.equipo }
+            ProblemColumn.COMENTARIOS -> compareBy { it.comentarios }
+        }
+        if (sortAsc) problems.sortedWith(baseComparator) else problems.sortedWith(baseComparator.reversed())
+    }
 
     val listState = rememberSaveable("problems_list_state", saver = LazyListState.Saver) { LazyListState() }
     Column(Modifier.fillMaxSize()) {
@@ -3561,25 +3597,47 @@ private fun ProblemsTable(
                 .background(MaterialTheme.colorScheme.surface)
                 .padding(vertical = 8.dp, horizontal = 8.dp)
         ) {
-            cell(1) { Text(stringResource(com.example.etic.R.string.col_numero)) }
-            cell(2) { Text(stringResource(com.example.etic.R.string.col_fecha)) }
-            cell(2) { Text(stringResource(com.example.etic.R.string.col_num_inspeccion)) }
-            cell(2) { Text(stringResource(com.example.etic.R.string.col_tipo)) }
-            cell(2) { Text(stringResource(com.example.etic.R.string.col_estatus)) }
-            cell(1) { Text(stringResource(com.example.etic.R.string.col_cronico)) }
-            cell(1) { Text(stringResource(com.example.etic.R.string.col_temp_c)) }
-            cell(1) { Text(stringResource(com.example.etic.R.string.col_delta_t_c)) }
-            cell(2) { Text(stringResource(com.example.etic.R.string.col_severidad)) }
-            cell(2) { Text(stringResource(com.example.etic.R.string.col_equipo)) }
-            cell(3) { Text(stringResource(com.example.etic.R.string.col_comentarios)) }
+            cell(1, Modifier.clickable { toggleSort(ProblemColumn.NUMERO) }) {
+                Text("No. ${if (sortColumn == ProblemColumn.NUMERO) if (sortAsc) "▲" else "▼" else ""}")
+            }
+            cell(2, Modifier.clickable { toggleSort(ProblemColumn.FECHA) }) {
+                Text("${stringResource(com.example.etic.R.string.col_fecha)}${if (sortColumn == ProblemColumn.FECHA) if (sortAsc) " ▲" else " ▼" else ""}")
+            }
+            cell(2, Modifier.clickable { toggleSort(ProblemColumn.INSPECCION) }) {
+                Text("${stringResource(com.example.etic.R.string.col_num_inspeccion)}${if (sortColumn == ProblemColumn.INSPECCION) if (sortAsc) " ▲" else " ▼" else ""}")
+            }
+            cell(2, Modifier.clickable { toggleSort(ProblemColumn.TIPO) }) {
+                Text("${stringResource(com.example.etic.R.string.col_tipo)}${if (sortColumn == ProblemColumn.TIPO) if (sortAsc) " ▲" else " ▼" else ""}")
+            }
+            cell(2, Modifier.clickable { toggleSort(ProblemColumn.ESTATUS) }) {
+                Text("${stringResource(com.example.etic.R.string.col_estatus)}${if (sortColumn == ProblemColumn.ESTATUS) if (sortAsc) " ▲" else " ▼" else ""}")
+            }
+            cell(1, Modifier.clickable { toggleSort(ProblemColumn.CRONICO) }) {
+                Text("${stringResource(com.example.etic.R.string.col_cronico)}${if (sortColumn == ProblemColumn.CRONICO) if (sortAsc) " ▲" else " ▼" else ""}")
+            }
+            cell(1, Modifier.clickable { toggleSort(ProblemColumn.TEMP_C) }) {
+                Text("${stringResource(com.example.etic.R.string.col_temp_c)}${if (sortColumn == ProblemColumn.TEMP_C) if (sortAsc) " ▲" else " ▼" else ""}")
+            }
+            cell(1, Modifier.clickable { toggleSort(ProblemColumn.DELTA_T) }) {
+                Text("${stringResource(com.example.etic.R.string.col_delta_t_c)}${if (sortColumn == ProblemColumn.DELTA_T) if (sortAsc) " ▲" else " ▼" else ""}")
+            }
+            cell(2, Modifier.clickable { toggleSort(ProblemColumn.SEVERIDAD) }) {
+                Text("${stringResource(com.example.etic.R.string.col_severidad)}${if (sortColumn == ProblemColumn.SEVERIDAD) if (sortAsc) " ▲" else " ▼" else ""}")
+            }
+            cell(2, Modifier.clickable { toggleSort(ProblemColumn.EQUIPO) }) {
+                Text("${stringResource(com.example.etic.R.string.col_equipo)}${if (sortColumn == ProblemColumn.EQUIPO) if (sortAsc) " ▲" else " ▼" else ""}")
+            }
+            cell(3, Modifier.clickable { toggleSort(ProblemColumn.COMENTARIOS) }) {
+                Text("${stringResource(com.example.etic.R.string.col_comentarios)}${if (sortColumn == ProblemColumn.COMENTARIOS) if (sortAsc) " ▲" else " ▼" else ""}")
+            }
             cell(1) { Text(stringResource(com.example.etic.R.string.col_op)) }
         }
         Divider(thickness = DIVIDER_THICKNESS)
-        if (problems.isEmpty()) {
+        if (sortedProblems.isEmpty()) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(stringResource(com.example.etic.R.string.msg_sin_problemas)) }
         } else {
             LazyColumn(Modifier.fillMaxSize(), state = listState) {
-                items(problems, key = { it.id }) { p ->
+                items(sortedProblems, key = { it.id }) { p ->
                     Row(
                         Modifier
                             .fillMaxWidth()
@@ -3598,7 +3656,7 @@ private fun ProblemsTable(
                         cell(1) { Text(p.deltaTC.toString()) }
                         cell(2) { Text(p.severidad) }
                         cell(2) { Text(p.equipo) }
-            cell(3) { Text(p.comentarios) }
+                        cell(3) { Text(p.comentarios) }
                         cell(1) {
                             IconButton(onClick = { onDelete(p) }) {
                                 Icon(Icons.Outlined.Delete, contentDescription = "Eliminar")
@@ -3615,10 +3673,35 @@ private fun ProblemsTable(
 @Composable
 private fun BaselineTable(baselines: List<Baseline>, onDelete: (Baseline) -> Unit) {
     @Composable
-    fun RowScope.cell(flex: Int, content: @Composable () -> Unit) =
-        Box(Modifier.weight(flex.toFloat())) { content() }
+    fun RowScope.cell(flex: Int, modifier: Modifier = Modifier, content: @Composable () -> Unit) =
+        Box(Modifier.weight(flex.toFloat()).then(modifier)) { content() }
 
     val listState = rememberSaveable("baseline_list_state", saver = LazyListState.Saver) { LazyListState() }
+    var sortColumn by rememberSaveable { mutableStateOf(BaselineColumn.FECHA) }
+    var sortAsc by rememberSaveable { mutableStateOf(true) }
+
+    fun toggleSort(column: BaselineColumn) {
+        if (sortColumn == column) sortAsc = !sortAsc else {
+            sortColumn = column
+            sortAsc = true
+        }
+    }
+
+    val sortedBaselines = remember(baselines, sortColumn, sortAsc) {
+        val comparator = when (sortColumn) {
+            BaselineColumn.INSPECCION -> compareBy<Baseline> { it.numInspeccion }
+            BaselineColumn.EQUIPO -> compareBy { it.equipo }
+            BaselineColumn.FECHA -> compareBy { it.fecha }
+            BaselineColumn.MTA -> compareBy { it.mtaC }
+            BaselineColumn.TEMP -> compareBy { it.tempC }
+            BaselineColumn.AMB -> compareBy { it.ambC }
+            BaselineColumn.IR -> compareBy { it.imgR ?: "" }
+            BaselineColumn.ID -> compareBy { it.imgD ?: "" }
+            BaselineColumn.NOTAS -> compareBy { it.notas }
+        }
+        if (sortAsc) baselines.sortedWith(comparator) else baselines.sortedWith(comparator.reversed())
+    }
+
     Column(Modifier.fillMaxSize()) {
         Row(
             Modifier
@@ -3626,15 +3709,33 @@ private fun BaselineTable(baselines: List<Baseline>, onDelete: (Baseline) -> Uni
                 .background(MaterialTheme.colorScheme.surface)
                 .padding(vertical = 8.dp, horizontal = 8.dp)
         ) {
-            cell(2) { Text(stringResource(com.example.etic.R.string.col_no_inspeccion)) }
-            cell(2) { Text(stringResource(com.example.etic.R.string.col_equipo)) }
-            cell(2) { Text(stringResource(com.example.etic.R.string.col_fecha)) }
-            cell(1) { Text(stringResource(com.example.etic.R.string.col_mta_c)) }
-            cell(1) { Text(stringResource(com.example.etic.R.string.col_temp_c)) }
-            cell(1) { Text(stringResource(com.example.etic.R.string.col_amb_c)) }
-            cell(1) { Text("IR") }
-            cell(1) { Text("ID") }
-            cell(3) { Text("Notas") }
+            cell(2, Modifier.clickable { toggleSort(BaselineColumn.INSPECCION) }) {
+                Text("${stringResource(com.example.etic.R.string.col_no_inspeccion)}${if (sortColumn == BaselineColumn.INSPECCION) if (sortAsc) " ▲" else " ▼" else ""}")
+            }
+            cell(2, Modifier.clickable { toggleSort(BaselineColumn.EQUIPO) }) {
+                Text("${stringResource(com.example.etic.R.string.col_equipo)}${if (sortColumn == BaselineColumn.EQUIPO) if (sortAsc) " ▲" else " ▼" else ""}")
+            }
+            cell(2, Modifier.clickable { toggleSort(BaselineColumn.FECHA) }) {
+                Text("${stringResource(com.example.etic.R.string.col_fecha)}${if (sortColumn == BaselineColumn.FECHA) if (sortAsc) " ▲" else " ▼" else ""}")
+            }
+            cell(1, Modifier.clickable { toggleSort(BaselineColumn.MTA) }) {
+                Text("${stringResource(com.example.etic.R.string.col_mta_c)}${if (sortColumn == BaselineColumn.MTA) if (sortAsc) " ▲" else " ▼" else ""}")
+            }
+            cell(1, Modifier.clickable { toggleSort(BaselineColumn.TEMP) }) {
+                Text("${stringResource(com.example.etic.R.string.col_temp_c)}${if (sortColumn == BaselineColumn.TEMP) if (sortAsc) " ▲" else " ▼" else ""}")
+            }
+            cell(1, Modifier.clickable { toggleSort(BaselineColumn.AMB) }) {
+                Text("${stringResource(com.example.etic.R.string.col_amb_c)}${if (sortColumn == BaselineColumn.AMB) if (sortAsc) " ▲" else " ▼" else ""}")
+            }
+            cell(1, Modifier.clickable { toggleSort(BaselineColumn.IR) }) {
+                Text("IR${if (sortColumn == BaselineColumn.IR) if (sortAsc) " ▲" else " ▼" else ""}")
+            }
+            cell(1, Modifier.clickable { toggleSort(BaselineColumn.ID) }) {
+                Text("ID${if (sortColumn == BaselineColumn.ID) if (sortAsc) " ▲" else " ▼" else ""}")
+            }
+            cell(3, Modifier.clickable { toggleSort(BaselineColumn.NOTAS) }) {
+                Text("Notas${if (sortColumn == BaselineColumn.NOTAS) if (sortAsc) " ▲" else " ▼" else ""}")
+            }
             cell(1) { Text(stringResource(com.example.etic.R.string.col_op)) }
         }
         Divider(thickness = DIVIDER_THICKNESS)
@@ -3642,7 +3743,7 @@ private fun BaselineTable(baselines: List<Baseline>, onDelete: (Baseline) -> Uni
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(stringResource(com.example.etic.R.string.msg_sin_baseline)) }
         } else {
             LazyColumn(Modifier.fillMaxSize(), state = listState) {
-                items(baselines, key = { it.id }) { b ->
+                items(sortedBaselines, key = { it.id }) { b ->
                     Row(
                         Modifier
                             .fillMaxWidth()
