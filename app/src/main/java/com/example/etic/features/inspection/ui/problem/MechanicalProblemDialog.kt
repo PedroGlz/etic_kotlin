@@ -166,6 +166,8 @@ fun MechanicalProblemDialog(
                 var comments by rememberSaveable { mutableStateOf(initial.comments) }
                 var commentsTouched by rememberSaveable { mutableStateOf(initial.comments.isNotBlank()) }
                 var lastAutoComment by rememberSaveable { mutableStateOf(initial.comments) }
+                var rpm by rememberSaveable { mutableStateOf(initial.rpm) }
+                var bearingType by rememberSaveable { mutableStateOf(initial.bearingType) }
 
                 val failureLabel =
                     failureOptions.firstOrNull { it.first == failureId }?.second?.takeIf { it.isNotBlank() }
@@ -175,9 +177,7 @@ fun MechanicalProblemDialog(
                 val requiredFieldsFilled = listOf(
                     failureId?.isNotBlank() == true,
                     componentTemperature.trim().isNotBlank(),
-                    componentPhaseId?.isNotBlank() == true,
-                    referenceTemperature.trim().isNotBlank(),
-                    referencePhaseId?.isNotBlank() == true
+                    referenceTemperature.trim().isNotBlank()
                 ).all { it }
 
                 val autoCommentText = buildList {
@@ -448,16 +448,14 @@ fun MechanicalProblemDialog(
 
                                         LabeledField(
                                             label = "RPM",
-                                            value = ratedLoad,
-                                            onValueChange = { ratedLoad = it },
-                                            unit = "A"
+                                            value = rpm,
+                                            onValueChange = { rpm = it }
                                         )
 
                                         LabeledField(
                                             label = "Tipo de rodamiento",
-                                            value = ratedLoad,
-                                            onValueChange = { ratedLoad = it },
-                                            unit = "A"
+                                            value = bearingType,
+                                            onValueChange = { bearingType = it }
                                         )
 
                                         DropdownSelector(
@@ -545,33 +543,34 @@ fun MechanicalProblemDialog(
                         val canSubmit = continueEnabled && emissivityError == null && requiredFieldsFilled
                         Button(
                             onClick = {
-                                onContinue(
-                                    MechanicalProblemFormData(
-                                        failureId = failureId?.takeIf { it.isNotBlank() },
-                                        componentTemperature = componentTemperature,
-                                        componentPhaseId = componentPhaseId,
-                                        componentRms = componentRms,
-                                        referenceTemperature = referenceTemperature,
-                                        referencePhaseId = referencePhaseId,
-                                        referenceRms = referenceRms,
-                                        additionalInfoId = additionalInfoId,
-                                        additionalRms = additionalRms,
-                                        emissivityChecked = emissivityChecked,
-                                        emissivity = emissivity,
-                                        indirectTempChecked = indirectTempChecked,
-                                        ambientTempChecked = ambientTempChecked,
-                                        ambientTemp = ambientTemp,
-                                        environmentChecked = environmentChecked,
-                                        environmentId = environmentId,
-                                        windSpeedChecked = windSpeedChecked,
-                                        windSpeed = windSpeed,
-                                        manufacturerId = manufacturerId,
-                                        ratedLoad = ratedLoad,
-                                        circuitVoltage = circuitVoltage,
-                                        comments = comments,
-                                        rpm = ""
-                                    )
-                                )
+                onContinue(
+                    MechanicalProblemFormData(
+                        failureId = failureId?.takeIf { it.isNotBlank() },
+                        componentTemperature = componentTemperature,
+                        componentPhaseId = null,
+                        componentRms = componentRms,
+                        referenceTemperature = referenceTemperature,
+                        referencePhaseId = null,
+                        referenceRms = referenceRms,
+                        additionalInfoId = null,
+                        additionalRms = "",
+                        emissivityChecked = emissivityChecked,
+                        emissivity = emissivity,
+                        indirectTempChecked = false,
+                        ambientTempChecked = ambientTempChecked,
+                        ambientTemp = ambientTemp,
+                        environmentChecked = environmentChecked,
+                        environmentId = environmentId,
+                        windSpeedChecked = false,
+                        windSpeed = "",
+                        manufacturerId = manufacturerId,
+                        ratedLoad = ratedLoad,
+                        circuitVoltage = circuitVoltage,
+                        comments = comments,
+                        rpm = rpm,
+                        bearingType = bearingType
+                    )
+                )
                             },
                             enabled = canSubmit
                         ) {
@@ -607,7 +606,8 @@ data class MechanicalProblemFormData(
     val ratedLoad: String = "",
     val circuitVoltage: String = "",
     val comments: String = "",
-    val rpm: String = ""
+    val rpm: String = "",
+    val bearingType: String = ""
 )
 
 @Composable

@@ -880,13 +880,133 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             }
 
             fun saveMechanicalProblem(formData: MechanicalProblemFormData) {
-                if (isSavingMechanicalProblem) return
+                val inspection = currentInspection
+                if (inspection == null) {
+                    Toast.makeText(ctx, "No hay inspección activa.", Toast.LENGTH_SHORT).show()
+                    return
+                }
+                val locationId = pendingProblemUbicacionId ?: selectedId
+                if (locationId.isNullOrBlank()) {
+                    Toast.makeText(ctx, "Selecciona un equipo.", Toast.LENGTH_SHORT).show()
+                    return
+                }
+                val typeId = MECHANICAL_PROBLEM_TYPE_ID ?: "0D32B334-76C3-11D3-82BF-00104BC75DC2"
+                val numero = pendingProblemNumber.toIntOrNull() ?: 1
                 scope.launch {
+                    if (isSavingMechanicalProblem) return@launch
                     isSavingMechanicalProblem = true
-                    Toast.makeText(ctx, "Guardado mecánico aún no disponible.", Toast.LENGTH_SHORT).show()
-                    resetElectricProblemState()
-                    showMechanicalProblemDialog = false
-                    isSavingMechanicalProblem = false
+                    try {
+                        val componentTemp = formData.componentTemperature.toDoubleOrNull()
+                        val referenceTemp = formData.referenceTemperature.toDoubleOrNull()
+                        val difference = componentTemp?.let { comp ->
+                            referenceTemp?.let { ref -> comp - ref }
+                        }
+                        val severityId = calculateSeverityId(difference)
+                        val failureLabel = formData.failureId?.let { id ->
+                            electricHazardOptions.firstOrNull { it.first == id }?.second
+                        }
+                        val emissivityInput = formData.emissivity.trim()
+                        val emissivityValue = emissivityInput.replace(',', '.').toDoubleOrNull()
+                        if (formData.emissivityChecked) {
+                            if (emissivityValue == null || emissivityValue < 0.0 || emissivityValue > 1.0) {
+                                Toast.makeText(
+                                    ctx,
+                                    "La emisividad debe estar entre 0.00 y 1.00.",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                                return@launch
+                            }
+                        }
+                        val autoComment = buildList {
+                            failureLabel?.takeIf { it.isNotBlank() }?.let { add(it) }
+                            pendingProblemEquipmentName?.takeIf { it.isNotBlank() }?.let { add(it) }
+                        }.joinToString(", ")
+                        val finalComment = formData.comments.takeIf { it.isNotBlank() } ?: autoComment
+
+                        val detRow = withContext(Dispatchers.IO) {
+                            runCatching {
+                                inspeccionDetDao.getByUbicacion(locationId)
+                                    .firstOrNull { it.idInspeccion == inspection.idInspeccion }
+                            }.getOrNull()
+                        }
+                        val detId = detRow?.idInspeccionDet
+                        val nowTs = java.time.LocalDateTime.now()
+                            .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+
+                        val problema = Problema(
+                            idProblema = java.util.UUID.randomUUID().toString().uppercase(),
+                            numeroProblema = numero,
+                            idTipoInspeccion = typeId,
+                            idSitio = inspection.idSitio,
+                            idInspeccion = inspection.idInspeccion,
+                            idInspeccionDet = detId,
+                            idUbicacion = locationId,
+                            problemTemperature = componentTemp,
+                            referenceTemperature = referenceTemp,
+                            problemPhase = null,
+                            referencePhase = null,
+                            problemRms = formData.componentRms.toDoubleOrNull(),
+                            referenceRms = formData.referenceRms.toDoubleOrNull(),
+                            additionalInfo = null,
+                            additionalRms = null,
+                            emissivityCheck = if (formData.emissivityChecked) "on" else "off",
+                            emissivity = emissivityValue,
+                            indirectTempCheck = "off",
+                            tempAmbientCheck = if (formData.ambientTempChecked) "on" else "off",
+                            tempAmbient = formData.ambientTemp.toDoubleOrNull(),
+                            environmentCheck = if (formData.environmentChecked) "on" else "off",
+                            environment = formData.environmentId,
+                            windSpeedCheck = "off",
+                            windSpeed = null,
+                            idFabricante = formData.manufacturerId,
+                            ratedLoadCheck = "off",
+                            ratedLoad = formData.ratedLoad.takeIf { it.isNotBlank() },
+                            circuitVoltageCheck = "off",
+                            circuitVoltage = formData.circuitVoltage.takeIf { it.isNotBlank() },
+                            idFalla = formData.failureId,
+                            componentComment = finalComment,
+                            estatusProblema = "Abierto",
+                            aumentoTemperatura = difference,
+                            idSeveridad = severityId,
+                            ruta = pendingProblemRoute ?: pendingProblemEquipmentName ?: "-",
+                            estatus = "Activo",
+                            esCronico = "NO",
+                            rpm = formData.rpm.toDoubleOrNull(),
+                            bearingType = formData.bearingType.takeIf { it.isNotBlank() },
+                            irFile = pendingThermalImage,
+                            photoFile = pendingDigitalImage,
+                            creadoPor = currentUser?.idUsuario,
+                            fechaCreacion = nowTs
+                        )
+                        val result = withContext(Dispatchers.IO) {
+                            runCatching { problemaDao.insert(problema) }
+                        }
+                        if (result.isSuccess) {
+                            if (detRow != null) {
+                                val updatedDet = detRow.copy(
+                                    idStatusInspeccionDet = "568798D2-76BB-11D3-82BF-00104BC75DC2",
+                                    idEstatusColorText = 2,
+                                    modificadoPor = currentUser?.idUsuario,
+                                    fechaMod = nowTs
+                                )
+                                withContext(Dispatchers.IO) { runCatching { inspeccionDetDao.update(updatedDet) } }
+                            }
+                            problemsRefreshTick++
+                            refreshTree(preserveSelection = locationId)
+                            Toast.makeText(ctx, "Problema mecánico guardado.", Toast.LENGTH_SHORT).show()
+                            resetElectricProblemState()
+                            showMechanicalProblemDialog = false
+                        } else {
+                            val message = result.exceptionOrNull()?.localizedMessage ?: "Error desconocido"
+                            Toast.makeText(
+                                ctx,
+                                "No se pudo guardar el problema mecánico: $message",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    } finally {
+                        isSavingMechanicalProblem = false
+                    }
                 }
             }
 
