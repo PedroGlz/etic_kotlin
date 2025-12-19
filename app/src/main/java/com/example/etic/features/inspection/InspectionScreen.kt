@@ -118,6 +118,7 @@ import com.example.etic.data.local.entities.Problema
 import com.example.etic.data.local.dao.VisualProblemHistoryRow
 import androidx.compose.ui.window.Dialog
 import java.text.Normalizer
+import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 // Centralizamos algunos "magic numbers" para facilitar ajuste futuro
@@ -141,6 +142,7 @@ private val PROBLEM_TYPE_IDS = mapOf(
 
 private val VISUAL_PROBLEM_TYPE_ID = PROBLEM_TYPE_IDS["Visual"]
 private val ELECTRIC_PROBLEM_TYPE_ID = PROBLEM_TYPE_IDS["Eléctrico"]
+private val PROBLEM_DATE_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
 private val MECHANICAL_PROBLEM_TYPE_ID = PROBLEM_TYPE_IDS["Mecánico"]
 
 private fun problemTypeLabelForId(typeId: String?): String {
@@ -3587,7 +3589,7 @@ private fun ProblemsTable(
                             }
                     ) {
                         cell(1) { Text("${p.no}") }
-                        cell(2) { Text(p.fecha.toString()) }
+                        cell(2) { Text(p.fecha.format(PROBLEM_DATE_FORMATTER)) }
                         cell(2) { Text(p.numInspeccion) }
                         cell(2) { Text(p.tipo) }
                         cell(2) { Text(p.estatus) }
