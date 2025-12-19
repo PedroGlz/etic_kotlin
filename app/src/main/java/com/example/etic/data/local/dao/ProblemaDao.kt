@@ -24,6 +24,22 @@ interface ProblemaDao {
     @Query("SELECT * FROM problemas WHERE Estatus = 'Activo'")
     suspend fun getAllActivos(): List<Problema>
 
+    @Query(
+        """
+        SELECT * FROM problemas
+        WHERE Id_Sitio = :siteId
+          AND Estatus = 'Activo'
+          AND Id_Problema NOT IN (
+            SELECT Id_Problema FROM problemas
+            WHERE Es_Cronico = 'SI'
+              AND Estatus_Problema = 'Cerrado'
+              AND Estatus = 'Activo'
+          )
+        ORDER BY Fecha_Creacion ASC
+        """
+    )
+    suspend fun getActivosPorSitio(siteId: String): List<Problema>
+
     @Query("SELECT * FROM problemas WHERE Id_Inspeccion = :idInspeccion")
     suspend fun getByInspeccion(idInspeccion: String): List<Problema>
 

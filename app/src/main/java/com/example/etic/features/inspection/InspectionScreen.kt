@@ -2990,7 +2990,12 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                     val problemas = if (!inspId.isNullOrBlank()) {
                                         problemaDao.getByInspeccionActivos(inspId)
                                     } else {
-                                        problemaDao.getAllActivos()
+                                        val siteId = currentInspection?.idSitio
+                                        if (!siteId.isNullOrBlank()) {
+                                            problemaDao.getActivosPorSitio(siteId)
+                                        } else {
+                                            problemaDao.getAllActivos()
+                                        }
                                     }
                                     problemas.any { it.idUbicacion == ubId && (it.estatus ?: "Activo") == "Activo" }
                                 }.getOrDefault(false)
@@ -3686,9 +3691,17 @@ private fun ProblemsTableFromDatabase(
     val eqDao = remember { com.example.etic.data.local.DbProvider.get(ctx).equipoDao() }
     val tipoInspDao = remember { com.example.etic.data.local.DbProvider.get(ctx).tipoInspeccionDao() }
 
+    val currentInspection = LocalCurrentInspection.current
     var problemsCache by remember { mutableStateOf(emptyList<Problem>()) }
     val uiProblems by produceState(initialValue = problemsCache, selectedId, refreshTick) {
-        val rows = try { dao.getAllActivos() } catch (_: Exception) { emptyList() }
+        val rows = try {
+            val siteId = currentInspection?.idSitio
+            if (!siteId.isNullOrBlank()) {
+                dao.getActivosPorSitio(siteId)
+            } else {
+                dao.getAllActivos()
+            }
+        } catch (_: Exception) { emptyList() }
         val ubicaciones = try { ubicacionDao.getAll() } catch (_: Exception) { emptyList() }
         val filteredRows = when {
             selectedId == null -> rows
