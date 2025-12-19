@@ -3650,7 +3650,7 @@ private fun BaselineTable(baselines: List<Baseline>, onDelete: (Baseline) -> Uni
                     ) {
                         cell(2) { Text(b.numInspeccion) }
                         cell(2) { Text(b.equipo) }
-                        cell(2) { Text(b.fecha.toString()) }
+                        cell(2) { Text(b.fecha.format(PROBLEM_DATE_FORMATTER)) }
                         cell(1) { Text(b.mtaC.toString()) }
                         cell(1) { Text(b.tempC.toString()) }
                         cell(1) { Text(b.ambC.toString()) }
