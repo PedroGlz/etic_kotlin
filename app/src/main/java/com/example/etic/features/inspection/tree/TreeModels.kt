@@ -27,6 +27,7 @@ data class Problem(
     val fecha: LocalDate,
     val numInspeccion: String,
     val tipo: String,
+    val tipoId: String?,
     val estatus: String,
     val cronico: Boolean,
     val tempC: Double,
