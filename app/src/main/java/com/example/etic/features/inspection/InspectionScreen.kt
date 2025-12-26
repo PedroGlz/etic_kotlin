@@ -1,6 +1,7 @@
 package com.example.etic.features.inspection.ui.home
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.Orientation
@@ -120,6 +121,9 @@ import androidx.compose.ui.window.Dialog
 import java.text.Normalizer
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.ArrowDropUp
 
 // Centralizamos algunos "magic numbers" para facilitar ajuste futuro
 private const val MIN_FRAC: Float = 0.2f     // Limite inferior de los splitters
@@ -3685,10 +3689,75 @@ private fun ProblemsTable(
     onDelete: (Problem) -> Unit,
     onDoubleTap: ((Problem) -> Unit)? = null
 ) {
-    @Composable
-    fun RowScope.cell(flex: Int, modifier: Modifier = Modifier, content: @Composable () -> Unit) =
-        Box(Modifier.weight(flex.toFloat()).then(modifier), contentAlignment = Alignment.CenterStart) { content() }
+    // ─────────────────────────────
+    // Anchos fijos (Opción A)
+    // ─────────────────────────────
+    val wNo = 55.dp
+    val wFecha = 95.dp
+    val wInspeccion = 85.dp
+    val wTipo = 77.dp
+    val wEstatus = 80.dp
+    val wCronico = 82.dp
+    val wTempC = 87.dp
+    val wDeltaT = 97.dp
+    val wSeveridad = 97.dp
+    val wEquipo = 160.dp
+    val wComentarios = 300.dp
+    val wOp = 30.dp
 
+    val tableMinWidth =
+        wNo + wFecha + wInspeccion + wTipo + wEstatus + wCronico +
+                wTempC + wDeltaT + wSeveridad + wEquipo + wComentarios + wOp
+
+    // 🎨 Colores por cabecera (suaves, basados en theme)
+    val cNo = MaterialTheme.colorScheme.errorContainer
+    val cFecha = MaterialTheme.colorScheme.secondaryContainer
+    val cInspeccion = MaterialTheme.colorScheme.tertiaryContainer
+    val cTipo = MaterialTheme.colorScheme.surfaceVariant
+    val cEstatus = MaterialTheme.colorScheme.errorContainer
+    val cCronico = MaterialTheme.colorScheme.inversePrimary
+    val cTempC = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+    val cDeltaT = MaterialTheme.colorScheme.errorContainer
+    val cSeveridad = MaterialTheme.colorScheme.secondaryContainer
+    val cEquipo = MaterialTheme.colorScheme.tertiaryContainer
+    val cComentarios = MaterialTheme.colorScheme.errorContainer
+    val cOp = MaterialTheme.colorScheme.surface
+
+    // Helper: header cell (ancho + color)
+    @Composable
+    fun RowScope.headerCell(
+        width: Dp,
+        background: Color,
+        modifier: Modifier = Modifier,
+        content: @Composable () -> Unit
+    ) {
+        Box(
+            modifier = modifier
+                .width(width)
+                .background(background)
+                .padding(horizontal = 6.dp, vertical = 8.dp),
+            contentAlignment = Alignment.CenterStart
+        ) { content() }
+    }
+
+    // Helper: body cell (ancho fijo)
+    @Composable
+    fun RowScope.cellFixed(
+        width: Dp,
+        modifier: Modifier = Modifier,
+        content: @Composable () -> Unit
+    ) {
+        Box(
+            modifier = modifier
+                .width(width)
+                .padding(horizontal = 6.dp),
+            contentAlignment = Alignment.CenterStart
+        ) { content() }
+    }
+
+    // ─────────────────────────────
+    // Estado de ordenamiento
+    // ─────────────────────────────
     var sortColumn by rememberSaveable { mutableStateOf(ProblemColumn.FECHA) }
     var sortAsc by rememberSaveable { mutableStateOf(true) }
 
@@ -3717,83 +3786,208 @@ private fun ProblemsTable(
         if (sortAsc) problems.sortedWith(baseComparator) else problems.sortedWith(baseComparator.reversed())
     }
 
-    val listState = rememberSaveable("problems_list_state", saver = LazyListState.Saver) { LazyListState() }
+    val listState = rememberLazyListState()
+    val hScroll = rememberScrollState()
+
     Column(Modifier.fillMaxSize()) {
-        Row(
-            Modifier
+        Box(
+            modifier = Modifier
                 .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.surface)
-                .padding(vertical = 8.dp, horizontal = 8.dp)
+                .horizontalScroll(hScroll)
         ) {
-            cell(1, Modifier.clickable { toggleSort(ProblemColumn.NUMERO) }) {
-                Text("No. ${if (sortColumn == ProblemColumn.NUMERO) if (sortAsc) "▲" else "▼" else ""}")
-            }
-            cell(2, Modifier.clickable { toggleSort(ProblemColumn.FECHA) }) {
-                Text("${stringResource(com.example.etic.R.string.col_fecha)}${if (sortColumn == ProblemColumn.FECHA) if (sortAsc) " ▲" else " ▼" else ""}")
-            }
-            cell(2, Modifier.clickable { toggleSort(ProblemColumn.INSPECCION) }) {
-                Text("${stringResource(com.example.etic.R.string.col_num_inspeccion)}${if (sortColumn == ProblemColumn.INSPECCION) if (sortAsc) " ▲" else " ▼" else ""}")
-            }
-            cell(2, Modifier.clickable { toggleSort(ProblemColumn.TIPO) }) {
-                Text("${stringResource(com.example.etic.R.string.col_tipo)}${if (sortColumn == ProblemColumn.TIPO) if (sortAsc) " ▲" else " ▼" else ""}")
-            }
-            cell(2, Modifier.clickable { toggleSort(ProblemColumn.ESTATUS) }) {
-                Text("${stringResource(com.example.etic.R.string.col_estatus)}${if (sortColumn == ProblemColumn.ESTATUS) if (sortAsc) " ▲" else " ▼" else ""}")
-            }
-            cell(1, Modifier.clickable { toggleSort(ProblemColumn.CRONICO) }) {
-                Text("${stringResource(com.example.etic.R.string.col_cronico)}${if (sortColumn == ProblemColumn.CRONICO) if (sortAsc) " ▲" else " ▼" else ""}")
-            }
-            cell(1, Modifier.clickable { toggleSort(ProblemColumn.TEMP_C) }) {
-                Text("${stringResource(com.example.etic.R.string.col_temp_c)}${if (sortColumn == ProblemColumn.TEMP_C) if (sortAsc) " ▲" else " ▼" else ""}")
-            }
-            cell(1, Modifier.clickable { toggleSort(ProblemColumn.DELTA_T) }) {
-                Text("${stringResource(com.example.etic.R.string.col_delta_t_c)}${if (sortColumn == ProblemColumn.DELTA_T) if (sortAsc) " ▲" else " ▼" else ""}")
-            }
-            cell(2, Modifier.clickable { toggleSort(ProblemColumn.SEVERIDAD) }) {
-                Text("${stringResource(com.example.etic.R.string.col_severidad)}${if (sortColumn == ProblemColumn.SEVERIDAD) if (sortAsc) " ▲" else " ▼" else ""}")
-            }
-            cell(2, Modifier.clickable { toggleSort(ProblemColumn.EQUIPO) }) {
-                Text("${stringResource(com.example.etic.R.string.col_equipo)}${if (sortColumn == ProblemColumn.EQUIPO) if (sortAsc) " ▲" else " ▼" else ""}")
-            }
-            cell(3, Modifier.clickable { toggleSort(ProblemColumn.COMENTARIOS) }) {
-                Text("${stringResource(com.example.etic.R.string.col_comentarios)}${if (sortColumn == ProblemColumn.COMENTARIOS) if (sortAsc) " ▲" else " ▼" else ""}")
-            }
-            cell(1) { Text(stringResource(com.example.etic.R.string.col_op)) }
-        }
-        Divider(thickness = DIVIDER_THICKNESS)
-        if (sortedProblems.isEmpty()) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(stringResource(com.example.etic.R.string.msg_sin_problemas)) }
-        } else {
-            LazyColumn(Modifier.fillMaxSize(), state = listState) {
-                items(sortedProblems, key = { it.id }) { p ->
-                    Row(
-                        Modifier
+            Column(Modifier.widthIn(min = tableMinWidth)) {
+
+                // ───────── HEADER ─────────
+                Row(Modifier.fillMaxWidth()) {
+
+                    headerCell(wNo, cNo, Modifier.clickable { toggleSort(ProblemColumn.NUMERO) }) {
+                        SortHeader(
+                            label = "No.",
+                            column = ProblemColumn.NUMERO,
+                            sortColumn = sortColumn,
+                            sortAsc = sortAsc
+                        )
+                    }
+
+                    headerCell(wFecha, cFecha, Modifier.clickable { toggleSort(ProblemColumn.FECHA) }) {
+                        SortHeader(
+                            label = stringResource(com.example.etic.R.string.col_fecha),
+                            column = ProblemColumn.FECHA,
+                            sortColumn = sortColumn,
+                            sortAsc = sortAsc
+                        )
+                    }
+
+                    headerCell(wInspeccion, cInspeccion, Modifier.clickable { toggleSort(ProblemColumn.INSPECCION) }) {
+                        SortHeader(
+                            label = stringResource(com.example.etic.R.string.col_num_inspeccion),
+                            column = ProblemColumn.INSPECCION,
+                            sortColumn = sortColumn,
+                            sortAsc = sortAsc
+                        )
+                    }
+
+                    headerCell(wTipo, cTipo, Modifier.clickable { toggleSort(ProblemColumn.TIPO) }) {
+                        SortHeader(
+                            label = stringResource(com.example.etic.R.string.col_tipo),
+                            column = ProblemColumn.TIPO,
+                            sortColumn = sortColumn,
+                            sortAsc = sortAsc
+                        )
+                    }
+
+                    headerCell(wEstatus, cEstatus, Modifier.clickable { toggleSort(ProblemColumn.ESTATUS) }) {
+                        SortHeader(
+                            label = stringResource(com.example.etic.R.string.col_estatus),
+                            column = ProblemColumn.ESTATUS,
+                            sortColumn = sortColumn,
+                            sortAsc = sortAsc
+                        )
+                    }
+
+                    headerCell(wCronico, cCronico, Modifier.clickable { toggleSort(ProblemColumn.CRONICO) }) {
+                        SortHeader(
+                            label = stringResource(com.example.etic.R.string.col_cronico),
+                            column = ProblemColumn.CRONICO,
+                            sortColumn = sortColumn,
+                            sortAsc = sortAsc
+                        )
+                    }
+
+                    headerCell(wTempC, cTempC, Modifier.clickable { toggleSort(ProblemColumn.TEMP_C) }) {
+                        SortHeader(
+                            label = stringResource(com.example.etic.R.string.col_temp_c),
+                            column = ProblemColumn.TEMP_C,
+                            sortColumn = sortColumn,
+                            sortAsc = sortAsc
+                        )
+                    }
+
+                    headerCell(wDeltaT, cDeltaT, Modifier.clickable { toggleSort(ProblemColumn.DELTA_T) }) {
+                        SortHeader(
+                            label = stringResource(com.example.etic.R.string.col_delta_t_c),
+                            column = ProblemColumn.DELTA_T,
+                            sortColumn = sortColumn,
+                            sortAsc = sortAsc
+                        )
+                    }
+
+                    headerCell(wSeveridad, cSeveridad, Modifier.clickable { toggleSort(ProblemColumn.SEVERIDAD) }) {
+                        SortHeader(
+                            label = stringResource(com.example.etic.R.string.col_severidad),
+                            column = ProblemColumn.SEVERIDAD,
+                            sortColumn = sortColumn,
+                            sortAsc = sortAsc
+                        )
+                    }
+
+                    headerCell(wEquipo, cEquipo, Modifier.clickable { toggleSort(ProblemColumn.EQUIPO) }) {
+                        SortHeader(
+                            label = stringResource(com.example.etic.R.string.col_equipo),
+                            column = ProblemColumn.EQUIPO,
+                            sortColumn = sortColumn,
+                            sortAsc = sortAsc
+                        )
+                    }
+
+                    /*headerCell(wComentarios, cComentarios, Modifier.clickable { toggleSort(ProblemColumn.COMENTARIOS) }) {
+                        SortHeader(
+                            label = stringResource(com.example.etic.R.string.col_comentarios),
+                            column = ProblemColumn.COMENTARIOS,
+                            sortColumn = sortColumn,
+                            sortAsc = sortAsc
+                        )
+                    }*/
+
+                    headerCell(wComentarios, cComentarios) {
+                        Text(stringResource(com.example.etic.R.string.col_comentarios))
+                    }
+
+                    headerCell(wOp, cOp) {
+                        Text(stringResource(com.example.etic.R.string.col_op))
+                    }
+                }
+
+                Divider(thickness = DIVIDER_THICKNESS)
+
+                // ───────── BODY ─────────
+                if (sortedProblems.isEmpty()) {
+                    Box(
+                        modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 6.dp, horizontal = 8.dp)
-                            .pointerInput(p.id) {
-                                detectTapGestures(onDoubleTap = { onDoubleTap?.invoke(p) })
-                            }
+                            .padding(16.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        cell(1) { Text("${p.no}") }
-                        cell(2) { Text(p.fecha.format(PROBLEM_DATE_FORMATTER)) }
-                        cell(2) { Text(p.numInspeccion) }
-                        cell(2) { Text(p.tipo) }
-                        cell(2) { Text(p.estatus) }
-                        cell(1) { Text(if (p.cronico) "SI" else "NO") }
-                        cell(1) { Text(p.tempC.toString()) }
-                        cell(1) { Text(p.deltaTC.toString()) }
-                        cell(2) { Text(p.severidad) }
-                        cell(2) { Text(p.equipo) }
-                        cell(3) { Text(p.comentarios) }
-                        cell(1) {
-                            IconButton(onClick = { onDelete(p) }) {
-                                Icon(Icons.Outlined.Delete, contentDescription = "Eliminar")
+                        Text(stringResource(com.example.etic.R.string.msg_sin_problemas))
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        state = listState
+                    ) {
+                        items(sortedProblems, key = { it.id }) { p ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 6.dp)
+                                    .pointerInput(p.id) {
+                                        detectTapGestures(onDoubleTap = { onDoubleTap?.invoke(p) })
+                                    }
+                            ) {
+                                cellFixed(wNo) { Text("${p.no}") }
+                                cellFixed(wFecha) { Text(p.fecha.format(PROBLEM_DATE_FORMATTER)) }
+                                cellFixed(wInspeccion) { Text(p.numInspeccion) }
+                                cellFixed(wTipo) { Text(p.tipo) }
+                                cellFixed(wEstatus) { Text(p.estatus) }
+                                cellFixed(wCronico) { Text(if (p.cronico) "SI" else "NO") }
+                                cellFixed(wTempC) { Text(p.tempC.toString()) }
+                                cellFixed(wDeltaT) { Text(p.deltaTC.toString()) }
+                                cellFixed(wSeveridad) { Text(p.severidad) }
+                                cellFixed(wEquipo) { Text(p.equipo) }
+                                cellFixed(wComentarios) { Text(p.comentarios) }
+                                cellFixed(wOp) {
+                                    IconButton(onClick = { onDelete(p) }) {
+                                        Icon(Icons.Outlined.Delete, contentDescription = "Eliminar")
+                                    }
+                                }
                             }
+                            Divider(thickness = DIVIDER_THICKNESS)
                         }
                     }
-                    Divider(thickness = DIVIDER_THICKNESS)
                 }
             }
+        }
+    }
+}
+
+// ─────────────────────────────
+// Header con flecha delgada (Icon)
+// ─────────────────────────────
+@Composable
+private fun SortHeader(
+    label: String,
+    column: ProblemColumn,
+    sortColumn: ProblemColumn,
+    sortAsc: Boolean
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f)
+        )
+
+        if (sortColumn == column) {
+            Icon(
+                imageVector = if (sortAsc) Icons.Filled.ArrowDropUp else Icons.Filled.ArrowDropDown,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(15.dp) // 👈 más delgada / ocupa menos
+            )
         }
     }
 }

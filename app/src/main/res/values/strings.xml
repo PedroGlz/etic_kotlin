@@ -20,7 +20,7 @@
     <string name="col_severidad">Severidad</string>
     <string name="col_equipo">Equipo</string>
     <string name="col_comentarios">Comentarios</string>
-    <string name="col_op">Op</string>
+    <string name="col_op"></string>
     <string name="tab_problemas">Listado de problemas</string>
     <string name="tab_baseline">Listado Base Line</string>
     <string name="msg_sin_problemas">Sin problemas</string>
