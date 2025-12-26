@@ -50,9 +50,9 @@ private fun scaledTypography(base: Typography, scale: Float): Typography = base.
 fun typographyFor(option: FontSizeOption): Typography {
     val base = BaseTypography // base definida arriba (equivale a "Grande")
     val scale = when (option) {
-        FontSizeOption.Large -> 0.9f   // tamaño actual
-        FontSizeOption.Medium -> 0.8f  // un poco más pequeño
-        FontSizeOption.Small -> 0.7f   // aún más pequeño
+        FontSizeOption.Large -> 0.8f   // tamaño actual
+        FontSizeOption.Medium -> 0.7f  // un poco más pequeño
+        FontSizeOption.Small -> 0.6f   // aún más pequeño
     }
     return if (scale == 1.0f) base else scaledTypography(base, scale)
 }

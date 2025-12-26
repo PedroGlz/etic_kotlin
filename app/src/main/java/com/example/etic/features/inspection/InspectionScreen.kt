@@ -3703,7 +3703,7 @@ private fun ProblemsTable(
     val wSeveridad = 97.dp
     val wEquipo = 160.dp
     val wComentarios = 300.dp
-    val wOp = 30.dp
+    val wOp = 27.dp
 
     val tableMinWidth =
         wNo + wFecha + wInspeccion + wTipo + wEstatus + wCronico +
