@@ -3642,32 +3642,34 @@ private fun ListTabs(
     var tab by rememberSaveable { mutableStateOf(0) }
 
     Column(Modifier.fillMaxSize()) {
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .padding(bottom = 8.dp),
-            horizontalArrangement = Arrangement.End,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Button(
-                onClick = { onNewProblem?.invoke() },
-                enabled = onNewProblem != null,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.error,
-                    contentColor = MaterialTheme.colorScheme.onError
-                )
-            ) {
-                Icon(Icons.Filled.Build, contentDescription = null)
-                Spacer(Modifier.width(8.dp))
-                Text("Nuevo Problema")
-            }
-        }
         TabRow(selectedTabIndex = tab) {
             Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text(stringResource(com.example.etic.R.string.tab_problemas)) })
             Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text(stringResource(com.example.etic.R.string.tab_baseline)) })
         }
         Divider(thickness = DIVIDER_THICKNESS)
         val showProblems = tab == 0
+        if (showProblems) {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Button(
+                    onClick = { onNewProblem?.invoke() },
+                    enabled = onNewProblem != null,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error,
+                        contentColor = MaterialTheme.colorScheme.onError
+                    )
+                ) {
+                    Icon(Icons.Filled.Build, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Nuevo Problema")
+                }
+            }
+        }
         Box(Modifier.fillMaxSize()) {
             ProblemsTableFromDatabase(
                 selectedId = node?.id,
