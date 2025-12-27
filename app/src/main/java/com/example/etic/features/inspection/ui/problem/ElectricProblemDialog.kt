@@ -114,6 +114,14 @@ fun ElectricProblemDialog(
 ) {
     key(dialogKey) {
         val initial = initialFormData ?: ElectricProblemFormData()
+        val initialFailureLabel = failureOptions.firstOrNull { it.first == initial.failureId }?.second?.takeIf { it.isNotBlank() }
+        val initialPhaseLabel = phaseOptions.firstOrNull { it.first == initial.componentPhaseId }?.second?.takeIf { it.isNotBlank() }
+        val initialAutoCommentText = buildList {
+            initialFailureLabel?.let { add(it) }
+            initialPhaseLabel?.let { add(it) }
+            equipmentName.takeUnless { it.isBlank() }?.let { add(it) }
+        }.joinToString(", ")
+        val initialCommentWasAuto = initial.comments.isNotBlank() && initial.comments == initialAutoCommentText
         Dialog(
             onDismissRequest = onDismiss,
             properties = DialogProperties(
@@ -164,8 +172,12 @@ fun ElectricProblemDialog(
                 var circuitVoltage by rememberSaveable { mutableStateOf(initial.circuitVoltage) }
 
                 var comments by rememberSaveable { mutableStateOf(initial.comments) }
-                var commentsTouched by rememberSaveable { mutableStateOf(initial.comments.isNotBlank()) }
-                var lastAutoComment by rememberSaveable { mutableStateOf(initial.comments) }
+                var commentsTouched by rememberSaveable {
+                    mutableStateOf(initial.comments.isNotBlank() && !initialCommentWasAuto)
+                }
+                var lastAutoComment by rememberSaveable {
+                    mutableStateOf(if (initialCommentWasAuto) initial.comments else "")
+                }
 
             val failureLabel = failureOptions.firstOrNull { it.first == failureId }?.second?.takeIf { it.isNotBlank() }
             val phaseLabel = phaseOptions.firstOrNull { it.first == componentPhaseId }?.second?.takeIf { it.isNotBlank() }
