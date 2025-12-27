@@ -241,6 +241,10 @@ fun MechanicalProblemDialog(
                         if (emissivityChecked && emissivity.isBlank()) "Fuera del rango válido" else null
                 }
 
+                val thermalError = thermalImageName.isBlank()
+                val digitalError = digitalImageName.isBlank()
+                val imagesProvided = !thermalError && !digitalError
+
                 Column(
                     Modifier
                         .widthIn(min = DIALOG_MIN_WIDTH, max = DIALOG_MAX_WIDTH)
@@ -526,7 +530,8 @@ fun MechanicalProblemDialog(
                                         onPickInitial = onThermalPickInitial,
                                         onFolder = onThermalFolder,
                                         onCamera = onThermalCamera,
-                                        modifier = Modifier.weight(1f)
+                                        modifier = Modifier.weight(1f),
+                                        isError = thermalError
                                     )
                                     ImageInputColumn(
                                         title = "",
@@ -538,7 +543,8 @@ fun MechanicalProblemDialog(
                                         onPickInitial = onDigitalPickInitial,
                                         onFolder = onDigitalFolder,
                                         onCamera = onDigitalCamera,
-                                        modifier = Modifier.weight(1f)
+                                        modifier = Modifier.weight(1f),
+                                        isError = digitalError
                                     )
                                 }
                             }
@@ -552,7 +558,8 @@ fun MechanicalProblemDialog(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         TextButton(onClick = onDismiss) { Text("Cancelar") }
-                        val canSubmit = continueEnabled && emissivityError == null && requiredFieldsFilled
+                        val canSubmit =
+                            continueEnabled && emissivityError == null && requiredFieldsFilled && imagesProvided
                         Button(
                             onClick = {
                 onContinue(
@@ -1007,7 +1014,8 @@ private fun ImageInputColumn(
     onPickInitial: () -> Unit,
     onFolder: () -> Unit,
     onCamera: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isError: Boolean = false
 ) {
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         if (title.isNotBlank()) Text(title, style = MaterialTheme.typography.labelMedium)
@@ -1025,6 +1033,15 @@ private fun ImageInputColumn(
             onFolderClick = onFolder,
             onCameraClick = onCamera
         )
+
+        if (isError) {
+            Text(
+                text = "Cargar imagen requerida",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(start = 4.dp, top = 4.dp)
+            )
+        }
 
         ImagePreviewBox(fileName = value)
     }

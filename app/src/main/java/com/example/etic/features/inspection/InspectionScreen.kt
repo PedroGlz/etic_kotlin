@@ -775,6 +775,10 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     Toast.makeText(ctx, "Selecciona un equipo.", Toast.LENGTH_SHORT).show()
                     return
                 }
+                if (pendingThermalImage.isBlank() || pendingDigitalImage.isBlank()) {
+                    Toast.makeText(ctx, "Carga las imágenes térmica y digital para guardar el problema.", Toast.LENGTH_SHORT).show()
+                    return
+                }
                 val typeId = ELECTRIC_PROBLEM_TYPE_ID ?: "0D32B331-76C3-11D3-82BF-00104BC75DC2"
                 val numero = pendingProblemNumber.toIntOrNull() ?: 1
                 scope.launch {
@@ -947,6 +951,10 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                 val locationId = pendingProblemUbicacionId ?: selectedId
                 if (locationId.isNullOrBlank()) {
                     Toast.makeText(ctx, "Selecciona un equipo.", Toast.LENGTH_SHORT).show()
+                    return
+                }
+                if (pendingThermalImage.isBlank() || pendingDigitalImage.isBlank()) {
+                    Toast.makeText(ctx, "Carga las imágenes térmica y digital para guardar el problema.", Toast.LENGTH_SHORT).show()
                     return
                 }
                 val typeId = MECHANICAL_PROBLEM_TYPE_ID ?: "0D32B334-76C3-11D3-82BF-00104BC75DC2"
