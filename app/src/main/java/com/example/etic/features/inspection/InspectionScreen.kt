@@ -51,6 +51,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
@@ -143,6 +144,31 @@ private val PROBLEM_TYPE_IDS = mapOf(
     "Visual" to "0D32B333-76C3-11D3-82BF-00104BC75DC2",
     "Mecánico" to "0D32B334-76C3-11D3-82BF-00104BC75DC2"
 )
+
+private const val PROBLEM_STATUS_ALL = "0"
+private const val PROBLEM_STATUS_OPEN_CURRENT = "1"
+private const val PROBLEM_STATUS_OPEN_PAST = "2"
+private const val PROBLEM_STATUS_OPEN_ALL = "3"
+private const val PROBLEM_STATUS_CLOSED = "4"
+
+private val PROBLEM_TYPE_FILTER_OPTIONS =
+    listOf("" to "Todos") + PROBLEM_TYPE_IDS.map { (label, id) -> id to label.canonicalProblemLabel() }
+
+private val PROBLEM_STATUS_FILTER_OPTIONS = listOf(
+    PROBLEM_STATUS_ALL to "Todos",
+    PROBLEM_STATUS_OPEN_CURRENT to "Abiertos, actuales",
+    PROBLEM_STATUS_OPEN_PAST to "Abiertos, pasado",
+    PROBLEM_STATUS_OPEN_ALL to "Abiertos, todos",
+    PROBLEM_STATUS_CLOSED to "Cerrados"
+)
+
+private val PROBLEM_FILTER_FIELD_HEIGHT = 28.dp
+private val PROBLEM_FILTER_FIELD_RADIUS = 4.dp
+private val PROBLEM_FILTER_FIELD_BORDER = 1.dp
+private val PROBLEM_FILTER_FIELD_HORIZONTAL_PADDING = 6.dp
+private val PROBLEM_FILTER_FIELD_VERTICAL_PADDING = 4.dp
+private val PROBLEM_FILTER_CHECKBOX_GAP = 6.dp
+private val PROBLEM_FILTER_ROW_SPACING = 8.dp
 
 private val VISUAL_PROBLEM_TYPE_ID = PROBLEM_TYPE_IDS["Visual"]
 private val ELECTRIC_PROBLEM_TYPE_ID = PROBLEM_TYPE_IDS["Eléctrico"]
@@ -3648,14 +3674,45 @@ private fun ListTabs(
         }
         Divider(thickness = DIVIDER_THICKNESS)
         val showProblems = tab == 0
+        var typeFilterEnabled by rememberSaveable { mutableStateOf(false) }
+        var typeFilterId by rememberSaveable {
+            mutableStateOf(PROBLEM_TYPE_FILTER_OPTIONS.firstOrNull()?.first.orEmpty())
+        }
+        var statusFilterEnabled by rememberSaveable { mutableStateOf(true) }
+        var statusFilterId by rememberSaveable {
+            mutableStateOf(PROBLEM_STATUS_OPEN_PAST)
+        }
         if (showProblems) {
             Row(
                 Modifier
                     .fillMaxWidth()
                     .padding(bottom = 8.dp),
-                horizontalArrangement = Arrangement.End,
+                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                Row(
+                    modifier = Modifier.weight(1f),
+                    horizontalArrangement = Arrangement.spacedBy(PROBLEM_FILTER_ROW_SPACING),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    ProblemFilterRow(
+                        label = "Tipo",
+                        checked = typeFilterEnabled,
+                        onCheckedChange = { typeFilterEnabled = it },
+                        options = PROBLEM_TYPE_FILTER_OPTIONS,
+                        selectedId = typeFilterId,
+                        onSelected = { typeFilterId = it }
+                    )
+                    ProblemFilterRow(
+                        label = "Estatus",
+                        checked = statusFilterEnabled,
+                        onCheckedChange = { statusFilterEnabled = it },
+                        options = PROBLEM_STATUS_FILTER_OPTIONS,
+                        selectedId = statusFilterId,
+                        onSelected = { statusFilterId = it }
+                    )
+                }
+
                 Button(
                     onClick = { onNewProblem?.invoke() },
                     enabled = onNewProblem != null,
@@ -3674,21 +3731,107 @@ private fun ListTabs(
             ProblemsTableFromDatabase(
                 selectedId = node?.id,
                 refreshTick = problemsRefreshTick,
+                typeFilterEnabled = typeFilterEnabled,
+                typeFilterId = typeFilterId,
+                statusFilterEnabled = statusFilterEnabled,
+                statusFilterId = statusFilterId,
                 modifier = Modifier
                     .fillMaxSize()
                     .alpha(if (showProblems) 1f else 0f)
                     .zIndex(if (showProblems) 1f else 0f),
                 onProblemDoubleTap = onProblemDoubleTap
             )
-            BaselineTableFromDatabase(
-                selectedId = node?.id,
-                refreshTick = baselineRefreshTick,
-                onBaselineChanged = onBaselineChanged,
-                modifier = Modifier
-                    .fillMaxSize()
-                    .alpha(if (showProblems) 0f else 1f)
-                    .zIndex(if (showProblems) 0f else 1f)
+        BaselineTableFromDatabase(
+            selectedId = node?.id,
+            refreshTick = baselineRefreshTick,
+            onBaselineChanged = onBaselineChanged,
+            modifier = Modifier
+                .fillMaxSize()
+                .alpha(if (showProblems) 0f else 1f)
+                .zIndex(if (showProblems) 0f else 1f)
             )
+        }
+    }
+}
+
+@Composable
+private fun ProblemFilterRow(
+    label: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    options: List<Pair<String, String>>,
+    selectedId: String?,
+    onSelected: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val selectedLabel = options.firstOrNull { it.first == selectedId }?.second.orEmpty()
+
+    Row(
+        modifier = modifier,
+        horizontalArrangement = Arrangement.spacedBy(PROBLEM_FILTER_CHECKBOX_GAP),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Checkbox(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            modifier = Modifier
+                .wrapContentWidth()
+                .padding(0.dp)
+        )
+
+        Column(
+            modifier = Modifier
+                .widthIn(min = 150.dp, max = 220.dp)
+        ) {
+            Text(text = label, style = MaterialTheme.typography.labelSmall)
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(PROBLEM_FILTER_FIELD_HEIGHT)
+                    .border(
+                        PROBLEM_FILTER_FIELD_BORDER,
+                        MaterialTheme.colorScheme.outline,
+                        RoundedCornerShape(PROBLEM_FILTER_FIELD_RADIUS)
+                    )
+                    .padding(
+                        horizontal = PROBLEM_FILTER_FIELD_HORIZONTAL_PADDING,
+                        vertical = PROBLEM_FILTER_FIELD_VERTICAL_PADDING
+                    )
+                    .clickable { expanded = true },
+                contentAlignment = Alignment.CenterStart
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = if (selectedLabel.isNotBlank()) selectedLabel else "Seleccionar",
+                        style = MaterialTheme.typography.bodySmall,
+                        modifier = Modifier.weight(1f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = "▾",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                options.forEach { (id, text) ->
+                    DropdownMenuItem(
+                        text = { Text(text = text.ifBlank { id }, style = MaterialTheme.typography.bodySmall) },
+                        onClick = {
+                            expanded = false
+                            onSelected(id)
+                        }
+                    )
+                }
+            }
         }
     }
 }
@@ -4115,6 +4258,10 @@ private fun PreviewInspection() { EticTheme { InspectionScreen() } }
 private fun ProblemsTableFromDatabase(
     selectedId: String?,
     refreshTick: Int,
+    typeFilterEnabled: Boolean,
+    typeFilterId: String?,
+    statusFilterEnabled: Boolean,
+    statusFilterId: String,
     modifier: Modifier = Modifier,
     onProblemDoubleTap: ((Problem) -> Unit)? = null
 ) {
@@ -4138,7 +4285,7 @@ private fun ProblemsTableFromDatabase(
             }
         } catch (_: Exception) { emptyList() }
         val ubicaciones = try { ubicacionDao.getAll() } catch (_: Exception) { emptyList() }
-        val filteredRows = when {
+        val locationFilteredRows = when {
             selectedId == null -> rows
             selectedId!!.startsWith("root:") -> rows
             else -> {
@@ -4146,12 +4293,39 @@ private fun ProblemsTableFromDatabase(
                 rows.filter { r -> r.idUbicacion != null && allowed.contains(r.idUbicacion!!) }
             }
         }
+        val typeFilteredRows = if (typeFilterEnabled && typeFilterId?.isNotBlank() == true) {
+            locationFilteredRows.filter { row ->
+                row.idTipoInspeccion?.equals(typeFilterId, ignoreCase = true) == true
+            }
+        } else locationFilteredRows
+        val currentInspectionId = currentInspection?.idInspeccion
+
+        fun Problema.isOpen(): Boolean =
+            !(estatusProblema?.contains("cerrado", ignoreCase = true) ?: false)
+
+        fun Problema.belongsToCurrentInspection(): Boolean =
+            !currentInspectionId.isNullOrBlank() && idInspeccion?.equals(currentInspectionId, ignoreCase = true) == true
+
+        val statusFilteredRows = if (statusFilterEnabled && statusFilterId != PROBLEM_STATUS_ALL) {
+            when (statusFilterId) {
+                PROBLEM_STATUS_OPEN_CURRENT ->
+                    typeFilteredRows.filter { it.isOpen() && it.belongsToCurrentInspection() }
+                PROBLEM_STATUS_OPEN_PAST ->
+                    typeFilteredRows.filter { it.isOpen() && !it.belongsToCurrentInspection() }
+                PROBLEM_STATUS_OPEN_ALL ->
+                    typeFilteredRows.filter { it.isOpen() }
+                PROBLEM_STATUS_CLOSED ->
+                    typeFilteredRows.filter { !it.isOpen() }
+                else -> typeFilteredRows
+            }
+        } else typeFilteredRows
+
         val inspMap = try { inspDao.getAll().associateBy { it.idInspeccion } } catch (_: Exception) { emptyMap() }
         val sevMap = try { sevDao.getAll().associateBy { it.idSeveridad } } catch (_: Exception) { emptyMap() }
         val eqMap = try { eqDao.getAll().associateBy { it.idEquipo } } catch (_: Exception) { emptyMap() }
         val ubicMap = ubicaciones.associateBy { it.idUbicacion }
         val tipoMap = try { tipoInspDao.getAll().associateBy { it.idTipoInspeccion } } catch (_: Exception) { emptyMap() }
-        value = filteredRows.map { r ->
+        value = statusFilteredRows.map { r ->
             val fecha = runCatching {
                 val raw = r.fechaCreacion?.takeIf { it.isNotBlank() }
                     ?: r.irFileDate?.takeIf { it.isNotBlank() }
