@@ -3708,15 +3708,27 @@ private fun ListTabs(
                 Button(
                     onClick = { onNewProblem?.invoke() },
                     enabled = onNewProblem != null,
+                    shape = RoundedCornerShape(4.dp), // casi cuadrado
+                    contentPadding = PaddingValues(
+                        horizontal = 10.dp,
+                        vertical = 0.dp   // ↓ reduce altura
+                    ),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.error,
                         contentColor = MaterialTheme.colorScheme.onError
                     )
                 ) {
-                    Icon(Icons.Filled.Build, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Nuevo Problema")
+                    Icon(
+                        imageVector = Icons.Filled.Build,
+                        contentDescription = null,
+                        modifier = Modifier.size(13.dp) // ↓ icono más pequeño
+                    )
+
+                    Spacer(Modifier.width(6.dp))
+
+                    Text(text = "Nuevo Problema")
                 }
+
             }
         }
         Box(Modifier.fillMaxSize()) {
