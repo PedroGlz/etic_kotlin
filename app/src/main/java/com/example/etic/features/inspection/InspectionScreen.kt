@@ -3699,7 +3699,7 @@ private fun ListTabs(
             mutableStateOf(PROBLEM_TYPE_FILTER_OPTIONS.firstOrNull()?.first.orEmpty())
         }
         var statusFilterId by rememberSaveable {
-            mutableStateOf(PROBLEM_STATUS_OPEN_PAST)
+            mutableStateOf(PROBLEM_STATUS_ALL)
         }
         if (showProblems) {
             Row(
@@ -4315,23 +4315,27 @@ private fun ProblemsTableFromDatabase(
             }
         } else locationFilteredRows
         val currentInspectionId = currentInspection?.idInspeccion
-
-        fun Problema.isOpen(): Boolean =
-            !(estatusProblema?.contains("cerrado", ignoreCase = true) ?: false)
-
-        fun Problema.belongsToCurrentInspection(): Boolean =
-            !currentInspectionId.isNullOrBlank() && idInspeccion?.equals(currentInspectionId, ignoreCase = true) == true
+        val openRows = typeFilteredRows.filter {
+            it.estatusProblema?.equals("Abierto", ignoreCase = true) == true
+        }
+        val closedRows = typeFilteredRows.filter {
+            it.estatusProblema?.equals("Cerrado", ignoreCase = true) == true
+        }
 
         val statusFilteredRows = if (statusFilterId != PROBLEM_STATUS_ALL) {
             when (statusFilterId) {
                 PROBLEM_STATUS_OPEN_CURRENT ->
-                    typeFilteredRows.filter { it.isOpen() && it.belongsToCurrentInspection() }
+                    openRows.filter { row ->
+                        val isCurrent = row.idInspeccion?.equals(currentInspectionId, ignoreCase = true) == true
+                        !currentInspectionId.isNullOrBlank() && isCurrent
+                    }
                 PROBLEM_STATUS_OPEN_PAST ->
-                    typeFilteredRows.filter { it.isOpen() && !it.belongsToCurrentInspection() }
-                PROBLEM_STATUS_OPEN_ALL ->
-                    typeFilteredRows.filter { it.isOpen() }
-                PROBLEM_STATUS_CLOSED ->
-                    typeFilteredRows.filter { !it.isOpen() }
+                    openRows.filter { row ->
+                        val isCurrent = row.idInspeccion?.equals(currentInspectionId, ignoreCase = true) == true
+                        currentInspectionId.isNullOrBlank() || !isCurrent
+                    }
+                PROBLEM_STATUS_OPEN_ALL -> openRows
+                PROBLEM_STATUS_CLOSED -> closedRows
                 else -> typeFilteredRows
             }
         } else typeFilteredRows
