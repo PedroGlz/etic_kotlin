@@ -28,6 +28,7 @@ data class Problem(
     val numInspeccion: String,
     val tipo: String,
     val tipoId: String?,
+    val inspectionId: String?,
     val estatus: String,
     val cronico: Boolean,
     val tempC: Double,

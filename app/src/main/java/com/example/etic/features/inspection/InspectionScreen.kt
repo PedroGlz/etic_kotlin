@@ -3857,6 +3857,7 @@ private fun ProblemsTable(
     onDelete: (Problem) -> Unit,
     onDoubleTap: ((Problem) -> Unit)? = null
 ) {
+    val currentInspectionId = LocalCurrentInspection.current?.idInspeccion
     // ─────────────────────────────
     // Anchos fijos (Opción A)
     // ─────────────────────────────
@@ -4114,8 +4115,12 @@ private fun ProblemsTable(
                                 cellFixed(wEquipo) { Text(p.equipo) }
                                 cellFixed(wComentarios) { Text(p.comentarios) }
                                 cellFixed(wOp) {
-                                    IconButton(onClick = { onDelete(p) }) {
-                                        Icon(Icons.Outlined.Delete, contentDescription = "Eliminar")
+                                    val isOpen = p.estatus.equals("Abierto", ignoreCase = true)
+                                    val belongsToCurrentInspection = p.inspectionId?.equals(currentInspectionId, ignoreCase = true) == true
+                                    if (isOpen && belongsToCurrentInspection) {
+                                        IconButton(onClick = { onDelete(p) }) {
+                                            Icon(Icons.Outlined.Delete, contentDescription = "Eliminar")
+                                        }
                                     }
                                 }
                             }
@@ -4366,6 +4371,7 @@ private fun ProblemsTableFromDatabase(
                 numInspeccion = numInspDisplay,
                 tipo = tipoDisplay,
                 tipoId = r.idTipoInspeccion,
+                inspectionId = r.idInspeccion,
                 estatus = r.estatusProblema ?: "",
                 cronico = (r.esCronico ?: "").equals("SI", ignoreCase = true),
                 tempC = r.problemTemperature ?: 0.0,
