@@ -3699,7 +3699,7 @@ private fun ListTabs(
             mutableStateOf(PROBLEM_TYPE_FILTER_OPTIONS.firstOrNull()?.first.orEmpty())
         }
         var statusFilterId by rememberSaveable {
-            mutableStateOf(PROBLEM_STATUS_ALL)
+            mutableStateOf(PROBLEM_STATUS_OPEN_PAST)
         }
         if (showProblems) {
             Row(
