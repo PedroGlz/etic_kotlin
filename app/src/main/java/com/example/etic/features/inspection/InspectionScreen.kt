@@ -51,7 +51,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
@@ -167,7 +166,6 @@ private val PROBLEM_FILTER_FIELD_RADIUS = 4.dp
 private val PROBLEM_FILTER_FIELD_BORDER = 1.dp
 private val PROBLEM_FILTER_FIELD_HORIZONTAL_PADDING = 6.dp
 private val PROBLEM_FILTER_FIELD_VERTICAL_PADDING = 4.dp
-private val PROBLEM_FILTER_CHECKBOX_GAP = 6.dp
 private val PROBLEM_FILTER_ROW_SPACING = 8.dp
 
 private val VISUAL_PROBLEM_TYPE_ID = PROBLEM_TYPE_IDS["Visual"]
@@ -3674,11 +3672,9 @@ private fun ListTabs(
         }
         Divider(thickness = DIVIDER_THICKNESS)
         val showProblems = tab == 0
-        var typeFilterEnabled by rememberSaveable { mutableStateOf(false) }
         var typeFilterId by rememberSaveable {
             mutableStateOf(PROBLEM_TYPE_FILTER_OPTIONS.firstOrNull()?.first.orEmpty())
         }
-        var statusFilterEnabled by rememberSaveable { mutableStateOf(true) }
         var statusFilterId by rememberSaveable {
             mutableStateOf(PROBLEM_STATUS_OPEN_PAST)
         }
@@ -3697,16 +3693,12 @@ private fun ListTabs(
                 ) {
                     ProblemFilterRow(
                         label = "Tipo",
-                        checked = typeFilterEnabled,
-                        onCheckedChange = { typeFilterEnabled = it },
                         options = PROBLEM_TYPE_FILTER_OPTIONS,
                         selectedId = typeFilterId,
                         onSelected = { typeFilterId = it }
                     )
                     ProblemFilterRow(
                         label = "Estatus",
-                        checked = statusFilterEnabled,
-                        onCheckedChange = { statusFilterEnabled = it },
                         options = PROBLEM_STATUS_FILTER_OPTIONS,
                         selectedId = statusFilterId,
                         onSelected = { statusFilterId = it }
@@ -3731,9 +3723,7 @@ private fun ListTabs(
             ProblemsTableFromDatabase(
                 selectedId = node?.id,
                 refreshTick = problemsRefreshTick,
-                typeFilterEnabled = typeFilterEnabled,
                 typeFilterId = typeFilterId,
-                statusFilterEnabled = statusFilterEnabled,
                 statusFilterId = statusFilterId,
                 modifier = Modifier
                     .fillMaxSize()
@@ -3757,8 +3747,6 @@ private fun ListTabs(
 @Composable
 private fun ProblemFilterRow(
     label: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
     options: List<Pair<String, String>>,
     selectedId: String?,
     onSelected: (String) -> Unit,
@@ -3769,17 +3757,9 @@ private fun ProblemFilterRow(
 
     Row(
         modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(PROBLEM_FILTER_CHECKBOX_GAP),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Checkbox(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-            modifier = Modifier
-                .wrapContentWidth()
-                .padding(0.dp)
-        )
-
         Column(
             modifier = Modifier
                 .widthIn(min = 150.dp, max = 220.dp)
@@ -4258,9 +4238,7 @@ private fun PreviewInspection() { EticTheme { InspectionScreen() } }
 private fun ProblemsTableFromDatabase(
     selectedId: String?,
     refreshTick: Int,
-    typeFilterEnabled: Boolean,
     typeFilterId: String?,
-    statusFilterEnabled: Boolean,
     statusFilterId: String,
     modifier: Modifier = Modifier,
     onProblemDoubleTap: ((Problem) -> Unit)? = null
@@ -4293,7 +4271,7 @@ private fun ProblemsTableFromDatabase(
                 rows.filter { r -> r.idUbicacion != null && allowed.contains(r.idUbicacion!!) }
             }
         }
-        val typeFilteredRows = if (typeFilterEnabled && typeFilterId?.isNotBlank() == true) {
+        val typeFilteredRows = if (typeFilterId?.isNotBlank() == true) {
             locationFilteredRows.filter { row ->
                 row.idTipoInspeccion?.equals(typeFilterId, ignoreCase = true) == true
             }
@@ -4306,7 +4284,7 @@ private fun ProblemsTableFromDatabase(
         fun Problema.belongsToCurrentInspection(): Boolean =
             !currentInspectionId.isNullOrBlank() && idInspeccion?.equals(currentInspectionId, ignoreCase = true) == true
 
-        val statusFilteredRows = if (statusFilterEnabled && statusFilterId != PROBLEM_STATUS_ALL) {
+        val statusFilteredRows = if (statusFilterId != PROBLEM_STATUS_ALL) {
             when (statusFilterId) {
                 PROBLEM_STATUS_OPEN_CURRENT ->
                     typeFilteredRows.filter { it.isOpen() && it.belongsToCurrentInspection() }
