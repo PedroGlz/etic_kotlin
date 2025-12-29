@@ -150,8 +150,31 @@ private const val PROBLEM_STATUS_OPEN_PAST = "2"
 private const val PROBLEM_STATUS_OPEN_ALL = "3"
 private const val PROBLEM_STATUS_CLOSED = "4"
 
-private val PROBLEM_TYPE_FILTER_OPTIONS =
-    listOf("" to "Todos") + PROBLEM_TYPE_IDS.map { (label, id) -> id to label.canonicalProblemLabel() }
+private data class ProblemTypeFilter(val id: String, val label: String, val matchIds: List<String>)
+
+private val PROBLEM_TYPE_FILTERS = listOf(
+    ProblemTypeFilter("", "Todos", emptyList()),
+    ProblemTypeFilter(
+        "electrico",
+        "Eléctrico",
+        listOf(
+            "0D32B331-76C3-11D3-82BF-00104BC75DC2",
+            "0D32B332-76C3-11D3-82BF-00104BC75DC2"
+        )
+    ),
+    ProblemTypeFilter(
+        "visual",
+        "Visual",
+        listOf("0D32B333-76C3-11D3-82BF-00104BC75DC2")
+    ),
+    ProblemTypeFilter(
+        "mecanico",
+        "Mecánico",
+        listOf("0D32B334-76C3-11D3-82BF-00104BC75DC2")
+    )
+)
+
+private val PROBLEM_TYPE_FILTER_OPTIONS = PROBLEM_TYPE_FILTERS.map { it.id to it.label }
 
 private val PROBLEM_STATUS_FILTER_OPTIONS = listOf(
     PROBLEM_STATUS_ALL to "Todos",
@@ -4265,7 +4288,7 @@ private fun ProblemsTableFromDatabase(
 
     val currentInspection = LocalCurrentInspection.current
     var problemsCache by remember { mutableStateOf(emptyList<Problem>()) }
-    val uiProblems by produceState(initialValue = problemsCache, selectedId, refreshTick) {
+    val uiProblems by produceState(initialValue = problemsCache, selectedId, refreshTick, typeFilterId, statusFilterId) {
         val rows = try {
             val siteId = currentInspection?.idSitio
             if (!siteId.isNullOrBlank()) {
@@ -4283,9 +4306,12 @@ private fun ProblemsTableFromDatabase(
                 rows.filter { r -> r.idUbicacion != null && allowed.contains(r.idUbicacion!!) }
             }
         }
-        val typeFilteredRows = if (typeFilterId?.isNotBlank() == true) {
+        val selectedTypeFilter = PROBLEM_TYPE_FILTERS.firstOrNull { it.id == typeFilterId }
+            ?: PROBLEM_TYPE_FILTERS.first()
+        val typeFilteredRows = if (selectedTypeFilter.matchIds.isNotEmpty()) {
             locationFilteredRows.filter { row ->
-                row.idTipoInspeccion?.equals(typeFilterId, ignoreCase = true) == true
+                val rowId = row.idTipoInspeccion
+                rowId != null && selectedTypeFilter.matchIds.any { it.equals(rowId, ignoreCase = true) }
             }
         } else locationFilteredRows
         val currentInspectionId = currentInspection?.idInspeccion
