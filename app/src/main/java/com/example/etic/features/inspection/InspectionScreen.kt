@@ -4108,6 +4108,22 @@ private fun BaselineTable(baselines: List<Baseline>, onDelete: (Baseline) -> Uni
     fun RowScope.cell(flex: Int, modifier: Modifier = Modifier, content: @Composable () -> Unit) =
         Box(Modifier.weight(flex.toFloat()).then(modifier)) { content() }
 
+    @Composable
+    fun RowScope.headerCell(
+        flex: Int,
+        background: Color,
+        modifier: Modifier = Modifier,
+        content: @Composable () -> Unit
+    ) {
+        Box(
+            Modifier
+                .weight(flex.toFloat())
+                .background(background)
+                .padding(horizontal = 6.dp, vertical = 8.dp)
+                .then(modifier)
+        ) { content() }
+    }
+
     val listState = rememberSaveable("baseline_list_state", saver = LazyListState.Saver) { LazyListState() }
     var sortColumn by rememberSaveable { mutableStateOf(BaselineColumn.FECHA) }
     var sortAsc by rememberSaveable { mutableStateOf(true) }
@@ -4134,6 +4150,18 @@ private fun BaselineTable(baselines: List<Baseline>, onDelete: (Baseline) -> Uni
         if (sortAsc) baselines.sortedWith(comparator) else baselines.sortedWith(comparator.reversed())
     }
 
+    // Colores de cabecera alineados con la tabla de Problemas
+    val cNo = MaterialTheme.colorScheme.errorContainer
+    val cEquipo = MaterialTheme.colorScheme.tertiaryContainer
+    val cFecha = MaterialTheme.colorScheme.secondaryContainer
+    val cMta = MaterialTheme.colorScheme.surfaceVariant
+    val cTemp = MaterialTheme.colorScheme.inversePrimary
+    val cAmb = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+    val cIr = MaterialTheme.colorScheme.errorContainer
+    val cId = MaterialTheme.colorScheme.secondaryContainer
+    val cNotas = MaterialTheme.colorScheme.tertiaryContainer
+    val cOp = MaterialTheme.colorScheme.surface
+
     Column(Modifier.fillMaxSize()) {
         Row(
             Modifier
@@ -4141,34 +4169,34 @@ private fun BaselineTable(baselines: List<Baseline>, onDelete: (Baseline) -> Uni
                 .background(MaterialTheme.colorScheme.surface)
                 .padding(vertical = 8.dp, horizontal = 8.dp)
         ) {
-            cell(2, Modifier.clickable { toggleSort(BaselineColumn.INSPECCION) }) {
+            headerCell(2, cNo, Modifier.clickable { toggleSort(BaselineColumn.INSPECCION) }) {
                 Text("${stringResource(com.example.etic.R.string.col_no_inspeccion)}${if (sortColumn == BaselineColumn.INSPECCION) if (sortAsc) " ▲" else " ▼" else ""}")
             }
-            cell(2, Modifier.clickable { toggleSort(BaselineColumn.EQUIPO) }) {
+            headerCell(2, cEquipo, Modifier.clickable { toggleSort(BaselineColumn.EQUIPO) }) {
                 Text("${stringResource(com.example.etic.R.string.col_equipo)}${if (sortColumn == BaselineColumn.EQUIPO) if (sortAsc) " ▲" else " ▼" else ""}")
             }
-            cell(2, Modifier.clickable { toggleSort(BaselineColumn.FECHA) }) {
+            headerCell(2, cFecha, Modifier.clickable { toggleSort(BaselineColumn.FECHA) }) {
                 Text("${stringResource(com.example.etic.R.string.col_fecha)}${if (sortColumn == BaselineColumn.FECHA) if (sortAsc) " ▲" else " ▼" else ""}")
             }
-            cell(1, Modifier.clickable { toggleSort(BaselineColumn.MTA) }) {
+            headerCell(1, cMta, Modifier.clickable { toggleSort(BaselineColumn.MTA) }) {
                 Text("${stringResource(com.example.etic.R.string.col_mta_c)}${if (sortColumn == BaselineColumn.MTA) if (sortAsc) " ▲" else " ▼" else ""}")
             }
-            cell(1, Modifier.clickable { toggleSort(BaselineColumn.TEMP) }) {
+            headerCell(1, cTemp, Modifier.clickable { toggleSort(BaselineColumn.TEMP) }) {
                 Text("${stringResource(com.example.etic.R.string.col_temp_c)}${if (sortColumn == BaselineColumn.TEMP) if (sortAsc) " ▲" else " ▼" else ""}")
             }
-            cell(1, Modifier.clickable { toggleSort(BaselineColumn.AMB) }) {
+            headerCell(1, cAmb, Modifier.clickable { toggleSort(BaselineColumn.AMB) }) {
                 Text("${stringResource(com.example.etic.R.string.col_amb_c)}${if (sortColumn == BaselineColumn.AMB) if (sortAsc) " ▲" else " ▼" else ""}")
             }
-            cell(1, Modifier.clickable { toggleSort(BaselineColumn.IR) }) {
+            headerCell(1, cIr, Modifier.clickable { toggleSort(BaselineColumn.IR) }) {
                 Text("IR${if (sortColumn == BaselineColumn.IR) if (sortAsc) " ▲" else " ▼" else ""}")
             }
-            cell(1, Modifier.clickable { toggleSort(BaselineColumn.ID) }) {
+            headerCell(1, cId, Modifier.clickable { toggleSort(BaselineColumn.ID) }) {
                 Text("ID${if (sortColumn == BaselineColumn.ID) if (sortAsc) " ▲" else " ▼" else ""}")
             }
-            cell(3, Modifier.clickable { toggleSort(BaselineColumn.NOTAS) }) {
+            headerCell(3, cNotas, Modifier.clickable { toggleSort(BaselineColumn.NOTAS) }) {
                 Text("Notas${if (sortColumn == BaselineColumn.NOTAS) if (sortAsc) " ▲" else " ▼" else ""}")
             }
-            cell(1) { Text(stringResource(com.example.etic.R.string.col_op)) }
+            headerCell(1, cOp) { Text(stringResource(com.example.etic.R.string.col_op)) }
         }
         Divider(thickness = DIVIDER_THICKNESS)
         if (baselines.isEmpty()) {
