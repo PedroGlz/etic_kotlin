@@ -274,6 +274,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
         // Centralizar seleccion como si fuera un tap del usuario
     var selectedId by rememberSaveable { mutableStateOf<String?>(null) }
     var highlightedId by remember { mutableStateOf<String?>(null) }
+    var scrollToNodeId by remember { mutableStateOf<String?>(null) }
     var baselineRefreshTick by remember { mutableStateOf(0) }
     var problemsRefreshTick by remember { mutableStateOf(0) }
     var hasSignaledReady by rememberSaveable { mutableStateOf(false) }
@@ -1209,6 +1210,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     val targetId = path.last()
                     selectedId = targetId
                     highlightedId = targetId
+                    scrollToNodeId = targetId
                     scope.launch {
                         delay(3000)
                         if (highlightedId == targetId) highlightedId = null
@@ -3083,6 +3085,8 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                             expanded = expanded.toSet(),
                             selectedId = selectedId,
                             highlightedId = highlightedId,
+                            scrollToId = scrollToNodeId,
+                            onScrollHandled = { scrollToNodeId = null },
                             onToggle = { id ->
                                 val inspId = currentInspection?.idInspeccion
                                 if (!expanded.remove(id)) expanded.add(id) else Unit
@@ -3372,6 +3376,8 @@ private fun SimpleTreeView(
     expanded: Set<String>,
     selectedId: String?,
     highlightedId: String?,
+    scrollToId: String?,
+    onScrollHandled: () -> Unit,
     onToggle: (String) -> Unit,
     onSelect: (String) -> Unit,
     modifier: Modifier = Modifier
@@ -3394,6 +3400,17 @@ private fun SimpleTreeView(
         if (!hasValidSelection && rootNodeId != null) {
             onSelect(rootNodeId)
         }
+    }
+    LaunchedEffect(scrollToId, flat.size) {
+        val targetId = scrollToId ?: return@LaunchedEffect
+        val targetIndex = flat.indexOfFirst { it.node.id == targetId }
+        if (targetIndex >= 0) {
+            val isVisible = treeListState.layoutInfo.visibleItemsInfo.any { it.index == targetIndex }
+            if (!isVisible) {
+                treeListState.animateScrollToItem(targetIndex)
+            }
+        }
+        onScrollHandled()
     }
     Box(Modifier.fillMaxSize()) {
         LazyColumn(Modifier.fillMaxWidth(), state = treeListState) {
