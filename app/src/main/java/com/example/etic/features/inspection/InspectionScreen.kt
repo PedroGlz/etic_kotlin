@@ -71,6 +71,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
@@ -255,6 +256,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
 
     var nodes by remember { mutableStateOf<List<TreeNode>>(emptyList()) }
     val ctx = androidx.compose.ui.platform.LocalContext.current
+    val keyboardController = LocalSoftwareKeyboardController.current
     val ubicacionDao = remember { com.example.etic.data.local.DbProvider.get(ctx).ubicacionDao() }
     val vistaUbicacionArbolDao = remember { com.example.etic.data.local.DbProvider.get(ctx).vistaUbicacionArbolDao() }
     val usuarioDao = remember { com.example.etic.data.local.DbProvider.get(ctx).usuarioDao() }
@@ -1198,6 +1200,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             }
 
             fun triggerSearch() {
+                keyboardController?.hide()
                 searchMessage = null
                 val code = barcode.trim()
                 if (code.isEmpty()) return
