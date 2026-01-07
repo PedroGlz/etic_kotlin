@@ -94,6 +94,8 @@ import kotlin.collections.buildList
 import kotlin.math.max
 import com.example.etic.features.inspection.data.InspectionRepository
 import com.example.etic.features.inspection.data.UbicacionSaveContext
+import com.example.etic.features.inspection.ui.components.FILTER_FIELD_ROW_SPACING
+import com.example.etic.features.inspection.ui.components.FilterDropdownField
 import com.example.etic.features.inspection.ui.components.InspectionHeader
 import com.example.etic.features.inspection.ui.components.NewLocationDialog
 import com.example.etic.features.inspection.ui.state.rememberLocationFormState
@@ -184,12 +186,6 @@ private val PROBLEM_STATUS_FILTER_OPTIONS = listOf(
     PROBLEM_STATUS_CLOSED to "Cerrados"
 )
 
-private val PROBLEM_FILTER_FIELD_HEIGHT = 28.dp
-private val PROBLEM_FILTER_FIELD_RADIUS = 4.dp
-private val PROBLEM_FILTER_FIELD_BORDER = 1.dp
-private val PROBLEM_FILTER_FIELD_HORIZONTAL_PADDING = 6.dp
-private val PROBLEM_FILTER_FIELD_VERTICAL_PADDING = 4.dp
-private val PROBLEM_FILTER_ROW_SPACING = 8.dp
 
 private val VISUAL_PROBLEM_TYPE_ID = PROBLEM_TYPE_IDS["Visual"]
 private val ELECTRIC_PROBLEM_TYPE_ID = PROBLEM_TYPE_IDS["Eléctrico"]
@@ -373,8 +369,6 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
 
             // Controles superiores (fuera de los paneles)
             var barcode by rememberSaveable { mutableStateOf("") }
-            var statusMenuExpanded by remember { mutableStateOf(false) }
-            var selectedStatusLabel by rememberSaveable { mutableStateOf("Todos") }
             var selectedStatusId by rememberSaveable { mutableStateOf<String?>(null) }
             var statusOptions by remember { mutableStateOf<List<EstatusInspeccionDet>>(emptyList()) }
             val estatusDao = remember { com.example.etic.data.local.DbProvider.get(ctx).estatusInspeccionDetDao() }
@@ -1226,19 +1220,10 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                 barcode = barcode,
                 onBarcodeChange = { barcode = it },
                 onSearch = { triggerSearch() },
-                statusMenuExpanded = statusMenuExpanded,
-                onStatusMenuToggle = { statusMenuExpanded = !statusMenuExpanded },
-                onStatusMenuDismiss = { statusMenuExpanded = false },
-                selectedStatusLabel = selectedStatusLabel,
+                selectedStatusId = selectedStatusId,
                 statusOptions = statusOptions,
                 onStatusSelected = { opt ->
-                    if (opt == null) {
-                        selectedStatusLabel = "Todos"
-                        selectedStatusId = null
-                    } else {
-                        selectedStatusLabel = opt.estatusInspeccionDet ?: opt.idStatusInspeccionDet
-                        selectedStatusId = opt.idStatusInspeccionDet
-                    }
+                    selectedStatusId = opt?.idStatusInspeccionDet
                 },
                 onClickNewLocation = {
                     if (selectedId == null) {
@@ -3712,21 +3697,21 @@ private fun ListTabs(
             ) {
 
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(PROBLEM_FILTER_ROW_SPACING),
+                    horizontalArrangement = Arrangement.spacedBy(FILTER_FIELD_ROW_SPACING),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    ProblemFilterRow(
+                    FilterDropdownField(
                         label = "Tipo",
-                        options = PROBLEM_TYPE_FILTER_OPTIONS,
+                        options = PROBLEM_TYPE_FILTER_OPTIONS.map { it.first as String? to it.second },
                         selectedId = typeFilterId,
-                        onSelected = { typeFilterId = it }
+                        onSelected = { typeFilterId = it ?: "" }
                     )
 
-                    ProblemFilterRow(
+                    FilterDropdownField(
                         label = "Estatus",
-                        options = PROBLEM_STATUS_FILTER_OPTIONS,
+                        options = PROBLEM_STATUS_FILTER_OPTIONS.map { it.first as String? to it.second },
                         selectedId = statusFilterId,
-                        onSelected = { statusFilterId = it }
+                        onSelected = { statusFilterId = it ?: PROBLEM_STATUS_ALL }
                     )
                 }
 
@@ -3779,78 +3764,6 @@ private fun ListTabs(
                 .alpha(if (showProblems) 0f else 1f)
                 .zIndex(if (showProblems) 0f else 1f)
             )
-        }
-    }
-}
-
-@Composable
-private fun ProblemFilterRow(
-    label: String,
-    options: List<Pair<String, String>>,
-    selectedId: String?,
-    onSelected: (String) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    var expanded by remember { mutableStateOf(false) }
-    val selectedLabel = options.firstOrNull { it.first == selectedId }?.second.orEmpty()
-
-    Row(
-        modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(
-            modifier = Modifier
-                .widthIn(min = 150.dp, max = 220.dp)
-        ) {
-            Text(text = label, style = MaterialTheme.typography.labelSmall)
-
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(PROBLEM_FILTER_FIELD_HEIGHT)
-                    .border(
-                        PROBLEM_FILTER_FIELD_BORDER,
-                        MaterialTheme.colorScheme.outline,
-                        RoundedCornerShape(PROBLEM_FILTER_FIELD_RADIUS)
-                    )
-                    .padding(
-                        horizontal = PROBLEM_FILTER_FIELD_HORIZONTAL_PADDING,
-                        vertical = PROBLEM_FILTER_FIELD_VERTICAL_PADDING
-                    )
-                    .clickable { expanded = true },
-                contentAlignment = Alignment.CenterStart
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = if (selectedLabel.isNotBlank()) selectedLabel else "Seleccionar",
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.weight(1f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Text(
-                        text = "▾",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-
-            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
-                options.forEach { (id, text) ->
-                    DropdownMenuItem(
-                        text = { Text(text = text.ifBlank { id }, style = MaterialTheme.typography.bodySmall) },
-                        onClick = {
-                            expanded = false
-                            onSelected(id)
-                        }
-                    )
-                }
-            }
         }
     }
 }
