@@ -3701,16 +3701,17 @@ private fun ListTabs(
         var statusFilterId by rememberSaveable {
             mutableStateOf(PROBLEM_STATUS_OPEN_PAST)
         }
+        
         if (showProblems) {
             Row(
-                Modifier
+                modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+
                 Row(
-                    modifier = Modifier.weight(1f),
                     horizontalArrangement = Arrangement.spacedBy(PROBLEM_FILTER_ROW_SPACING),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -3720,6 +3721,7 @@ private fun ListTabs(
                         selectedId = typeFilterId,
                         onSelected = { typeFilterId = it }
                     )
+
                     ProblemFilterRow(
                         label = "Estatus",
                         options = PROBLEM_STATUS_FILTER_OPTIONS,
@@ -3728,13 +3730,15 @@ private fun ListTabs(
                     )
                 }
 
+                Spacer(Modifier.width(12.dp))
+
                 Button(
                     onClick = { onNewProblem?.invoke() },
                     enabled = onNewProblem != null,
-                    shape = RoundedCornerShape(4.dp), // casi cuadrado
+                    shape = RoundedCornerShape(4.dp),
                     contentPadding = PaddingValues(
                         horizontal = 10.dp,
-                        vertical = 0.dp   // ↓ reduce altura
+                        vertical = 0.dp
                     ),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.error,
@@ -3744,16 +3748,16 @@ private fun ListTabs(
                     Icon(
                         imageVector = Icons.Filled.Build,
                         contentDescription = null,
-                        modifier = Modifier.size(13.dp) // ↓ icono más pequeño
+                        modifier = Modifier.size(13.dp)
                     )
 
                     Spacer(Modifier.width(6.dp))
 
                     Text(text = "Nuevo Problema")
                 }
-
             }
         }
+
         Box(Modifier.fillMaxSize()) {
             ProblemsTableFromDatabase(
                 selectedId = node?.id,
