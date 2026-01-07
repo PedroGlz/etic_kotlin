@@ -7,7 +7,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -50,7 +54,6 @@ fun InspectionHeader(
         horizontalArrangement = Arrangement.End,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        val controlHeight = 56.dp
         FilterTextField(
             label = stringResource(R.string.label_codigo_barras),
             value = barcode,
@@ -77,9 +80,19 @@ fun InspectionHeader(
         Button(
             onClick = onClickNewLocation,
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),
-            shape = RoundedCornerShape(8.dp),
-            modifier = Modifier.height(controlHeight)
+            shape = RoundedCornerShape(4.dp),
+            contentPadding = PaddingValues(
+                horizontal = 10.dp,
+                vertical = 0.dp
+            )
         ) {
+            Icon(
+                imageVector = Icons.Filled.Add,
+                contentDescription = null,
+                tint = Color.White,
+                modifier = Modifier.height(13.dp)
+            )
+            Spacer(Modifier.width(6.dp))
             Text(stringResource(R.string.btn_nueva_ubicacion), color = Color.White)
         }
     }
