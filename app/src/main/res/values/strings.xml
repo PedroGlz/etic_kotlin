@@ -25,7 +25,7 @@
     <string name="tab_baseline">Listado Base Line</string>
     <string name="msg_sin_problemas">Sin problemas</string>
     <string name="msg_sin_baseline">Sin base line</string>
-    <string name="col_no_inspeccion">No Inspección</string>
+    <string name="col_no_inspeccion">No. Insp</string>
     <string name="col_mta_c">MTA °C</string>
     <string name="col_amb_c">Amb °C</string>
 </resources>

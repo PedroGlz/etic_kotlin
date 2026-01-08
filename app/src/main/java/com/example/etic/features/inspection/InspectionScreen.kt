@@ -4124,6 +4124,26 @@ private fun BaselineTable(baselines: List<Baseline>, onDelete: (Baseline) -> Uni
         ) { content() }
     }
 
+    @Composable
+    fun RowScope.headerCellFixed(
+        width: Dp,
+        background: Color,
+        modifier: Modifier = Modifier,
+        content: @Composable () -> Unit
+    ) {
+        Box(
+            Modifier
+                .width(width)
+                .background(background)
+                .padding(horizontal = 6.dp, vertical = 8.dp)
+                .then(modifier)
+        ) { content() }
+    }
+
+    @Composable
+    fun RowScope.cellFixed(width: Dp, modifier: Modifier = Modifier, content: @Composable () -> Unit) =
+        Box(Modifier.width(width).then(modifier)) { content() }
+
     val listState = rememberSaveable("baseline_list_state", saver = LazyListState.Saver) { LazyListState() }
     var sortColumn by rememberSaveable { mutableStateOf(BaselineColumn.FECHA) }
     var sortAsc by rememberSaveable { mutableStateOf(true) }
@@ -4162,6 +4182,17 @@ private fun BaselineTable(baselines: List<Baseline>, onDelete: (Baseline) -> Uni
     val cNotas = MaterialTheme.colorScheme.tertiaryContainer
     val cOp = MaterialTheme.colorScheme.surface
 
+    val wInspeccion = 135.dp
+    val wEquipo = 160.dp
+    val wFecha = 95.dp
+    val wMta = 90.dp
+    val wTemp = 90.dp
+    val wAmb = 90.dp
+    val wIr = 190.dp
+    val wId = 190.dp
+    val wNotas = 260.dp
+    val wOp = 27.dp
+
     Column(Modifier.fillMaxSize()) {
         Row(
             Modifier
@@ -4169,34 +4200,34 @@ private fun BaselineTable(baselines: List<Baseline>, onDelete: (Baseline) -> Uni
                 .background(MaterialTheme.colorScheme.surface)
                 .padding(vertical = 8.dp, horizontal = 8.dp)
         ) {
-            headerCell(2, cNo, Modifier.clickable { toggleSort(BaselineColumn.INSPECCION) }) {
+            headerCellFixed(wInspeccion, cNo, Modifier.clickable { toggleSort(BaselineColumn.INSPECCION) }) {
                 Text("${stringResource(com.example.etic.R.string.col_no_inspeccion)}${if (sortColumn == BaselineColumn.INSPECCION) if (sortAsc) " ▲" else " ▼" else ""}")
             }
-            headerCell(2, cEquipo, Modifier.clickable { toggleSort(BaselineColumn.EQUIPO) }) {
+            headerCellFixed(wEquipo, cEquipo, Modifier.clickable { toggleSort(BaselineColumn.EQUIPO) }) {
                 Text("${stringResource(com.example.etic.R.string.col_equipo)}${if (sortColumn == BaselineColumn.EQUIPO) if (sortAsc) " ▲" else " ▼" else ""}")
             }
-            headerCell(2, cFecha, Modifier.clickable { toggleSort(BaselineColumn.FECHA) }) {
+            headerCellFixed(wFecha, cFecha, Modifier.clickable { toggleSort(BaselineColumn.FECHA) }) {
                 Text("${stringResource(com.example.etic.R.string.col_fecha)}${if (sortColumn == BaselineColumn.FECHA) if (sortAsc) " ▲" else " ▼" else ""}")
             }
-            headerCell(1, cMta, Modifier.clickable { toggleSort(BaselineColumn.MTA) }) {
+            headerCellFixed(wMta, cMta, Modifier.clickable { toggleSort(BaselineColumn.MTA) }) {
                 Text("${stringResource(com.example.etic.R.string.col_mta_c)}${if (sortColumn == BaselineColumn.MTA) if (sortAsc) " ▲" else " ▼" else ""}")
             }
-            headerCell(1, cTemp, Modifier.clickable { toggleSort(BaselineColumn.TEMP) }) {
+            headerCellFixed(wTemp, cTemp, Modifier.clickable { toggleSort(BaselineColumn.TEMP) }) {
                 Text("${stringResource(com.example.etic.R.string.col_temp_c)}${if (sortColumn == BaselineColumn.TEMP) if (sortAsc) " ▲" else " ▼" else ""}")
             }
-            headerCell(1, cAmb, Modifier.clickable { toggleSort(BaselineColumn.AMB) }) {
+            headerCellFixed(wAmb, cAmb, Modifier.clickable { toggleSort(BaselineColumn.AMB) }) {
                 Text("${stringResource(com.example.etic.R.string.col_amb_c)}${if (sortColumn == BaselineColumn.AMB) if (sortAsc) " ▲" else " ▼" else ""}")
             }
-            headerCell(1, cIr, Modifier.clickable { toggleSort(BaselineColumn.IR) }) {
+            headerCellFixed(wIr, cIr, Modifier.clickable { toggleSort(BaselineColumn.IR) }) {
                 Text("IR${if (sortColumn == BaselineColumn.IR) if (sortAsc) " ▲" else " ▼" else ""}")
             }
-            headerCell(1, cId, Modifier.clickable { toggleSort(BaselineColumn.ID) }) {
+            headerCellFixed(wId, cId, Modifier.clickable { toggleSort(BaselineColumn.ID) }) {
                 Text("ID${if (sortColumn == BaselineColumn.ID) if (sortAsc) " ▲" else " ▼" else ""}")
             }
-            headerCell(3, cNotas, Modifier.clickable { toggleSort(BaselineColumn.NOTAS) }) {
+            headerCellFixed(wNotas, cNotas, Modifier.clickable { toggleSort(BaselineColumn.NOTAS) }) {
                 Text("Notas${if (sortColumn == BaselineColumn.NOTAS) if (sortAsc) " ▲" else " ▼" else ""}")
             }
-            headerCell(1, cOp) { Text(stringResource(com.example.etic.R.string.col_op)) }
+            headerCellFixed(wOp, cOp) { Text(stringResource(com.example.etic.R.string.col_op)) }
         }
         Divider(thickness = DIVIDER_THICKNESS)
         if (baselines.isEmpty()) {
@@ -4209,16 +4240,16 @@ private fun BaselineTable(baselines: List<Baseline>, onDelete: (Baseline) -> Uni
                             .fillMaxWidth()
                             .padding(vertical = 6.dp, horizontal = 8.dp)
                     ) {
-                        cell(2) { Text(b.numInspeccion) }
-                        cell(2) { Text(b.equipo) }
-                        cell(2) { Text(b.fecha.format(PROBLEM_DATE_FORMATTER)) }
-                        cell(1) { Text(b.mtaC.toString()) }
-                        cell(1) { Text(b.tempC.toString()) }
-                        cell(1) { Text(b.ambC.toString()) }
-                        cell(1) { Text(b.imgR ?: "") }
-                        cell(1) { Text(b.imgD ?: "") }
-                        cell(3) { Text(b.notas) }
-                        cell(1) {
+                        cellFixed(wInspeccion) { Text(b.numInspeccion) }
+                        cellFixed(wEquipo) { Text(b.equipo) }
+                        cellFixed(wFecha) { Text(b.fecha.format(PROBLEM_DATE_FORMATTER)) }
+                        cellFixed(wMta) { Text(b.mtaC.toString()) }
+                        cellFixed(wTemp) { Text(b.tempC.toString()) }
+                        cellFixed(wAmb) { Text(b.ambC.toString()) }
+                        cellFixed(wIr) { Text(b.imgR ?: "") }
+                        cellFixed(wId) { Text(b.imgD ?: "") }
+                        cellFixed(wNotas) { Text(b.notas) }
+                        cellFixed(wOp) {
                             IconButton(onClick = { onDelete(b) }) {
                                 Icon(Icons.Outlined.Delete, contentDescription = "Eliminar")
                             }
