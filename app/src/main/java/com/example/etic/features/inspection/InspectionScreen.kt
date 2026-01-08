@@ -4051,7 +4051,7 @@ private fun ProblemsTable(
                                 cellFixed(wSeveridad) { Text(p.severidad) }
                                 cellFixed(wEquipo) { Text(p.equipo) }
                                 cellFixed(wComentarios) { Text(p.comentarios) }
-                                cellFixed(wOp) {
+                                cellFixed(wOp, Modifier.padding(horizontal = 0.dp)) {
                                     val isOpen = p.estatus.equals("Abierto", ignoreCase = true)
                                     val belongsToCurrentInspection = p.inspectionId?.equals(currentInspectionId, ignoreCase = true) == true
                                     if (isOpen && belongsToCurrentInspection) {
@@ -4097,6 +4097,35 @@ private fun SortHeader(
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(15.dp) // 👈 más delgada / ocupa menos
+            )
+        }
+    }
+}
+
+@Composable
+private fun BaselineSortHeader(
+    label: String,
+    column: BaselineColumn,
+    sortColumn: BaselineColumn,
+    sortAsc: Boolean
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f)
+        )
+
+        if (sortColumn == column) {
+            Icon(
+                imageVector = if (sortAsc) Icons.Filled.ArrowDropUp else Icons.Filled.ArrowDropDown,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(15.dp)
             )
         }
     }
@@ -4182,15 +4211,15 @@ private fun BaselineTable(baselines: List<Baseline>, onDelete: (Baseline) -> Uni
     val cNotas = MaterialTheme.colorScheme.tertiaryContainer
     val cOp = MaterialTheme.colorScheme.surface
 
-    val wInspeccion = 135.dp
-    val wEquipo = 160.dp
+    val wInspeccion = 85.dp
+    val wEquipo = 208.dp
     val wFecha = 95.dp
-    val wMta = 90.dp
-    val wTemp = 90.dp
-    val wAmb = 90.dp
-    val wIr = 190.dp
-    val wId = 190.dp
-    val wNotas = 260.dp
+    val wMta = 83.dp
+    val wTemp = 85.dp
+    val wAmb = 83.dp
+    val wIr = 133.dp
+    val wId = 133.dp
+    val wNotas = 313.dp
     val wOp = 27.dp
 
     Column(Modifier.fillMaxSize()) {
@@ -4201,33 +4230,33 @@ private fun BaselineTable(baselines: List<Baseline>, onDelete: (Baseline) -> Uni
                 .padding(vertical = 8.dp, horizontal = 8.dp)
         ) {
             headerCellFixed(wInspeccion, cNo, Modifier.clickable { toggleSort(BaselineColumn.INSPECCION) }) {
-                Text("${stringResource(com.example.etic.R.string.col_no_inspeccion)}${if (sortColumn == BaselineColumn.INSPECCION) if (sortAsc) " ▲" else " ▼" else ""}")
+                BaselineSortHeader(label = stringResource(com.example.etic.R.string.col_no_inspeccion), column = BaselineColumn.INSPECCION, sortColumn = sortColumn, sortAsc = sortAsc)
             }
             headerCellFixed(wEquipo, cEquipo, Modifier.clickable { toggleSort(BaselineColumn.EQUIPO) }) {
-                Text("${stringResource(com.example.etic.R.string.col_equipo)}${if (sortColumn == BaselineColumn.EQUIPO) if (sortAsc) " ▲" else " ▼" else ""}")
+                BaselineSortHeader(label = stringResource(com.example.etic.R.string.col_equipo), column = BaselineColumn.EQUIPO, sortColumn = sortColumn, sortAsc = sortAsc)
             }
             headerCellFixed(wFecha, cFecha, Modifier.clickable { toggleSort(BaselineColumn.FECHA) }) {
-                Text("${stringResource(com.example.etic.R.string.col_fecha)}${if (sortColumn == BaselineColumn.FECHA) if (sortAsc) " ▲" else " ▼" else ""}")
+                BaselineSortHeader(label = stringResource(com.example.etic.R.string.col_fecha), column = BaselineColumn.FECHA, sortColumn = sortColumn, sortAsc = sortAsc)
             }
             headerCellFixed(wMta, cMta, Modifier.clickable { toggleSort(BaselineColumn.MTA) }) {
-                Text("${stringResource(com.example.etic.R.string.col_mta_c)}${if (sortColumn == BaselineColumn.MTA) if (sortAsc) " ▲" else " ▼" else ""}")
+                BaselineSortHeader(label = stringResource(com.example.etic.R.string.col_mta_c), column = BaselineColumn.MTA, sortColumn = sortColumn, sortAsc = sortAsc)
             }
             headerCellFixed(wTemp, cTemp, Modifier.clickable { toggleSort(BaselineColumn.TEMP) }) {
-                Text("${stringResource(com.example.etic.R.string.col_temp_c)}${if (sortColumn == BaselineColumn.TEMP) if (sortAsc) " ▲" else " ▼" else ""}")
+                BaselineSortHeader(label = stringResource(com.example.etic.R.string.col_temp_c), column = BaselineColumn.TEMP, sortColumn = sortColumn, sortAsc = sortAsc)
             }
             headerCellFixed(wAmb, cAmb, Modifier.clickable { toggleSort(BaselineColumn.AMB) }) {
-                Text("${stringResource(com.example.etic.R.string.col_amb_c)}${if (sortColumn == BaselineColumn.AMB) if (sortAsc) " ▲" else " ▼" else ""}")
+                BaselineSortHeader(label = stringResource(com.example.etic.R.string.col_amb_c), column = BaselineColumn.AMB, sortColumn = sortColumn, sortAsc = sortAsc)
             }
             headerCellFixed(wIr, cIr, Modifier.clickable { toggleSort(BaselineColumn.IR) }) {
-                Text("IR${if (sortColumn == BaselineColumn.IR) if (sortAsc) " ▲" else " ▼" else ""}")
+                BaselineSortHeader(label = "IR", column = BaselineColumn.IR, sortColumn = sortColumn, sortAsc = sortAsc)
             }
             headerCellFixed(wId, cId, Modifier.clickable { toggleSort(BaselineColumn.ID) }) {
-                Text("ID${if (sortColumn == BaselineColumn.ID) if (sortAsc) " ▲" else " ▼" else ""}")
+                BaselineSortHeader(label = "ID", column = BaselineColumn.ID, sortColumn = sortColumn, sortAsc = sortAsc)
             }
             headerCellFixed(wNotas, cNotas, Modifier.clickable { toggleSort(BaselineColumn.NOTAS) }) {
-                Text("Notas${if (sortColumn == BaselineColumn.NOTAS) if (sortAsc) " ▲" else " ▼" else ""}")
+                BaselineSortHeader(label = "Notas", column = BaselineColumn.NOTAS, sortColumn = sortColumn, sortAsc = sortAsc)
             }
-            headerCellFixed(wOp, cOp) { Text(stringResource(com.example.etic.R.string.col_op)) }
+            headerCellFixed(wOp, cOp) { Text("") }
         }
         Divider(thickness = DIVIDER_THICKNESS)
         if (baselines.isEmpty()) {
