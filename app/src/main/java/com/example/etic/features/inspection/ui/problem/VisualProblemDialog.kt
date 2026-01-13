@@ -85,6 +85,7 @@ fun VisualProblemDialog(
     onDigitalCamera: () -> Unit,
     onHazardSelected: (String) -> Unit,
     onSeveritySelected: (String) -> Unit,
+    showEditControls: Boolean = false,
     onDismiss: () -> Unit,
     onContinue: () -> Unit
 ) {
@@ -108,37 +109,38 @@ fun VisualProblemDialog(
                     .verticalScroll(scrollState)
                     .padding(24.dp)
             ) {
-                var isCronico by remember { mutableStateOf(false) }
-                var isCerrado by remember { mutableStateOf(false) }
-
                 Text("Problema Visual", style = MaterialTheme.typography.headlineSmall)
-                Divider(Modifier.padding(top = 12.dp, bottom = 8.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = {}) {
-                            Icon(Icons.Outlined.ArrowLeft, contentDescription = "Anterior")
+                if (showEditControls) {
+                    var isCronico by remember { mutableStateOf(false) }
+                    var isCerrado by remember { mutableStateOf(false) }
+                    Divider(Modifier.padding(top = 12.dp, bottom = 8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            IconButton(onClick = {}) {
+                                Icon(Icons.Outlined.ArrowLeft, contentDescription = "Anterior")
+                            }
+                            IconButton(onClick = {}) {
+                                Icon(Icons.Outlined.ArrowRight, contentDescription = "Siguiente")
+                            }
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(checked = isCronico, onCheckedChange = { isCronico = it })
+                            Text("Cronico")
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(checked = isCerrado, onCheckedChange = { isCerrado = it })
+                            Text("Cerrado")
                         }
                         IconButton(onClick = {}) {
-                            Icon(Icons.Outlined.ArrowRight, contentDescription = "Siguiente")
+                            Icon(Icons.Outlined.AccessTime, contentDescription = "Historial")
                         }
                     }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Checkbox(checked = isCronico, onCheckedChange = { isCronico = it })
-                        Text("Cronico")
-                    }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Checkbox(checked = isCerrado, onCheckedChange = { isCerrado = it })
-                        Text("Cerrado")
-                    }
-                    IconButton(onClick = {}) {
-                        Icon(Icons.Outlined.AccessTime, contentDescription = "Historial")
-                    }
+                    Divider(Modifier.padding(top = 8.dp, bottom = 16.dp))
                 }
-                Divider(Modifier.padding(top = 8.dp, bottom = 16.dp))
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()

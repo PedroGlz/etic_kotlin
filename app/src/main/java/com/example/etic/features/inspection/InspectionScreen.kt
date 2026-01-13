@@ -1469,6 +1469,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     onSeveritySelected = { selected ->
                         pendingSeverityId = selected.takeIf { it.isNotBlank() }
                     },
+                    showEditControls = editingProblemId != null,
                     onDismiss = {
                         showVisualInspectionDialog = false
                         resetVisualProblemForm()
@@ -1700,6 +1701,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     onDigitalFolder = { digitalFolderLauncher.launch("image/*") },
                     onThermalCamera = { thermalCameraLauncher.launch(null) },
                     onDigitalCamera = { digitalCameraLauncher.launch(null) },
+                    showEditControls = editingElectricProblemId != null,
                     onDismiss = {
                         showElectricProblemDialog = false
                         resetElectricProblemState()
@@ -1735,6 +1737,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     onDigitalFolder = { digitalFolderLauncher.launch("image/*") },
                     onThermalCamera = { thermalCameraLauncher.launch(null) },
                     onDigitalCamera = { digitalCameraLauncher.launch(null) },
+                    showEditControls = editingMechanicalProblemId != null,
                     onDismiss = {
                         showMechanicalProblemDialog = false
                         resetMechanicalProblemState()

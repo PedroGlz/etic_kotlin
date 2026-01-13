@@ -110,6 +110,7 @@ fun ElectricProblemDialog(
     onDigitalFolder: () -> Unit,
     onThermalCamera: () -> Unit,
     onDigitalCamera: () -> Unit,
+    showEditControls: Boolean = false,
     onDismiss: () -> Unit,
     onContinue: (ElectricProblemFormData) -> Unit,
     continueEnabled: Boolean = true,
@@ -253,35 +254,37 @@ fun ElectricProblemDialog(
             ) {
                 Text("Problema Eléctrico", style = MaterialTheme.typography.titleMedium)
 
-                var isCronico by rememberSaveable { mutableStateOf(false) }
-                var isCerrado by rememberSaveable { mutableStateOf(false) }
-                Divider(Modifier.padding(top = 12.dp, bottom = 8.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        IconButton(onClick = {}) {
-                            Icon(Icons.Outlined.ArrowLeft, contentDescription = "Anterior")
+                if (showEditControls) {
+                    var isCronico by rememberSaveable { mutableStateOf(false) }
+                    var isCerrado by rememberSaveable { mutableStateOf(false) }
+                    Divider(Modifier.padding(top = 12.dp, bottom = 8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            IconButton(onClick = {}) {
+                                Icon(Icons.Outlined.ArrowLeft, contentDescription = "Anterior")
+                            }
+                            IconButton(onClick = {}) {
+                                Icon(Icons.Outlined.ArrowRight, contentDescription = "Siguiente")
+                            }
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(checked = isCronico, onCheckedChange = { isCronico = it })
+                            Text("Cronico")
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(checked = isCerrado, onCheckedChange = { isCerrado = it })
+                            Text("Cerrado")
                         }
                         IconButton(onClick = {}) {
-                            Icon(Icons.Outlined.ArrowRight, contentDescription = "Siguiente")
+                            Icon(Icons.Outlined.AccessTime, contentDescription = "Historial")
                         }
                     }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Checkbox(checked = isCronico, onCheckedChange = { isCronico = it })
-                        Text("Cronico")
-                    }
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Checkbox(checked = isCerrado, onCheckedChange = { isCerrado = it })
-                        Text("Cerrado")
-                    }
-                    IconButton(onClick = {}) {
-                        Icon(Icons.Outlined.AccessTime, contentDescription = "Historial")
-                    }
+                    Divider(Modifier.padding(top = 8.dp, bottom = 12.dp))
                 }
-                Divider(Modifier.padding(top = 8.dp, bottom = 12.dp))
                 Spacer(Modifier.height(12.dp))
                 Row(
                     modifier = Modifier
