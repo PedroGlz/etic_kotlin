@@ -31,6 +31,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AccessTime
+import androidx.compose.material.icons.outlined.ArrowLeft
+import androidx.compose.material.icons.outlined.ArrowRight
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
@@ -259,6 +261,14 @@ fun ElectricProblemDialog(
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        IconButton(onClick = {}) {
+                            Icon(Icons.Outlined.ArrowLeft, contentDescription = "Anterior")
+                        }
+                        IconButton(onClick = {}) {
+                            Icon(Icons.Outlined.ArrowRight, contentDescription = "Siguiente")
+                        }
+                    }
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Checkbox(checked = isCronico, onCheckedChange = { isCronico = it })
                         Text("Cronico")
