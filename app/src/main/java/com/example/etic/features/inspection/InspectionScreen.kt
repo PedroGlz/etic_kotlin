@@ -3281,6 +3281,21 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     problemsRefreshTick = problemsRefreshTick,
                     modifier = Modifier.fillMaxSize(),  // asegura ocupar todo el espacio
                     onProblemDoubleTap = { problem ->
+                        val currentInspectionId = currentInspection?.idInspeccion
+                        val isOpen = problem.estatus.equals("Abierto", ignoreCase = true)
+                        val isClosed = problem.estatus.equals("Cerrado", ignoreCase = true)
+                        val belongsToCurrentInspection =
+                            !currentInspectionId.isNullOrBlank() &&
+                                problem.inspectionId?.equals(currentInspectionId, ignoreCase = true) == true
+                        val canEdit = isOpen || (isClosed && belongsToCurrentInspection)
+                        if (!canEdit) {
+                            Toast.makeText(
+                                ctx,
+                                "Este problema cerrado pertenece a una inspeccion pasada.",
+                                Toast.LENGTH_SHORT
+                            ).show()
+                            return@ListTabs
+                        }
                         val normalizedType = problem.tipo?.normalizeProblemKey()
                         when {
                             problem.tipoId?.equals(VISUAL_PROBLEM_TYPE_ID, ignoreCase = true) == true -> startVisualProblemEdit(problem)
