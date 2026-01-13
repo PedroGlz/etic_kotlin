@@ -29,6 +29,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AccessTime
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
@@ -36,6 +37,7 @@ import androidx.compose.material3.Divider
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
@@ -253,6 +255,27 @@ fun MechanicalProblemDialog(
                 ) {
                     Text("Problema Mecánico", style = MaterialTheme.typography.titleMedium)
 
+                    var isCronico by rememberSaveable { mutableStateOf(false) }
+                    var isCerrado by rememberSaveable { mutableStateOf(false) }
+                    Divider(Modifier.padding(top = 12.dp, bottom = 8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(checked = isCronico, onCheckedChange = { isCronico = it })
+                            Text("Cronico")
+                        }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(checked = isCerrado, onCheckedChange = { isCerrado = it })
+                            Text("Cerrado")
+                        }
+                        IconButton(onClick = {}) {
+                            Icon(Icons.Outlined.AccessTime, contentDescription = "Historial")
+                        }
+                    }
+                    Divider(Modifier.padding(top = 8.dp, bottom = 12.dp))
                     Spacer(Modifier.height(12.dp))
                     Row(
                         modifier = Modifier

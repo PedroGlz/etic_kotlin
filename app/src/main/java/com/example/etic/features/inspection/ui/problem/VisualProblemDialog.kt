@@ -9,6 +9,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -16,8 +17,10 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AccessTime
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
@@ -103,9 +106,29 @@ fun VisualProblemDialog(
                     .verticalScroll(scrollState)
                     .padding(24.dp)
             ) {
+                var isCronico by remember { mutableStateOf(false) }
+                var isCerrado by remember { mutableStateOf(false) }
+
                 Text("Problema Visual", style = MaterialTheme.typography.headlineSmall)
-                
-                Spacer(Modifier.height(16.dp))
+                Divider(Modifier.padding(top = 12.dp, bottom = 8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = isCronico, onCheckedChange = { isCronico = it })
+                        Text("Cronico")
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(checked = isCerrado, onCheckedChange = { isCerrado = it })
+                        Text("Cerrado")
+                    }
+                    IconButton(onClick = {}) {
+                        Icon(Icons.Outlined.AccessTime, contentDescription = "Historial")
+                    }
+                }
+                Divider(Modifier.padding(top = 8.dp, bottom = 16.dp))
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
