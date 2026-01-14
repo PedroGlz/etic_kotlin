@@ -812,7 +812,10 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     else -> "1D56EDB0-8D6E-11D3-9270-006008A19766"
                 }
             }
-            fun createCronicoFromProblem(entity: com.example.etic.data.local.entities.Problema, onSuccess: () -> Unit) {
+            fun createCronicoFromProblem(
+                entity: com.example.etic.data.local.entities.Problema,
+                onSuccess: (newProblemNumber: String) -> Unit
+            ) {
                 val inspection = currentInspection
                 if (inspection == null || inspection.idInspeccion.isNullOrBlank()) {
                     Toast.makeText(ctx, "No hay inspeccion activa.", Toast.LENGTH_SHORT).show()
@@ -895,7 +898,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                             problemsRefreshTick++
                             refreshTree(preserveSelection = ubicacionId)
                             Toast.makeText(ctx, "Problema cronico creado.", Toast.LENGTH_SHORT).show()
-                            onSuccess()
+                            onSuccess(numero.toString())
                         } else {
                             val message = result.exceptionOrNull()?.localizedMessage ?: "Error desconocido"
                             Toast.makeText(
@@ -1576,10 +1579,9 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     onDigitalCamera = { digitalCameraLauncher.launch(null) },
                     onCronicoClick = {
                         val entity = editingProblemOriginal ?: return@VisualProblemDialog
-                        createCronicoFromProblem(entity) {
-                            showVisualInspectionDialog = false
+                        createCronicoFromProblem(entity) { newNumber ->
+                            pendingProblemNumber = newNumber
                             cronicoActionEnabled = false
-                            resetVisualProblemForm()
                         }
                     },
                     cronicoEnabled = cronicoActionEnabled && !isSavingCronico,
@@ -1826,10 +1828,9 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     onDigitalCamera = { digitalCameraLauncher.launch(null) },
                     onCronicoClick = {
                         val entity = editingElectricProblemOriginal ?: return@ElectricProblemDialog
-                        createCronicoFromProblem(entity) {
-                            showElectricProblemDialog = false
+                        createCronicoFromProblem(entity) { newNumber ->
+                            pendingProblemNumber = newNumber
                             cronicoActionEnabled = false
-                            resetElectricProblemState()
                         }
                     },
                     cronicoEnabled = cronicoActionEnabled && !isSavingCronico,
@@ -1872,10 +1873,9 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     onDigitalCamera = { digitalCameraLauncher.launch(null) },
                     onCronicoClick = {
                         val entity = editingMechanicalProblemOriginal ?: return@MechanicalProblemDialog
-                        createCronicoFromProblem(entity) {
-                            showMechanicalProblemDialog = false
+                        createCronicoFromProblem(entity) { newNumber ->
+                            pendingProblemNumber = newNumber
                             cronicoActionEnabled = false
-                            resetMechanicalProblemState()
                         }
                     },
                     cronicoEnabled = cronicoActionEnabled && !isSavingCronico,
