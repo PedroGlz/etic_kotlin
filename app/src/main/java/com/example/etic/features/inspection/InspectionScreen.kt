@@ -393,6 +393,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                 val electricTypeId = ELECTRIC_PROBLEM_TYPE_ID
                 prioridadOptions = runCatching { prioridadDao.getAllActivas() }.getOrElse { emptyList() }
                 fabricanteOptions = runCatching { fabricanteDao.getAllActivos() }.getOrElse { emptyList() }
+                    .sortedBy { it.fabricante?.lowercase(Locale.getDefault()) ?: "" }
                 electricPhaseOptions = runCatching {
                     withContext(Dispatchers.IO) { faseDao.getAllActivos() }
                 }.getOrElse { emptyList() }
