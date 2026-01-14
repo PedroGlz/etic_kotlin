@@ -152,6 +152,7 @@ private const val PROBLEM_STATUS_OPEN_CURRENT = "1"
 private const val PROBLEM_STATUS_OPEN_PAST = "2"
 private const val PROBLEM_STATUS_OPEN_ALL = "3"
 private const val PROBLEM_STATUS_CLOSED = "4"
+private const val DEFAULT_PRIORIDAD_ID = "6F5F0EB1-76B8-11D3-82BF-00104BC75DC2"
 
 private data class ProblemTypeFilter(val id: String, val label: String, val matchIds: List<String>)
 
@@ -1196,6 +1197,18 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                 } else {
                     isSavingNewUb = false
                     locationForm.error = null
+                }
+            }
+            LaunchedEffect(showNewUbDialog, prioridadOptions) {
+                if (showNewUbDialog && locationForm.prioridadId == null) {
+                    val match = prioridadOptions.firstOrNull {
+                        it.idTipoPrioridad.equals(DEFAULT_PRIORIDAD_ID, true) ||
+                            it.tipoPrioridad?.equals("CTO", true) == true
+                    }
+                    if (match != null) {
+                        locationForm.prioridadId = match.idTipoPrioridad
+                        locationForm.prioridadLabel = match.tipoPrioridad ?: match.idTipoPrioridad
+                    }
                 }
             }
 
