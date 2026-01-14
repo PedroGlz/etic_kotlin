@@ -85,6 +85,8 @@ fun VisualProblemDialog(
     onDigitalCamera: () -> Unit,
     onHazardSelected: (String) -> Unit,
     onSeveritySelected: (String) -> Unit,
+    onCronicoClick: (() -> Unit)? = null,
+    cronicoEnabled: Boolean = false,
     showEditControls: Boolean = false,
     onDismiss: () -> Unit,
     onContinue: () -> Unit
@@ -135,7 +137,10 @@ fun VisualProblemDialog(
                             Checkbox(checked = isCerrado, onCheckedChange = { isCerrado = it })
                             Text("Cerrado")
                         }
-                        IconButton(onClick = {}) {
+                        IconButton(
+                            onClick = { onCronicoClick?.invoke() },
+                            enabled = cronicoEnabled
+                        ) {
                             Icon(Icons.Outlined.AccessTime, contentDescription = "Historial")
                         }
                     }

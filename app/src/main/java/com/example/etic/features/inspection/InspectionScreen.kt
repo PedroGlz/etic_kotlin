@@ -423,6 +423,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             var electricProblemFormKey by rememberSaveable { mutableStateOf(0) }
             var showMechanicalProblemDialog by rememberSaveable { mutableStateOf(false) }
             var mechanicalProblemFormKey by rememberSaveable { mutableStateOf(0) }
+            var cronicoActionEnabled by rememberSaveable { mutableStateOf(false) }
             var showEditUbDialog by remember { mutableStateOf(false) }
             var isSavingEditUb by remember { mutableStateOf(false) }
             var editTab by rememberSaveable { mutableStateOf(0) }
@@ -439,6 +440,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             var isSavingVisualProblem by remember { mutableStateOf(false) }
             var isSavingElectricProblem by remember { mutableStateOf(false) }
             var isSavingMechanicalProblem by remember { mutableStateOf(false) }
+            var isSavingCronico by remember { mutableStateOf(false) }
             var editingProblemId by rememberSaveable { mutableStateOf<String?>(null) }
             var editingProblemOriginal by remember { mutableStateOf<Problema?>(null) }
             fun resetVisualProblemForm() {
@@ -808,6 +810,103 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     difference < 9 -> "1D56EDB2-8D6E-11D3-9270-006008A19766"
                     difference < 16 -> "1D56EDB1-8D6E-11D3-9270-006008A19766"
                     else -> "1D56EDB0-8D6E-11D3-9270-006008A19766"
+                }
+            }
+            fun createCronicoFromProblem(entity: com.example.etic.data.local.entities.Problema, onSuccess: () -> Unit) {
+                val inspection = currentInspection
+                if (inspection == null || inspection.idInspeccion.isNullOrBlank()) {
+                    Toast.makeText(ctx, "No hay inspeccion activa.", Toast.LENGTH_SHORT).show()
+                    return
+                }
+                val isOpen = entity.estatusProblema?.equals("Abierto", ignoreCase = true) == true
+                val isPastInspection = entity.idInspeccion?.equals(inspection.idInspeccion, ignoreCase = true) != true
+                if (!isOpen || !isPastInspection) {
+                    Toast.makeText(ctx, "Solo puedes marcar como cronico problemas abiertos de inspecciones pasadas.", Toast.LENGTH_SHORT).show()
+                    return
+                }
+                val ubicacionId = entity.idUbicacion
+                if (ubicacionId.isNullOrBlank()) {
+                    Toast.makeText(ctx, "El problema no tiene una ubicacion asociada.", Toast.LENGTH_SHORT).show()
+                    return
+                }
+                val tipoId = entity.idTipoInspeccion
+                if (tipoId.isNullOrBlank()) {
+                    Toast.makeText(ctx, "No se encontro el tipo de problema.", Toast.LENGTH_SHORT).show()
+                    return
+                }
+                scope.launch {
+                    if (isSavingCronico) return@launch
+                    isSavingCronico = true
+                    try {
+                        val detRow = withContext(Dispatchers.IO) {
+                            runCatching {
+                                inspeccionDetDao.getByUbicacion(ubicacionId)
+                                    .firstOrNull { it.idInspeccion == inspection.idInspeccion }
+                            }.getOrNull()
+                        }
+                        val detId = detRow?.idInspeccionDet
+                        val numero = fetchNextProblemNumber(tipoId).toIntOrNull() ?: 1
+                        val nowTs = java.time.LocalDateTime.now()
+                            .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+                        val isVisualType = VISUAL_PROBLEM_TYPE_ID?.let {
+                            entity.idTipoInspeccion?.equals(it, ignoreCase = true) == true
+                        } ?: false
+                        val difference = if (!isVisualType) {
+                            val comp = entity.problemTemperature
+                            val ref = entity.referenceTemperature
+                            if (comp != null && ref != null) comp - ref else entity.aumentoTemperatura
+                        } else {
+                            entity.aumentoTemperatura
+                        }
+                        val severityId = if (!isVisualType) {
+                            calculateSeverityId(difference) ?: entity.idSeveridad
+                        } else {
+                            entity.idSeveridad
+                        }
+                        val nuevo = entity.copy(
+                            idProblema = java.util.UUID.randomUUID().toString().uppercase(),
+                            numeroProblema = numero,
+                            idSitio = inspection.idSitio,
+                            idInspeccion = inspection.idInspeccion,
+                            idInspeccionDet = detId,
+                            estatusProblema = "Abierto",
+                            estatus = "Activo",
+                            esCronico = "SI",
+                            aumentoTemperatura = difference,
+                            idSeveridad = severityId,
+                            creadoPor = currentUser?.idUsuario,
+                            fechaCreacion = nowTs,
+                            modificadoPor = null,
+                            fechaMod = null
+                        )
+                        val result = withContext(Dispatchers.IO) {
+                            runCatching { problemaDao.insert(nuevo) }
+                        }
+                        if (result.isSuccess) {
+                            if (detRow != null) {
+                                val updatedDet = detRow.copy(
+                                    idStatusInspeccionDet = "568798D2-76BB-11D3-82BF-00104BC75DC2",
+                                    idEstatusColorText = 2,
+                                    modificadoPor = currentUser?.idUsuario,
+                                    fechaMod = nowTs
+                                )
+                                withContext(Dispatchers.IO) { runCatching { inspeccionDetDao.update(updatedDet) } }
+                            }
+                            problemsRefreshTick++
+                            refreshTree(preserveSelection = ubicacionId)
+                            Toast.makeText(ctx, "Problema cronico creado.", Toast.LENGTH_SHORT).show()
+                            onSuccess()
+                        } else {
+                            val message = result.exceptionOrNull()?.localizedMessage ?: "Error desconocido"
+                            Toast.makeText(
+                                ctx,
+                                "No se pudo crear el problema cronico: $message",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    } finally {
+                        isSavingCronico = false
+                    }
                 }
             }
             fun saveElectricProblem(formData: ElectricProblemFormData) {
@@ -1475,6 +1574,15 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     onDigitalFolder = { digitalFolderLauncher.launch("image/*") },
                     onThermalCamera = { thermalCameraLauncher.launch(null) },
                     onDigitalCamera = { digitalCameraLauncher.launch(null) },
+                    onCronicoClick = {
+                        val entity = editingProblemOriginal ?: return@VisualProblemDialog
+                        createCronicoFromProblem(entity) {
+                            showVisualInspectionDialog = false
+                            cronicoActionEnabled = false
+                            resetVisualProblemForm()
+                        }
+                    },
+                    cronicoEnabled = cronicoActionEnabled && !isSavingCronico,
                     onHazardSelected = { selected ->
                         val normalized = selected.takeIf { it.isNotBlank() }
                         pendingHazardId = normalized
@@ -1486,6 +1594,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     showEditControls = editingProblemId != null,
                     onDismiss = {
                         showVisualInspectionDialog = false
+                        cronicoActionEnabled = false
                         resetVisualProblemForm()
                     },
                     onContinue = {
@@ -1715,9 +1824,19 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     onDigitalFolder = { digitalFolderLauncher.launch("image/*") },
                     onThermalCamera = { thermalCameraLauncher.launch(null) },
                     onDigitalCamera = { digitalCameraLauncher.launch(null) },
+                    onCronicoClick = {
+                        val entity = editingElectricProblemOriginal ?: return@ElectricProblemDialog
+                        createCronicoFromProblem(entity) {
+                            showElectricProblemDialog = false
+                            cronicoActionEnabled = false
+                            resetElectricProblemState()
+                        }
+                    },
+                    cronicoEnabled = cronicoActionEnabled && !isSavingCronico,
                     showEditControls = editingElectricProblemId != null,
                     onDismiss = {
                         showElectricProblemDialog = false
+                        cronicoActionEnabled = false
                         resetElectricProblemState()
                     },
                     onContinue = { saveElectricProblem(it) },
@@ -1751,9 +1870,19 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     onDigitalFolder = { digitalFolderLauncher.launch("image/*") },
                     onThermalCamera = { thermalCameraLauncher.launch(null) },
                     onDigitalCamera = { digitalCameraLauncher.launch(null) },
+                    onCronicoClick = {
+                        val entity = editingMechanicalProblemOriginal ?: return@MechanicalProblemDialog
+                        createCronicoFromProblem(entity) {
+                            showMechanicalProblemDialog = false
+                            cronicoActionEnabled = false
+                            resetMechanicalProblemState()
+                        }
+                    },
+                    cronicoEnabled = cronicoActionEnabled && !isSavingCronico,
                     showEditControls = editingMechanicalProblemId != null,
                     onDismiss = {
                         showMechanicalProblemDialog = false
+                        cronicoActionEnabled = false
                         resetMechanicalProblemState()
                     },
                     onContinue = { saveMechanicalProblem(it) },
@@ -3304,8 +3433,10 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                         val belongsToCurrentInspection =
                             !currentInspectionId.isNullOrBlank() &&
                                 problem.inspectionId?.equals(currentInspectionId, ignoreCase = true) == true
+                        cronicoActionEnabled = isOpen && !belongsToCurrentInspection
                         val canEdit = isOpen || (isClosed && belongsToCurrentInspection)
                         if (!canEdit) {
+                            cronicoActionEnabled = false
                             Toast.makeText(
                                 ctx,
                                 "Este problema cerrado pertenece a una inspeccion pasada.",
@@ -3329,6 +3460,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                         }
                     },
                     onNewProblem = {
+                        cronicoActionEnabled = false
                         val currentSelection = selectedId
                         val node = currentSelection?.let { findById(it, nodes) }
                         if (currentSelection.isNullOrBlank() || currentSelection.startsWith("root:") || node == null) {

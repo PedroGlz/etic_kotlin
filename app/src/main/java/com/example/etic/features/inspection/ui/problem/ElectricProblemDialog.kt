@@ -110,6 +110,8 @@ fun ElectricProblemDialog(
     onDigitalFolder: () -> Unit,
     onThermalCamera: () -> Unit,
     onDigitalCamera: () -> Unit,
+    onCronicoClick: (() -> Unit)? = null,
+    cronicoEnabled: Boolean = false,
     showEditControls: Boolean = false,
     onDismiss: () -> Unit,
     onContinue: (ElectricProblemFormData) -> Unit,
@@ -279,7 +281,10 @@ fun ElectricProblemDialog(
                             Checkbox(checked = isCerrado, onCheckedChange = { isCerrado = it })
                             Text("Cerrado")
                         }
-                        IconButton(onClick = {}) {
+                        IconButton(
+                            onClick = { onCronicoClick?.invoke() },
+                            enabled = cronicoEnabled
+                        ) {
                             Icon(Icons.Outlined.AccessTime, contentDescription = "Historial")
                         }
                     }
