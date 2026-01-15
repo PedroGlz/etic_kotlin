@@ -431,6 +431,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             var pendingProblemRoute by rememberSaveable { mutableStateOf<String?>(null) }
             var pendingProblemType by rememberSaveable { mutableStateOf(problemTypeLabelForId(VISUAL_PROBLEM_TYPE_ID)) }
             var pendingProblemNumber by rememberSaveable { mutableStateOf("Pendiente") }
+            var pendingInspectionNumber by rememberSaveable { mutableStateOf("-") }
             var pendingHazardId by rememberSaveable { mutableStateOf<String?>(null) }
             var pendingSeverityId by rememberSaveable { mutableStateOf<String?>(null) }
             var pendingProblemUbicacionId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -658,10 +659,16 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                         ?: problem.equipo.takeIf { it.isNotBlank() }
                         ?: ubId
                     val resolvedRoute = draft.route ?: if (fallbackRoute.isNotBlank()) fallbackRoute else entity.ruta ?: "-"
+                    val inspectionNumber = entity.idInspeccion?.let { inspId ->
+                        withContext(Dispatchers.IO) {
+                            runCatching { inspeccionDao.getById(inspId) }.getOrNull()?.noInspeccion?.toString()
+                        }
+                    } ?: currentInspection?.noInspeccion?.toString() ?: "-"
                     pendingProblemEquipmentName = equipmentName
                     pendingProblemRoute = resolvedRoute
                     pendingProblemUbicacionId = ubId
                     pendingProblemNumber = entity.numeroProblema?.toString() ?: problem.no.toString()
+                    pendingInspectionNumber = inspectionNumber
                     pendingHazardId = entity.idFalla?.takeIf { !it.isNullOrBlank() }
                         ?: visualHazardOptions.firstOrNull { option ->
                             entity.hazardIssue?.equals(option.second, ignoreCase = true) == true
@@ -704,10 +711,16 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     val equipmentName = problem.equipo.takeIf { it.isNotBlank() } ?: ubicacionId
                     val fallbackRoute = titlePathForId(nodes, ubicacionId).joinToString(" / ")
                     val resolvedRoute = fallbackRoute.takeIf { it.isNotBlank() } ?: entity.ruta ?: "-"
+                    val inspectionNumber = entity.idInspeccion?.let { inspId ->
+                        withContext(Dispatchers.IO) {
+                            runCatching { inspeccionDao.getById(inspId) }.getOrNull()?.noInspeccion?.toString()
+                        }
+                    } ?: currentInspection?.noInspeccion?.toString() ?: "-"
                     pendingProblemEquipmentName = equipmentName
                     pendingProblemRoute = resolvedRoute
                     pendingProblemUbicacionId = ubicacionId
                     pendingProblemNumber = entity.numeroProblema?.toString() ?: problem.no.toString()
+                    pendingInspectionNumber = inspectionNumber
                     pendingProblemType = problemTypeLabelForId(electricTypeId)
                     pendingThermalImage = entity.irFile.orEmpty()
                     pendingDigitalImage = entity.photoFile.orEmpty()
@@ -739,10 +752,16 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     val equipmentName = problem.equipo.takeIf { it.isNotBlank() } ?: ubicacionId
                     val fallbackRoute = titlePathForId(nodes, ubicacionId).joinToString(" / ")
                     val resolvedRoute = fallbackRoute.takeIf { it.isNotBlank() } ?: entity.ruta ?: "-"
+                    val inspectionNumber = entity.idInspeccion?.let { inspId ->
+                        withContext(Dispatchers.IO) {
+                            runCatching { inspeccionDao.getById(inspId) }.getOrNull()?.noInspeccion?.toString()
+                        }
+                    } ?: currentInspection?.noInspeccion?.toString() ?: "-"
                     pendingProblemEquipmentName = equipmentName
                     pendingProblemRoute = resolvedRoute
                     pendingProblemUbicacionId = ubicacionId
                     pendingProblemNumber = entity.numeroProblema?.toString() ?: problem.no.toString()
+                    pendingInspectionNumber = inspectionNumber
                     pendingProblemType = problemTypeLabelForId(mechanicalTypeId)
                     pendingThermalImage = entity.irFile.orEmpty()
                     pendingDigitalImage = entity.photoFile.orEmpty()
@@ -814,7 +833,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             }
             fun createCronicoFromProblem(
                 entity: com.example.etic.data.local.entities.Problema,
-                onSuccess: (newProblemNumber: String) -> Unit
+                onSuccess: (created: com.example.etic.data.local.entities.Problema) -> Unit
             ) {
                 val inspection = currentInspection
                 if (inspection == null || inspection.idInspeccion.isNullOrBlank()) {
@@ -886,6 +905,15 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                             runCatching { problemaDao.insert(nuevo) }
                         }
                         if (result.isSuccess) {
+                            val markedOriginal = entity.copy(
+                                estatusProblema = "Cerrado",
+                                esCronico = "SI",
+                                modificadoPor = currentUser?.idUsuario,
+                                fechaMod = nowTs
+                            )
+                            withContext(Dispatchers.IO) {
+                                runCatching { problemaDao.update(markedOriginal) }
+                            }
                             if (detRow != null) {
                                 val updatedDet = detRow.copy(
                                     idStatusInspeccionDet = "568798D2-76BB-11D3-82BF-00104BC75DC2",
@@ -898,7 +926,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                             problemsRefreshTick++
                             refreshTree(preserveSelection = ubicacionId)
                             Toast.makeText(ctx, "Problema cronico creado.", Toast.LENGTH_SHORT).show()
-                            onSuccess(numero.toString())
+                            onSuccess(nuevo)
                         } else {
                             val message = result.exceptionOrNull()?.localizedMessage ?: "Error desconocido"
                             Toast.makeText(
@@ -1548,9 +1576,8 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             }
 
             if (showVisualInspectionDialog && pendingProblemEquipmentName != null) {
-                val inspectionNumber = currentInspection?.noInspeccion?.toString() ?: "-"
                 VisualProblemDialog(
-                    inspectionNumber = inspectionNumber,
+                    inspectionNumber = pendingInspectionNumber,
                     problemNumber = pendingProblemNumber,
                     problemType = pendingProblemType,
                     equipmentName = pendingProblemEquipmentName ?: "-",
@@ -1579,8 +1606,11 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     onDigitalCamera = { digitalCameraLauncher.launch(null) },
                     onCronicoClick = {
                         val entity = editingProblemOriginal ?: return@VisualProblemDialog
-                        createCronicoFromProblem(entity) { newNumber ->
-                            pendingProblemNumber = newNumber
+                        createCronicoFromProblem(entity) { created ->
+                            pendingProblemNumber = created.numeroProblema?.toString() ?: pendingProblemNumber
+                            pendingInspectionNumber = currentInspection?.noInspeccion?.toString() ?: "-"
+                            editingProblemId = created.idProblema
+                            editingProblemOriginal = created
                             cronicoActionEnabled = false
                         }
                     },
@@ -1797,13 +1827,12 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     bearingType = entity.bearingType ?: ""
                 )
             }
-            val inspectionNumber = currentInspection?.noInspeccion?.toString() ?: "-"
             val manufacturerOptionsPairs = fabricanteOptions
                 .sortedBy { it.fabricante?.lowercase(Locale.getDefault()) ?: "" }
                 .map { it.idFabricante to (it.fabricante ?: it.idFabricante) }
             if (showElectricProblemDialog && pendingProblemEquipmentName != null) {
                 ElectricProblemDialog(
-                    inspectionNumber = inspectionNumber,
+                    inspectionNumber = pendingInspectionNumber,
                     problemNumber = pendingProblemNumber,
                     problemType = pendingProblemType,
                     equipmentName = pendingProblemEquipmentName ?: "-",
@@ -1828,8 +1857,11 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     onDigitalCamera = { digitalCameraLauncher.launch(null) },
                     onCronicoClick = {
                         val entity = editingElectricProblemOriginal ?: return@ElectricProblemDialog
-                        createCronicoFromProblem(entity) { newNumber ->
-                            pendingProblemNumber = newNumber
+                        createCronicoFromProblem(entity) { created ->
+                            pendingProblemNumber = created.numeroProblema?.toString() ?: pendingProblemNumber
+                            pendingInspectionNumber = currentInspection?.noInspeccion?.toString() ?: "-"
+                            editingElectricProblemId = created.idProblema
+                            editingElectricProblemOriginal = created
                             cronicoActionEnabled = false
                         }
                     },
@@ -1848,7 +1880,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             }
             if (showMechanicalProblemDialog && pendingProblemEquipmentName != null) {
                 MechanicalProblemDialog(
-                    inspectionNumber = inspectionNumber,
+                    inspectionNumber = pendingInspectionNumber,
                     problemNumber = pendingProblemNumber,
                     problemType = pendingProblemType,
                     equipmentName = pendingProblemEquipmentName ?: "-",
@@ -1873,8 +1905,11 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     onDigitalCamera = { digitalCameraLauncher.launch(null) },
                     onCronicoClick = {
                         val entity = editingMechanicalProblemOriginal ?: return@MechanicalProblemDialog
-                        createCronicoFromProblem(entity) { newNumber ->
-                            pendingProblemNumber = newNumber
+                        createCronicoFromProblem(entity) { created ->
+                            pendingProblemNumber = created.numeroProblema?.toString() ?: pendingProblemNumber
+                            pendingInspectionNumber = currentInspection?.noInspeccion?.toString() ?: "-"
+                            editingMechanicalProblemId = created.idProblema
+                            editingMechanicalProblemOriginal = created
                             cronicoActionEnabled = false
                         }
                     },
@@ -3461,6 +3496,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     },
                     onNewProblem = {
                         cronicoActionEnabled = false
+                        pendingInspectionNumber = currentInspection?.noInspeccion?.toString() ?: "-"
                         val currentSelection = selectedId
                         val node = currentSelection?.let { findById(it, nodes) }
                         if (currentSelection.isNullOrBlank() || currentSelection.startsWith("root:") || node == null) {
