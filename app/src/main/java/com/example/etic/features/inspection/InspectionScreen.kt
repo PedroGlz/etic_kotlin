@@ -3847,6 +3847,7 @@ private fun DetailsTable(
                                         Icon(
                                             Icons.Outlined.Delete,
                                             contentDescription = "Eliminar",
+                                            tint = MaterialTheme.colorScheme.error,
                                             modifier = Modifier.size(18.dp)
                                         )
                                     }
@@ -4247,6 +4248,7 @@ private fun ProblemsTable(
                                             Icon(
                                                 Icons.Outlined.Delete,
                                                 contentDescription = "Eliminar",
+                                                tint = MaterialTheme.colorScheme.error,
                                                 modifier = Modifier.size(28.dp)
                                             )
                                         }
@@ -4462,7 +4464,11 @@ private fun BaselineTable(baselines: List<Baseline>, onDelete: (Baseline) -> Uni
                         cellFixed(wNotas) { Text(b.notas) }
                         cellFixed(wOp) {
                             IconButton(onClick = { onDelete(b) }) {
-                                Icon(Icons.Outlined.Delete, contentDescription = "Eliminar")
+                                Icon(
+                                    Icons.Outlined.Delete,
+                                    contentDescription = "Eliminar",
+                                    tint = MaterialTheme.colorScheme.error
+                                )
                             }
                         }
                     }
