@@ -3520,6 +3520,12 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                         val cur = findById(selectedId, nodes)
                         cur?.baselines?.remove(b)
                     },
+                    onProblemDeleted = {
+                        problemsRefreshTick++
+                        scope.launch {
+                            refreshTree(preserveSelection = selectedId)
+                        }
+                    },
                     baselineRefreshTick = baselineRefreshTick,
                     onBaselineChanged = { baselineRefreshTick++ },
                     problemsRefreshTick = problemsRefreshTick,
@@ -3947,6 +3953,7 @@ private fun ListTabs(
     node: TreeNode?,
     onDeleteProblem: (Problem) -> Unit,
     onDeleteBaseline: (Baseline) -> Unit,
+    onProblemDeleted: (() -> Unit)? = null,
     baselineRefreshTick: Int,
     onBaselineChanged: () -> Unit,
     problemsRefreshTick: Int,
@@ -4033,6 +4040,7 @@ private fun ListTabs(
                 refreshTick = problemsRefreshTick,
                 typeFilterId = typeFilterId,
                 statusFilterId = statusFilterId,
+                onProblemDeleted = onProblemDeleted,
                 modifier = Modifier
                     .fillMaxSize()
                     .alpha(if (showProblems) 1f else 0f)
@@ -4557,18 +4565,23 @@ private fun ProblemsTableFromDatabase(
     typeFilterId: String?,
     statusFilterId: String,
     modifier: Modifier = Modifier,
+    onProblemDeleted: (() -> Unit)? = null,
     onProblemDoubleTap: ((Problem) -> Unit)? = null
 ) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val dao = remember { com.example.etic.data.local.DbProvider.get(ctx).problemaDao() }
     val ubicacionDao = remember { com.example.etic.data.local.DbProvider.get(ctx).ubicacionDao() }
     val inspDao = remember { com.example.etic.data.local.DbProvider.get(ctx).inspeccionDao() }
+    val inspeccionDetDao = remember { com.example.etic.data.local.DbProvider.get(ctx).inspeccionDetDao() }
     val sevDao = remember { com.example.etic.data.local.DbProvider.get(ctx).severidadDao() }
     val eqDao = remember { com.example.etic.data.local.DbProvider.get(ctx).equipoDao() }
     val tipoInspDao = remember { com.example.etic.data.local.DbProvider.get(ctx).tipoInspeccionDao() }
 
     val currentInspection = LocalCurrentInspection.current
+    val currentUser = LocalCurrentUser.current
+    val scope = rememberCoroutineScope()
     var problemsCache by remember { mutableStateOf(emptyList<Problem>()) }
+    var problemToDelete by remember { mutableStateOf<Problem?>(null) }
     val uiProblems by produceState(initialValue = problemsCache, selectedId, refreshTick, typeFilterId, statusFilterId) {
         val rows = try {
             val siteId = currentInspection?.idSitio
@@ -4661,7 +4674,86 @@ private fun ProblemsTableFromDatabase(
     }
 
     Box(modifier) {
-        ProblemsTable(problems = uiProblems, onDelete = { /* no-op: from DB */ }, onDoubleTap = onProblemDoubleTap)
+        ProblemsTable(
+            problems = uiProblems,
+            onDelete = { problem -> problemToDelete = problem },
+            onDoubleTap = onProblemDoubleTap
+        )
+
+        if (problemToDelete != null) {
+            val problem = problemToDelete!!
+            AlertDialog(
+                onDismissRequest = { problemToDelete = null },
+                confirmButton = {
+                    Button(onClick = {
+                        scope.launch {
+                            val entity = runCatching { dao.getById(problem.id) }.getOrNull()
+                            if (entity == null) {
+                                problemToDelete = null
+                                return@launch
+                            }
+                            val nowTs = java.time.LocalDateTime.now()
+                                .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+                            val updated = entity.copy(
+                                estatus = "Inactivo",
+                                modificadoPor = currentUser?.idUsuario,
+                                fechaMod = nowTs
+                            )
+                            runCatching { dao.update(updated) }
+
+                            val ubicacionId = entity.idUbicacion
+                            val inspectionId = currentInspection?.idInspeccion
+                            if (!ubicacionId.isNullOrBlank() && !inspectionId.isNullOrBlank()) {
+                                val siteId = currentInspection?.idSitio
+                                val activeRows = try {
+                                    if (!siteId.isNullOrBlank()) {
+                                        dao.getActivosPorSitio(siteId)
+                                    } else {
+                                        dao.getAllActivos()
+                                    }
+                                } catch (_: Exception) { emptyList() }
+                                val hasOtherActive = activeRows.any { row ->
+                                    row.idUbicacion == ubicacionId && row.idProblema != entity.idProblema
+                                }
+                                val openInCurrentInspection = try {
+                                    dao.getByInspeccionActivos(inspectionId)
+                                        .filter { it.idUbicacion == ubicacionId && it.idProblema != entity.idProblema }
+                                        .any { it.estatusProblema?.equals("Abierto", ignoreCase = true) == true }
+                                } catch (_: Exception) { false }
+
+                                val detRow = try {
+                                    inspeccionDetDao.getByUbicacion(ubicacionId)
+                                        .firstOrNull { it.idInspeccion == inspectionId }
+                                } catch (_: Exception) { null }
+                                if (detRow != null) {
+                                    val shouldBePending = !hasOtherActive && !openInCurrentInspection
+                                    val statusId = if (shouldBePending)
+                                        "568798D1-76BB-11D3-82BF-00104BC75DC2"
+                                    else
+                                        "568798D2-76BB-11D3-82BF-00104BC75DC2"
+                                    val colorText = if (shouldBePending) 1 else 2
+                                    val updatedDet = detRow.copy(
+                                        idStatusInspeccionDet = statusId,
+                                        idEstatusColorText = colorText,
+                                        modificadoPor = currentUser?.idUsuario,
+                                        fechaMod = nowTs
+                                    )
+                                    runCatching { inspeccionDetDao.update(updatedDet) }
+                                }
+                            }
+
+                            problemsCache = problemsCache.filter { it.id != problem.id }
+                            onProblemDeleted?.invoke()
+                            problemToDelete = null
+                        }
+                    }) { Text("Eliminar") }
+                },
+                dismissButton = {
+                    Button(onClick = { problemToDelete = null }) { Text("Cancelar") }
+                },
+                text = { Text("Eliminar problema seleccionado?") }
+            )
+        }
     }
 }
 
