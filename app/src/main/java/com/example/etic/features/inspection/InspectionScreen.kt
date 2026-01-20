@@ -442,6 +442,8 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             var isSavingElectricProblem by remember { mutableStateOf(false) }
             var isSavingMechanicalProblem by remember { mutableStateOf(false) }
             var isSavingCronico by remember { mutableStateOf(false) }
+            var showCronicoConfirmDialog by rememberSaveable { mutableStateOf(false) }
+            var pendingCronicoEntity by remember { mutableStateOf<Problema?>(null) }
             var editingProblemId by rememberSaveable { mutableStateOf<String?>(null) }
             var editingProblemOriginal by remember { mutableStateOf<Problema?>(null) }
             var visualProblemClosed by rememberSaveable { mutableStateOf(false) }
@@ -1615,13 +1617,8 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     onDigitalCamera = { digitalCameraLauncher.launch(null) },
                     onCronicoClick = {
                         val entity = editingProblemOriginal ?: return@VisualProblemDialog
-                        createCronicoFromProblem(entity) { created ->
-                            pendingProblemNumber = created.numeroProblema?.toString() ?: pendingProblemNumber
-                            pendingInspectionNumber = currentInspection?.noInspeccion?.toString() ?: "-"
-                            editingProblemId = created.idProblema
-                            editingProblemOriginal = created
-                            cronicoActionEnabled = false
-                        }
+                        pendingCronicoEntity = entity
+                        showCronicoConfirmDialog = true
                     },
                     cronicoEnabled = cronicoActionEnabled && !isSavingCronico,
                     cronicoChecked = editingProblemOriginal?.esCronico?.equals("SI", ignoreCase = true) == true,
@@ -1871,13 +1868,8 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     onDigitalCamera = { digitalCameraLauncher.launch(null) },
                     onCronicoClick = {
                         val entity = editingElectricProblemOriginal ?: return@ElectricProblemDialog
-                        createCronicoFromProblem(entity) { created ->
-                            pendingProblemNumber = created.numeroProblema?.toString() ?: pendingProblemNumber
-                            pendingInspectionNumber = currentInspection?.noInspeccion?.toString() ?: "-"
-                            editingElectricProblemId = created.idProblema
-                            editingElectricProblemOriginal = created
-                            cronicoActionEnabled = false
-                        }
+                        pendingCronicoEntity = entity
+                        showCronicoConfirmDialog = true
                     },
                     cronicoEnabled = cronicoActionEnabled && !isSavingCronico,
                     cronicoChecked = editingElectricProblemOriginal?.esCronico?.equals("SI", ignoreCase = true) == true,
@@ -1923,13 +1915,8 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     onDigitalCamera = { digitalCameraLauncher.launch(null) },
                     onCronicoClick = {
                         val entity = editingMechanicalProblemOriginal ?: return@MechanicalProblemDialog
-                        createCronicoFromProblem(entity) { created ->
-                            pendingProblemNumber = created.numeroProblema?.toString() ?: pendingProblemNumber
-                            pendingInspectionNumber = currentInspection?.noInspeccion?.toString() ?: "-"
-                            editingMechanicalProblemId = created.idProblema
-                            editingMechanicalProblemOriginal = created
-                            cronicoActionEnabled = false
-                        }
+                        pendingCronicoEntity = entity
+                        showCronicoConfirmDialog = true
                     },
                     cronicoEnabled = cronicoActionEnabled && !isSavingCronico,
                     cronicoChecked = editingMechanicalProblemOriginal?.esCronico?.equals("SI", ignoreCase = true) == true,
@@ -1946,6 +1933,57 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     continueEnabled = !isSavingMechanicalProblem,
                     initialFormData = mechanicalProblemInitialData,
                     dialogKey = mechanicalProblemFormKey
+                )
+            }
+
+            if (showCronicoConfirmDialog) {
+                AlertDialog(
+                    onDismissRequest = {
+                        showCronicoConfirmDialog = false
+                        pendingCronicoEntity = null
+                    },
+                    confirmButton = {
+                        Button(onClick = {
+                            val entity = pendingCronicoEntity
+                            showCronicoConfirmDialog = false
+                            pendingCronicoEntity = null
+                            if (entity != null) {
+                                createCronicoFromProblem(entity) { created ->
+                                    pendingProblemNumber = created.numeroProblema?.toString() ?: pendingProblemNumber
+                                    pendingInspectionNumber = currentInspection?.noInspeccion?.toString() ?: "-"
+                                    when (created.idTipoInspeccion?.lowercase(Locale.ROOT)) {
+                                        VISUAL_PROBLEM_TYPE_ID?.lowercase(Locale.ROOT) -> {
+                                            editingProblemId = created.idProblema
+                                            editingProblemOriginal = created
+                                        }
+                                        ELECTRIC_PROBLEM_TYPE_ID?.lowercase(Locale.ROOT) -> {
+                                            editingElectricProblemId = created.idProblema
+                                            editingElectricProblemOriginal = created
+                                        }
+                                        MECHANICAL_PROBLEM_TYPE_ID?.lowercase(Locale.ROOT) -> {
+                                            editingMechanicalProblemId = created.idProblema
+                                            editingMechanicalProblemOriginal = created
+                                        }
+                                    }
+                                    cronicoActionEnabled = false
+                                }
+                            }
+                        }) { Text("Continuar") }
+                    },
+                    dismissButton = {
+                        Button(onClick = {
+                            showCronicoConfirmDialog = false
+                            pendingCronicoEntity = null
+                        }) { Text("Cancelar") }
+                    },
+                    title = { Text("Confirmación") },
+                    text = {
+                        Text(
+                            "Estás a punto de crear un problema crónico, el problema actual " +
+                            "se cerrará y se abrirá un nuevo problema en la inspección actual. " +
+                            "¿Deseas continuar?"
+                        )
+                    }
                 )
             }
 
