@@ -87,6 +87,10 @@ fun VisualProblemDialog(
     onSeveritySelected: (String) -> Unit,
     onCronicoClick: (() -> Unit)? = null,
     cronicoEnabled: Boolean = false,
+    cronicoChecked: Boolean = false,
+    cerradoChecked: Boolean = false,
+    cerradoEnabled: Boolean = false,
+    onCerradoChange: (Boolean) -> Unit = {},
     showEditControls: Boolean = false,
     onDismiss: () -> Unit,
     onContinue: () -> Unit
@@ -113,8 +117,6 @@ fun VisualProblemDialog(
             ) {
                 Text("Problema Visual", style = MaterialTheme.typography.headlineSmall)
                 if (showEditControls) {
-                    var isCronico by remember { mutableStateOf(false) }
-                    var isCerrado by remember { mutableStateOf(false) }
                     Divider(Modifier.padding(top = 12.dp, bottom = 8.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -130,11 +132,19 @@ fun VisualProblemDialog(
                             }
                         }
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Checkbox(checked = isCronico, onCheckedChange = { isCronico = it })
+                            Checkbox(
+                                checked = cronicoChecked,
+                                onCheckedChange = {},
+                                enabled = false
+                            )
                             Text("Cronico")
                         }
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Checkbox(checked = isCerrado, onCheckedChange = { isCerrado = it })
+                            Checkbox(
+                                checked = cerradoChecked,
+                                onCheckedChange = { onCerradoChange(it) },
+                                enabled = cerradoEnabled
+                            )
                             Text("Cerrado")
                         }
                         IconButton(

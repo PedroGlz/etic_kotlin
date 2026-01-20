@@ -444,9 +444,11 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             var isSavingCronico by remember { mutableStateOf(false) }
             var editingProblemId by rememberSaveable { mutableStateOf<String?>(null) }
             var editingProblemOriginal by remember { mutableStateOf<Problema?>(null) }
+            var visualProblemClosed by rememberSaveable { mutableStateOf(false) }
             fun resetVisualProblemForm() {
                 editingProblemId = null
                 editingProblemOriginal = null
+                visualProblemClosed = false
                 pendingProblemType = problemTypeLabelForId(VISUAL_PROBLEM_TYPE_ID)
                 pendingHazardId = null
                 pendingSeverityId = null
@@ -459,17 +461,21 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             }
             var editingElectricProblemId by rememberSaveable { mutableStateOf<String?>(null) }
             var editingElectricProblemOriginal by remember { mutableStateOf<Problema?>(null) }
+            var electricProblemClosed by rememberSaveable { mutableStateOf(false) }
             fun resetElectricProblemState() {
                 editingElectricProblemId = null
                 editingElectricProblemOriginal = null
+                electricProblemClosed = false
                 pendingThermalImage = ""
                 pendingDigitalImage = ""
             }
             var editingMechanicalProblemId by rememberSaveable { mutableStateOf<String?>(null) }
             var editingMechanicalProblemOriginal by remember { mutableStateOf<Problema?>(null) }
+            var mechanicalProblemClosed by rememberSaveable { mutableStateOf(false) }
             fun resetMechanicalProblemState() {
                 editingMechanicalProblemId = null
                 editingMechanicalProblemOriginal = null
+                mechanicalProblemClosed = false
                 pendingThermalImage = ""
                 pendingDigitalImage = ""
             }
@@ -680,6 +686,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     pendingProblemType = problemTypeLabelForId(VISUAL_PROBLEM_TYPE_ID)
                     editingProblemId = entity.idProblema
                     editingProblemOriginal = entity
+                    visualProblemClosed = entity.estatusProblema?.equals("Cerrado", ignoreCase = true) == true
                     ensureVisualDefaults(allowObservationUpdate = false)
                     showVisualInspectionDialog = true
                 }
@@ -708,6 +715,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     resetElectricProblemState()
                     editingElectricProblemOriginal = entity
                     editingElectricProblemId = entity.idProblema
+                    electricProblemClosed = entity.estatusProblema?.equals("Cerrado", ignoreCase = true) == true
                     val equipmentName = problem.equipo.takeIf { it.isNotBlank() } ?: ubicacionId
                     val fallbackRoute = titlePathForId(nodes, ubicacionId).joinToString(" / ")
                     val resolvedRoute = fallbackRoute.takeIf { it.isNotBlank() } ?: entity.ruta ?: "-"
@@ -767,6 +775,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     pendingDigitalImage = entity.photoFile.orEmpty()
                     editingMechanicalProblemOriginal = entity
                     editingMechanicalProblemId = entity.idProblema
+                    mechanicalProblemClosed = entity.estatusProblema?.equals("Cerrado", ignoreCase = true) == true
                     mechanicalProblemFormKey += 1
                     showMechanicalProblemDialog = true
                 }
@@ -1026,7 +1035,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                 circuitVoltage = formData.circuitVoltage.takeIf { it.isNotBlank() },
                                 idFalla = formData.failureId,
                                 componentComment = finalComment,
-                                estatusProblema = editingElectricProblem.estatusProblema ?: "Abierto",
+                                estatusProblema = if (electricProblemClosed) "Cerrado" else "Abierto",
                                 aumentoTemperatura = difference,
                                 idSeveridad = severityId,
                                 ruta = pendingProblemRoute ?: pendingProblemEquipmentName ?: "-",
@@ -1206,7 +1215,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                 circuitVoltage = formData.circuitVoltage.takeIf { it.isNotBlank() },
                                 idFalla = formData.failureId,
                                 componentComment = finalComment,
-                                estatusProblema = editingProblem.estatusProblema ?: "Abierto",
+                                estatusProblema = if (mechanicalProblemClosed) "Cerrado" else "Abierto",
                                 aumentoTemperatura = difference,
                                 idSeveridad = severityId,
                                 ruta = pendingProblemRoute ?: pendingProblemEquipmentName ?: "-",
@@ -1615,6 +1624,10 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                         }
                     },
                     cronicoEnabled = cronicoActionEnabled && !isSavingCronico,
+                    cronicoChecked = editingProblemOriginal?.esCronico?.equals("SI", ignoreCase = true) == true,
+                    cerradoChecked = visualProblemClosed,
+                    cerradoEnabled = editingProblemOriginal?.estatusProblema?.equals("Abierto", ignoreCase = true) == true,
+                    onCerradoChange = { visualProblemClosed = it },
                     onHazardSelected = { selected ->
                         val normalized = selected.takeIf { it.isNotBlank() }
                         pendingHazardId = normalized
@@ -1722,6 +1735,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                             idSeveridad = severityId,
                                             componentComment = comment,
                                             ruta = resolvedRoute,
+                                            estatusProblema = if (visualProblemClosed) "Cerrado" else "Abierto",
                                             irFile = thermal,
                                             photoFile = digital,
                                             modificadoPor = currentUser?.idUsuario,
@@ -1866,6 +1880,10 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                         }
                     },
                     cronicoEnabled = cronicoActionEnabled && !isSavingCronico,
+                    cronicoChecked = editingElectricProblemOriginal?.esCronico?.equals("SI", ignoreCase = true) == true,
+                    cerradoChecked = electricProblemClosed,
+                    cerradoEnabled = editingElectricProblemOriginal?.estatusProblema?.equals("Abierto", ignoreCase = true) == true,
+                    onCerradoChange = { electricProblemClosed = it },
                     showEditControls = editingElectricProblemId != null,
                     onDismiss = {
                         showElectricProblemDialog = false
@@ -1914,6 +1932,10 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                         }
                     },
                     cronicoEnabled = cronicoActionEnabled && !isSavingCronico,
+                    cronicoChecked = editingMechanicalProblemOriginal?.esCronico?.equals("SI", ignoreCase = true) == true,
+                    cerradoChecked = mechanicalProblemClosed,
+                    cerradoEnabled = editingMechanicalProblemOriginal?.estatusProblema?.equals("Abierto", ignoreCase = true) == true,
+                    onCerradoChange = { mechanicalProblemClosed = it },
                     showEditControls = editingMechanicalProblemId != null,
                     onDismiss = {
                         showMechanicalProblemDialog = false
@@ -4002,14 +4024,14 @@ private fun ProblemsTable(
     val wNo = 55.dp
     val wFecha = 95.dp
     val wInspeccion = 85.dp
-    val wTipo = 77.dp
+    val wTipo = 81.dp
     val wEstatus = 80.dp
     val wCronico = 82.dp
     val wTempC = 87.dp
     val wDeltaT = 97.dp
     val wSeveridad = 97.dp
     val wEquipo = 163.dp
-    val wComentarios = 301.dp
+    val wComentarios = 300.dp
     val wOp = 32.dp
 
     val tableMinWidth =

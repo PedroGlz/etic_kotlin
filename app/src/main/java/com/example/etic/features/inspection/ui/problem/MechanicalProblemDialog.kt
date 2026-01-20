@@ -111,6 +111,10 @@ fun MechanicalProblemDialog(
     onDigitalCamera: () -> Unit,
     onCronicoClick: (() -> Unit)? = null,
     cronicoEnabled: Boolean = false,
+    cronicoChecked: Boolean = false,
+    cerradoChecked: Boolean = false,
+    cerradoEnabled: Boolean = false,
+    onCerradoChange: (Boolean) -> Unit = {},
     showEditControls: Boolean = false,
     onDismiss: () -> Unit,
     onContinue: (MechanicalProblemFormData) -> Unit,
@@ -261,8 +265,6 @@ fun MechanicalProblemDialog(
                     Text("Problema Mecánico", style = MaterialTheme.typography.titleMedium)
 
                     if (showEditControls) {
-                        var isCronico by rememberSaveable { mutableStateOf(false) }
-                        var isCerrado by rememberSaveable { mutableStateOf(false) }
                         Divider(Modifier.padding(top = 12.dp, bottom = 8.dp))
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -278,11 +280,19 @@ fun MechanicalProblemDialog(
                                 }
                             }
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Checkbox(checked = isCronico, onCheckedChange = { isCronico = it })
+                                Checkbox(
+                                    checked = cronicoChecked,
+                                    onCheckedChange = {},
+                                    enabled = false
+                                )
                                 Text("Cronico")
                             }
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Checkbox(checked = isCerrado, onCheckedChange = { isCerrado = it })
+                                Checkbox(
+                                    checked = cerradoChecked,
+                                    onCheckedChange = { onCerradoChange(it) },
+                                    enabled = cerradoEnabled
+                                )
                                 Text("Cerrado")
                             }
                             IconButton(
