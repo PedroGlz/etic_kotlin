@@ -57,6 +57,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.key
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.KeyboardType
@@ -295,7 +296,11 @@ fun ElectricProblemDialog(
                             onClick = { onCronicoClick?.invoke() },
                             enabled = cronicoEnabled
                         ) {
-                            Icon(Icons.Outlined.AccessTime, contentDescription = "Historial")
+                            Icon(
+                                Icons.Outlined.AccessTime,
+                                contentDescription = "Historial",
+                                tint = Color(0xFFFFC107)
+                            )
                         }
                     }
                     Divider(Modifier.padding(top = 8.dp, bottom = 12.dp))
