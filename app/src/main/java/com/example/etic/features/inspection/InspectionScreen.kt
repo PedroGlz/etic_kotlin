@@ -4007,27 +4007,15 @@ private fun ProblemsTable(
     val wTempC = 87.dp
     val wDeltaT = 97.dp
     val wSeveridad = 97.dp
-    val wEquipo = 160.dp
-    val wComentarios = 300.dp
-    val wOp = 27.dp
+    val wEquipo = 163.dp
+    val wComentarios = 301.dp
+    val wOp = 32.dp
 
     val tableMinWidth =
         wNo + wFecha + wInspeccion + wTipo + wEstatus + wCronico +
                 wTempC + wDeltaT + wSeveridad + wEquipo + wComentarios + wOp
 
-    // 🎨 Colores por cabecera (suaves, basados en theme)
-    val cNo = MaterialTheme.colorScheme.errorContainer
-    val cFecha = MaterialTheme.colorScheme.secondaryContainer
-    val cInspeccion = MaterialTheme.colorScheme.tertiaryContainer
-    val cTipo = MaterialTheme.colorScheme.surfaceVariant
-    val cEstatus = MaterialTheme.colorScheme.errorContainer
-    val cCronico = MaterialTheme.colorScheme.inversePrimary
-    val cTempC = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
-    val cDeltaT = MaterialTheme.colorScheme.errorContainer
-    val cSeveridad = MaterialTheme.colorScheme.secondaryContainer
-    val cEquipo = MaterialTheme.colorScheme.tertiaryContainer
-    val cComentarios = MaterialTheme.colorScheme.errorContainer
-    val cOp = MaterialTheme.colorScheme.surface
+    val headerBackground = MaterialTheme.colorScheme.surface
 
     // Helper: header cell (ancho + color)
     @Composable
@@ -4106,7 +4094,7 @@ private fun ProblemsTable(
                 // ───────── HEADER ─────────
                 Row(Modifier.fillMaxWidth()) {
 
-                    headerCell(wNo, cNo, Modifier.clickable { toggleSort(ProblemColumn.NUMERO) }) {
+                    headerCell(wNo, headerBackground, Modifier.clickable { toggleSort(ProblemColumn.NUMERO) }) {
                         SortHeader(
                             label = "No.",
                             column = ProblemColumn.NUMERO,
@@ -4115,7 +4103,7 @@ private fun ProblemsTable(
                         )
                     }
 
-                    headerCell(wFecha, cFecha, Modifier.clickable { toggleSort(ProblemColumn.FECHA) }) {
+                    headerCell(wFecha, headerBackground, Modifier.clickable { toggleSort(ProblemColumn.FECHA) }) {
                         SortHeader(
                             label = stringResource(com.example.etic.R.string.col_fecha),
                             column = ProblemColumn.FECHA,
@@ -4124,7 +4112,7 @@ private fun ProblemsTable(
                         )
                     }
 
-                    headerCell(wInspeccion, cInspeccion, Modifier.clickable { toggleSort(ProblemColumn.INSPECCION) }) {
+                    headerCell(wInspeccion, headerBackground, Modifier.clickable { toggleSort(ProblemColumn.INSPECCION) }) {
                         SortHeader(
                             label = stringResource(com.example.etic.R.string.col_num_inspeccion),
                             column = ProblemColumn.INSPECCION,
@@ -4133,7 +4121,7 @@ private fun ProblemsTable(
                         )
                     }
 
-                    headerCell(wTipo, cTipo, Modifier.clickable { toggleSort(ProblemColumn.TIPO) }) {
+                    headerCell(wTipo, headerBackground, Modifier.clickable { toggleSort(ProblemColumn.TIPO) }) {
                         SortHeader(
                             label = stringResource(com.example.etic.R.string.col_tipo),
                             column = ProblemColumn.TIPO,
@@ -4142,7 +4130,7 @@ private fun ProblemsTable(
                         )
                     }
 
-                    headerCell(wEstatus, cEstatus, Modifier.clickable { toggleSort(ProblemColumn.ESTATUS) }) {
+                    headerCell(wEstatus, headerBackground, Modifier.clickable { toggleSort(ProblemColumn.ESTATUS) }) {
                         SortHeader(
                             label = stringResource(com.example.etic.R.string.col_estatus),
                             column = ProblemColumn.ESTATUS,
@@ -4151,7 +4139,7 @@ private fun ProblemsTable(
                         )
                     }
 
-                    headerCell(wCronico, cCronico, Modifier.clickable { toggleSort(ProblemColumn.CRONICO) }) {
+                    headerCell(wCronico, headerBackground, Modifier.clickable { toggleSort(ProblemColumn.CRONICO) }) {
                         SortHeader(
                             label = stringResource(com.example.etic.R.string.col_cronico),
                             column = ProblemColumn.CRONICO,
@@ -4160,7 +4148,7 @@ private fun ProblemsTable(
                         )
                     }
 
-                    headerCell(wTempC, cTempC, Modifier.clickable { toggleSort(ProblemColumn.TEMP_C) }) {
+                    headerCell(wTempC, headerBackground, Modifier.clickable { toggleSort(ProblemColumn.TEMP_C) }) {
                         SortHeader(
                             label = stringResource(com.example.etic.R.string.col_temp_c),
                             column = ProblemColumn.TEMP_C,
@@ -4169,7 +4157,7 @@ private fun ProblemsTable(
                         )
                     }
 
-                    headerCell(wDeltaT, cDeltaT, Modifier.clickable { toggleSort(ProblemColumn.DELTA_T) }) {
+                    headerCell(wDeltaT, headerBackground, Modifier.clickable { toggleSort(ProblemColumn.DELTA_T) }) {
                         SortHeader(
                             label = stringResource(com.example.etic.R.string.col_delta_t_c),
                             column = ProblemColumn.DELTA_T,
@@ -4178,7 +4166,7 @@ private fun ProblemsTable(
                         )
                     }
 
-                    headerCell(wSeveridad, cSeveridad, Modifier.clickable { toggleSort(ProblemColumn.SEVERIDAD) }) {
+                    headerCell(wSeveridad, headerBackground, Modifier.clickable { toggleSort(ProblemColumn.SEVERIDAD) }) {
                         SortHeader(
                             label = stringResource(com.example.etic.R.string.col_severidad),
                             column = ProblemColumn.SEVERIDAD,
@@ -4187,7 +4175,7 @@ private fun ProblemsTable(
                         )
                     }
 
-                    headerCell(wEquipo, cEquipo, Modifier.clickable { toggleSort(ProblemColumn.EQUIPO) }) {
+                    headerCell(wEquipo, headerBackground, Modifier.clickable { toggleSort(ProblemColumn.EQUIPO) }) {
                         SortHeader(
                             label = stringResource(com.example.etic.R.string.col_equipo),
                             column = ProblemColumn.EQUIPO,
@@ -4205,11 +4193,11 @@ private fun ProblemsTable(
                         )
                     }*/
 
-                    headerCell(wComentarios, cComentarios) {
+                    headerCell(wComentarios, headerBackground) {
                         Text(stringResource(com.example.etic.R.string.col_comentarios))
                     }
 
-                    headerCell(wOp, cOp) {
+                    headerCell(wOp, headerBackground) {
                         Text(stringResource(com.example.etic.R.string.col_op))
                     }
                 }
@@ -4256,7 +4244,11 @@ private fun ProblemsTable(
                                     val belongsToCurrentInspection = p.inspectionId?.equals(currentInspectionId, ignoreCase = true) == true
                                     if (isOpen && belongsToCurrentInspection) {
                                         IconButton(onClick = { onDelete(p) }) {
-                                            Icon(Icons.Outlined.Delete, contentDescription = "Eliminar")
+                                            Icon(
+                                                Icons.Outlined.Delete,
+                                                contentDescription = "Eliminar",
+                                                modifier = Modifier.size(28.dp)
+                                            )
                                         }
                                     }
                                 }
@@ -4399,17 +4391,7 @@ private fun BaselineTable(baselines: List<Baseline>, onDelete: (Baseline) -> Uni
         if (sortAsc) baselines.sortedWith(comparator) else baselines.sortedWith(comparator.reversed())
     }
 
-    // Colores de cabecera alineados con la tabla de Problemas
-    val cNo = MaterialTheme.colorScheme.errorContainer
-    val cEquipo = MaterialTheme.colorScheme.tertiaryContainer
-    val cFecha = MaterialTheme.colorScheme.secondaryContainer
-    val cMta = MaterialTheme.colorScheme.surfaceVariant
-    val cTemp = MaterialTheme.colorScheme.inversePrimary
-    val cAmb = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
-    val cIr = MaterialTheme.colorScheme.errorContainer
-    val cId = MaterialTheme.colorScheme.secondaryContainer
-    val cNotas = MaterialTheme.colorScheme.tertiaryContainer
-    val cOp = MaterialTheme.colorScheme.surface
+    val headerBackground = MaterialTheme.colorScheme.surface
 
     val wInspeccion = 85.dp
     val wEquipo = 208.dp
@@ -4429,34 +4411,34 @@ private fun BaselineTable(baselines: List<Baseline>, onDelete: (Baseline) -> Uni
                 .background(MaterialTheme.colorScheme.surface)
                 .padding(vertical = 8.dp, horizontal = 8.dp)
         ) {
-            headerCellFixed(wInspeccion, cNo, Modifier.clickable { toggleSort(BaselineColumn.INSPECCION) }) {
+            headerCellFixed(wInspeccion, headerBackground, Modifier.clickable { toggleSort(BaselineColumn.INSPECCION) }) {
                 BaselineSortHeader(label = stringResource(com.example.etic.R.string.col_no_inspeccion), column = BaselineColumn.INSPECCION, sortColumn = sortColumn, sortAsc = sortAsc)
             }
-            headerCellFixed(wEquipo, cEquipo, Modifier.clickable { toggleSort(BaselineColumn.EQUIPO) }) {
+            headerCellFixed(wEquipo, headerBackground, Modifier.clickable { toggleSort(BaselineColumn.EQUIPO) }) {
                 BaselineSortHeader(label = stringResource(com.example.etic.R.string.col_equipo), column = BaselineColumn.EQUIPO, sortColumn = sortColumn, sortAsc = sortAsc)
             }
-            headerCellFixed(wFecha, cFecha, Modifier.clickable { toggleSort(BaselineColumn.FECHA) }) {
+            headerCellFixed(wFecha, headerBackground, Modifier.clickable { toggleSort(BaselineColumn.FECHA) }) {
                 BaselineSortHeader(label = stringResource(com.example.etic.R.string.col_fecha), column = BaselineColumn.FECHA, sortColumn = sortColumn, sortAsc = sortAsc)
             }
-            headerCellFixed(wMta, cMta, Modifier.clickable { toggleSort(BaselineColumn.MTA) }) {
+            headerCellFixed(wMta, headerBackground, Modifier.clickable { toggleSort(BaselineColumn.MTA) }) {
                 BaselineSortHeader(label = stringResource(com.example.etic.R.string.col_mta_c), column = BaselineColumn.MTA, sortColumn = sortColumn, sortAsc = sortAsc)
             }
-            headerCellFixed(wTemp, cTemp, Modifier.clickable { toggleSort(BaselineColumn.TEMP) }) {
+            headerCellFixed(wTemp, headerBackground, Modifier.clickable { toggleSort(BaselineColumn.TEMP) }) {
                 BaselineSortHeader(label = stringResource(com.example.etic.R.string.col_temp_c), column = BaselineColumn.TEMP, sortColumn = sortColumn, sortAsc = sortAsc)
             }
-            headerCellFixed(wAmb, cAmb, Modifier.clickable { toggleSort(BaselineColumn.AMB) }) {
+            headerCellFixed(wAmb, headerBackground, Modifier.clickable { toggleSort(BaselineColumn.AMB) }) {
                 BaselineSortHeader(label = stringResource(com.example.etic.R.string.col_amb_c), column = BaselineColumn.AMB, sortColumn = sortColumn, sortAsc = sortAsc)
             }
-            headerCellFixed(wIr, cIr, Modifier.clickable { toggleSort(BaselineColumn.IR) }) {
+            headerCellFixed(wIr, headerBackground, Modifier.clickable { toggleSort(BaselineColumn.IR) }) {
                 BaselineSortHeader(label = "IR", column = BaselineColumn.IR, sortColumn = sortColumn, sortAsc = sortAsc)
             }
-            headerCellFixed(wId, cId, Modifier.clickable { toggleSort(BaselineColumn.ID) }) {
+            headerCellFixed(wId, headerBackground, Modifier.clickable { toggleSort(BaselineColumn.ID) }) {
                 BaselineSortHeader(label = "ID", column = BaselineColumn.ID, sortColumn = sortColumn, sortAsc = sortAsc)
             }
-            headerCellFixed(wNotas, cNotas, Modifier.clickable { toggleSort(BaselineColumn.NOTAS) }) {
+            headerCellFixed(wNotas, headerBackground, Modifier.clickable { toggleSort(BaselineColumn.NOTAS) }) {
                 BaselineSortHeader(label = "Notas", column = BaselineColumn.NOTAS, sortColumn = sortColumn, sortAsc = sortAsc)
             }
-            headerCellFixed(wOp, cOp) { Text("") }
+            headerCellFixed(wOp, headerBackground) { Text("") }
         }
         Divider(thickness = DIVIDER_THICKNESS)
         if (baselines.isEmpty()) {
