@@ -300,9 +300,8 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
         if (visualTypeId != null) {
             visualHazardOptions = runCatching {
                 withContext(Dispatchers.IO) {
-                    fallaDao.getAllWithTipoInspeccion()
+                    fallaDao.getByTipoInspeccion(visualTypeId)
                         .asSequence()
-                        .filter { it.idTipoInspeccion.equals(visualTypeId, true) }
                         .map { it.idFalla to (it.falla ?: it.idFalla) }
                         .sortedBy { it.second.lowercase() }
                         .toList()
