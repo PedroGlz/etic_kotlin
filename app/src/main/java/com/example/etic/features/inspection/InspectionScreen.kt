@@ -79,6 +79,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 import com.example.etic.ui.theme.EticTheme
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import com.example.etic.data.local.entities.EstatusInspeccionDet
@@ -270,6 +272,11 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
     val lineaBaseDaoGlobal = remember { com.example.etic.data.local.DbProvider.get(ctx).lineaBaseDao() }
     val fallaDao = remember { com.example.etic.data.local.DbProvider.get(ctx).fallaDao() }
     val severidadDao = remember { com.example.etic.data.local.DbProvider.get(ctx).severidadDao() }
+    val estatusDao = remember { com.example.etic.data.local.DbProvider.get(ctx).estatusInspeccionDetDao() }
+    val prioridadDao = remember { com.example.etic.data.local.DbProvider.get(ctx).tipoPrioridadDao() }
+    val fabricanteDao = remember { com.example.etic.data.local.DbProvider.get(ctx).fabricanteDao() }
+    val faseDao = remember { com.example.etic.data.local.DbProvider.get(ctx).faseDao() }
+    val tipoAmbienteDao = remember { com.example.etic.data.local.DbProvider.get(ctx).tipoAmbienteDao() }
     val currentInspection = LocalCurrentInspection.current
     val rootTitle = currentInspection?.nombreSitio ?: "Sitio"
     val rootId = remember(currentInspection?.idSitio) { (currentInspection?.idSitio?.let { "root:$it" } ?: "root:site") }
@@ -282,7 +289,14 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
     var problemsRefreshTick by remember { mutableStateOf(0) }
     var hasSignaledReady by rememberSaveable { mutableStateOf(false) }
     var severityCatalog by remember { mutableStateOf<List<Severidad>>(emptyList()) }
-    var visualHazardOptions by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
+    var hazardOptionsByType by remember {
+        mutableStateOf<Map<String, List<Pair<String, String>>>>(emptyMap())
+    }
+    var statusOptionsCache by remember { mutableStateOf<List<EstatusInspeccionDet>>(emptyList()) }
+    var prioridadOptionsCache by remember { mutableStateOf<List<com.example.etic.data.local.entities.TipoPrioridad>>(emptyList()) }
+    var fabricanteOptionsCache by remember { mutableStateOf<List<com.example.etic.data.local.entities.Fabricante>>(emptyList()) }
+    var electricPhaseOptionsCache by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
+    var electricEnvironmentOptionsCache by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
     val treeScope = rememberCoroutineScope()
     val onSelectNode: (String) -> Unit = { id ->
         selectedId = id
@@ -297,22 +311,53 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
     }
     LaunchedEffect(Unit) {
         val visualTypeId = PROBLEM_TYPE_IDS["Visual"]
-        if (visualTypeId != null) {
-            visualHazardOptions = runCatching {
-                withContext(Dispatchers.IO) {
-                    fallaDao.getByTipoInspeccion(visualTypeId)
+        val electricTypeId = ELECTRIC_PROBLEM_TYPE_ID
+        val mechanicalTypeId = MECHANICAL_PROBLEM_TYPE_ID
+        val typesToLoad = listOfNotNull(visualTypeId, electricTypeId, mechanicalTypeId)
+
+        coroutineScope {
+            val hazardsDeferred = async(Dispatchers.IO) {
+                val hazardsByType = mutableMapOf<String, List<Pair<String, String>>>()
+                typesToLoad.forEach { typeId ->
+                    val options = runCatching { fallaDao.getByTipoInspeccion(typeId) }
+                        .getOrElse { emptyList() }
                         .asSequence()
                         .map { it.idFalla to (it.falla ?: it.idFalla) }
                         .sortedBy { it.second.lowercase() }
                         .toList()
+                    hazardsByType[typeId] = options
                 }
-            }.getOrElse { emptyList() }
-        } else {
-            visualHazardOptions = emptyList()
+                hazardsByType
+            }
+            val statusDeferred = async { runCatching { estatusDao.getAll() }.getOrElse { emptyList() } }
+            val prioridadDeferred = async { runCatching { prioridadDao.getAllActivas() }.getOrElse { emptyList() } }
+            val fabricanteDeferred = async {
+                runCatching { fabricanteDao.getAllActivos() }.getOrElse { emptyList() }
+                    .sortedBy { it.fabricante?.lowercase(Locale.getDefault()) ?: "" }
+            }
+            val phaseDeferred = async(Dispatchers.IO) {
+                runCatching { faseDao.getAllActivos() }.getOrElse { emptyList() }
+                    .sortedBy { it.nombreFase?.lowercase(Locale.getDefault()) ?: "" }
+                    .map { it.idFase to (it.nombreFase ?: it.idFase) }
+            }
+            val environmentDeferred = async(Dispatchers.IO) {
+                runCatching { tipoAmbienteDao.getAllActivos() }.getOrElse { emptyList() }
+                    .sortedBy { it.nombre?.lowercase(Locale.getDefault()) ?: "" }
+                    .map { it.idTipoAmbiente to (it.nombre ?: it.idTipoAmbiente) }
+            }
+            val severityDeferred = async(Dispatchers.IO) {
+                runCatching { severidadDao.getAll() }.getOrElse { emptyList() }
+            }
+
+            val hazardsByType = hazardsDeferred.await()
+            hazardOptionsByType = hazardsByType
+            statusOptionsCache = statusDeferred.await()
+            prioridadOptionsCache = prioridadDeferred.await()
+            fabricanteOptionsCache = fabricanteDeferred.await()
+            electricPhaseOptionsCache = phaseDeferred.await()
+            electricEnvironmentOptionsCache = environmentDeferred.await()
+            severityCatalog = severityDeferred.await()
         }
-        severityCatalog = runCatching {
-            withContext(Dispatchers.IO) { severidadDao.getAll() }
-        }.getOrElse { emptyList() }
     }
     // Reconstruir el arbol cuando llegue/ cambie la Inspeccion actual
     LaunchedEffect(rootId, rootTitle, currentInspection?.idInspeccion) {
@@ -374,9 +419,8 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             var barcode by rememberSaveable { mutableStateOf("") }
             var selectedStatusId by rememberSaveable { mutableStateOf<String?>(null) }
             var statusOptions by remember { mutableStateOf<List<EstatusInspeccionDet>>(emptyList()) }
-            val estatusDao = remember { com.example.etic.data.local.DbProvider.get(ctx).estatusInspeccionDetDao() }
-            LaunchedEffect(Unit) {
-                statusOptions = runCatching { estatusDao.getAll() }.getOrElse { emptyList() }
+            LaunchedEffect(statusOptionsCache) {
+                statusOptions = statusOptionsCache
             }
             // Tipo de prioridad, fabricantes y catálogos para problema eléctrico
             var prioridadOptions by remember { mutableStateOf<List<com.example.etic.data.local.entities.TipoPrioridad>>(emptyList()) }
@@ -384,33 +428,23 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             var electricPhaseOptions by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
             var electricEnvironmentOptions by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
             var electricHazardOptions by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
-            val prioridadDao = remember { com.example.etic.data.local.DbProvider.get(ctx).tipoPrioridadDao() }
-            val fabricanteDao = remember { com.example.etic.data.local.DbProvider.get(ctx).fabricanteDao() }
-            val faseDao = remember { com.example.etic.data.local.DbProvider.get(ctx).faseDao() }
-            val tipoAmbienteDao = remember { com.example.etic.data.local.DbProvider.get(ctx).tipoAmbienteDao() }
-            LaunchedEffect(Unit) {
+            LaunchedEffect(
+                prioridadOptionsCache,
+                fabricanteOptionsCache,
+                electricPhaseOptionsCache,
+                electricEnvironmentOptionsCache,
+                hazardOptionsByType
+            ) {
                 val electricTypeId = ELECTRIC_PROBLEM_TYPE_ID
-                prioridadOptions = runCatching { prioridadDao.getAllActivas() }.getOrElse { emptyList() }
-                fabricanteOptions = runCatching { fabricanteDao.getAllActivos() }.getOrElse { emptyList() }
-                    .sortedBy { it.fabricante?.lowercase(Locale.getDefault()) ?: "" }
-                electricPhaseOptions = runCatching {
-                    withContext(Dispatchers.IO) { faseDao.getAllActivos() }
-                }.getOrElse { emptyList() }
-                    .sortedBy { it.nombreFase?.lowercase(Locale.getDefault()) ?: "" }
-                    .map { it.idFase to (it.nombreFase ?: it.idFase) }
-                electricEnvironmentOptions = runCatching {
-                    withContext(Dispatchers.IO) { tipoAmbienteDao.getAllActivos() }
-                }.getOrElse { emptyList() }
-                    .sortedBy { it.nombre?.lowercase(Locale.getDefault()) ?: "" }
-                    .map { it.idTipoAmbiente to (it.nombre ?: it.idTipoAmbiente) }
-                electricHazardOptions = runCatching {
-                    withContext(Dispatchers.IO) {
-                        if (electricTypeId.isNullOrBlank()) emptyList()
-                        else fallaDao.getByTipoInspeccion(electricTypeId)
-                    }
-                }.getOrElse { emptyList() }
-                    .sortedBy { it.falla?.lowercase(Locale.getDefault()) ?: "" }
-                    .map { it.idFalla to (it.falla ?: it.idFalla) }
+                prioridadOptions = prioridadOptionsCache
+                fabricanteOptions = fabricanteOptionsCache
+                electricPhaseOptions = electricPhaseOptionsCache
+                electricEnvironmentOptions = electricEnvironmentOptionsCache
+                electricHazardOptions = if (electricTypeId.isNullOrBlank()) {
+                    emptyList()
+                } else {
+                    hazardOptionsByType[electricTypeId].orEmpty()
+                }
             }
             var searchMessage by remember { mutableStateOf<String?>(null) }
             var showNoSelectionDialog by rememberSaveable { mutableStateOf(false) }
@@ -432,7 +466,9 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             var pendingProblemNumber by rememberSaveable { mutableStateOf("Pendiente") }
             var pendingInspectionNumber by rememberSaveable { mutableStateOf("-") }
             var pendingHazardId by rememberSaveable { mutableStateOf<String?>(null) }
+            var pendingHazardLabel by rememberSaveable { mutableStateOf<String?>(null) }
             var pendingSeverityId by rememberSaveable { mutableStateOf<String?>(null) }
+            var pendingSeverityLabel by rememberSaveable { mutableStateOf<String?>(null) }
             var pendingProblemUbicacionId by rememberSaveable { mutableStateOf<String?>(null) }
             var pendingObservation by rememberSaveable { mutableStateOf("") }
             var pendingThermalImage by rememberSaveable { mutableStateOf("") }
@@ -452,7 +488,9 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                 visualProblemClosed = false
                 pendingProblemType = problemTypeLabelForId(VISUAL_PROBLEM_TYPE_ID)
                 pendingHazardId = null
+                pendingHazardLabel = null
                 pendingSeverityId = null
+                pendingSeverityLabel = null
                 pendingObservation = ""
                 pendingThermalImage = ""
                 pendingDigitalImage = ""
@@ -537,29 +575,55 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     id to (map[id]?.severidad ?: fallback)
                 }
             }
+            val visualHazardOptionsFixed = remember(hazardOptionsByType) {
+                val visualTypeId = VISUAL_PROBLEM_TYPE_ID
+                if (visualTypeId.isNullOrBlank()) {
+                    emptyList()
+                } else {
+                    hazardOptionsByType[visualTypeId].orEmpty()
+                }
+            }
 
             fun buildVisualObservation(hazardId: String?, equipmentName: String?): String {
                 val hazardText = hazardId?.let { id ->
-                    visualHazardOptions.firstOrNull { it.first == id }?.second
+                    visualHazardOptionsFixed.firstOrNull { it.first == id }?.second
                 }
                 val equipment = equipmentName?.takeUnless { it.isBlank() }
                 val parts = listOfNotNull(hazardText, equipment).filter { it.isNotBlank() }
                 return parts.joinToString(", ").uppercase(Locale.getDefault())
             }
 
-            fun ensureVisualDefaults(allowObservationUpdate: Boolean = true) {
-                if (visualHazardOptions.isNotEmpty() && visualHazardOptions.none { it.first == pendingHazardId }) {
-                    pendingHazardId = null
+            fun ensureVisualDefaults(
+                allowObservationUpdate: Boolean = true,
+                allowUnknownSelections: Boolean = false
+            ) {
+                fun normalizePendingId(
+                    pendingId: String?,
+                    options: List<Pair<String, String>>
+                ): String? {
+                    if (pendingId.isNullOrBlank()) return null
+                    return options.firstOrNull { it.first == pendingId }?.first
+                        ?: options.firstOrNull { it.first.equals(pendingId, ignoreCase = true) }?.first
+                        ?: options.firstOrNull { it.second.equals(pendingId, ignoreCase = true) }?.first
                 }
-                if (visualSeverityOptions.isNotEmpty() && visualSeverityOptions.none { it.first == pendingSeverityId }) {
-                    pendingSeverityId = null
+
+                if (visualHazardOptionsFixed.isNotEmpty()) {
+                    val normalized = normalizePendingId(pendingHazardId, visualHazardOptionsFixed)
+                    pendingHazardId = if (normalized != null) normalized else if (allowUnknownSelections) pendingHazardId else null
+                }
+                if (visualSeverityOptions.isNotEmpty()) {
+                    val normalized = normalizePendingId(pendingSeverityId, visualSeverityOptions)
+                    pendingSeverityId = if (normalized != null) normalized else if (allowUnknownSelections) pendingSeverityId else null
                 }
                 if (allowObservationUpdate) {
                     pendingObservation = buildVisualObservation(pendingHazardId, pendingProblemEquipmentName)
                 }
             }
-            LaunchedEffect(visualHazardOptions, visualSeverityOptions, editingProblemId) {
-                ensureVisualDefaults(allowObservationUpdate = editingProblemId == null)
+            LaunchedEffect(visualHazardOptionsFixed, visualSeverityOptions, editingProblemId) {
+                ensureVisualDefaults(
+                    allowObservationUpdate = editingProblemId == null,
+                    allowUnknownSelections = editingProblemId != null
+                )
             }
 
             var visualProblemHistory by remember { mutableStateOf<List<VisualProblemHistoryRow>>(emptyList()) }
@@ -677,10 +741,20 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     pendingProblemNumber = entity.numeroProblema?.toString() ?: problem.no.toString()
                     pendingInspectionNumber = inspectionNumber
                     pendingHazardId = entity.idFalla?.takeIf { !it.isNullOrBlank() }
-                        ?: visualHazardOptions.firstOrNull { option ->
+                        ?: visualHazardOptionsFixed.firstOrNull { option ->
                             entity.hazardIssue?.equals(option.second, ignoreCase = true) == true
                         }?.first
+                    val hazardCatalogLabel = VISUAL_PROBLEM_TYPE_ID?.let { typeId ->
+                        hazardOptionsByType[typeId]
+                            ?.firstOrNull { it.first.equals(entity.idFalla, ignoreCase = true) }
+                            ?.second
+                    }
+                    pendingHazardLabel = hazardCatalogLabel
+                        ?: entity.hazardIssue?.takeIf { it.isNotBlank() }
                     pendingSeverityId = entity.idSeveridad
+                    pendingSeverityLabel = severityCatalog.firstOrNull {
+                        it.idSeveridad.equals(entity.idSeveridad, ignoreCase = true)
+                    }?.severidad
                     pendingObservation = entity.componentComment.orEmpty()
                     pendingThermalImage = entity.irFile.orEmpty()
                     pendingDigitalImage = entity.photoFile.orEmpty()
@@ -688,7 +762,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     editingProblemId = entity.idProblema
                     editingProblemOriginal = entity
                     visualProblemClosed = entity.estatusProblema?.equals("Cerrado", ignoreCase = true) == true
-                    ensureVisualDefaults(allowObservationUpdate = false)
+                    ensureVisualDefaults(allowObservationUpdate = false, allowUnknownSelections = true)
                     showVisualInspectionDialog = true
                 }
             }
@@ -831,6 +905,30 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
     }
             // Lee el usuario actual del CompositionLocal en contexto @Composable
             val currentUser = LocalCurrentUser.current
+            LaunchedEffect(statusOptions, locationForm.statusId) {
+                val statusId = locationForm.statusId
+                if (!statusId.isNullOrBlank() && locationForm.statusLabel.isBlank()) {
+                    locationForm.statusLabel = statusOptions.firstOrNull {
+                        it.idStatusInspeccionDet == statusId
+                    }?.estatusInspeccionDet ?: statusId
+                }
+            }
+            LaunchedEffect(prioridadOptions, locationForm.prioridadId) {
+                val prioridadId = locationForm.prioridadId
+                if (!prioridadId.isNullOrBlank() && locationForm.prioridadLabel.isBlank()) {
+                    locationForm.prioridadLabel = prioridadOptions.firstOrNull {
+                        it.idTipoPrioridad == prioridadId
+                    }?.tipoPrioridad ?: prioridadId
+                }
+            }
+            LaunchedEffect(fabricanteOptions, locationForm.fabricanteId) {
+                val fabricanteId = locationForm.fabricanteId
+                if (!fabricanteId.isNullOrBlank() && locationForm.fabricanteLabel.isBlank()) {
+                    locationForm.fabricanteLabel = fabricanteOptions.firstOrNull {
+                        it.idFabricante == fabricanteId
+                    }?.fabricante ?: fabricanteId
+                }
+            }
             fun calculateSeverityId(difference: Double?): String? {
                 if (difference == null) return null
                 return when {
@@ -1588,16 +1686,92 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             }
 
             if (showVisualInspectionDialog && pendingProblemEquipmentName != null) {
+                val visualHazardOptionsForDialog = remember(
+                    visualHazardOptionsFixed,
+                    hazardOptionsByType,
+                    pendingHazardId,
+                    pendingHazardLabel
+                ) {
+                    val pendingId = pendingHazardId
+                    if (pendingId.isNullOrBlank()) {
+                        visualHazardOptionsFixed
+                    } else {
+                        val preferredLabel = pendingHazardLabel
+                            ?.takeIf { it.isNotBlank() && !it.equals(pendingId, ignoreCase = true) }
+                        if (preferredLabel != null) {
+                            val replaced = visualHazardOptionsFixed.map { option ->
+                                if (option.first.equals(pendingId, ignoreCase = true)) {
+                                    pendingId to preferredLabel
+                                } else {
+                                    option
+                                }
+                            }
+                            val hasEntry = replaced.any { it.first.equals(pendingId, ignoreCase = true) }
+                            if (hasEntry) replaced else replaced + (pendingId to preferredLabel)
+                        } else {
+                            val exists = visualHazardOptionsFixed.any {
+                                it.first.equals(pendingId, ignoreCase = true)
+                            }
+                            if (exists) {
+                                visualHazardOptionsFixed
+                            } else {
+                                val catalogLabel = VISUAL_PROBLEM_TYPE_ID?.let { typeId ->
+                                    hazardOptionsByType[typeId]
+                                        ?.firstOrNull { it.first.equals(pendingId, ignoreCase = true) }
+                                        ?.second
+                                }
+                                val label = catalogLabel ?: pendingId
+                                visualHazardOptionsFixed + (pendingId to label)
+                            }
+                        }
+                    }
+                }
+                val visualSeverityOptionsForDialog = remember(
+                    visualSeverityOptions,
+                    severityCatalog,
+                    pendingSeverityId,
+                    pendingSeverityLabel
+                ) {
+                    val pendingId = pendingSeverityId
+                    if (pendingId.isNullOrBlank()) {
+                        val label = pendingSeverityLabel
+                        if (label.isNullOrBlank()) {
+                            visualSeverityOptions
+                        } else {
+                            val exists = visualSeverityOptions.any {
+                                it.second.equals(label, ignoreCase = true)
+                            }
+                            if (exists) {
+                                visualSeverityOptions
+                            } else {
+                                visualSeverityOptions + (label to label)
+                            }
+                        }
+                    } else {
+                        val exists = visualSeverityOptions.any { it.first.equals(pendingId, ignoreCase = true) }
+                        if (exists) {
+                            visualSeverityOptions
+                        } else {
+                            val catalogLabel = severityCatalog.firstOrNull {
+                                it.idSeveridad.equals(pendingId, ignoreCase = true)
+                            }?.severidad
+                            val label = pendingSeverityLabel?.takeIf { it.isNotBlank() }
+                                ?: catalogLabel
+                                ?: pendingId
+                            visualSeverityOptions + (pendingId to label)
+                        }
+                    }
+                }
                 VisualProblemDialog(
                     inspectionNumber = pendingInspectionNumber,
                     problemNumber = pendingProblemNumber,
                     problemType = pendingProblemType,
                     equipmentName = pendingProblemEquipmentName ?: "-",
                     equipmentRoute = pendingProblemRoute ?: "-",
-                    hazardIssues = visualHazardOptions,
-                    severities = visualSeverityOptions,
-                    selectedHazardIssue = pendingHazardId,
-                    selectedSeverity = pendingSeverityId,
+                    hazardIssues = visualHazardOptionsForDialog,
+                    severities = visualSeverityOptionsForDialog,
+                    selectedHazardIssue = pendingHazardId ?: pendingHazardLabel,
+                    selectedSeverity = pendingSeverityId ?: pendingSeverityLabel,
                     observations = pendingObservation,
                     onObservationsChange = { pendingObservation = it },
                     historyRows = visualProblemHistory,
@@ -1629,10 +1803,18 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     onHazardSelected = { selected ->
                         val normalized = selected.takeIf { it.isNotBlank() }
                         pendingHazardId = normalized
+                        pendingHazardLabel = visualHazardOptionsForDialog.firstOrNull {
+                            it.first.equals(normalized, ignoreCase = true)
+                        }?.second
                         pendingObservation = buildVisualObservation(normalized, pendingProblemEquipmentName)
                     },
                     onSeveritySelected = { selected ->
-                        pendingSeverityId = selected.takeIf { it.isNotBlank() }
+                        val normalized = selected.takeIf { it.isNotBlank() }
+                        pendingSeverityId = normalized
+                        pendingSeverityLabel = visualSeverityOptionsForDialog.firstOrNull {
+                            it.first.equals(normalized, ignoreCase = true) ||
+                                it.second.equals(normalized, ignoreCase = true)
+                        }?.second
                     },
                     showEditControls = editingProblemId != null,
                     onDismiss = {
@@ -1675,7 +1857,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                 val resolvedRoute = pendingProblemRoute
                                     ?: ubicacionId?.let { titlePathForId(nodes, it).joinToString(" / ") }
                                     ?: "-"
-                                val hazardLabel = visualHazardOptions.firstOrNull { it.first == hazardId }?.second
+                                val hazardLabel = visualHazardOptionsFixed.firstOrNull { it.first == hazardId }?.second
                                 val comment = pendingObservation.ifBlank {
                                     buildVisualObservation(hazardId, pendingProblemEquipmentName)
                                 }
@@ -1700,7 +1882,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                         idInspeccion = inspection.idInspeccion,
                                         idInspeccionDet = detId,
                                         idUbicacion = ubicacionId,
-                                        hazardIssue = hazardLabel ?: hazardId,
+                                        hazardIssue = hazardId,
                                         idFalla = hazardId,
                                         idSeveridad = severityId,
                                         componentComment = comment,
@@ -1728,7 +1910,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                         val updated = base.copy(
                                             idInspeccionDet = detId,
                                             idUbicacion = ubicacionId,
-                                            hazardIssue = hazardLabel ?: hazardId,
+                                            hazardIssue = hazardId,
                                             idFalla = hazardId,
                                             idSeveridad = severityId,
                                             componentComment = comment,
