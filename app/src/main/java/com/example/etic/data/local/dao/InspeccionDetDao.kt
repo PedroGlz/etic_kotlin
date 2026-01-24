@@ -15,6 +15,9 @@ interface InspeccionDetDao {
     @Query("SELECT * FROM inspecciones_det WHERE Id_Ubicacion = :idUbicacion")
     suspend fun getByUbicacion(idUbicacion: String): List<InspeccionDet>
 
+    @Query("SELECT * FROM inspecciones_det WHERE Id_Inspeccion = :idInspeccion AND Estatus = 'Activo'")
+    suspend fun getByInspeccion(idInspeccion: String): List<InspeccionDet>
+
     @Update
     suspend fun update(row: InspeccionDet)
 

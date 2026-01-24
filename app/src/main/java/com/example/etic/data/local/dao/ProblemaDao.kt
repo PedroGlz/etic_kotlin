@@ -48,6 +48,42 @@ interface ProblemaDao {
 
     @Query(
         """
+        SELECT * FROM problemas
+        WHERE Id_Inspeccion = :idInspeccion
+          AND Id_Tipo_Inspeccion = :idTipoInspeccion
+          AND Estatus = 'Activo'
+        ORDER BY Numero_Problema ASC
+        """
+    )
+    suspend fun getActivosByInspeccionAndTipo(
+        idInspeccion: String,
+        idTipoInspeccion: String
+    ): List<Problema>
+
+    @Query(
+        """
+        SELECT COUNT(*) FROM problemas
+        WHERE Id_Inspeccion_Det = :idInspeccionDet
+          AND Estatus = 'Activo'
+        """
+    )
+    suspend fun countActivosByInspeccionDet(idInspeccionDet: String): Int
+
+    @Query(
+        """
+        SELECT COUNT(*) FROM problemas
+        WHERE Id_Inspeccion = :idInspeccion
+          AND Id_Ubicacion = :idUbicacion
+          AND Estatus = 'Activo'
+        """
+    )
+    suspend fun countActivosByInspeccionAndUbicacion(
+        idInspeccion: String,
+        idUbicacion: String
+    ): Int
+
+    @Query(
+        """
         SELECT Numero_Problema FROM problemas
         WHERE Id_Inspeccion = :idInspeccion
           AND Id_Tipo_Inspeccion = :idTipoInspeccion
