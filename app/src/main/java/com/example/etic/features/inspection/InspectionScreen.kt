@@ -1800,7 +1800,8 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     cronicoEnabled = cronicoActionEnabled && !isSavingCronico,
                     cronicoChecked = editingProblemOriginal?.esCronico?.equals("SI", ignoreCase = true) == true,
                     cerradoChecked = visualProblemClosed,
-                    cerradoEnabled = editingProblemOriginal?.estatusProblema?.equals("Abierto", ignoreCase = true) == true,
+                    cerradoEnabled = editingProblemOriginal?.idInspeccion
+                        ?.equals(currentInspection?.idInspeccion, ignoreCase = true) == true,
                     onCerradoChange = { visualProblemClosed = it },
                     onHazardSelected = { selected ->
                         val normalized = selected.takeIf { it.isNotBlank() }
@@ -2060,7 +2061,8 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     cronicoEnabled = cronicoActionEnabled && !isSavingCronico,
                     cronicoChecked = editingElectricProblemOriginal?.esCronico?.equals("SI", ignoreCase = true) == true,
                     cerradoChecked = electricProblemClosed,
-                    cerradoEnabled = editingElectricProblemOriginal?.estatusProblema?.equals("Abierto", ignoreCase = true) == true,
+                    cerradoEnabled = editingElectricProblemOriginal?.idInspeccion
+                        ?.equals(currentInspection?.idInspeccion, ignoreCase = true) == true,
                     onCerradoChange = { electricProblemClosed = it },
                     showEditControls = editingElectricProblemId != null,
                     onDismiss = {
@@ -2107,7 +2109,8 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     cronicoEnabled = cronicoActionEnabled && !isSavingCronico,
                     cronicoChecked = editingMechanicalProblemOriginal?.esCronico?.equals("SI", ignoreCase = true) == true,
                     cerradoChecked = mechanicalProblemClosed,
-                    cerradoEnabled = editingMechanicalProblemOriginal?.estatusProblema?.equals("Abierto", ignoreCase = true) == true,
+                    cerradoEnabled = editingMechanicalProblemOriginal?.idInspeccion
+                        ?.equals(currentInspection?.idInspeccion, ignoreCase = true) == true,
                     onCerradoChange = { mechanicalProblemClosed = it },
                     showEditControls = editingMechanicalProblemId != null,
                     onDismiss = {
