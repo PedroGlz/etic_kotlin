@@ -699,6 +699,13 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                 }
                 return ((last ?: 0) + 1).toString()
             }
+            fun canEnableCronico(entity: Problema?): Boolean {
+                val currentId = currentInspection?.idInspeccion
+                if (currentId.isNullOrBlank() || entity == null) return false
+                val isOpen = entity.estatusProblema?.equals("Abierto", ignoreCase = true) == true
+                val isPast = entity.idInspeccion?.equals(currentId, ignoreCase = true) != true
+                return isOpen && isPast
+            }
             fun startVisualProblemEdit(problem: Problem) {
                 val visualTypeId = PROBLEM_TYPE_IDS["Visual"]
                 if (visualTypeId.isNullOrBlank()) {
@@ -764,6 +771,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     editingProblemId = entity.idProblema
                     editingProblemOriginal = entity
                     visualProblemClosed = entity.estatusProblema?.equals("Cerrado", ignoreCase = true) == true
+                    cronicoActionEnabled = canEnableCronico(entity)
                     ensureVisualDefaults(allowObservationUpdate = false, allowUnknownSelections = true)
                     showVisualInspectionDialog = true
                 }
@@ -810,6 +818,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     pendingThermalImage = entity.irFile.orEmpty()
                     pendingDigitalImage = entity.photoFile.orEmpty()
                     electricProblemFormKey += 1
+                    cronicoActionEnabled = canEnableCronico(entity)
                     showElectricProblemDialog = true
                 }
             }
@@ -854,6 +863,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     editingMechanicalProblemId = entity.idProblema
                     mechanicalProblemClosed = entity.estatusProblema?.equals("Cerrado", ignoreCase = true) == true
                     mechanicalProblemFormKey += 1
+                    cronicoActionEnabled = canEnableCronico(entity)
                     showMechanicalProblemDialog = true
                 }
             }
