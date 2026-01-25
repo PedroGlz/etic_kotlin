@@ -269,7 +269,7 @@ fun MechanicalProblemDialog(
                         Divider(Modifier.padding(top = 12.dp, bottom = 8.dp))
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -281,28 +281,32 @@ fun MechanicalProblemDialog(
                                 }
                             }
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Checkbox(
-                                    checked = cronicoChecked,
-                                    onCheckedChange = {},
-                                    enabled = false
-                                )
-                                Text("Cronico")
-                            }
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Checkbox(
-                                    checked = cerradoChecked,
-                                    onCheckedChange = { onCerradoChange(it) },
-                                    enabled = cerradoEnabled
-                                )
-                                Text("Cerrado")
-                            }
-                            if (cronicoEnabled) {
-                                IconButton(onClick = { onCronicoClick?.invoke() }) {
-                                    Icon(
-                                        Icons.Outlined.AccessTime,
-                                        contentDescription = "Historial",
-                                        tint = Color(0xFFFFC107)
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Checkbox(
+                                        checked = cronicoChecked,
+                                        onCheckedChange = {},
+                                        enabled = false
                                     )
+                                    Text("Cronico")
+                                }
+                                Spacer(Modifier.width(12.dp))
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Checkbox(
+                                        checked = cerradoChecked,
+                                        onCheckedChange = { onCerradoChange(it) },
+                                        enabled = cerradoEnabled
+                                    )
+                                    Text("Cerrado")
+                                }
+                                if (cronicoEnabled) {
+                                    Spacer(Modifier.width(12.dp))
+                                    IconButton(onClick = { onCronicoClick?.invoke() }) {
+                                        Icon(
+                                            Icons.Outlined.AccessTime,
+                                            contentDescription = "Historial",
+                                            tint = Color(0xFFFFC107)
+                                        )
+                                    }
                                 }
                             }
                         }
