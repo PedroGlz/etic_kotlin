@@ -296,15 +296,14 @@ fun MechanicalProblemDialog(
                                 )
                                 Text("Cerrado")
                             }
-                            IconButton(
-                                onClick = { onCronicoClick?.invoke() },
-                                enabled = cronicoEnabled
-                            ) {
-                                Icon(
-                                    Icons.Outlined.AccessTime,
-                                    contentDescription = "Historial",
-                                    tint = Color(0xFFFFC107)
-                                )
+                            if (cronicoEnabled) {
+                                IconButton(onClick = { onCronicoClick?.invoke() }) {
+                                    Icon(
+                                        Icons.Outlined.AccessTime,
+                                        contentDescription = "Historial",
+                                        tint = Color(0xFFFFC107)
+                                    )
+                                }
                             }
                         }
                         Divider(Modifier.padding(top = 8.dp, bottom = 12.dp))
