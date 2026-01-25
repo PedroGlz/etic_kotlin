@@ -208,7 +208,7 @@ fun NewLocationDialog(
             }
         },
         dismissButton = {
-            Button(onClick = onDismiss, enabled = !isSaving) { Text("Cancelar") }
+            Button(onClick = onDismiss, enabled = !isSaving) { Text("Cerrar") }
         }
     )
 }

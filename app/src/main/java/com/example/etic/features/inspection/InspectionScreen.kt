@@ -1484,6 +1484,26 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     locationForm.error = null
                 }
             }
+            fun applyNewUbDefaults() {
+                locationForm.resetForNew()
+                val defaultId = "568798D1-76BB-11D3-82BF-00104BC75DC2"
+                val match = statusOptions.firstOrNull { it.idStatusInspeccionDet.equals(defaultId, true) }
+                if (match != null) {
+                    locationForm.statusId = match.idStatusInspeccionDet
+                    locationForm.statusLabel = match.estatusInspeccionDet ?: match.idStatusInspeccionDet
+                } else {
+                    locationForm.statusId = null
+                    locationForm.statusLabel = ""
+                }
+                val priorityMatch = prioridadOptions.firstOrNull {
+                    it.idTipoPrioridad.equals(DEFAULT_PRIORIDAD_ID, true) ||
+                        it.tipoPrioridad?.equals("CTO", true) == true
+                }
+                if (priorityMatch != null) {
+                    locationForm.prioridadId = priorityMatch.idTipoPrioridad
+                    locationForm.prioridadLabel = priorityMatch.tipoPrioridad ?: priorityMatch.idTipoPrioridad
+                }
+            }
             LaunchedEffect(showNewUbDialog, prioridadOptions) {
                 if (showNewUbDialog && locationForm.prioridadId == null) {
                     val match = prioridadOptions.firstOrNull {
@@ -2382,7 +2402,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                     locationForm.resetForNew()
                                 } else {
                                     Toast.makeText(ctx, "Ubicacion creada correctamente.", Toast.LENGTH_SHORT).show()
-                                    locationForm.resetForNew()
+                                    applyNewUbDefaults()
                                 }
                                 isSavingNewUb = false
                             } else {
