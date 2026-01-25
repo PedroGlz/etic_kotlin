@@ -880,6 +880,38 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             var editingInspId by remember { mutableStateOf<String?>(null) }
             var deleteUbInfoMessage by remember { mutableStateOf<String?>(null) }
             var pendingDeleteUbId by remember { mutableStateOf<String?>(null) }
+            fun startEditUb(node: TreeNode) {
+                if (node.id.startsWith("root:")) return
+                locationForm.error = null
+                editingUbId = node.id
+                showEditUbDialog = true
+                editTab = 0
+                scope.launch {
+                    val ub = runCatching { ubicacionDao.getById(node.id) }.getOrNull()
+                    if (ub != null) {
+                        locationForm.name = ub.ubicacion ?: ""
+                        locationForm.description = ub.descripcion ?: ""
+                        locationForm.isEquipment = (ub.esEquipo ?: "").equals("SI", ignoreCase = true)
+                        locationForm.barcode = ub.codigoBarras ?: ""
+                        editingParentId = ub.idUbicacionPadre
+                        locationForm.prioridadId = ub.idTipoPrioridad
+                        locationForm.prioridadLabel = prioridadOptions.firstOrNull { it.idTipoPrioridad == ub.idTipoPrioridad }?.tipoPrioridad
+                            ?: (ub.idTipoPrioridad ?: "")
+                        locationForm.fabricanteId = ub.fabricante
+                        locationForm.fabricanteLabel = fabricanteOptions.firstOrNull { it.idFabricante == ub.fabricante }?.fabricante
+                            ?: (ub.fabricante ?: "")
+                    }
+                    val det = runCatching { inspeccionDetDao.getByUbicacion(node.id).firstOrNull() }.getOrNull()
+                    editingDetId = det?.idInspeccionDet
+                    editingInspId = det?.idInspeccion
+                    val statusId = det?.idStatusInspeccionDet
+                    if (!statusId.isNullOrBlank()) {
+                        locationForm.statusId = statusId
+                        locationForm.statusLabel = statusOptions.firstOrNull { it.idStatusInspeccionDet == statusId }?.estatusInspeccionDet
+                            ?: statusId
+                    }
+                }
+            }
     var deleteUbConfirmNode by remember { mutableStateOf<TreeNode?>(null) }
 
     suspend fun refreshTree(
@@ -2339,15 +2371,19 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                 refreshTree(
                                     extraExpanded = listOf(parentToExpand)
                                 )
-                                editingUbId = null
-                                editingParentId = null
-                                editingDetId = null
-                                editingInspId = null
                                 locationForm.error = null
                                 selectedId?.let { pid -> if (!expanded.contains(pid)) expanded.add(pid) }
-                                delay(3000)
-                                showNewUbDialog = false
-                                locationForm.resetForNew()
+                                if (isEdit) {
+                                    editingUbId = null
+                                    editingParentId = null
+                                    editingDetId = null
+                                    editingInspId = null
+                                    showNewUbDialog = false
+                                    locationForm.resetForNew()
+                                } else {
+                                    Toast.makeText(ctx, "Ubicacion creada correctamente.", Toast.LENGTH_SHORT).show()
+                                    locationForm.resetForNew()
+                                }
                                 isSavingNewUb = false
                             } else {
                                 locationForm.error = "No se pudo guardar la ubicacion"
@@ -3547,6 +3583,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                 }
                             },
                             onSelect = onSelectNode,
+                            onDoubleTap = { node -> startEditUb(node) },
                             modifier = Modifier.fillMaxSize() // ocupa todo el panel
                         )
                     } else {
@@ -3646,37 +3683,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                             }
                         },
                         onEdit = { node ->
-                            // Abrir dialogo de edicion con tabs y precargar datos desde BD
-                            locationForm.error = null
-                            editingUbId = node.id
-                            showEditUbDialog = true
-                            // Tab inicial
-                            editTab = 0
-                            scope.launch {
-                                val ub = runCatching { ubicacionDao.getById(node.id) }.getOrNull()
-                                if (ub != null) {
-                                    locationForm.name = ub.ubicacion ?: ""
-                                    locationForm.description = ub.descripcion ?: ""
-                                    locationForm.isEquipment = (ub.esEquipo ?: "").equals("SI", ignoreCase = true)
-                                    locationForm.barcode = ub.codigoBarras ?: ""
-                                    editingParentId = ub.idUbicacionPadre
-                                    locationForm.prioridadId = ub.idTipoPrioridad
-                                    locationForm.prioridadLabel = prioridadOptions.firstOrNull { it.idTipoPrioridad == ub.idTipoPrioridad }?.tipoPrioridad
-                                        ?: (ub.idTipoPrioridad ?: "")
-                                    locationForm.fabricanteId = ub.fabricante
-                                    locationForm.fabricanteLabel = fabricanteOptions.firstOrNull { it.idFabricante == ub.fabricante }?.fabricante
-                                        ?: (ub.fabricante ?: "")
-                                }
-                                val det = runCatching { inspeccionDetDao.getByUbicacion(node.id).firstOrNull() }.getOrNull()
-                                editingDetId = det?.idInspeccionDet
-                                editingInspId = det?.idInspeccion
-                                val statusId = det?.idStatusInspeccionDet
-                                if (!statusId.isNullOrBlank()) {
-                                    locationForm.statusId = statusId
-                                    locationForm.statusLabel = statusOptions.firstOrNull { it.idStatusInspeccionDet == statusId }?.estatusInspeccionDet
-                                        ?: statusId
-                                }
-                            }
+                            startEditUb(node)
                         },
                         statusNameForId = { id -> id?.let { statusLabelMap[it] } }
                     )
@@ -3848,6 +3855,7 @@ private fun SimpleTreeView(
     onScrollHandled: () -> Unit,
     onToggle: (String) -> Unit,
     onSelect: (String) -> Unit,
+    onDoubleTap: (TreeNode) -> Unit,
     modifier: Modifier = Modifier
 ) {
     fun flatten(list: List<TreeNode>, depth: Int, out: MutableList<FlatNode>) {
@@ -3890,7 +3898,12 @@ private fun SimpleTreeView(
                     Modifier
                         .fillMaxWidth()
                         .background(rowBackground)
-                        .clickable { onSelect(n.id) }
+                        .pointerInput(n.id) {
+                            detectTapGestures(
+                                onTap = { onSelect(n.id) },
+                                onDoubleTap = { onDoubleTap(n) }
+                            )
+                        }
                 ) {
                     Row(
                         Modifier

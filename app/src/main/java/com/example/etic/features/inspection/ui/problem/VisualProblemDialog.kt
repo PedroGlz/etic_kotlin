@@ -50,8 +50,8 @@ import com.example.etic.data.local.dao.VisualProblemHistoryRow
 import com.example.etic.features.components.ImageInputButtonGroup
 import java.io.File
 
-private val DIALOG_MIN_WIDTH = 720.dp
-private val DIALOG_MAX_WIDTH = 980.dp
+private val DIALOG_MIN_WIDTH = 710.dp
+private val DIALOG_MAX_WIDTH = 710.dp
 private val INFO_FIELD_MIN_WIDTH = 130.dp
 private val INFO_FIELD_MAX_WIDTH = 220.dp
 
