@@ -1228,6 +1228,181 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     else -> "1D56EDB0-8D6E-11D3-9270-006008A19766"
                 }
             }
+            suspend fun persistProblemDrafts(
+                currentId: String,
+                currentDraft: ProblemDraft,
+                currentUserId: String?
+            ): Boolean {
+                val inspection = currentInspection
+                if (inspection == null) {
+                    Toast.makeText(ctx, "No hay inspeccion activa.", Toast.LENGTH_SHORT).show()
+                    return false
+                }
+                problemDrafts = problemDrafts + (currentId to currentDraft)
+                val draftsSnapshot = problemDrafts
+                val nowTs = java.time.LocalDateTime.now()
+                    .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+                val saved = withContext(Dispatchers.IO) {
+                    var failed = false
+                    draftsSnapshot.forEach { (problemId, draft) ->
+                        val base = runCatching { problemaDao.getById(problemId) }.getOrNull()
+                        if (base == null) {
+                            failed = true
+                            return@forEach
+                        }
+                        val updated = when (draft) {
+                            is ProblemDraft.VisualDraft -> {
+                                base.copy(
+                                    hazardIssue = draft.hazardId,
+                                    idFalla = draft.hazardId,
+                                    idSeveridad = draft.severityId,
+                                    componentComment = draft.observation.ifBlank {
+                                        base.componentComment.orEmpty()
+                                    },
+                                    estatusProblema = if (draft.closed) "Cerrado" else "Abierto",
+                                    cerradoEnInspeccion = if (draft.closed) inspection.idInspeccion
+                                    else base.cerradoEnInspeccion,
+                                    irFile = draft.thermalImage,
+                                    photoFile = draft.digitalImage,
+                                    modificadoPor = currentUserId,
+                                    fechaMod = nowTs
+                                )
+                            }
+                            is ProblemDraft.ElectricDraft -> {
+                                val formData = draft.formData
+                                val componentTemp = formData.componentTemperature.toDoubleOrNull()
+                                val referenceTemp = formData.referenceTemperature.toDoubleOrNull()
+                                val difference = componentTemp?.let { comp ->
+                                    referenceTemp?.let { ref -> comp - ref }
+                                }
+                                val severityId = calculateSeverityId(difference)
+                                val emissivityValue = normalizeEmissivityValue(formData.emissivity).toDoubleOrNull()
+                                val finalComment = formData.comments.ifBlank {
+                                    base.componentComment.orEmpty()
+                                }
+                                base.copy(
+                                    problemTemperature = componentTemp,
+                                    referenceTemperature = referenceTemp,
+                                    problemPhase = formData.componentPhaseId,
+                                    referencePhase = formData.referencePhaseId,
+                                    problemRms = formData.componentRms.toDoubleOrNull(),
+                                    referenceRms = formData.referenceRms.toDoubleOrNull(),
+                                    additionalInfo = formData.additionalInfoId,
+                                    additionalRms = formData.additionalRms.toDoubleOrNull(),
+                                    emissivityCheck = if (formData.emissivityChecked) "on" else "off",
+                                    emissivity = emissivityValue,
+                                    indirectTempCheck = if (formData.indirectTempChecked) "on" else "off",
+                                    tempAmbientCheck = if (formData.ambientTempChecked) "on" else "off",
+                                    tempAmbient = formData.ambientTemp.toDoubleOrNull(),
+                                    environmentCheck = if (formData.environmentChecked) "on" else "off",
+                                    environment = formData.environmentId,
+                                    windSpeedCheck = if (formData.windSpeedChecked) "on" else "off",
+                                    windSpeed = formData.windSpeed.toDoubleOrNull(),
+                                    idFabricante = formData.manufacturerId,
+                                    ratedLoad = formData.ratedLoad.takeIf { it.isNotBlank() },
+                                    circuitVoltage = formData.circuitVoltage.takeIf { it.isNotBlank() },
+                                    idFalla = formData.failureId,
+                                    componentComment = finalComment,
+                                    estatusProblema = if (draft.closed) "Cerrado" else "Abierto",
+                                    cerradoEnInspeccion = if (draft.closed) inspection.idInspeccion
+                                    else base.cerradoEnInspeccion,
+                                    aumentoTemperatura = difference,
+                                    idSeveridad = severityId,
+                                    irFile = draft.thermalImage,
+                                    photoFile = draft.digitalImage,
+                                    modificadoPor = currentUserId,
+                                    fechaMod = nowTs
+                                )
+                            }
+                            is ProblemDraft.MechanicalDraft -> {
+                                val formData = draft.formData
+                                val componentTemp = formData.componentTemperature.toDoubleOrNull()
+                                val referenceTemp = formData.referenceTemperature.toDoubleOrNull()
+                                val difference = componentTemp?.let { comp ->
+                                    referenceTemp?.let { ref -> comp - ref }
+                                }
+                                val severityId = calculateSeverityId(difference)
+                                val emissivityValue = normalizeEmissivityValue(formData.emissivity).toDoubleOrNull()
+                                val finalComment = formData.comments.ifBlank {
+                                    base.componentComment.orEmpty()
+                                }
+                                base.copy(
+                                    problemTemperature = componentTemp,
+                                    referenceTemperature = referenceTemp,
+                                    problemPhase = null,
+                                    referencePhase = null,
+                                    problemRms = formData.componentRms.toDoubleOrNull(),
+                                    referenceRms = formData.referenceRms.toDoubleOrNull(),
+                                    additionalInfo = null,
+                                    additionalRms = null,
+                                    emissivityCheck = if (formData.emissivityChecked) "on" else "off",
+                                    emissivity = emissivityValue,
+                                    indirectTempCheck = "off",
+                                    tempAmbientCheck = if (formData.ambientTempChecked) "on" else "off",
+                                    tempAmbient = formData.ambientTemp.toDoubleOrNull(),
+                                    environmentCheck = if (formData.environmentChecked) "on" else "off",
+                                    environment = formData.environmentId,
+                                    windSpeedCheck = "off",
+                                    windSpeed = null,
+                                    idFabricante = formData.manufacturerId,
+                                    ratedLoadCheck = "off",
+                                    ratedLoad = formData.ratedLoad.takeIf { it.isNotBlank() },
+                                    circuitVoltageCheck = "off",
+                                    circuitVoltage = formData.circuitVoltage.takeIf { it.isNotBlank() },
+                                    idFalla = formData.failureId,
+                                    componentComment = finalComment,
+                                    estatusProblema = if (draft.closed) "Cerrado" else "Abierto",
+                                    cerradoEnInspeccion = if (draft.closed) inspection.idInspeccion
+                                    else base.cerradoEnInspeccion,
+                                    aumentoTemperatura = difference,
+                                    idSeveridad = severityId,
+                                    rpm = formData.rpm.toDoubleOrNull(),
+                                    bearingType = formData.bearingType.takeIf { it.isNotBlank() },
+                                    irFile = draft.thermalImage,
+                                    photoFile = draft.digitalImage,
+                                    modificadoPor = currentUserId,
+                                    fechaMod = nowTs
+                                )
+                            }
+                        }
+                        val updateResult = runCatching { problemaDao.update(updated) }
+                        if (updateResult.isFailure) {
+                            failed = true
+                            return@forEach
+                        }
+                        val locationId = base.idUbicacion
+                        if (!locationId.isNullOrBlank()) {
+                            val detRow = runCatching {
+                                inspeccionDetDao.getByUbicacion(locationId)
+                                    .firstOrNull { it.idInspeccion == inspection.idInspeccion }
+                            }.getOrNull()
+                            if (detRow != null) {
+                                val updatedDet = detRow.copy(
+                                    idStatusInspeccionDet = "568798D2-76BB-11D3-82BF-00104BC75DC2",
+                                    idEstatusColorText = 2,
+                                    modificadoPor = currentUserId,
+                                    fechaMod = nowTs
+                                )
+                                runCatching { inspeccionDetDao.update(updatedDet) }
+                            }
+                        }
+                    }
+                    !failed
+                }
+                if (saved) {
+                    problemsRefreshTick++
+                    refreshTree(preserveSelection = pendingProblemUbicacionId ?: selectedId)
+                    Toast.makeText(ctx, "Cambios guardados.", Toast.LENGTH_SHORT).show()
+                    resetProblemNavigation()
+                    return true
+                }
+                Toast.makeText(
+                    ctx,
+                    "No se pudieron guardar todos los cambios.",
+                    Toast.LENGTH_LONG
+                ).show()
+                return false
+            }
             fun createCronicoFromProblem(
                 entity: com.example.etic.data.local.entities.Problema,
                 onSuccess: (created: com.example.etic.data.local.entities.Problema) -> Unit
@@ -1350,6 +1525,31 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                 }
                 if (pendingThermalImage.isBlank() || pendingDigitalImage.isBlank()) {
                     Toast.makeText(ctx, "Carga las imágenes térmica y digital para guardar el problema.", Toast.LENGTH_SHORT).show()
+                    return
+                }
+                val navigationSave = editingElectricProblemId != null && problemNavList.isNotEmpty()
+                if (navigationSave) {
+                    if (!validateElectricForNavigation(formData)) return
+                    val currentId = editingElectricProblemId ?: return
+                    scope.launch {
+                        if (isSavingElectricProblem) return@launch
+                        isSavingElectricProblem = true
+                        try {
+                            val draft = ProblemDraft.ElectricDraft(
+                                formData = formData,
+                                thermalImage = pendingThermalImage,
+                                digitalImage = pendingDigitalImage,
+                                closed = electricProblemClosed
+                            )
+                            val saved = persistProblemDrafts(currentId, draft, currentUser?.idUsuario)
+                            if (saved) {
+                                resetElectricProblemState()
+                                showElectricProblemDialog = false
+                            }
+                        } finally {
+                            isSavingElectricProblem = false
+                        }
+                    }
                     return
                 }
                 val typeId = ELECTRIC_PROBLEM_TYPE_ID ?: "0D32B331-76C3-11D3-82BF-00104BC75DC2"
@@ -1529,6 +1729,31 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                 }
                 if (pendingThermalImage.isBlank() || pendingDigitalImage.isBlank()) {
                     Toast.makeText(ctx, "Carga las imágenes térmica y digital para guardar el problema.", Toast.LENGTH_SHORT).show()
+                    return
+                }
+                val navigationSave = editingMechanicalProblemId != null && problemNavList.isNotEmpty()
+                if (navigationSave) {
+                    if (!validateMechanicalForNavigation(formData)) return
+                    val currentId = editingMechanicalProblemId ?: return
+                    scope.launch {
+                        if (isSavingMechanicalProblem) return@launch
+                        isSavingMechanicalProblem = true
+                        try {
+                            val draft = ProblemDraft.MechanicalDraft(
+                                formData = formData,
+                                thermalImage = pendingThermalImage,
+                                digitalImage = pendingDigitalImage,
+                                closed = mechanicalProblemClosed
+                            )
+                            val saved = persistProblemDrafts(currentId, draft, currentUser?.idUsuario)
+                            if (saved) {
+                                resetMechanicalProblemState()
+                                showMechanicalProblemDialog = false
+                            }
+                        } finally {
+                            isSavingMechanicalProblem = false
+                        }
+                    }
                     return
                 }
                 val typeId = MECHANICAL_PROBLEM_TYPE_ID ?: "0D32B334-76C3-11D3-82BF-00104BC75DC2"
@@ -2151,6 +2376,36 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     },
                     onContinue = {
                         if (isSavingVisualProblem) return@VisualProblemDialog
+                        val navigationSave = editingProblemId != null && problemNavList.isNotEmpty()
+                        if (navigationSave) {
+                            if (!validateVisualForNavigation()) return@VisualProblemDialog
+                            val currentId = editingProblemId ?: return@VisualProblemDialog
+                            scope.launch {
+                                if (isSavingVisualProblem) return@launch
+                                isSavingVisualProblem = true
+                                try {
+                                    val draft = ProblemDraft.VisualDraft(
+                                        hazardId = pendingHazardId,
+                                        hazardLabel = pendingHazardLabel,
+                                        severityId = pendingSeverityId,
+                                        severityLabel = pendingSeverityLabel,
+                                        observation = pendingObservation,
+                                        thermalImage = pendingThermalImage,
+                                        digitalImage = pendingDigitalImage,
+                                        closed = visualProblemClosed
+                                    )
+                                    val saved = persistProblemDrafts(currentId, draft, currentUser?.idUsuario)
+                                    if (saved) {
+                                        showVisualInspectionDialog = false
+                                        cronicoActionEnabled = false
+                                        resetVisualProblemForm()
+                                    }
+                                } finally {
+                                    isSavingVisualProblem = false
+                                }
+                            }
+                            return@VisualProblemDialog
+                        }
                         val inspection = currentInspection ?: return@VisualProblemDialog
                         val ubicacionId = pendingProblemUbicacionId ?: selectedId
                         val hazardId = pendingHazardId
