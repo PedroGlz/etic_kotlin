@@ -884,6 +884,8 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     return
                 }
                 scope.launch {
+                    showElectricProblemDialog = false
+                    showMechanicalProblemDialog = false
                     resetVisualProblemForm()
                     val draft = withContext(Dispatchers.IO) {
                         runCatching {
@@ -955,6 +957,8 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     return
                 }
                 scope.launch {
+                    showVisualInspectionDialog = false
+                    showMechanicalProblemDialog = false
                     val entity = withContext(Dispatchers.IO) {
                         runCatching { problemaDao.getById(problem.id) }.getOrNull()
                     }
@@ -1002,6 +1006,8 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     return
                 }
                 scope.launch {
+                    showVisualInspectionDialog = false
+                    showElectricProblemDialog = false
                     val entity = withContext(Dispatchers.IO) {
                         runCatching { problemaDao.getById(problem.id) }.getOrNull()
                     }
