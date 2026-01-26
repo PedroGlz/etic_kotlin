@@ -97,6 +97,10 @@ fun VisualProblemDialog(
     cerradoChecked: Boolean = false,
     cerradoEnabled: Boolean = false,
     onCerradoChange: (Boolean) -> Unit = {},
+    onNavigatePrevious: (() -> Unit)? = null,
+    onNavigateNext: (() -> Unit)? = null,
+    canNavigatePrevious: Boolean = true,
+    canNavigateNext: Boolean = true,
     showEditControls: Boolean = false,
     onDismiss: () -> Unit,
     onContinue: () -> Unit
@@ -130,10 +134,16 @@ fun VisualProblemDialog(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            IconButton(onClick = {}) {
+                            IconButton(
+                                onClick = { onNavigatePrevious?.invoke() },
+                                enabled = onNavigatePrevious != null && canNavigatePrevious
+                            ) {
                                 Icon(Icons.Outlined.ArrowLeft, contentDescription = "Anterior")
                             }
-                            IconButton(onClick = {}) {
+                            IconButton(
+                                onClick = { onNavigateNext?.invoke() },
+                                enabled = onNavigateNext != null && canNavigateNext
+                            ) {
                                 Icon(Icons.Outlined.ArrowRight, contentDescription = "Siguiente")
                             }
                         }

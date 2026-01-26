@@ -117,6 +117,10 @@ fun ElectricProblemDialog(
     cerradoChecked: Boolean = false,
     cerradoEnabled: Boolean = false,
     onCerradoChange: (Boolean) -> Unit = {},
+    onNavigatePrevious: ((ElectricProblemFormData) -> Unit)? = null,
+    onNavigateNext: ((ElectricProblemFormData) -> Unit)? = null,
+    canNavigatePrevious: Boolean = true,
+    canNavigateNext: Boolean = true,
     showEditControls: Boolean = false,
     onDismiss: () -> Unit,
     onContinue: (ElectricProblemFormData) -> Unit,
@@ -253,6 +257,33 @@ fun ElectricProblemDialog(
             val digitalError = digitalImageName.isBlank()
             val imagesProvided = !thermalError && !digitalError
 
+            fun buildFormData(): ElectricProblemFormData =
+                ElectricProblemFormData(
+                    failureId = failureId?.takeIf { it.isNotBlank() },
+                    componentTemperature = componentTemperature,
+                    componentPhaseId = componentPhaseId,
+                    componentRms = componentRms,
+                    referenceTemperature = referenceTemperature,
+                    referencePhaseId = referencePhaseId,
+                    referenceRms = referenceRms,
+                    additionalInfoId = additionalInfoId,
+                    additionalRms = additionalRms,
+                    emissivityChecked = emissivityChecked,
+                    emissivity = emissivity,
+                    indirectTempChecked = indirectTempChecked,
+                    ambientTempChecked = ambientTempChecked,
+                    ambientTemp = ambientTemp,
+                    environmentChecked = environmentChecked,
+                    environmentId = environmentId,
+                    windSpeedChecked = windSpeedChecked,
+                    windSpeed = windSpeed,
+                    manufacturerId = manufacturerId,
+                    ratedLoad = ratedLoad,
+                    circuitVoltage = circuitVoltage,
+                    comments = comments,
+                    rpm = ""
+                )
+
             Column(
                 Modifier
                     .widthIn(min = DIALOG_MIN_WIDTH, max = DIALOG_MAX_WIDTH)
@@ -269,10 +300,16 @@ fun ElectricProblemDialog(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            IconButton(onClick = {}) {
+                            IconButton(
+                                onClick = { onNavigatePrevious?.invoke(buildFormData()) },
+                                enabled = onNavigatePrevious != null && canNavigatePrevious
+                            ) {
                                 Icon(Icons.Outlined.ArrowLeft, contentDescription = "Anterior")
                             }
-                            IconButton(onClick = {}) {
+                            IconButton(
+                                onClick = { onNavigateNext?.invoke(buildFormData()) },
+                                enabled = onNavigateNext != null && canNavigateNext
+                            ) {
                                 Icon(Icons.Outlined.ArrowRight, contentDescription = "Siguiente")
                             }
                         }
@@ -689,33 +726,7 @@ fun ElectricProblemDialog(
                         continueEnabled && emissivityError == null && requiredFieldsFilled && imagesProvided
                     Button(
                         onClick = {
-                            onContinue(
-                                ElectricProblemFormData(
-                                    failureId = failureId?.takeIf { it.isNotBlank() },
-                                    componentTemperature = componentTemperature,
-                                    componentPhaseId = componentPhaseId,
-                                    componentRms = componentRms,
-                                    referenceTemperature = referenceTemperature,
-                                    referencePhaseId = referencePhaseId,
-                                    referenceRms = referenceRms,
-                                    additionalInfoId = additionalInfoId,
-                                    additionalRms = additionalRms,
-                                    emissivityChecked = emissivityChecked,
-                                    emissivity = emissivity,
-                                    indirectTempChecked = indirectTempChecked,
-                                    ambientTempChecked = ambientTempChecked,
-                                    ambientTemp = ambientTemp,
-                                    environmentChecked = environmentChecked,
-                                    environmentId = environmentId,
-                                    windSpeedChecked = windSpeedChecked,
-                                    windSpeed = windSpeed,
-                                    manufacturerId = manufacturerId,
-                                    ratedLoad = ratedLoad,
-                                    circuitVoltage = circuitVoltage,
-                                    comments = comments,
-                                    rpm = ""
-                                )
-                            )
+                            onContinue(buildFormData())
                         },
                         enabled = canSubmit
                     ) {

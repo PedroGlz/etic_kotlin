@@ -160,6 +160,33 @@ private const val STATUS_VERIFICADO = "568798D2-76BB-11D3-82BF-00104BC75DC2"
 
 private data class ProblemTypeFilter(val id: String, val label: String, val matchIds: List<String>)
 
+private sealed class ProblemDraft {
+    data class VisualDraft(
+        val hazardId: String?,
+        val hazardLabel: String?,
+        val severityId: String?,
+        val severityLabel: String?,
+        val observation: String,
+        val thermalImage: String,
+        val digitalImage: String,
+        val closed: Boolean
+    ) : ProblemDraft()
+
+    data class ElectricDraft(
+        val formData: ElectricProblemFormData,
+        val thermalImage: String,
+        val digitalImage: String,
+        val closed: Boolean
+    ) : ProblemDraft()
+
+    data class MechanicalDraft(
+        val formData: MechanicalProblemFormData,
+        val thermalImage: String,
+        val digitalImage: String,
+        val closed: Boolean
+    ) : ProblemDraft()
+}
+
 private val PROBLEM_TYPE_FILTERS = listOf(
     ProblemTypeFilter("", "Todos", emptyList()),
     ProblemTypeFilter(
@@ -484,6 +511,11 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             var editingProblemId by rememberSaveable { mutableStateOf<String?>(null) }
             var editingProblemOriginal by remember { mutableStateOf<Problema?>(null) }
             var visualProblemClosed by rememberSaveable { mutableStateOf(false) }
+            var problemNavList by remember { mutableStateOf<List<Problem>>(emptyList()) }
+            var problemNavIndex by remember { mutableStateOf(-1) }
+            var problemDrafts by remember { mutableStateOf<Map<String, ProblemDraft>>(emptyMap()) }
+            var electricProblemDraftData by remember { mutableStateOf<ElectricProblemFormData?>(null) }
+            var mechanicalProblemDraftData by remember { mutableStateOf<MechanicalProblemFormData?>(null) }
             fun resetVisualProblemForm() {
                 editingProblemId = null
                 editingProblemOriginal = null
@@ -509,6 +541,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                 electricProblemClosed = false
                 pendingThermalImage = ""
                 pendingDigitalImage = ""
+                electricProblemDraftData = null
             }
             var editingMechanicalProblemId by rememberSaveable { mutableStateOf<String?>(null) }
             var editingMechanicalProblemOriginal by remember { mutableStateOf<Problema?>(null) }
@@ -519,6 +552,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                 mechanicalProblemClosed = false
                 pendingThermalImage = ""
                 pendingDigitalImage = ""
+                mechanicalProblemDraftData = null
             }
             val thermalCameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { bmp ->
                 if (bmp != null) {
@@ -706,6 +740,143 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                 val isPast = entity.idInspeccion?.equals(currentId, ignoreCase = true) != true
                 return isOpen && isPast
             }
+            fun computePreviousInspectionNumber(
+                currentNumber: Int?,
+                visibleProblems: List<Problem>
+            ): Int? {
+                val numbers = buildList {
+                    currentNumber?.let { add(it) }
+                    visibleProblems.mapNotNull { it.numInspeccion.toIntOrNull() }.forEach { add(it) }
+                }
+                if (numbers.isEmpty()) return null
+                val unique = numbers.distinct().sortedDescending()
+                return if (unique.size > 1) unique[1] else unique[0]
+            }
+
+            fun buildNavigationList(
+                visibleProblems: List<Problem>,
+                inspectionPrevious: Int?
+            ): List<Problem> {
+                if (inspectionPrevious == null) return visibleProblems
+                return visibleProblems.filter { problem ->
+                    val num = problem.numInspeccion.toIntOrNull()
+                    val isOpen = problem.estatus.equals("Abierto", ignoreCase = true)
+                    (num != null && num >= inspectionPrevious) || isOpen
+                }
+            }
+
+            fun shouldBlockProblemOpen(problem: Problem, inspectionPrevious: Int?): Boolean {
+                if (inspectionPrevious == null) return false
+                val isClosed = problem.estatus.equals("Cerrado", ignoreCase = true)
+                val isDifferentInspection =
+                    problem.inspectionId?.equals(currentInspection?.idInspeccion, ignoreCase = true) != true
+                val num = problem.numInspeccion.toIntOrNull() ?: return false
+                return isDifferentInspection && isClosed && num <= inspectionPrevious
+            }
+
+            fun resetProblemNavigation() {
+                problemNavList = emptyList()
+                problemNavIndex = -1
+                problemDrafts = emptyMap()
+                electricProblemDraftData = null
+                mechanicalProblemDraftData = null
+            }
+
+            fun applyVisualDraft(problemId: String) {
+                val draft = problemDrafts[problemId] as? ProblemDraft.VisualDraft ?: return
+                pendingHazardId = draft.hazardId
+                pendingHazardLabel = draft.hazardLabel
+                pendingSeverityId = draft.severityId
+                pendingSeverityLabel = draft.severityLabel
+                pendingObservation = draft.observation
+                pendingThermalImage = draft.thermalImage
+                pendingDigitalImage = draft.digitalImage
+                visualProblemClosed = draft.closed
+                ensureVisualDefaults(allowObservationUpdate = false, allowUnknownSelections = true)
+            }
+
+            fun applyElectricDraft(problemId: String) {
+                val draft = problemDrafts[problemId] as? ProblemDraft.ElectricDraft ?: return
+                electricProblemDraftData = draft.formData
+                pendingThermalImage = draft.thermalImage
+                pendingDigitalImage = draft.digitalImage
+                electricProblemClosed = draft.closed
+            }
+
+            fun applyMechanicalDraft(problemId: String) {
+                val draft = problemDrafts[problemId] as? ProblemDraft.MechanicalDraft ?: return
+                mechanicalProblemDraftData = draft.formData
+                pendingThermalImage = draft.thermalImage
+                pendingDigitalImage = draft.digitalImage
+                mechanicalProblemClosed = draft.closed
+            }
+
+            fun normalizeEmissivityValue(raw: String): String = raw.trim().replace(',', '.')
+
+            fun isEmissivityValid(checked: Boolean, value: String): Boolean {
+                if (!checked) return true
+                val normalized = normalizeEmissivityValue(value)
+                if (normalized.isBlank()) return false
+                val number = normalized.toDoubleOrNull() ?: return false
+                if (number < 0.0 || number > 1.0) return false
+                val decimals = normalized.substringAfter('.', "")
+                return !normalized.contains('.') || decimals.length <= 2
+            }
+
+            fun validateVisualForNavigation(): Boolean {
+                val missing = buildList {
+                    if (pendingHazardId.isNullOrBlank()) add("Problema")
+                    if (pendingSeverityId.isNullOrBlank()) add("Severidad")
+                    if (pendingThermalImage.isBlank()) add("Imagen térmica")
+                    if (pendingDigitalImage.isBlank()) add("Imagen digital")
+                }
+                if (missing.isNotEmpty()) {
+                    Toast.makeText(ctx, "Completa: ${missing.joinToString()}", Toast.LENGTH_SHORT).show()
+                    return false
+                }
+                return true
+            }
+
+            fun validateElectricForNavigation(formData: ElectricProblemFormData): Boolean {
+                val missing = buildList {
+                    if (formData.failureId.isNullOrBlank()) add("Falla")
+                    if (formData.componentTemperature.isBlank()) add("Temp. componente")
+                    if (formData.componentPhaseId.isNullOrBlank()) add("Fase componente")
+                    if (formData.referenceTemperature.isBlank()) add("Temp. referencia")
+                    if (formData.referencePhaseId.isNullOrBlank()) add("Fase referencia")
+                    if (pendingThermalImage.isBlank()) add("Imagen térmica")
+                    if (pendingDigitalImage.isBlank()) add("Imagen digital")
+                }
+                if (missing.isNotEmpty()) {
+                    Toast.makeText(ctx, "Completa: ${missing.joinToString()}", Toast.LENGTH_SHORT).show()
+                    return false
+                }
+                if (!isEmissivityValid(formData.emissivityChecked, formData.emissivity)) {
+                    Toast.makeText(ctx, "Revisa el valor de emisividad.", Toast.LENGTH_SHORT).show()
+                    return false
+                }
+                return true
+            }
+
+            fun validateMechanicalForNavigation(formData: MechanicalProblemFormData): Boolean {
+                val missing = buildList {
+                    if (formData.failureId.isNullOrBlank()) add("Falla")
+                    if (formData.componentTemperature.isBlank()) add("Temp. componente")
+                    if (formData.referenceTemperature.isBlank()) add("Temp. referencia")
+                    if (pendingThermalImage.isBlank()) add("Imagen térmica")
+                    if (pendingDigitalImage.isBlank()) add("Imagen digital")
+                }
+                if (missing.isNotEmpty()) {
+                    Toast.makeText(ctx, "Completa: ${missing.joinToString()}", Toast.LENGTH_SHORT).show()
+                    return false
+                }
+                if (!isEmissivityValid(formData.emissivityChecked, formData.emissivity)) {
+                    Toast.makeText(ctx, "Revisa el valor de emisividad.", Toast.LENGTH_SHORT).show()
+                    return false
+                }
+                return true
+            }
+
             fun startVisualProblemEdit(problem: Problem) {
                 val visualTypeId = PROBLEM_TYPE_IDS["Visual"]
                 if (visualTypeId.isNullOrBlank()) {
@@ -773,6 +944,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     visualProblemClosed = entity.estatusProblema?.equals("Cerrado", ignoreCase = true) == true
                     cronicoActionEnabled = canEnableCronico(entity)
                     ensureVisualDefaults(allowObservationUpdate = false, allowUnknownSelections = true)
+                    applyVisualDraft(entity.idProblema)
                     showVisualInspectionDialog = true
                 }
             }
@@ -819,6 +991,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     pendingDigitalImage = entity.photoFile.orEmpty()
                     electricProblemFormKey += 1
                     cronicoActionEnabled = canEnableCronico(entity)
+                    applyElectricDraft(entity.idProblema)
                     showElectricProblemDialog = true
                 }
             }
@@ -843,6 +1016,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                         Toast.makeText(ctx, "El problema no tiene una ubicacion asociada.", Toast.LENGTH_SHORT).show()
                         return@launch
                     }
+                    resetMechanicalProblemState()
                     val equipmentName = problem.equipo.takeIf { it.isNotBlank() } ?: ubicacionId
                     val fallbackRoute = titlePathForId(nodes, ubicacionId).joinToString(" / ")
                     val resolvedRoute = fallbackRoute.takeIf { it.isNotBlank() } ?: entity.ruta ?: "-"
@@ -864,8 +1038,73 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     mechanicalProblemClosed = entity.estatusProblema?.equals("Cerrado", ignoreCase = true) == true
                     mechanicalProblemFormKey += 1
                     cronicoActionEnabled = canEnableCronico(entity)
+                    applyMechanicalDraft(entity.idProblema)
                     showMechanicalProblemDialog = true
                 }
+            }
+            fun openProblemForNavigation(problem: Problem) {
+                val normalizedType = problem.tipo?.normalizeProblemKey()
+                when {
+                    problem.tipoId?.equals(VISUAL_PROBLEM_TYPE_ID, ignoreCase = true) == true -> startVisualProblemEdit(problem)
+                    problem.tipoId?.equals(ELECTRIC_PROBLEM_TYPE_ID, ignoreCase = true) == true -> startElectricProblemEdit(problem)
+                    problem.tipoId?.equals(MECHANICAL_PROBLEM_TYPE_ID, ignoreCase = true) == true -> startMechanicalProblemEdit(problem)
+                    normalizedType == "visual" -> startVisualProblemEdit(problem)
+                    normalizedType == "electrico" -> startElectricProblemEdit(problem)
+                    normalizedType == "mecanico" -> startMechanicalProblemEdit(problem)
+                    else -> Toast.makeText(ctx, "La edición de este tipo de problema no está disponible.", Toast.LENGTH_SHORT).show()
+                }
+            }
+
+            fun navigateFromVisual(delta: Int) {
+                val currentId = editingProblemId ?: return
+                if (!validateVisualForNavigation()) return
+                val draft = ProblemDraft.VisualDraft(
+                    hazardId = pendingHazardId,
+                    hazardLabel = pendingHazardLabel,
+                    severityId = pendingSeverityId,
+                    severityLabel = pendingSeverityLabel,
+                    observation = pendingObservation,
+                    thermalImage = pendingThermalImage,
+                    digitalImage = pendingDigitalImage,
+                    closed = visualProblemClosed
+                )
+                problemDrafts = problemDrafts + (currentId to draft)
+                val nextIndex = problemNavIndex + delta
+                if (nextIndex !in problemNavList.indices) return
+                problemNavIndex = nextIndex
+                openProblemForNavigation(problemNavList[nextIndex])
+            }
+
+            fun navigateFromElectric(delta: Int, formData: ElectricProblemFormData) {
+                val currentId = editingElectricProblemId ?: return
+                if (!validateElectricForNavigation(formData)) return
+                val draft = ProblemDraft.ElectricDraft(
+                    formData = formData,
+                    thermalImage = pendingThermalImage,
+                    digitalImage = pendingDigitalImage,
+                    closed = electricProblemClosed
+                )
+                problemDrafts = problemDrafts + (currentId to draft)
+                val nextIndex = problemNavIndex + delta
+                if (nextIndex !in problemNavList.indices) return
+                problemNavIndex = nextIndex
+                openProblemForNavigation(problemNavList[nextIndex])
+            }
+
+            fun navigateFromMechanical(delta: Int, formData: MechanicalProblemFormData) {
+                val currentId = editingMechanicalProblemId ?: return
+                if (!validateMechanicalForNavigation(formData)) return
+                val draft = ProblemDraft.MechanicalDraft(
+                    formData = formData,
+                    thermalImage = pendingThermalImage,
+                    digitalImage = pendingDigitalImage,
+                    closed = mechanicalProblemClosed
+                )
+                problemDrafts = problemDrafts + (currentId to draft)
+                val nextIndex = problemNavIndex + delta
+                if (nextIndex !in problemNavList.indices) return
+                problemNavIndex = nextIndex
+                openProblemForNavigation(problemNavList[nextIndex])
             }
             var selectedProblemType by rememberSaveable { mutableStateOf(problemTypeLabelForId(ELECTRIC_PROBLEM_TYPE_ID)) }
             var showInvalidParentDialog by rememberSaveable { mutableStateOf(false) }
@@ -1749,6 +1988,10 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                 )
             }
 
+            val canNavigatePrevious = problemNavList.isNotEmpty() && problemNavIndex > 0
+            val canNavigateNext =
+                problemNavList.isNotEmpty() && problemNavIndex >= 0 && problemNavIndex < problemNavList.lastIndex
+
             if (showVisualInspectionDialog && pendingProblemEquipmentName != null) {
                 val visualHazardOptionsForDialog = remember(
                     visualHazardOptionsFixed,
@@ -1865,6 +2108,18 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     cerradoEnabled = editingProblemOriginal?.idInspeccion
                         ?.equals(currentInspection?.idInspeccion, ignoreCase = true) == true,
                     onCerradoChange = { visualProblemClosed = it },
+                    onNavigatePrevious = if (editingProblemId != null) {
+                        { navigateFromVisual(-1) }
+                    } else {
+                        null
+                    },
+                    onNavigateNext = if (editingProblemId != null) {
+                        { navigateFromVisual(1) }
+                    } else {
+                        null
+                    },
+                    canNavigatePrevious = canNavigatePrevious,
+                    canNavigateNext = canNavigateNext,
                     onHazardSelected = { selected ->
                         val normalized = selected.takeIf { it.isNotBlank() }
                         pendingHazardId = normalized
@@ -1885,6 +2140,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     onDismiss = {
                         showVisualInspectionDialog = false
                         cronicoActionEnabled = false
+                        resetProblemNavigation()
                         resetVisualProblemForm()
                     },
                     onContinue = {
@@ -2032,61 +2288,63 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                 )
             }
 
-            val electricProblemInitialData = editingElectricProblemOriginal?.let { entity ->
-                ElectricProblemFormData(
-                    failureId = entity.idFalla,
-                    componentTemperature = entity.problemTemperature?.toString() ?: "",
-                    componentPhaseId = entity.problemPhase,
-                    componentRms = entity.problemRms?.toString() ?: "",
-                    referenceTemperature = entity.referenceTemperature?.toString() ?: "",
-                    referencePhaseId = entity.referencePhase,
-                    referenceRms = entity.referenceRms?.toString() ?: "",
-                    additionalInfoId = entity.additionalInfo,
-                    additionalRms = entity.additionalRms?.toString() ?: "",
-                    emissivityChecked = (entity.emissivityCheck ?: "").equals("on", ignoreCase = true),
-                    emissivity = entity.emissivity?.toString() ?: "",
-                    indirectTempChecked = (entity.indirectTempCheck ?: "").equals("on", ignoreCase = true),
-                    ambientTempChecked = (entity.tempAmbientCheck ?: "").equals("on", ignoreCase = true),
-                    ambientTemp = entity.tempAmbient?.toString() ?: "",
-                    environmentChecked = (entity.environmentCheck ?: "").equals("on", ignoreCase = true),
-                    environmentId = entity.environment,
-                    windSpeedChecked = (entity.windSpeedCheck ?: "").equals("on", ignoreCase = true),
-                    windSpeed = entity.windSpeed?.toString() ?: "",
-                    manufacturerId = entity.idFabricante,
-                    ratedLoad = entity.ratedLoad ?: "",
-                    circuitVoltage = entity.circuitVoltage ?: "",
-                    comments = entity.componentComment ?: "",
-                    rpm = entity.rpm?.toString() ?: ""
-                )
-            }
-            val mechanicalProblemInitialData = editingMechanicalProblemOriginal?.let { entity ->
-                MechanicalProblemFormData(
-                    failureId = entity.idFalla,
-                    componentTemperature = entity.problemTemperature?.toString() ?: "",
-                    componentPhaseId = null,
-                    componentRms = entity.problemRms?.toString() ?: "",
-                    referenceTemperature = entity.referenceTemperature?.toString() ?: "",
-                    referencePhaseId = null,
-                    referenceRms = entity.referenceRms?.toString() ?: "",
-                    additionalInfoId = null,
-                    additionalRms = "",
-                    emissivityChecked = (entity.emissivityCheck ?: "").equals("on", ignoreCase = true),
-                    emissivity = entity.emissivity?.toString() ?: "",
-                    indirectTempChecked = false,
-                    ambientTempChecked = (entity.tempAmbientCheck ?: "").equals("on", ignoreCase = true),
-                    ambientTemp = entity.tempAmbient?.toString() ?: "",
-                    environmentChecked = (entity.environmentCheck ?: "").equals("on", ignoreCase = true),
-                    environmentId = entity.environment,
-                    windSpeedChecked = false,
-                    windSpeed = "",
-                    manufacturerId = entity.idFabricante,
-                    ratedLoad = entity.ratedLoad ?: "",
-                    circuitVoltage = entity.circuitVoltage ?: "",
-                    comments = entity.componentComment ?: "",
-                    rpm = entity.rpm?.toString() ?: "",
-                    bearingType = entity.bearingType ?: ""
-                )
-            }
+            val electricProblemInitialData = electricProblemDraftData
+                ?: editingElectricProblemOriginal?.let { entity ->
+                    ElectricProblemFormData(
+                        failureId = entity.idFalla,
+                        componentTemperature = entity.problemTemperature?.toString() ?: "",
+                        componentPhaseId = entity.problemPhase,
+                        componentRms = entity.problemRms?.toString() ?: "",
+                        referenceTemperature = entity.referenceTemperature?.toString() ?: "",
+                        referencePhaseId = entity.referencePhase,
+                        referenceRms = entity.referenceRms?.toString() ?: "",
+                        additionalInfoId = entity.additionalInfo,
+                        additionalRms = entity.additionalRms?.toString() ?: "",
+                        emissivityChecked = (entity.emissivityCheck ?: "").equals("on", ignoreCase = true),
+                        emissivity = entity.emissivity?.toString() ?: "",
+                        indirectTempChecked = (entity.indirectTempCheck ?: "").equals("on", ignoreCase = true),
+                        ambientTempChecked = (entity.tempAmbientCheck ?: "").equals("on", ignoreCase = true),
+                        ambientTemp = entity.tempAmbient?.toString() ?: "",
+                        environmentChecked = (entity.environmentCheck ?: "").equals("on", ignoreCase = true),
+                        environmentId = entity.environment,
+                        windSpeedChecked = (entity.windSpeedCheck ?: "").equals("on", ignoreCase = true),
+                        windSpeed = entity.windSpeed?.toString() ?: "",
+                        manufacturerId = entity.idFabricante,
+                        ratedLoad = entity.ratedLoad ?: "",
+                        circuitVoltage = entity.circuitVoltage ?: "",
+                        comments = entity.componentComment ?: "",
+                        rpm = entity.rpm?.toString() ?: ""
+                    )
+                }
+            val mechanicalProblemInitialData = mechanicalProblemDraftData
+                ?: editingMechanicalProblemOriginal?.let { entity ->
+                    MechanicalProblemFormData(
+                        failureId = entity.idFalla,
+                        componentTemperature = entity.problemTemperature?.toString() ?: "",
+                        componentPhaseId = null,
+                        componentRms = entity.problemRms?.toString() ?: "",
+                        referenceTemperature = entity.referenceTemperature?.toString() ?: "",
+                        referencePhaseId = null,
+                        referenceRms = entity.referenceRms?.toString() ?: "",
+                        additionalInfoId = null,
+                        additionalRms = "",
+                        emissivityChecked = (entity.emissivityCheck ?: "").equals("on", ignoreCase = true),
+                        emissivity = entity.emissivity?.toString() ?: "",
+                        indirectTempChecked = false,
+                        ambientTempChecked = (entity.tempAmbientCheck ?: "").equals("on", ignoreCase = true),
+                        ambientTemp = entity.tempAmbient?.toString() ?: "",
+                        environmentChecked = (entity.environmentCheck ?: "").equals("on", ignoreCase = true),
+                        environmentId = entity.environment,
+                        windSpeedChecked = false,
+                        windSpeed = "",
+                        manufacturerId = entity.idFabricante,
+                        ratedLoad = entity.ratedLoad ?: "",
+                        circuitVoltage = entity.circuitVoltage ?: "",
+                        comments = entity.componentComment ?: "",
+                        rpm = entity.rpm?.toString() ?: "",
+                        bearingType = entity.bearingType ?: ""
+                    )
+                }
             val manufacturerOptionsPairs = fabricanteOptions
                 .sortedBy { it.fabricante?.lowercase(Locale.getDefault()) ?: "" }
                 .map { it.idFabricante to (it.fabricante ?: it.idFabricante) }
@@ -2126,10 +2384,23 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     cerradoEnabled = editingElectricProblemOriginal?.idInspeccion
                         ?.equals(currentInspection?.idInspeccion, ignoreCase = true) == true,
                     onCerradoChange = { electricProblemClosed = it },
+                    onNavigatePrevious = if (editingElectricProblemId != null) {
+                        { data -> navigateFromElectric(-1, data) }
+                    } else {
+                        null
+                    },
+                    onNavigateNext = if (editingElectricProblemId != null) {
+                        { data -> navigateFromElectric(1, data) }
+                    } else {
+                        null
+                    },
+                    canNavigatePrevious = canNavigatePrevious,
+                    canNavigateNext = canNavigateNext,
                     showEditControls = editingElectricProblemId != null,
                     onDismiss = {
                         showElectricProblemDialog = false
                         cronicoActionEnabled = false
+                        resetProblemNavigation()
                         resetElectricProblemState()
                     },
                     onContinue = { saveElectricProblem(it) },
@@ -2174,10 +2445,23 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     cerradoEnabled = editingMechanicalProblemOriginal?.idInspeccion
                         ?.equals(currentInspection?.idInspeccion, ignoreCase = true) == true,
                     onCerradoChange = { mechanicalProblemClosed = it },
+                    onNavigatePrevious = if (editingMechanicalProblemId != null) {
+                        { data -> navigateFromMechanical(-1, data) }
+                    } else {
+                        null
+                    },
+                    onNavigateNext = if (editingMechanicalProblemId != null) {
+                        { data -> navigateFromMechanical(1, data) }
+                    } else {
+                        null
+                    },
+                    canNavigatePrevious = canNavigatePrevious,
+                    canNavigateNext = canNavigateNext,
                     showEditControls = editingMechanicalProblemId != null,
                     onDismiss = {
                         showMechanicalProblemDialog = false
                         cronicoActionEnabled = false
+                        resetProblemNavigation()
                         resetMechanicalProblemState()
                     },
                     onContinue = { saveMechanicalProblem(it) },
@@ -3753,17 +4037,12 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     onBaselineChanged = { baselineRefreshTick++ },
                     problemsRefreshTick = problemsRefreshTick,
                     modifier = Modifier.fillMaxSize(),  // asegura ocupar todo el espacio
-                    onProblemDoubleTap = { problem ->
-                        val currentInspectionId = currentInspection?.idInspeccion
-                        val isOpen = problem.estatus.equals("Abierto", ignoreCase = true)
-                        val isClosed = problem.estatus.equals("Cerrado", ignoreCase = true)
-                        val belongsToCurrentInspection =
-                            !currentInspectionId.isNullOrBlank() &&
-                                problem.inspectionId?.equals(currentInspectionId, ignoreCase = true) == true
-                        cronicoActionEnabled = isOpen && !belongsToCurrentInspection
-                        val canEdit = isOpen || (isClosed && belongsToCurrentInspection)
-                        if (!canEdit) {
-                            cronicoActionEnabled = false
+                    onProblemDoubleTap = { problem, visibleProblems ->
+                        val inspectionPrevious = computePreviousInspectionNumber(
+                            currentInspection?.noInspeccion,
+                            visibleProblems
+                        )
+                        if (shouldBlockProblemOpen(problem, inspectionPrevious)) {
                             Toast.makeText(
                                 ctx,
                                 "Este problema cerrado pertenece a una inspeccion pasada.",
@@ -3771,20 +4050,12 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                             ).show()
                             return@ListTabs
                         }
-                        val normalizedType = problem.tipo?.normalizeProblemKey()
-                        when {
-                            problem.tipoId?.equals(VISUAL_PROBLEM_TYPE_ID, ignoreCase = true) == true -> startVisualProblemEdit(problem)
-                            problem.tipoId?.equals(ELECTRIC_PROBLEM_TYPE_ID, ignoreCase = true) == true -> startElectricProblemEdit(problem)
-                            problem.tipoId?.equals(MECHANICAL_PROBLEM_TYPE_ID, ignoreCase = true) == true -> startMechanicalProblemEdit(problem)
-                            normalizedType == "visual" -> startVisualProblemEdit(problem)
-                            normalizedType == "electrico" -> startElectricProblemEdit(problem)
-                            normalizedType == "mecanico" -> startMechanicalProblemEdit(problem)
-                            else -> Toast.makeText(
-                                ctx,
-                                "La edición de este tipo de problema no está disponible.",
-                                Toast.LENGTH_SHORT
-                            ).show()
-                        }
+                        val navList = buildNavigationList(visibleProblems, inspectionPrevious)
+                        val index = navList.indexOfFirst { it.id == problem.id }
+                        resetProblemNavigation()
+                        problemNavList = navList
+                        problemNavIndex = index
+                        openProblemForNavigation(problem)
                     },
                     onNewProblem = {
                         cronicoActionEnabled = false
@@ -4187,7 +4458,7 @@ private fun ListTabs(
     onBaselineChanged: () -> Unit,
     problemsRefreshTick: Int,
     modifier: Modifier = Modifier,
-    onProblemDoubleTap: ((Problem) -> Unit)? = null,
+    onProblemDoubleTap: ((Problem, List<Problem>) -> Unit)? = null,
     onNewProblem: (() -> Unit)? = null
 ) {
     // Nota: mostramos versiones ligadas a BD; no usamos listas calculadas por nodo aqu?
@@ -4293,7 +4564,7 @@ private fun ListTabs(
 private fun ProblemsTable(
     problems: List<Problem>,
     onDelete: (Problem) -> Unit,
-    onDoubleTap: ((Problem) -> Unit)? = null
+    onDoubleTap: ((Problem, List<Problem>) -> Unit)? = null
 ) {
     val currentInspectionId = LocalCurrentInspection.current?.idInspeccion
     // ─────────────────────────────
@@ -4526,7 +4797,7 @@ private fun ProblemsTable(
                                     .fillMaxWidth()
                                     .padding(vertical = 6.dp)
                                     .pointerInput(p.id) {
-                                        detectTapGestures(onDoubleTap = { onDoubleTap?.invoke(p) })
+                                        detectTapGestures(onDoubleTap = { onDoubleTap?.invoke(p, sortedProblems) })
                                     }
                             ) {
                                 cellFixed(wNo) { Text("${p.no}") }
@@ -4795,7 +5066,7 @@ private fun ProblemsTableFromDatabase(
     statusFilterId: String,
     modifier: Modifier = Modifier,
     onProblemDeleted: (() -> Unit)? = null,
-    onProblemDoubleTap: ((Problem) -> Unit)? = null
+    onProblemDoubleTap: ((Problem, List<Problem>) -> Unit)? = null
 ) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val dao = remember { com.example.etic.data.local.DbProvider.get(ctx).problemaDao() }

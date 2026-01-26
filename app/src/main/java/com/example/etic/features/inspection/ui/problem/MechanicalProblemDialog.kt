@@ -116,6 +116,10 @@ fun MechanicalProblemDialog(
     cerradoChecked: Boolean = false,
     cerradoEnabled: Boolean = false,
     onCerradoChange: (Boolean) -> Unit = {},
+    onNavigatePrevious: ((MechanicalProblemFormData) -> Unit)? = null,
+    onNavigateNext: ((MechanicalProblemFormData) -> Unit)? = null,
+    canNavigatePrevious: Boolean = true,
+    canNavigateNext: Boolean = true,
     showEditControls: Boolean = false,
     onDismiss: () -> Unit,
     onContinue: (MechanicalProblemFormData) -> Unit,
@@ -257,6 +261,34 @@ fun MechanicalProblemDialog(
                 val digitalError = digitalImageName.isBlank()
                 val imagesProvided = !thermalError && !digitalError
 
+                fun buildFormData(): MechanicalProblemFormData =
+                    MechanicalProblemFormData(
+                        failureId = failureId?.takeIf { it.isNotBlank() },
+                        componentTemperature = componentTemperature,
+                        componentPhaseId = null,
+                        componentRms = componentRms,
+                        referenceTemperature = referenceTemperature,
+                        referencePhaseId = null,
+                        referenceRms = referenceRms,
+                        additionalInfoId = null,
+                        additionalRms = "",
+                        emissivityChecked = emissivityChecked,
+                        emissivity = emissivity,
+                        indirectTempChecked = false,
+                        ambientTempChecked = ambientTempChecked,
+                        ambientTemp = ambientTemp,
+                        environmentChecked = environmentChecked,
+                        environmentId = environmentId,
+                        windSpeedChecked = false,
+                        windSpeed = "",
+                        manufacturerId = manufacturerId,
+                        ratedLoad = ratedLoad,
+                        circuitVoltage = circuitVoltage,
+                        comments = comments,
+                        rpm = rpm,
+                        bearingType = bearingType
+                    )
+
                 Column(
                     Modifier
                         .widthIn(min = DIALOG_MIN_WIDTH, max = DIALOG_MAX_WIDTH)
@@ -273,10 +305,16 @@ fun MechanicalProblemDialog(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                IconButton(onClick = {}) {
+                                IconButton(
+                                    onClick = { onNavigatePrevious?.invoke(buildFormData()) },
+                                    enabled = onNavigatePrevious != null && canNavigatePrevious
+                                ) {
                                     Icon(Icons.Outlined.ArrowLeft, contentDescription = "Anterior")
                                 }
-                                IconButton(onClick = {}) {
+                                IconButton(
+                                    onClick = { onNavigateNext?.invoke(buildFormData()) },
+                                    enabled = onNavigateNext != null && canNavigateNext
+                                ) {
                                     Icon(Icons.Outlined.ArrowRight, contentDescription = "Siguiente")
                                 }
                             }
@@ -621,34 +659,7 @@ fun MechanicalProblemDialog(
                             continueEnabled && emissivityError == null && requiredFieldsFilled && imagesProvided
                         Button(
                             onClick = {
-                onContinue(
-                    MechanicalProblemFormData(
-                        failureId = failureId?.takeIf { it.isNotBlank() },
-                        componentTemperature = componentTemperature,
-                        componentPhaseId = null,
-                        componentRms = componentRms,
-                        referenceTemperature = referenceTemperature,
-                        referencePhaseId = null,
-                        referenceRms = referenceRms,
-                        additionalInfoId = null,
-                        additionalRms = "",
-                        emissivityChecked = emissivityChecked,
-                        emissivity = emissivity,
-                        indirectTempChecked = false,
-                        ambientTempChecked = ambientTempChecked,
-                        ambientTemp = ambientTemp,
-                        environmentChecked = environmentChecked,
-                        environmentId = environmentId,
-                        windSpeedChecked = false,
-                        windSpeed = "",
-                        manufacturerId = manufacturerId,
-                        ratedLoad = ratedLoad,
-                        circuitVoltage = circuitVoltage,
-                        comments = comments,
-                        rpm = rpm,
-                        bearingType = bearingType
-                    )
-                )
+                onContinue(buildFormData())
                             },
                             enabled = canSubmit
                         ) {
