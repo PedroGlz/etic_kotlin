@@ -489,6 +489,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             var showEditUbDialog by remember { mutableStateOf(false) }
             var isSavingEditUb by remember { mutableStateOf(false) }
             var editTab by rememberSaveable { mutableStateOf(0) }
+            var problemDialogTab by rememberSaveable { mutableStateOf(0) }
             var pendingProblemEquipmentName by rememberSaveable { mutableStateOf<String?>(null) }
             var pendingProblemRoute by rememberSaveable { mutableStateOf<String?>(null) }
             var pendingProblemType by rememberSaveable { mutableStateOf(problemTypeLabelForId(VISUAL_PROBLEM_TYPE_ID)) }
@@ -2368,6 +2369,8 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                         }?.second
                     },
                     showEditControls = editingProblemId != null,
+                    selectedTabIndex = problemDialogTab,
+                    onSelectedTabChange = { problemDialogTab = it },
                     onDismiss = {
                         showVisualInspectionDialog = false
                         cronicoActionEnabled = false
@@ -2658,6 +2661,8 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     canNavigatePrevious = canNavigatePrevious,
                     canNavigateNext = canNavigateNext,
                     showEditControls = editingElectricProblemId != null,
+                    selectedTabIndex = problemDialogTab,
+                    onSelectedTabChange = { problemDialogTab = it },
                     onDismiss = {
                         showElectricProblemDialog = false
                         cronicoActionEnabled = false
@@ -2719,6 +2724,8 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     canNavigatePrevious = canNavigatePrevious,
                     canNavigateNext = canNavigateNext,
                     showEditControls = editingMechanicalProblemId != null,
+                    selectedTabIndex = problemDialogTab,
+                    onSelectedTabChange = { problemDialogTab = it },
                     onDismiss = {
                         showMechanicalProblemDialog = false
                         cronicoActionEnabled = false

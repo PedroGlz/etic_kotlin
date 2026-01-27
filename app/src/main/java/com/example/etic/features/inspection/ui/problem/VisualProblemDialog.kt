@@ -34,6 +34,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -103,7 +104,9 @@ fun VisualProblemDialog(
     canNavigateNext: Boolean = true,
     showEditControls: Boolean = false,
     onDismiss: () -> Unit,
-    onContinue: () -> Unit
+    onContinue: () -> Unit,
+    selectedTabIndex: Int? = null,
+    onSelectedTabChange: ((Int) -> Unit)? = null
 ) {
     Dialog(
         onDismissRequest = onDismiss,
@@ -199,10 +202,19 @@ fun VisualProblemDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
 
-                var selectedTab by remember { mutableStateOf(0) }
+                val useExternalTabState = selectedTabIndex != null && onSelectedTabChange != null
+                var internalSelectedTab by rememberSaveable { mutableStateOf(selectedTabIndex ?: 0) }
+                val selectedTab = if (useExternalTabState) selectedTabIndex!! else internalSelectedTab
+                val onTabChange: (Int) -> Unit = { index ->
+                    if (useExternalTabState) {
+                        onSelectedTabChange?.invoke(index)
+                    } else {
+                        internalSelectedTab = index
+                    }
+                }
                 TabRow(selectedTabIndex = selectedTab) {
-                    Tab(selected = selectedTab == 0, onClick = { selectedTab = 0 }, text = { Text("Datos") })
-                    Tab(selected = selectedTab == 1, onClick = { selectedTab = 1 }, text = { Text("Imágenes") })
+                    Tab(selected = selectedTab == 0, onClick = { onTabChange(0) }, text = { Text("Datos") })
+                    Tab(selected = selectedTab == 1, onClick = { onTabChange(1) }, text = { Text("Imágenes") })
                 }
 
                 Spacer(Modifier.height(16.dp))

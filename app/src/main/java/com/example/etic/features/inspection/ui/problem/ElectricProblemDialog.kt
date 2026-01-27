@@ -126,7 +126,9 @@ fun ElectricProblemDialog(
     onContinue: (ElectricProblemFormData) -> Unit,
     continueEnabled: Boolean = true,
     initialFormData: ElectricProblemFormData? = null,
-    dialogKey: Any = Unit
+    dialogKey: Any = Unit,
+    selectedTabIndex: Int? = null,
+    onSelectedTabChange: ((Int) -> Unit)? = null
 ) {
     key(dialogKey) {
         val initial = initialFormData ?: ElectricProblemFormData()
@@ -153,7 +155,16 @@ fun ElectricProblemDialog(
                 val scrollState = rememberScrollState()
                 val infoRowScrollState = rememberScrollState()
 
-                var selectedTab by rememberSaveable { mutableStateOf(0) }
+                val useExternalTabState = selectedTabIndex != null && onSelectedTabChange != null
+                var internalSelectedTab by rememberSaveable { mutableStateOf(selectedTabIndex ?: 0) }
+                val selectedTab = if (useExternalTabState) selectedTabIndex!! else internalSelectedTab
+                val onTabChange: (Int) -> Unit = { index ->
+                    if (useExternalTabState) {
+                        onSelectedTabChange?.invoke(index)
+                    } else {
+                        internalSelectedTab = index
+                    }
+                }
 
                 var failureId by rememberSaveable { mutableStateOf(initial.failureId) }
                 var componentTemperature by rememberSaveable { mutableStateOf(initial.componentTemperature) }
@@ -388,12 +399,12 @@ fun ElectricProblemDialog(
                 TabRow(selectedTabIndex = selectedTab, divider = {}) {
                     Tab(
                         selected = selectedTab == 0,
-                        onClick = { selectedTab = 0 },
+                        onClick = { onTabChange(0) },
                         text = { Text("Datos", style = MaterialTheme.typography.bodySmall) }
                     )
                     Tab(
                         selected = selectedTab == 1,
-                        onClick = { selectedTab = 1 },
+                        onClick = { onTabChange(1) },
                         text = { Text("Imágenes", style = MaterialTheme.typography.bodySmall) }
                     )
                 }
