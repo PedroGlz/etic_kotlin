@@ -2,6 +2,11 @@ package com.example.etic.features.inspection.ui.problem
 
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -106,7 +111,8 @@ fun VisualProblemDialog(
     onDismiss: () -> Unit,
     onContinue: () -> Unit,
     selectedTabIndex: Int? = null,
-    onSelectedTabChange: ((Int) -> Unit)? = null
+    onSelectedTabChange: ((Int) -> Unit)? = null,
+    transitionKey: Any = Unit
 ) {
     Dialog(
         onDismissRequest = onDismiss,
@@ -122,7 +128,12 @@ fun VisualProblemDialog(
         ) {
             val scrollState = rememberScrollState()
             val infoRowScroll = rememberScrollState()
-            Column(
+            AnimatedContent(
+                targetState = transitionKey,
+                transitionSpec = { fadeIn(tween(140)) togetherWith fadeOut(tween(140)) },
+                label = "visual-problem-transition"
+            ) {
+                Column(
                 Modifier
                     .widthIn(min = DIALOG_MIN_WIDTH, max = DIALOG_MAX_WIDTH)
                     .verticalScroll(scrollState)
@@ -309,6 +320,7 @@ fun VisualProblemDialog(
                 ) {
                     TextButton(onClick = onDismiss) { Text("Cancelar") }
                     Button(onClick = onContinue, enabled = canSave) { Text("Guardar") }
+                }
                 }
             }
         }

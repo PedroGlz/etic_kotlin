@@ -2,6 +2,11 @@
 
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -128,30 +133,31 @@ fun ElectricProblemDialog(
     initialFormData: ElectricProblemFormData? = null,
     dialogKey: Any = Unit,
     selectedTabIndex: Int? = null,
-    onSelectedTabChange: ((Int) -> Unit)? = null
+    onSelectedTabChange: ((Int) -> Unit)? = null,
+    transitionKey: Any = Unit
 ) {
-    key(dialogKey) {
-        val initial = initialFormData ?: ElectricProblemFormData()
-        val initialFailureLabel = failureOptions.firstOrNull { it.first == initial.failureId }?.second?.takeIf { it.isNotBlank() }
-        val initialPhaseLabel = phaseOptions.firstOrNull { it.first == initial.componentPhaseId }?.second?.takeIf { it.isNotBlank() }
-        val initialAutoCommentText = buildList {
-            initialFailureLabel?.let { add(it) }
-            initialPhaseLabel?.let { add(it) }
-            equipmentName.takeUnless { it.isBlank() }?.let { add(it) }
-        }.joinToString(", ")
-        val initialCommentWasAuto = initial.comments.isNotBlank() && initial.comments == initialAutoCommentText
-        Dialog(
-            onDismissRequest = onDismiss,
-            properties = DialogProperties(
-                usePlatformDefaultWidth = false,
-                dismissOnClickOutside = false,
-                dismissOnBackPress = false
-            )
+    val initial = initialFormData ?: ElectricProblemFormData()
+    val initialFailureLabel = failureOptions.firstOrNull { it.first == initial.failureId }?.second?.takeIf { it.isNotBlank() }
+    val initialPhaseLabel = phaseOptions.firstOrNull { it.first == initial.componentPhaseId }?.second?.takeIf { it.isNotBlank() }
+    val initialAutoCommentText = buildList {
+        initialFailureLabel?.let { add(it) }
+        initialPhaseLabel?.let { add(it) }
+        equipmentName.takeUnless { it.isBlank() }?.let { add(it) }
+    }.joinToString(", ")
+    val initialCommentWasAuto = initial.comments.isNotBlank() && initial.comments == initialAutoCommentText
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            dismissOnClickOutside = false,
+            dismissOnBackPress = false
+        )
+    ) {
+        Surface(
+            shape = RoundedCornerShape(12.dp),
+            tonalElevation = 6.dp
         ) {
-            Surface(
-                shape = RoundedCornerShape(12.dp),
-                tonalElevation = 6.dp
-            ) {
+            key(dialogKey) {
                 val scrollState = rememberScrollState()
                 val infoRowScrollState = rememberScrollState()
 
@@ -295,7 +301,12 @@ fun ElectricProblemDialog(
                     rpm = ""
                 )
 
-            Column(
+            AnimatedContent(
+                targetState = transitionKey,
+                transitionSpec = { fadeIn(tween(140)) togetherWith fadeOut(tween(140)) },
+                label = "electric-problem-transition"
+            ) {
+                Column(
                 Modifier
                     .widthIn(min = DIALOG_MIN_WIDTH, max = DIALOG_MAX_WIDTH)
                     .verticalScroll(scrollState)
@@ -743,6 +754,7 @@ fun ElectricProblemDialog(
                     ) {
                         Text("Guardar")
                     }
+                }
                 }
             }
         }

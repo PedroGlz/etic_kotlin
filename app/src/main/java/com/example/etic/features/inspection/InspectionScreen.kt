@@ -2371,6 +2371,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     showEditControls = editingProblemId != null,
                     selectedTabIndex = problemDialogTab,
                     onSelectedTabChange = { problemDialogTab = it },
+                    transitionKey = editingProblemId ?: pendingProblemNumber,
                     onDismiss = {
                         showVisualInspectionDialog = false
                         cronicoActionEnabled = false
@@ -2663,6 +2664,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     showEditControls = editingElectricProblemId != null,
                     selectedTabIndex = problemDialogTab,
                     onSelectedTabChange = { problemDialogTab = it },
+                    transitionKey = editingElectricProblemId ?: pendingProblemNumber,
                     onDismiss = {
                         showElectricProblemDialog = false
                         cronicoActionEnabled = false
@@ -2726,6 +2728,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     showEditControls = editingMechanicalProblemId != null,
                     selectedTabIndex = problemDialogTab,
                     onSelectedTabChange = { problemDialogTab = it },
+                    transitionKey = editingMechanicalProblemId ?: pendingProblemNumber,
                     onDismiss = {
                         showMechanicalProblemDialog = false
                         cronicoActionEnabled = false

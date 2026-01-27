@@ -2,6 +2,11 @@ package com.example.etic.features.inspection.ui.problem
 
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -127,31 +132,32 @@ fun MechanicalProblemDialog(
     initialFormData: MechanicalProblemFormData? = null,
     dialogKey: Any = Unit,
     selectedTabIndex: Int? = null,
-    onSelectedTabChange: ((Int) -> Unit)? = null
+    onSelectedTabChange: ((Int) -> Unit)? = null,
+    transitionKey: Any = Unit
 ) {
-    key(dialogKey) {
-        val initial = initialFormData ?: MechanicalProblemFormData()
-        val initialFailureLabel = failureOptions.firstOrNull { it.first == initial.failureId }?.second?.takeIf { it.isNotBlank() }
-        val initialPhaseLabel = phaseOptions.firstOrNull { it.first == initial.componentPhaseId }?.second?.takeIf { it.isNotBlank() }
-        val initialAutoCommentText = buildList {
-            initialFailureLabel?.let { add(it) }
-            initialPhaseLabel?.let { add(it) }
-            equipmentName.takeUnless { it.isBlank() }?.let { add(it) }
-        }.joinToString(", ")
-        val initialCommentWasAuto = initial.comments.isNotBlank() && initial.comments == initialAutoCommentText
+    val initial = initialFormData ?: MechanicalProblemFormData()
+    val initialFailureLabel = failureOptions.firstOrNull { it.first == initial.failureId }?.second?.takeIf { it.isNotBlank() }
+    val initialPhaseLabel = phaseOptions.firstOrNull { it.first == initial.componentPhaseId }?.second?.takeIf { it.isNotBlank() }
+    val initialAutoCommentText = buildList {
+        initialFailureLabel?.let { add(it) }
+        initialPhaseLabel?.let { add(it) }
+        equipmentName.takeUnless { it.isBlank() }?.let { add(it) }
+    }.joinToString(", ")
+    val initialCommentWasAuto = initial.comments.isNotBlank() && initial.comments == initialAutoCommentText
 
-        Dialog(
-            onDismissRequest = onDismiss,
-            properties = DialogProperties(
-                usePlatformDefaultWidth = false,
-                dismissOnClickOutside = false,
-                dismissOnBackPress = false
-            )
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            dismissOnClickOutside = false,
+            dismissOnBackPress = false
+        )
+    ) {
+        Surface(
+            shape = RoundedCornerShape(12.dp),
+            tonalElevation = 6.dp
         ) {
-            Surface(
-                shape = RoundedCornerShape(12.dp),
-                tonalElevation = 6.dp
-            ) {
+            key(dialogKey) {
                 val scrollState = rememberScrollState()
                 val infoRowScrollState = rememberScrollState()
 
@@ -300,7 +306,12 @@ fun MechanicalProblemDialog(
                         bearingType = bearingType
                     )
 
-                Column(
+                AnimatedContent(
+                    targetState = transitionKey,
+                    transitionSpec = { fadeIn(tween(140)) togetherWith fadeOut(tween(140)) },
+                    label = "mechanical-problem-transition"
+                ) {
+                    Column(
                     Modifier
                         .widthIn(min = DIALOG_MIN_WIDTH, max = DIALOG_MAX_WIDTH)
                         .verticalScroll(scrollState)
@@ -669,13 +680,12 @@ fun MechanicalProblemDialog(
                         val canSubmit =
                             continueEnabled && emissivityError == null && requiredFieldsFilled && imagesProvided
                         Button(
-                            onClick = {
-                onContinue(buildFormData())
-                            },
+                            onClick = { onContinue(buildFormData()) },
                             enabled = canSubmit
                         ) {
                             Text("Guardar")
                         }
+                    }
                     }
                 }
             }
