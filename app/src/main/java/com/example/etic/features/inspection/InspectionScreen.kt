@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -3505,6 +3506,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
 
                                                     val baselineTabListState =
                                                         rememberSaveable("baseline_tab2_state", saver = LazyListState.Saver) { LazyListState() }
+                                                    val zebraColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.18f)
 
                                                     if (tableData.isEmpty()) {
                                                         Box(
@@ -3520,10 +3522,12 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                                             Modifier.fillMaxSize(),
                                                             state = baselineTabListState
                                                         ) {
-                                                            items(tableData, key = { it.id }) { b ->
+                                                            itemsIndexed(tableData, key = { _, item -> item.id }) { index, b ->
+                                                                val rowColor = if (index % 2 == 1) zebraColor else Color.Transparent
                                                                 Row(
                                                                     Modifier
                                                                         .fillMaxWidth()
+                                                                        .background(rowColor)
                                                                         .padding(vertical = 6.dp, horizontal = 8.dp)
                                                                         .pointerInput(b.id) {
                                                                             detectTapGestures(onDoubleTap = {
@@ -4432,6 +4436,7 @@ private fun SimpleTreeView(
     }
     val flat = remember(nodes, expanded) { mutableListOf<FlatNode>().also { flatten(nodes, 0, it) } }
     val selColor = Color(0xFFE1BEE7) // violeta suave
+    val zebraColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.12f)
     val treeListState = rememberSaveable("tree_list_state", saver = LazyListState.Saver) { LazyListState() }
     val rootNodeId = nodes.firstOrNull()?.id
     val hasValidSelection = selectedId != null && flat.any { it.node.id == selectedId }
@@ -4454,10 +4459,14 @@ private fun SimpleTreeView(
     }
     Box(Modifier.fillMaxSize()) {
         LazyColumn(Modifier.fillMaxWidth(), state = treeListState) {
-            items(flat, key = { it.node.id }) { item ->
+            itemsIndexed(flat, key = { _, item -> item.node.id }) { index, item ->
                 val n = item.node
                 val isSelected = effectiveSelectedId == n.id
-                val rowBackground = if (isSelected) selColor else Color.Transparent
+                val rowBackground = when {
+                    isSelected -> selColor
+                    index % 2 == 1 -> zebraColor
+                    else -> Color.Transparent
+                }
                 Column(
                     Modifier
                         .fillMaxWidth()
@@ -4651,6 +4660,7 @@ private fun DetailsTable(
         Divider(thickness = DIVIDER_THICKNESS)
 
         val listState = rememberSaveable("details_list_state", saver = LazyListState.Saver) { LazyListState() }
+        val zebraColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.18f)
         if (children.isEmpty()) {
             Box(
                 Modifier
@@ -4667,10 +4677,12 @@ private fun DetailsTable(
                     .fillMaxWidth(),
                 state = listState
             ) {
-                items(children, key = { it.id }) { n ->
+                itemsIndexed(children, key = { _, item -> item.id }) { index, n ->
+                    val rowColor = if (index % 2 == 1) zebraColor else Color.Transparent
                     Row(
                         Modifier
                             .fillMaxWidth()
+                            .background(rowColor)
                             .padding(vertical = 2.dp, horizontal = 8.dp)
                             .pointerInput(n.id) {
                                 detectTapGestures(onDoubleTap = { onEdit(n) })
@@ -4926,6 +4938,7 @@ private fun ProblemsTable(
     }
 
     val listState = rememberLazyListState()
+    val zebraColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.12f)
     val hScroll = rememberScrollState()
 
     Column(Modifier.fillMaxSize()) {
@@ -5064,10 +5077,12 @@ private fun ProblemsTable(
                         modifier = Modifier.fillMaxSize(),
                         state = listState
                     ) {
-                        items(sortedProblems, key = { it.id }) { p ->
+                        itemsIndexed(sortedProblems, key = { _, item -> item.id }) { index, p ->
+                            val rowColor = if (index % 2 == 1) zebraColor else Color.Transparent
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
+                                    .background(rowColor)
                                     .padding(vertical = 6.dp)
                                     .pointerInput(p.id) {
                                         detectTapGestures(onDoubleTap = { onDoubleTap?.invoke(p, sortedProblems) })
@@ -5216,6 +5231,7 @@ private fun BaselineTable(
         Box(Modifier.width(width).then(modifier)) { content() }
 
     val listState = rememberSaveable("baseline_list_state", saver = LazyListState.Saver) { LazyListState() }
+    val zebraColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.12f)
     var sortColumn by rememberSaveable { mutableStateOf(BaselineColumn.FECHA) }
     var sortAsc by rememberSaveable { mutableStateOf(true) }
 
@@ -5295,10 +5311,12 @@ private fun BaselineTable(
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(stringResource(com.example.etic.R.string.msg_sin_baseline)) }
         } else {
             LazyColumn(Modifier.fillMaxSize(), state = listState) {
-                items(sortedBaselines, key = { it.id }) { b ->
+                itemsIndexed(sortedBaselines, key = { _, item -> item.id }) { index, b ->
+                    val rowColor = if (index % 2 == 1) zebraColor else Color.Transparent
                     Row(
                         Modifier
                             .fillMaxWidth()
+                            .background(rowColor)
                             .padding(vertical = 6.dp, horizontal = 8.dp)
                             .pointerInput(b.id) {
                                 detectTapGestures(onDoubleTap = {
