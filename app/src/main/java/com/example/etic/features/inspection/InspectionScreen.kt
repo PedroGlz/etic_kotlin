@@ -5777,15 +5777,15 @@ private fun BaselineTableFromDatabase(
             return@LaunchedEffect
         }
         val current = baselineToEdit ?: return@LaunchedEffect
+        val refreshed = withContext(Dispatchers.IO) {
+            runCatching { dao.getById(current.id) }.getOrNull()
+        }
+        baselineEditEntity = refreshed
         val draft = baselineDrafts[current.id]
         if (draft != null) {
             applyBaselineDraft(current.id)
             return@LaunchedEffect
         }
-        val refreshed = withContext(Dispatchers.IO) {
-            runCatching { dao.getById(current.id) }.getOrNull()
-        }
-        baselineEditEntity = refreshed
         if (refreshed != null) {
             mta = (refreshed.mta ?: current.mtaC).toString()
             tempMax = (refreshed.tempMax ?: current.tempC).toString()
