@@ -24,6 +24,7 @@ import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.InsertDriveFile
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -47,6 +48,8 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -69,19 +72,25 @@ import com.example.etic.core.current.LocalCurrentInspection
 import com.example.etic.core.current.ProvideCurrentInspection
 import com.example.etic.core.current.ProvideCurrentUser
 import com.example.etic.core.export.exportRoomDbToDownloads
+import com.example.etic.core.saf.SafEticManager
+import com.example.etic.core.settings.EticPrefs
+import com.example.etic.core.settings.settingsDataStore
 import com.example.etic.data.local.DbProvider
 import com.example.etic.features.components.ImageInputButtonGroup
 import com.example.etic.features.inspection.ui.home.InspectionScreen
+import com.example.etic.features.saf.EticFolderShortcutScreen
+import com.example.etic.features.saf.EticFolderType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.example.etic.ui.theme.FontSizeOption
+import android.net.Uri
 import java.io.File
 import java.io.FileOutputStream
 import kotlin.math.max
 
-private enum class HomeSection { Inspection, Reports }
+private enum class HomeSection { Inspection, Reports, FolderImages, FolderReports }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -96,6 +105,8 @@ fun MainScreen(
     val scope = rememberCoroutineScope()
     val appContext = LocalContext.current
     val inspeccionDao = remember { DbProvider.get(appContext).inspeccionDao() }
+    val eticPrefs = remember { EticPrefs(appContext.settingsDataStore) }
+    val safManager = remember { SafEticManager() }
     var showLogoutDialog by rememberSaveable { mutableStateOf(false) }
     var section by rememberSaveable { mutableStateOf(HomeSection.Inspection) }
     var isLoading by rememberSaveable { mutableStateOf(true) }
@@ -172,6 +183,28 @@ fun MainScreen(
                             scope.launch { drawerState.close() }
                         },
                         modifier = Modifier.padding(vertical = 4.dp),
+                        colors = drawerItemColors
+                    )
+                    NavigationDrawerItem(
+                        label = { Text("Carpeta Imagenes") },
+                        selected = section == HomeSection.FolderImages,
+                        onClick = {
+                            section = HomeSection.FolderImages
+                            scope.launch { drawerState.close() }
+                        },
+                        modifier = Modifier.padding(vertical = 4.dp),
+                        icon = { Icon(Icons.Filled.Image, contentDescription = null) },
+                        colors = drawerItemColors
+                    )
+                    NavigationDrawerItem(
+                        label = { Text("Carpeta Archivos") },
+                        selected = section == HomeSection.FolderReports,
+                        onClick = {
+                            section = HomeSection.FolderReports
+                            scope.launch { drawerState.close() }
+                        },
+                        modifier = Modifier.padding(vertical = 4.dp),
+                        icon = { Icon(Icons.Filled.InsertDriveFile, contentDescription = null) },
                         colors = drawerItemColors
                     )
                     NavigationDrawerItem(
@@ -275,6 +308,20 @@ fun MainScreen(
         ProvideCurrentUser {
             ProvideCurrentInspection {
                 val currentInspection = LocalCurrentInspection.current
+                val rootTreeUriStr by eticPrefs.rootTreeUriFlow.collectAsState(initial = null)
+                val rootTreeUri = remember(rootTreeUriStr) { rootTreeUriStr?.let { Uri.parse(it) } }
+                val inspectionNumero = currentInspection?.noInspeccion?.toString()
+
+                LaunchedEffect(rootTreeUriStr, inspectionNumero) {
+                    eticPrefs.setActiveInspectionNum(inspectionNumero)
+                    val uri = rootTreeUriStr?.let { Uri.parse(it) } ?: return@LaunchedEffect
+                    withContext(Dispatchers.IO) {
+                        safManager.ensureEticFolders(appContext, uri)
+                        if (!inspectionNumero.isNullOrBlank()) {
+                            safManager.ensureInspectionFolders(appContext, uri, inspectionNumero)
+                        }
+                    }
+                }
                 fun saveCameraBitmap(prefix: String, bmp: Bitmap): String? {
                     return try {
                         val dir = File(appContext.filesDir, "Imagenes").apply { mkdirs() }
@@ -418,6 +465,44 @@ fun MainScreen(
                                 ) {
                                     Text("Reportes")
                                 }
+                            HomeSection.FolderImages ->
+                                EticFolderShortcutScreen(
+                                    folderType = EticFolderType.Images,
+                                    rootTreeUri = rootTreeUri,
+                                    inspectionNumero = inspectionNumero,
+                                    onPickRoot = { uri ->
+                                        scope.launch {
+                                            eticPrefs.setRootTreeUri(uri)
+                                            withContext(Dispatchers.IO) {
+                                                safManager.ensureEticFolders(appContext, uri)
+                                                if (!inspectionNumero.isNullOrBlank()) {
+                                                    safManager.ensureInspectionFolders(appContext, uri, inspectionNumero)
+                                                }
+                                            }
+                                        }
+                                    },
+                                    manager = safManager,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            HomeSection.FolderReports ->
+                                EticFolderShortcutScreen(
+                                    folderType = EticFolderType.Reports,
+                                    rootTreeUri = rootTreeUri,
+                                    inspectionNumero = inspectionNumero,
+                                    onPickRoot = { uri ->
+                                        scope.launch {
+                                            eticPrefs.setRootTreeUri(uri)
+                                            withContext(Dispatchers.IO) {
+                                                safManager.ensureEticFolders(appContext, uri)
+                                                if (!inspectionNumero.isNullOrBlank()) {
+                                                    safManager.ensureInspectionFolders(appContext, uri, inspectionNumero)
+                                                }
+                                            }
+                                        }
+                                    },
+                                    manager = safManager,
+                                    modifier = Modifier.fillMaxSize()
+                                )
                         }
 
                         if (isLoading) {
