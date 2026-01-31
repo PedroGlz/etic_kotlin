@@ -49,6 +49,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -84,6 +85,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import com.example.etic.ui.inspection.ReportAction
+import com.example.etic.ui.inspection.ReportsMenuSection
+import com.example.etic.reports.GenerateInventarioPdfUseCase
+import com.example.etic.reports.ReportesFolderProvider
+import com.example.etic.data.local.queries.CurrentInspectionInfo
 import com.example.etic.ui.theme.FontSizeOption
 import android.net.Uri
 import java.io.File
@@ -98,6 +104,7 @@ fun MainScreen(
     userName: String,
     currentFontSize: FontSizeOption = FontSizeOption.Large,
     onChangeFontSize: (FontSizeOption) -> Unit = {},
+    onReportAction: ((ReportAction) -> Unit)? = null,
     onLogout: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -116,6 +123,52 @@ fun MainScreen(
     var initDigitalPath by rememberSaveable { mutableStateOf("") }
     var isSavingInitImages by rememberSaveable { mutableStateOf(false) }
     val imageExtensionRegex = remember { Regex("\\.(jpg|jpeg|png|bmp|gif)$", RegexOption.IGNORE_CASE) }
+    val rootTreeUriStr by eticPrefs.rootTreeUriFlow.collectAsState(initial = null)
+    val rootTreeUri = remember(rootTreeUriStr) { rootTreeUriStr?.let { Uri.parse(it) } }
+    var currentInspectionSnapshot by remember { mutableStateOf<CurrentInspectionInfo?>(null) }
+
+    fun generateInventarioPdf(insp: CurrentInspectionInfo) {
+        val noInspeccion = insp.noInspeccion?.toString()
+        val inspeccionId = insp.idInspeccion
+        if (noInspeccion.isNullOrBlank() || inspeccionId.isNullOrBlank()) {
+            Toast.makeText(appContext, "Inspección inválida.", Toast.LENGTH_SHORT).show()
+            return
+        }
+        scope.launch {
+            val folderProvider = ReportesFolderProvider(appContext) { inspectionNumber ->
+                val rootUri = rootTreeUri ?: return@ReportesFolderProvider null
+                val reportsDir = safManager.getReportsDir(appContext, rootUri, inspectionNumber)
+                reportsDir?.uri
+            }
+            val useCase = GenerateInventarioPdfUseCase(appContext, folderProvider)
+            val result = useCase.run(noInspeccion, inspeccionId)
+            result.fold(
+                onSuccess = { uriString ->
+                    Toast.makeText(appContext, "PDF generado: $uriString", Toast.LENGTH_LONG).show()
+                },
+                onFailure = { e ->
+                    Toast.makeText(
+                        appContext,
+                        "Error al generar PDF: ${e.message ?: "desconocido"}",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+            )
+        }
+    }
+
+    val reportHandler: (ReportAction) -> Unit = { action ->
+        when (action) {
+            ReportAction.InventarioPdf -> {
+                val insp = currentInspectionSnapshot
+                if (insp == null) {
+                    Toast.makeText(appContext, "No hay inspección activa.", Toast.LENGTH_SHORT).show()
+                } else {
+                    generateInventarioPdf(insp)
+                }
+            }
+        }
+    }
 
     val drawerItemColors = NavigationDrawerItemDefaults.colors(
         selectedContainerColor = Color(0xFF202327),
@@ -184,6 +237,9 @@ fun MainScreen(
                         },
                         modifier = Modifier.padding(vertical = 4.dp),
                         colors = drawerItemColors
+                    )
+                    ReportsMenuSection(
+                        onReport = { action -> (onReportAction ?: reportHandler)(action) }
                     )
                     NavigationDrawerItem(
                         label = { Text("Carpeta Imagenes") },
@@ -308,8 +364,7 @@ fun MainScreen(
         ProvideCurrentUser {
             ProvideCurrentInspection {
                 val currentInspection = LocalCurrentInspection.current
-                val rootTreeUriStr by eticPrefs.rootTreeUriFlow.collectAsState(initial = null)
-                val rootTreeUri = remember(rootTreeUriStr) { rootTreeUriStr?.let { Uri.parse(it) } }
+                SideEffect { currentInspectionSnapshot = currentInspection }
                 val inspectionNumero = currentInspection?.noInspeccion?.toString()
 
                 LaunchedEffect(rootTreeUriStr, inspectionNumero) {
