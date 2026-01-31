@@ -1,6 +1,7 @@
 package com.example.etic.reports
 
 import android.content.Context
+import android.graphics.BitmapFactory
 import com.example.etic.data.local.DbProvider
 import com.example.etic.reports.pdf.InventarioPdfGenerator
 import kotlinx.coroutines.Dispatchers
@@ -43,12 +44,21 @@ class GenerateInventarioPdfUseCase(
             val file = folderProvider.createPdfFile(folder, "Reporte_Inventarios_$noInspeccion.pdf")
                 ?: return@withContext Result.failure(IllegalStateException("No se pudo crear el archivo PDF."))
 
+            val res = context.resources
+            val pkg = context.packageName
+            val logoId = res.getIdentifier("ETIC_logo", "drawable", pkg)
+                .takeIf { it != 0 }
+                ?: res.getIdentifier("etic_logo", "drawable", pkg).takeIf { it != 0 }
+                ?: res.getIdentifier("etic_logo_login", "drawable", pkg).takeIf { it != 0 }
+            val logoBmp = logoId?.let { BitmapFactory.decodeResource(res, it) }
+
             context.contentResolver.openOutputStream(file.uri)?.use { out ->
                 pdfGenerator.generate(
                     output = out,
                     noInspeccion = noInspeccion,
                     sitio = sitio,
-                    rows = rows
+                    rows = rows,
+                    logo = logoBmp
                 )
             } ?: return@withContext Result.failure(IllegalStateException("No se pudo abrir OutputStream del SAF."))
 

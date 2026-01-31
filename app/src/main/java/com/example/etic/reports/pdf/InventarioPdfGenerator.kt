@@ -1,5 +1,6 @@
 package com.example.etic.reports.pdf
 
+import android.graphics.Bitmap
 import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Typeface
@@ -13,7 +14,8 @@ class InventarioPdfGenerator {
         output: OutputStream,
         noInspeccion: String,
         sitio: String,
-        rows: List<InventoryRow>
+        rows: List<InventoryRow>,
+        logo: Bitmap? = null
     ) {
         val doc = PdfDocument()
 
@@ -60,6 +62,22 @@ class InventarioPdfGenerator {
             val c = page.canvas
 
             // Header
+            if (logo != null) {
+                val maxW = 200f
+                val maxH = 60f
+                val scale = kotlin.math.min(maxW / logo.width, maxH / logo.height)
+                val bmp = if (scale < 1f) {
+                    Bitmap.createScaledBitmap(
+                        logo,
+                        (logo.width * scale).toInt(),
+                        (logo.height * scale).toInt(),
+                        true
+                    )
+                } else {
+                    logo
+                }
+                c.drawBitmap(bmp, pageWidth - margin - bmp.width, margin - 6f, null)
+            }
             c.drawText("Reporte de Inventarios", margin, y + 30f, titlePaint)
             c.drawText("No. Inspección: $noInspeccion", margin, y + 65f, smallPaint)
             c.drawText("Sitio: $sitio", margin, y + 92f, smallPaint)

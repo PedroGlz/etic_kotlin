@@ -1,6 +1,8 @@
 package com.example.etic.reports.pdf
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Paint
 import android.graphics.Typeface
 import android.graphics.pdf.PdfDocument
@@ -9,7 +11,7 @@ import com.example.etic.features.inspection.tree.Problem
 import java.io.File
 import java.io.FileOutputStream
 import java.time.format.DateTimeFormatter
-import kotlin.math.max
+import kotlin.math.min
 
 class InspectionPdfReportGenerator {
     suspend fun generate(
@@ -82,6 +84,23 @@ class InspectionPdfReportGenerator {
         val dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd")
 
         // Header
+        val logo = loadLogo(context)
+        if (logo != null) {
+            val maxW = 120f
+            val maxH = 40f
+            val scale = min(maxW / logo.width, maxH / logo.height)
+            val bmp = if (scale < 1f) {
+                Bitmap.createScaledBitmap(
+                    logo,
+                    (logo.width * scale).toInt(),
+                    (logo.height * scale).toInt(),
+                    true
+                )
+            } else {
+                logo
+            }
+            canvas.drawBitmap(bmp, pageWidth - margin - bmp.width, margin - 6f, null)
+        }
         drawTextLine(inspectionTitle, titlePaint)
         drawTextLine("Sitio: ${siteName.orEmpty()}")
         drawTextLine("No. Inspección: ${inspectionNumber.orEmpty()}")
@@ -184,5 +203,15 @@ class InspectionPdfReportGenerator {
         }
         doc.close()
         return outputFile
+    }
+
+    private fun loadLogo(context: Context): Bitmap? {
+        val res = context.resources
+        val pkg = context.packageName
+        val id = res.getIdentifier("ETIC_logo", "drawable", pkg)
+            .takeIf { it != 0 }
+            ?: res.getIdentifier("etic_logo", "drawable", pkg).takeIf { it != 0 }
+            ?: res.getIdentifier("etic_logo_login", "drawable", pkg).takeIf { it != 0 }
+        return id?.let { BitmapFactory.decodeResource(res, it) }
     }
 }

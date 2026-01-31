@@ -30,7 +30,8 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun ReportsMenuSection(
     modifier: Modifier = Modifier,
-    onReport: (ReportAction) -> Unit
+    onReport: (ReportAction) -> Unit,
+    enabled: Boolean = true
 ) {
     var expanded by rememberSaveable { mutableStateOf(false) }
 
@@ -55,6 +56,7 @@ fun ReportsMenuSection(
             Column(Modifier.fillMaxWidth().padding(start = 14.dp, bottom = 8.dp)) {
                 // Por ahora: SOLO Inventarios
                 TextButton(
+                    enabled = enabled,
                     onClick = { onReport(ReportAction.InventarioPdf) },
                     contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
                     modifier = Modifier.fillMaxWidth()

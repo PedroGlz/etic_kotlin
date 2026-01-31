@@ -122,12 +122,14 @@ fun MainScreen(
     var initThermalPath by rememberSaveable { mutableStateOf("") }
     var initDigitalPath by rememberSaveable { mutableStateOf("") }
     var isSavingInitImages by rememberSaveable { mutableStateOf(false) }
+    var isGeneratingReport by rememberSaveable { mutableStateOf(false) }
     val imageExtensionRegex = remember { Regex("\\.(jpg|jpeg|png|bmp|gif)$", RegexOption.IGNORE_CASE) }
     val rootTreeUriStr by eticPrefs.rootTreeUriFlow.collectAsState(initial = null)
     val rootTreeUri = remember(rootTreeUriStr) { rootTreeUriStr?.let { Uri.parse(it) } }
     var currentInspectionSnapshot by remember { mutableStateOf<CurrentInspectionInfo?>(null) }
 
     fun generateInventarioPdf(insp: CurrentInspectionInfo) {
+        if (isGeneratingReport) return
         val noInspeccion = insp.noInspeccion?.toString()
         val inspeccionId = insp.idInspeccion
         if (noInspeccion.isNullOrBlank() || inspeccionId.isNullOrBlank()) {
@@ -135,25 +137,31 @@ fun MainScreen(
             return
         }
         scope.launch {
+            isGeneratingReport = true
+            drawerState.close()
             val folderProvider = ReportesFolderProvider(appContext) { inspectionNumber ->
                 val rootUri = rootTreeUri ?: return@ReportesFolderProvider null
                 val reportsDir = safManager.getReportsDir(appContext, rootUri, inspectionNumber)
                 reportsDir?.uri
             }
             val useCase = GenerateInventarioPdfUseCase(appContext, folderProvider)
-            val result = useCase.run(noInspeccion, inspeccionId)
-            result.fold(
-                onSuccess = { uriString ->
-                    Toast.makeText(appContext, "PDF generado: $uriString", Toast.LENGTH_LONG).show()
-                },
-                onFailure = { e ->
-                    Toast.makeText(
-                        appContext,
-                        "Error al generar PDF: ${e.message ?: "desconocido"}",
-                        Toast.LENGTH_LONG
-                    ).show()
-                }
-            )
+            try {
+                val result = useCase.run(noInspeccion, inspeccionId)
+                result.fold(
+                    onSuccess = { uriString ->
+                        Toast.makeText(appContext, "PDF generado: $uriString", Toast.LENGTH_LONG).show()
+                    },
+                    onFailure = { e ->
+                        Toast.makeText(
+                            appContext,
+                            "Error al generar PDF: ${e.message ?: "desconocido"}",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                )
+            } finally {
+                isGeneratingReport = false
+            }
         }
     }
 
@@ -239,7 +247,8 @@ fun MainScreen(
                         colors = drawerItemColors
                     )
                     ReportsMenuSection(
-                        onReport = { action -> (onReportAction ?: reportHandler)(action) }
+                        onReport = { action -> (onReportAction ?: reportHandler)(action) },
+                        enabled = !isGeneratingReport
                     )
                     NavigationDrawerItem(
                         label = { Text("Carpeta Imagenes") },
@@ -562,6 +571,9 @@ fun MainScreen(
 
                         if (isLoading) {
                             LoadingOverlay("Cargando datos…")
+                        }
+                        if (isGeneratingReport) {
+                            LoadingOverlay("Generando reporte…")
                         }
                     }
                 }
