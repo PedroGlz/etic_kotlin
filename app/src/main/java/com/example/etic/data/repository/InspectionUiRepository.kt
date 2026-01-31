@@ -127,75 +127,77 @@ class InspectionUiRepository(
         nowTs: String,
         statusPorVerificarId: String,
         statusVerificadoId: String
-    ): Boolean = try {
-        val entity = try { problemaDao.getById(problemId) } catch (_: Exception) { null }
-        if (entity == null) return false
+    ): Boolean {
+        return try {
+            val entity = try { problemaDao.getById(problemId) } catch (_: Exception) { null }
+            if (entity == null) return false
 
-        val updated = entity.copy(
-            estatus = "Inactivo",
-            modificadoPor = currentUserId,
-            fechaMod = nowTs
-        )
-        runCatching { problemaDao.update(updated) }
-
-        val inspectionId = entity.idInspeccion
-        val tipoId = entity.idTipoInspeccion
-        if (!inspectionId.isNullOrBlank() && !tipoId.isNullOrBlank()) {
-            val activeRows = try {
-                problemaDao.getActivosByInspeccionAndTipo(inspectionId, tipoId)
-            } catch (_: Exception) { emptyList() }
-            var num = 1
-            activeRows.forEach { row ->
-                if (row.numeroProblema != num) {
-                    val renumbered = row.copy(
-                        numeroProblema = num,
-                        modificadoPor = currentUserId,
-                        fechaMod = nowTs
-                    )
-                    runCatching { problemaDao.update(renumbered) }
-                }
-                num += 1
-            }
-        }
-
-        val ubicacionId = entity.idUbicacion
-        val inspeccionDetId = entity.idInspeccionDet
-        if (!ubicacionId.isNullOrBlank() && !inspectionId.isNullOrBlank()) {
-            val activeCount = try {
-                if (!inspeccionDetId.isNullOrBlank()) {
-                    problemaDao.countActivosByInspeccionDet(inspeccionDetId)
-                } else {
-                    problemaDao.countActivosByInspeccionAndUbicacion(inspectionId, ubicacionId)
-                }
-            } catch (_: Exception) { null }
-            if (activeCount != null && activeCount < 1) {
-                val detRow = try {
-                    inspeccionDetDao.getByUbicacion(ubicacionId)
-                        .firstOrNull { it.idInspeccion == inspectionId }
-                } catch (_: Exception) { null }
-                if (detRow != null) {
-                    val updatedDet = detRow.copy(
-                        idStatusInspeccionDet = statusPorVerificarId,
-                        idEstatusColorText = 1,
-                        modificadoPor = currentUserId,
-                        fechaMod = nowTs
-                    )
-                    runCatching { inspeccionDetDao.update(updatedDet) }
-                }
-            }
-            updateParentInspectionStatuses(
-                inspectionId = inspectionId,
-                startUbicacionId = ubicacionId,
-                statusPorVerificarId = statusPorVerificarId,
-                statusVerificadoId = statusVerificadoId,
-                currentUserId = currentUserId,
-                nowTs = nowTs
+            val updated = entity.copy(
+                estatus = "Inactivo",
+                modificadoPor = currentUserId,
+                fechaMod = nowTs
             )
-        }
+            runCatching { problemaDao.update(updated) }
 
-        true
-    } catch (_: Exception) {
-        false
+            val inspectionId = entity.idInspeccion
+            val tipoId = entity.idTipoInspeccion
+            if (!inspectionId.isNullOrBlank() && !tipoId.isNullOrBlank()) {
+                val activeRows = try {
+                    problemaDao.getActivosByInspeccionAndTipo(inspectionId, tipoId)
+                } catch (_: Exception) { emptyList() }
+                var num = 1
+                activeRows.forEach { row ->
+                    if (row.numeroProblema != num) {
+                        val renumbered = row.copy(
+                            numeroProblema = num,
+                            modificadoPor = currentUserId,
+                            fechaMod = nowTs
+                        )
+                        runCatching { problemaDao.update(renumbered) }
+                    }
+                    num += 1
+                }
+            }
+
+            val ubicacionId = entity.idUbicacion
+            val inspeccionDetId = entity.idInspeccionDet
+            if (!ubicacionId.isNullOrBlank() && !inspectionId.isNullOrBlank()) {
+                val activeCount = try {
+                    if (!inspeccionDetId.isNullOrBlank()) {
+                        problemaDao.countActivosByInspeccionDet(inspeccionDetId)
+                    } else {
+                        problemaDao.countActivosByInspeccionAndUbicacion(inspectionId, ubicacionId)
+                    }
+                } catch (_: Exception) { null }
+                if (activeCount != null && activeCount < 1) {
+                    val detRow = try {
+                        inspeccionDetDao.getByUbicacion(ubicacionId)
+                            .firstOrNull { it.idInspeccion == inspectionId }
+                    } catch (_: Exception) { null }
+                    if (detRow != null) {
+                        val updatedDet = detRow.copy(
+                            idStatusInspeccionDet = statusPorVerificarId,
+                            idEstatusColorText = 1,
+                            modificadoPor = currentUserId,
+                            fechaMod = nowTs
+                        )
+                        runCatching { inspeccionDetDao.update(updatedDet) }
+                    }
+                }
+                updateParentInspectionStatuses(
+                    inspectionId = inspectionId,
+                    startUbicacionId = ubicacionId,
+                    statusPorVerificarId = statusPorVerificarId,
+                    statusVerificadoId = statusVerificadoId,
+                    currentUserId = currentUserId,
+                    nowTs = nowTs
+                )
+            }
+
+            true
+        } catch (_: Exception) {
+            false
+        }
     }
 
     suspend fun loadBaselinesForUi(
@@ -253,34 +255,36 @@ class InspectionUiRepository(
         currentUserId: String?,
         nowTs: String,
         statusPorVerificarId: String
-    ): Boolean = try {
-        val row = try { lineaBaseDao.getById(baselineId) } catch (_: Exception) { null }
-        if (row != null) {
-            val ubicacionId = row.idUbicacion
-            val inspeccionId = row.idInspeccion
-            if (!ubicacionId.isNullOrBlank() && !inspeccionId.isNullOrBlank()) {
-                val detRow = try {
-                    inspeccionDetDao.getByUbicacion(ubicacionId)
-                        .firstOrNull { it.idInspeccion == inspeccionId }
-                } catch (_: Exception) { null }
-                if (detRow != null) {
-                    val revertedDet = detRow.copy(
-                        idStatusInspeccionDet = statusPorVerificarId,
-                        idEstatusColorText = 1,
-                        modificadoPor = currentUserId,
-                        fechaMod = nowTs
-                    )
-                    runCatching { inspeccionDetDao.update(revertedDet) }
+    ): Boolean {
+        return try {
+            val row = try { lineaBaseDao.getById(baselineId) } catch (_: Exception) { null }
+            if (row != null) {
+                val ubicacionId = row.idUbicacion
+                val inspeccionId = row.idInspeccion
+                if (!ubicacionId.isNullOrBlank() && !inspeccionId.isNullOrBlank()) {
+                    val detRow = try {
+                        inspeccionDetDao.getByUbicacion(ubicacionId)
+                            .firstOrNull { it.idInspeccion == inspeccionId }
+                    } catch (_: Exception) { null }
+                    if (detRow != null) {
+                        val revertedDet = detRow.copy(
+                            idStatusInspeccionDet = statusPorVerificarId,
+                            idEstatusColorText = 1,
+                            modificadoPor = currentUserId,
+                            fechaMod = nowTs
+                        )
+                        runCatching { inspeccionDetDao.update(revertedDet) }
+                    }
                 }
+            } else {
+                return false
             }
-        } else {
-            return false
-        }
 
-        runCatching { lineaBaseDao.deleteById(baselineId) }
-        true
-    } catch (_: Exception) {
-        false
+            runCatching { lineaBaseDao.deleteById(baselineId) }
+            true
+        } catch (_: Exception) {
+            false
+        }
     }
 
     private suspend fun updateParentInspectionStatuses(

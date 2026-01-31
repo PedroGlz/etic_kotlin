@@ -5400,8 +5400,3 @@ private fun buildTreeFromVista(rows: List<com.example.etic.data.local.views.Vist
     return roots
 }
 
-// -------------------------
-// DB-backed Baseline table
-// -------------------------
-
-@Composable

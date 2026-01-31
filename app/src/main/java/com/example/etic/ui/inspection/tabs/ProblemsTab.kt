@@ -14,11 +14,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.foundation.layout.Box
 import com.example.etic.data.local.DbProvider
 import com.example.etic.data.repository.InspectionUiRepository
-import com.example.etic.features.inspection.LocalCurrentInspection
-import com.example.etic.features.inspection.LocalCurrentUser
-import com.example.etic.features.inspection.ProblemsTable
-import com.example.etic.features.inspection.STATUS_POR_VERIFICAR
-import com.example.etic.features.inspection.STATUS_VERIFICADO
+import com.example.etic.core.current.LocalCurrentInspection
+import com.example.etic.core.current.LocalCurrentUser
+import com.example.etic.features.inspection.ui.home.ProblemsTable
+import com.example.etic.features.inspection.ui.home.STATUS_POR_VERIFICAR
+import com.example.etic.features.inspection.ui.home.STATUS_VERIFICADO
 import com.example.etic.features.inspection.tree.Problem
 import kotlinx.coroutines.launch
 
