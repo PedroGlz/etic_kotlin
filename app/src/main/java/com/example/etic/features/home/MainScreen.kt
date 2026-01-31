@@ -13,6 +13,8 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -30,6 +32,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CenterAlignedTopAppBar
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DrawerValue
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
@@ -78,9 +81,11 @@ import com.example.etic.core.settings.EticPrefs
 import com.example.etic.core.settings.settingsDataStore
 import com.example.etic.data.local.DbProvider
 import com.example.etic.features.components.ImageInputButtonGroup
+import com.example.etic.features.inspection.data.InspectionRepository
 import com.example.etic.features.inspection.ui.home.InspectionScreen
 import com.example.etic.features.saf.EticFolderShortcutScreen
 import com.example.etic.features.saf.EticFolderType
+import com.example.etic.features.inspection.tree.TreeNode
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -114,6 +119,13 @@ fun MainScreen(
     val inspeccionDao = remember { DbProvider.get(appContext).inspeccionDao() }
     val eticPrefs = remember { EticPrefs(appContext.settingsDataStore) }
     val safManager = remember { SafEticManager() }
+    val inspectionRepo = remember {
+        InspectionRepository(
+            ubicacionDao = DbProvider.get(appContext).ubicacionDao(),
+            inspeccionDetDao = DbProvider.get(appContext).inspeccionDetDao(),
+            vistaUbicacionArbolDao = DbProvider.get(appContext).vistaUbicacionArbolDao()
+        )
+    }
     var showLogoutDialog by rememberSaveable { mutableStateOf(false) }
     var section by rememberSaveable { mutableStateOf(HomeSection.Inspection) }
     var isLoading by rememberSaveable { mutableStateOf(true) }
@@ -123,12 +135,21 @@ fun MainScreen(
     var initDigitalPath by rememberSaveable { mutableStateOf("") }
     var isSavingInitImages by rememberSaveable { mutableStateOf(false) }
     var isGeneratingReport by rememberSaveable { mutableStateOf(false) }
+    var showInventoryReportDialog by rememberSaveable { mutableStateOf(false) }
+    var isLoadingInventoryOptions by rememberSaveable { mutableStateOf(false) }
+    var inventoryOptions by remember { mutableStateOf<List<TreeNode>>(emptyList()) }
+    var inventorySelection by remember { mutableStateOf<Map<String, Boolean>>(emptyMap()) }
     val imageExtensionRegex = remember { Regex("\\.(jpg|jpeg|png|bmp|gif)$", RegexOption.IGNORE_CASE) }
     val rootTreeUriStr by eticPrefs.rootTreeUriFlow.collectAsState(initial = null)
     val rootTreeUri = remember(rootTreeUriStr) { rootTreeUriStr?.let { Uri.parse(it) } }
     var currentInspectionSnapshot by remember { mutableStateOf<CurrentInspectionInfo?>(null) }
 
-    fun generateInventarioPdf(insp: CurrentInspectionInfo) {
+    fun collectNodeIds(node: TreeNode, out: MutableSet<String>) {
+        out.add(node.id)
+        node.children.forEach { collectNodeIds(it, out) }
+    }
+
+    fun generateInventarioPdf(insp: CurrentInspectionInfo, selectedUbicacionIds: Set<String>) {
         if (isGeneratingReport) return
         val noInspeccion = insp.noInspeccion?.toString()
         val inspeccionId = insp.idInspeccion
@@ -146,7 +167,7 @@ fun MainScreen(
             }
             val useCase = GenerateInventarioPdfUseCase(appContext, folderProvider)
             try {
-                val result = useCase.run(noInspeccion, inspeccionId)
+                val result = useCase.run(noInspeccion, inspeccionId, selectedUbicacionIds)
                 result.fold(
                     onSuccess = { uriString ->
                         Toast.makeText(appContext, "PDF generado: $uriString", Toast.LENGTH_LONG).show()
@@ -172,7 +193,19 @@ fun MainScreen(
                 if (insp == null) {
                     Toast.makeText(appContext, "No hay inspección activa.", Toast.LENGTH_SHORT).show()
                 } else {
-                    generateInventarioPdf(insp)
+                    showInventoryReportDialog = true
+                    if (inventoryOptions.isEmpty() && !isLoadingInventoryOptions) {
+                        isLoadingInventoryOptions = true
+                        val rootId = insp.idSitio?.let { "root:$it" } ?: "root:site"
+                        val rootTitle = insp.nombreSitio ?: "Sitio"
+                        scope.launch {
+                            val roots = inspectionRepo.loadTree(rootId, rootTitle)
+                            val children = roots.firstOrNull()?.children.orEmpty()
+                            inventoryOptions = children
+                            inventorySelection = children.associate { it.id to false }
+                            isLoadingInventoryOptions = false
+                        }
+                    }
                 }
             }
         }
@@ -704,6 +737,108 @@ fun MainScreen(
                             }
                         }
                     }
+                }
+
+                if (showInventoryReportDialog) {
+                    AlertDialog(
+                        onDismissRequest = { if (!isGeneratingReport) showInventoryReportDialog = false },
+                        title = { Text("Seleccionar elementos para reporte") },
+                        text = {
+                            Column(Modifier.fillMaxWidth()) {
+                                when {
+                                    isLoadingInventoryOptions -> Text("Cargando elementos…")
+                                    inventoryOptions.isEmpty() -> Text("No hay elementos para seleccionar.")
+                                    else -> {
+                                        val selectedCount = inventorySelection.values.count { it }
+                                        val totalCount = inventorySelection.size
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text("Seleccionados: $selectedCount / $totalCount")
+                                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                                TextButton(
+                                                    onClick = {
+                                                        inventorySelection =
+                                                            inventoryOptions.associate { it.id to true }
+                                                    }
+                                                ) { Text("Seleccionar todo") }
+                                                TextButton(
+                                                    onClick = {
+                                                        inventorySelection =
+                                                            inventoryOptions.associate { it.id to false }
+                                                    }
+                                                ) { Text("Limpiar") }
+                                            }
+                                        }
+                                        Spacer(Modifier.height(8.dp))
+                                        val listState = rememberScrollState()
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .heightIn(max = 380.dp)
+                                                .verticalScroll(listState)
+                                        ) {
+                                            inventoryOptions.forEach { node ->
+                                                val checked = inventorySelection[node.id] == true
+                                                Row(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .clickable {
+                                                            inventorySelection =
+                                                                inventorySelection + (node.id to !checked)
+                                                        }
+                                                        .padding(vertical = 4.dp),
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    Checkbox(
+                                                        checked = checked,
+                                                        onCheckedChange = { isChecked ->
+                                                            inventorySelection =
+                                                                inventorySelection + (node.id to isChecked)
+                                                        }
+                                                    )
+                                                    Spacer(Modifier.width(8.dp))
+                                                    Text(node.title)
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(
+                                enabled = !isGeneratingReport,
+                                onClick = { showInventoryReportDialog = false }
+                            ) { Text("Cancelar") }
+                        },
+                        confirmButton = {
+                            TextButton(
+                                enabled = !isGeneratingReport && inventorySelection.values.any { it },
+                                onClick = {
+                                    val insp = currentInspectionSnapshot
+                                    if (insp == null) {
+                                        Toast.makeText(
+                                            appContext,
+                                            "No hay inspección activa.",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                        return@TextButton
+                                    }
+                                    val selectedIds = mutableSetOf<String>()
+                                    inventoryOptions.forEach { node ->
+                                        if (inventorySelection[node.id] == true) {
+                                            collectNodeIds(node, selectedIds)
+                                        }
+                                    }
+                                    showInventoryReportDialog = false
+                                    generateInventarioPdf(insp, selectedIds)
+                                }
+                            ) { Text("Generar PDF") }
+                        }
+                    )
                 }
 
             } // ProvideCurrentInspection

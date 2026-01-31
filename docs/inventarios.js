@@ -28,6 +28,8 @@ var dataGridProblemas;
 var datos_treeview = [];
 var arrayUbicacionesFiltro = [];
 var dataSelectFallas = [];
+var dataSelectCausas = [];
+var dataSelectRecomendaciones = [];
 var inputImgStr = "";
 var elementosSeleccionadosTree = [];
 var elementosSeleccionadosJsGrid = [];
@@ -167,7 +169,22 @@ window.addEventListener('DOMContentLoaded', (event) => {
   // Si pasa la validación de una inspeccion activa se inician todas las funciones
   if (iniciar_modulo) {
     cargarDataJsGridBaseLine();
-    cargarDataSelectFallas();
+    cargarDataSelectFallas().then((data) => {
+      dataSelectFallas = data;
+    }).catch((error) => {
+      console.error('Error loading fallas:', error);
+    });
+
+    cargarDataSelectCausaPrincipal().then((data) => {
+      dataSelectCausas = data;
+    }).catch((error) => {
+      console.error('Error loading causas:', error);
+    });
+    cargarDataSelectRecomendaciones().then((data) => {
+      dataSelectRecomendaciones = data;
+    }).catch((error) => {
+      console.error('Error loading recomendaciones:', error);
+    });
     explorarArchivos();
     crearSelectStatusInspeccionDetalle('Id_Status_Inspeccion_Det');
     crearSelectStatusInspeccionDetalle('Test_Estatus');
@@ -1084,6 +1101,13 @@ window.addEventListener('DOMContentLoaded', (event) => {
 
     var opSeleccionada = $("input[type='radio'][name='seleccionProblema']:checked").val();
     document.querySelector('#Id_Tipo_Inspeccion').value = opSeleccionada;
+
+    // obtene nodo seleccionado del treeview y asignar los valores de Id_Inspeccion_Det  y Id_Ubicacion
+    let nodoSeleccionado = TreeView.treeview('getSelected')[0];
+    console.log(nodoSeleccionado)
+    idInspeccion_Det = nodoSeleccionado.Id_Inspeccion_Det;
+    idUbicacion = nodoSeleccionado.id;
+
     
     $.ajax({
       url: `inventarios/getNumero_Problema`,
@@ -1116,6 +1140,7 @@ window.addEventListener('DOMContentLoaded', (event) => {
         mostrarFormularioProblema('divProblemaElectrico',opSeleccionada);
         document.querySelector(`#StrRuta`).value = StrRuta;
         crearSelectFallaProblemas(opSeleccionada,"Id_Falla");
+        crearSelectCausaPrincipal(opSeleccionada,"Id_Causa_Raiz");
         break;
       // problema visual
       case '0D32B333-76C3-11D3-82BF-00104BC75DC2':
@@ -1124,6 +1149,10 @@ window.addEventListener('DOMContentLoaded', (event) => {
         // document.querySelector("#menuTabsProblemaElectricoMecanico").style.display = 'none';
         mostrarFormularioProblema('divProblemaVisual');
         document.querySelector(`#StrRutaVisual`).value = StrRuta;
+        
+        crearSelectFallaProblemas('0D32B333-76C3-11D3-82BF-00104BC75DC2',"hazard_Issue");
+        crearSelectCausaPrincipal(opSeleccionada,"Id_Causa_Raiz_Visual");
+        crearSelectRecomendaciones(opSeleccionada,"Id_Recomendacion");
         break;
       // problema mecanico
       case '0D32B334-76C3-11D3-82BF-00104BC75DC2':
@@ -1131,6 +1160,7 @@ window.addEventListener('DOMContentLoaded', (event) => {
         mostrarFormularioProblema('divProblemaElectrico',opSeleccionada);
         document.querySelector(`#StrRuta`).value = StrRuta;
         crearSelectFallaProblemas(opSeleccionada,"Id_Falla");
+        crearSelectCausaPrincipal(opSeleccionada,"Id_Causa_Raiz");
         break;
       default:
         StrTipoInspeccion = 'Eléctrico';
@@ -1312,6 +1342,7 @@ window.addEventListener('DOMContentLoaded', (event) => {
 
       // Editando problemas
       if(form_action == '/inventarios/updateProblema'){
+        
 
         alertLodading('Guardando cambios...')
 
@@ -1320,7 +1351,6 @@ window.addEventListener('DOMContentLoaded', (event) => {
 
         console.log(arrayFormsProblemasEditar)
         
-        return
         arrayFormsProblemasEditar.forEach((datos_probelma) => {
           let formData_editar = new FormData();
 
@@ -1361,7 +1391,11 @@ window.addEventListener('DOMContentLoaded', (event) => {
           success: function (res) {
             ////console.log(form_action)
 
-            cambiarEstatusUbicacion(idInspeccion_Det, 'problema_add')
+            if (form_action == '/inventarios/guardarCronico') {
+              cambiarEstatusUbicacion(document.querySelector("#Id_Inspeccion_Det_Cronico").value, 'problema_add')
+            }else{
+              cambiarEstatusUbicacion(idInspeccion_Det, 'problema_add')
+            }
             cargarDataJsGridProblemas()
   
             // if (form_action != '/inventarios/updateProblema') {
@@ -1470,7 +1504,8 @@ window.addEventListener('DOMContentLoaded', (event) => {
         },
       },
       rowDoubleClick: function(args){
-        //console.log(args.item)
+        // console.log(args.item)
+
         dataFilasJsGridProblemas = $("#jsGridProblemas").jsGrid("option", "data");
         totalFIlasProblemas = dataFilasJsGridProblemas.length - 1;
         // filaActualJsGridProblemas = args.itemIndex;
@@ -1574,7 +1609,7 @@ window.addEventListener('DOMContentLoaded', (event) => {
     // //console.log(listaProblemasParaEditar)
     var valoresItem = listaProblemasParaEditar[filaActualJsGridProblemas];
     // //console.log('desdeaqui miau')
-    // //console.log(valoresItem)
+    console.log(valoresItem)
     ////console.log(valoresItem.numInspeccion)
     ////console.log(strNumInspeccion.value)
     // Mostramos Botones de navegacion
@@ -1625,6 +1660,7 @@ window.addEventListener('DOMContentLoaded', (event) => {
       // Inicialmente mostranos el tab de imagenes para el problema electrico y mecanico
       document.querySelector("#menuTabsProblemaElectricoMecanico").style.display = '';
       mostrarFormularioProblema('divProblemaElectrico',valoresItem.Id_Tipo_Inspeccion);
+      crearSelectCausaPrincipal(valoresItem.Id_Tipo_Inspeccion,"Id_Causa_Raiz");
       crearSelectFallaProblemas(valoresItem.Id_Tipo_Inspeccion,"Id_Falla");
       console.log('problema electrico/mecanico')
       return editarProblemaElectrico(valoresItem);
@@ -1632,6 +1668,8 @@ window.addEventListener('DOMContentLoaded', (event) => {
       console.log('problema visual')
       // Si es un problema visual ocultamos los tabs de imagenes del problema electrico y mecanico
       // document.querySelector("#menuTabsProblemaElectricoMecanico").style.display = 'none';
+      crearSelectCausaPrincipal(valoresItem.Id_Tipo_Inspeccion,"Id_Causa_Raiz_Visual");
+      crearSelectRecomendaciones(valoresItem.Id_Tipo_Inspeccion,"Id_Recomendacion");
       mostrarFormularioProblema('divProblemaVisual');
       return editarProblemaVisual(valoresItem);
     }
@@ -1661,6 +1699,7 @@ window.addEventListener('DOMContentLoaded', (event) => {
     document.querySelector("#Rated_Load").value = item.Rated_Load;
     document.querySelector("#Circuit_Voltage").value = item.Circuit_Voltage;
     document.querySelector("#Id_Falla").value = item.Id_Falla;
+    document.querySelector("#Id_Causa_Raiz").value = item.Id_Causa_Raiz;
     document.querySelector("#Component_Comment").value = item.Component_Comment;
     document.querySelector("#StrRuta").value = item.Ruta;
     document.querySelector('#StrEquipo').value = item.nombreEquipo;
@@ -1685,7 +1724,7 @@ window.addEventListener('DOMContentLoaded', (event) => {
   }
 
   function editarProblemaVisual(item){
-    console.log(item)
+    // console.log(item)
     // Mostramos la fila con los datos con los campos de numero idInspeccion
     // numero problema, tipo de inpeccion y equipo
     document.querySelector('#rowEditVisual').style.display = 'block';
@@ -1703,6 +1742,8 @@ window.addEventListener('DOMContentLoaded', (event) => {
     // document.querySelector("#hazard_Group").value = item.hazard_Group;
     document.querySelector("#hazard_Issue").value = item.hazard_Issue;
     // document.querySelector("#Id_Severidad").value = item.Id_Severidad
+    document.querySelector("#Id_Causa_Raiz_Visual").value = item.Id_Causa_Raiz;
+    document.querySelector("#Id_Recomendacion").value = item.Id_Recomendacion;
 
 
     // VALIDACION TEMPORAL EN LO QUE SE MODIFICA EL PROCESO DB PARA UNIFICAR TODOS LOS ID
@@ -1808,23 +1849,27 @@ window.addEventListener('DOMContentLoaded', (event) => {
   function crearComentario(event){
     var equip = document.querySelector('#StrEquipo').value;
     var problem = "";
-    var element = "";
+    var causa_raiz = ""
+
+    if (document.querySelector('#Id_Causa_Raiz').value != "") {
+      causa_raiz = document.querySelector('#Id_Causa_Raiz').options[document.querySelector('#Id_Causa_Raiz').selectedIndex].text;      
+    }
+    // var element = "";
     var id_input = "Component_Comment";
 
     if(Id_Tipo_Inspeccion.value != "0D32B334-76C3-11D3-82BF-00104BC75DC2"){
       if(Id_Tipo_Inspeccion.value == "0D32B331-76C3-11D3-82BF-00104BC75DC2" || Id_Tipo_Inspeccion.value == "0D32B332-76C3-11D3-82BF-00104BC75DC2") {
         id_input = "Component_Comment";
         problem = selectFallaProblema.options[selectFallaProblema.selectedIndex].text;
-        element = selectProblemPhase.options[selectProblemPhase.selectedIndex].text;
+        // element = selectProblemPhase.options[selectProblemPhase.selectedIndex].text;
       }else if(Id_Tipo_Inspeccion.value == "0D32B333-76C3-11D3-82BF-00104BC75DC2") {
         id_input = "observaciones_Visual";
-        // problem = selectVisualGroup.options[selectVisualGroup.selectedIndex].text;
-        // element = selectVisualProblema.options[selectVisualProblema.selectedIndex].text;
         problem = selectVisualProblema.options[selectVisualProblema.selectedIndex].text;;
-        element = ""
+        causa_raiz = document.querySelector('#Id_Causa_Raiz_Visual').options[document.querySelector('#Id_Causa_Raiz_Visual').selectedIndex].text;
+        // element = ""
       }
   
-      document.querySelector(`#${id_input}`).value = (`${problem}, ${element}, ${equip}`).toUpperCase();
+      document.querySelector(`#${id_input}`).value = (`${problem}, ${causa_raiz}, ${equip}`)
     }
 
   }
@@ -2387,40 +2432,107 @@ window.addEventListener('DOMContentLoaded', (event) => {
     });
   }
 
-  function cargarDataSelectFallas(){
-    // peticion a la base
-    $.ajax({
-      url: '/fallas/show',
-      type: "get",
-      // data:,
-      dataType: 'json',
-      success: function (data){
-        dataSelectFallas = data;
+  // function cargarDataSelectFallas(){
+  //   // peticion a la base
+  //   $.ajax({
+  //     url: '/fallas/show',
+  //     type: "get",
+  //     // data:,
+  //     dataType: 'json',
+  //     success: function (data){
+  //       console.log(data)
+  //       dataSelectFallas = data;
 
-        // crearSelectFallaProblemas('0D32B333-76C3-11D3-82BF-00104BC75DC2',"hazard_Type");
-        // crearSelectFallaProblemas('0D32B333-76C3-11D3-82BF-00104BC75DC2',"hazard_Classification");
-        // crearSelectFallaProblemas('0D32B333-76C3-11D3-82BF-00104BC75DC2',"hazard_Group");
-        crearSelectFallaProblemas('0D32B333-76C3-11D3-82BF-00104BC75DC2',"hazard_Issue");
-      },
-      error: function (error) {
-        ////console.log(error);
-      },
+  //       // crearSelectFallaProblemas('0D32B333-76C3-11D3-82BF-00104BC75DC2',"hazard_Type");
+  //       // crearSelectFallaProblemas('0D32B333-76C3-11D3-82BF-00104BC75DC2',"hazard_Classification");
+  //       // crearSelectFallaProblemas('0D32B333-76C3-11D3-82BF-00104BC75DC2',"hazard_Group");
+  //       crearSelectFallaProblemas('0D32B333-76C3-11D3-82BF-00104BC75DC2',"hazard_Issue");
+  //     },
+  //     error: function (error) {
+  //       ////console.log(error);
+  //     },
+  //   });
+
+  // }
+
+  // function cargarDataSelectCausaPrincipal(){
+  //   // peticion a la base
+  //   $.ajax({
+  //     url: '/causaPrincipal/show',
+  //     type: "get",
+  //     // data:,
+  //     dataType: 'json',
+  //     success: function (data){
+  //       dataSelectCausas = data;
+  //       // crearSelectCausaProblemas('0D32B331-76C3-11D3-82BF-00104BC75DC2',"causa_Principal");
+  //     },
+  //     error: function (error) {
+  //       ////console.log(error);
+  //     },
+  //   });
+  // }
+
+  // function cargarDataSelectRecomendaciones(){
+  //   // peticion a la base
+  //   $.ajax({
+  //     url: '/recomendaciones/show',
+  //     type: "get",
+  //     // data:,
+  //     dataType: 'json',
+  //     success: function (data){
+  //       dataSelectRecomendaciones = data;
+  //     },
+  //     error: function (error) {
+  //       ////console.log(error);
+  //     },
+  //   });
+  // }
+  
+  function crearSelectFallaProblemas(idTipoInspeccion, id_select) {
+    const select = document.getElementById(id_select);
+    const fragment = document.createDocumentFragment();
+    const filteredData = dataSelectFallas.filter(falla => falla.Id_Tipo_Inspeccion === idTipoInspeccion);
+
+    select.innerHTML = '<option value="">Selecionar...</option>';
+    filteredData.forEach(falla => {
+      const option = document.createElement('option');
+      option.value = falla.Id_Falla;
+      option.textContent = falla.Falla;
+      fragment.appendChild(option);
     });
 
+    select.appendChild(fragment);
   }
-  
-  function crearSelectFallaProblemas(tipoProblema,id_select){
+
+  function crearSelectCausaPrincipal(idTipoInspeccion, id_select){
+    console.log('en el select causa')
+    console.log(dataSelectCausas)
     // obteniendo el select a modificar
     var select = document.getElementById(`${id_select}`);
     // // Limpiando el select
     $(`#${id_select}`).empty();
 
-    newdata = dataSelectFallas.filter(falla => falla.tipoProblmea == tipoProblema);
+    newdata = dataSelectCausas.filter(causa => causa.Id_Tipo_Inspeccion == idTipoInspeccion);
 
     // creando el select con los productos en la OC
     select.innerHTML += '<option value="">Selecionar...</option>';
     newdata.forEach(newdata => {
-      select.innerHTML += `<option value="${newdata.Id_Falla}">${newdata.Falla}</option>`;            
+      select.innerHTML += `<option value="${newdata.Id_Causa_Raiz}">${newdata.Causa_Raiz}</option>`;            
+    });
+  }
+
+  function crearSelectRecomendaciones(idTipoInspeccion, id_select){
+    // obteniendo el select a modificar
+    var select = document.getElementById(`${id_select}`);
+    // // Limpiando el select
+    $(`#${id_select}`).empty();
+
+    newdata = dataSelectRecomendaciones.filter(recomendacion => recomendacion.Id_Tipo_Inspeccion == idTipoInspeccion);
+
+    // creando el select con los productos en la OC
+    select.innerHTML += '<option value="">Selecionar...</option>';
+    newdata.forEach(newdata => {
+      select.innerHTML += `<option value="${newdata.Id_Recomendacion}">${newdata.Recomendacion}</option>`;            
     });
   }
 
@@ -3076,6 +3188,13 @@ window.addEventListener('DOMContentLoaded', (event) => {
     let datosDelProblemaEnELForm = formDataToObjet(formData)
     delete datosDelProblemaEnELForm.Numero_Problema;
 
+    // Si es un problemas visual colocar bien los datos en sus porpiedades
+    if (datosDelProblemaEnELForm.Id_Tipo_Inspeccion == "0D32B333-76C3-11D3-82BF-00104BC75DC2") {
+      datosDelProblemaEnELForm.Component_Comment = datosDelProblemaEnELForm.observaciones_Visual;
+      datosDelProblemaEnELForm.StrSeveridad = datosDelProblemaEnELForm.severidad;
+      datosDelProblemaEnELForm.Ruta = datosDelProblemaEnELForm.StrRutaVisual;
+    }
+
     arrayFormsProblemasEditar = arrayFormsProblemasEditar.filter(item => item.Id_Problema != datosDelProblemaEnELForm.Id_Problema);
     arrayFormsProblemasEditar.push(datosDelProblemaEnELForm);
 
@@ -3086,10 +3205,8 @@ window.addEventListener('DOMContentLoaded', (event) => {
     };
     
     if (btnClick.id == "btnSiguienteProblemas" && filaActualJsGridProblemas < totalFIlasProblemas) {
-      limpiarFrmProblemas()
       filaActualJsGridProblemas = filaActualJsGridProblemas + 1;
     } else if (btnClick.id == "btnAtrasProblemas" && filaActualJsGridProblemas > 0) {
-      limpiarFrmProblemas()
       filaActualJsGridProblemas = filaActualJsGridProblemas - 1;
     }
 
@@ -3118,7 +3235,7 @@ window.addEventListener('DOMContentLoaded', (event) => {
 
       let label = document.createElement('label');
       label.htmlFor = `${elemento.Id_Inspeccion_Det}`;
-      label.innerHTML = `${elemento.name}`;
+      label.innerHTML = `${elemento.nombreUbicacion}`;
       label.classList.add("form-check-label");
 
       contenedorCheck.appendChild(inputCheck);

@@ -12,7 +12,11 @@ class GenerateInventarioPdfUseCase(
     private val folderProvider: ReportesFolderProvider,
     private val pdfGenerator: InventarioPdfGenerator = InventarioPdfGenerator()
 ) {
-    suspend fun run(noInspeccion: String, inspeccionId: String): Result<String> = withContext(Dispatchers.IO) {
+    suspend fun run(
+        noInspeccion: String,
+        inspeccionId: String,
+        selectedUbicacionIds: Set<String>
+    ): Result<String> = withContext(Dispatchers.IO) {
         try {
             val db = DbProvider.get(context)
             val ubicacionDao = db.ubicacionDao()
@@ -23,6 +27,9 @@ class GenerateInventarioPdfUseCase(
             val sitio = inspeccion?.idSitio ?: ""
 
             val ubicaciones = ubicacionDao.getAllActivas()
+                .filter { u ->
+                    selectedUbicacionIds.isEmpty() || selectedUbicacionIds.contains(u.idUbicacion)
+                }
             val dets = inspeccionDetDao.getByInspeccion(inspeccionId)
 
             val detByUb = dets.mapNotNull { d -> d.idUbicacion?.let { it to d } }.toMap()
