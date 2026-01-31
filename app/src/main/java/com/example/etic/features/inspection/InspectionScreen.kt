@@ -111,6 +111,7 @@ import com.example.etic.features.inspection.tree.Problem
 import com.example.etic.features.inspection.tree.TreeNode
 import com.example.etic.features.inspection.tree.buildTreeFromVista
 import com.example.etic.features.inspection.tree.collectBaselines
+import com.example.etic.ui.inspection.tabs.ProblemsTableFromDatabase
 import com.example.etic.features.inspection.tree.collectProblems
 import com.example.etic.features.inspection.tree.depthOfId
 import com.example.etic.features.inspection.tree.descendantIds
@@ -158,8 +159,8 @@ private const val PROBLEM_STATUS_OPEN_PAST = "2"
 private const val PROBLEM_STATUS_OPEN_ALL = "3"
 private const val PROBLEM_STATUS_CLOSED = "4"
 private const val DEFAULT_PRIORIDAD_ID = "6F5F0EB1-76B8-11D3-82BF-00104BC75DC2"
-private const val STATUS_POR_VERIFICAR = "568798D1-76BB-11D3-82BF-00104BC75DC2"
-private const val STATUS_VERIFICADO = "568798D2-76BB-11D3-82BF-00104BC75DC2"
+internal const val STATUS_POR_VERIFICAR = "568798D1-76BB-11D3-82BF-00104BC75DC2"
+internal const val STATUS_VERIFICADO = "568798D2-76BB-11D3-82BF-00104BC75DC2"
 
 private data class ProblemTypeFilter(val id: String, val label: String, val matchIds: List<String>)
 
@@ -4846,7 +4847,7 @@ private fun ListTabs(
 }
 
 @Composable
-private fun ProblemsTable(
+internal fun ProblemsTable(
     problems: List<Problem>,
     onDelete: (Problem) -> Unit,
     onDoubleTap: ((Problem, List<Problem>) -> Unit)? = null
@@ -5358,268 +5359,6 @@ private fun PreviewInspection() { EticTheme { InspectionScreen() } }
 // DB-backed Problems table
 // -------------------------
 
-@Composable
-private fun ProblemsTableFromDatabase(
-    selectedId: String?,
-    refreshTick: Int,
-    typeFilterId: String?,
-    statusFilterId: String,
-    modifier: Modifier = Modifier,
-    onProblemDeleted: (() -> Unit)? = null,
-    onProblemDoubleTap: ((Problem, List<Problem>) -> Unit)? = null
-) {
-    val ctx = androidx.compose.ui.platform.LocalContext.current
-    val dao = remember { com.example.etic.data.local.DbProvider.get(ctx).problemaDao() }
-    val ubicacionDao = remember { com.example.etic.data.local.DbProvider.get(ctx).ubicacionDao() }
-    val inspDao = remember { com.example.etic.data.local.DbProvider.get(ctx).inspeccionDao() }
-    val inspeccionDetDao = remember { com.example.etic.data.local.DbProvider.get(ctx).inspeccionDetDao() }
-    val sevDao = remember { com.example.etic.data.local.DbProvider.get(ctx).severidadDao() }
-    val eqDao = remember { com.example.etic.data.local.DbProvider.get(ctx).equipoDao() }
-    val tipoInspDao = remember { com.example.etic.data.local.DbProvider.get(ctx).tipoInspeccionDao() }
-
-    val currentInspection = LocalCurrentInspection.current
-    val currentUser = LocalCurrentUser.current
-    val scope = rememberCoroutineScope()
-    var problemsCache by remember { mutableStateOf(emptyList<Problem>()) }
-    var problemToDelete by remember { mutableStateOf<Problem?>(null) }
-    val uiProblems by produceState(initialValue = problemsCache, selectedId, refreshTick, typeFilterId, statusFilterId) {
-        val rows = try {
-            val siteId = currentInspection?.idSitio
-            if (!siteId.isNullOrBlank()) {
-                dao.getActivosPorSitio(siteId)
-            } else {
-                dao.getAllActivos()
-            }
-        } catch (_: Exception) { emptyList() }
-        val ubicaciones = try { ubicacionDao.getAll() } catch (_: Exception) { emptyList() }
-        val locationFilteredRows = when {
-            selectedId == null -> rows
-            selectedId!!.startsWith("root:") -> rows
-            else -> {
-                val allowed = descendantIds(ubicaciones, selectedId!!)
-                rows.filter { r -> r.idUbicacion != null && allowed.contains(r.idUbicacion!!) }
-            }
-        }
-        val selectedTypeFilter = PROBLEM_TYPE_FILTERS.firstOrNull { it.id == typeFilterId }
-            ?: PROBLEM_TYPE_FILTERS.first()
-        val typeFilteredRows = if (selectedTypeFilter.matchIds.isNotEmpty()) {
-            locationFilteredRows.filter { row ->
-                val rowId = row.idTipoInspeccion
-                rowId != null && selectedTypeFilter.matchIds.any { it.equals(rowId, ignoreCase = true) }
-            }
-        } else locationFilteredRows
-        val currentInspectionId = currentInspection?.idInspeccion
-        val openRows = typeFilteredRows.filter {
-            it.estatusProblema?.equals("Abierto", ignoreCase = true) == true
-        }
-        val closedRows = typeFilteredRows.filter {
-            it.estatusProblema?.equals("Cerrado", ignoreCase = true) == true
-        }
-
-        val statusFilteredRows = if (statusFilterId != PROBLEM_STATUS_ALL) {
-            when (statusFilterId) {
-                PROBLEM_STATUS_OPEN_CURRENT ->
-                    openRows.filter { row ->
-                        val isCurrent = row.idInspeccion?.equals(currentInspectionId, ignoreCase = true) == true
-                        !currentInspectionId.isNullOrBlank() && isCurrent
-                    }
-                PROBLEM_STATUS_OPEN_PAST ->
-                    openRows.filter { row ->
-                        val isCurrent = row.idInspeccion?.equals(currentInspectionId, ignoreCase = true) == true
-                        currentInspectionId.isNullOrBlank() || !isCurrent
-                    }
-                PROBLEM_STATUS_OPEN_ALL -> openRows
-                PROBLEM_STATUS_CLOSED -> closedRows
-                else -> typeFilteredRows
-            }
-        } else typeFilteredRows
-
-        val inspMap = try { inspDao.getAll().associateBy { it.idInspeccion } } catch (_: Exception) { emptyMap() }
-        val sevMap = try { sevDao.getAll().associateBy { it.idSeveridad } } catch (_: Exception) { emptyMap() }
-        val eqMap = try { eqDao.getAll().associateBy { it.idEquipo } } catch (_: Exception) { emptyMap() }
-        val ubicMap = ubicaciones.associateBy { it.idUbicacion }
-        val tipoMap = try { tipoInspDao.getAll().associateBy { it.idTipoInspeccion } } catch (_: Exception) { emptyMap() }
-        value = statusFilteredRows.map { r ->
-            val fecha = runCatching {
-                val raw = r.fechaCreacion?.takeIf { it.isNotBlank() }
-                    ?: r.irFileDate?.takeIf { it.isNotBlank() }
-                val onlyDate = raw?.take(10)
-                if (onlyDate != null) java.time.LocalDate.parse(onlyDate) else java.time.LocalDate.now()
-            }.getOrDefault(java.time.LocalDate.now())
-
-            val numInspDisplay = r.idInspeccion?.let { inspMap[it]?.noInspeccion?.toString() } ?: ""
-            val severidadDisplay = r.idSeveridad?.let { sevMap[it]?.severidad } ?: (r.idSeveridad ?: "")
-            // Mostrar el nombre del equipo desde la Ubicacion asociada al problema
-            val equipoDisplay = r.idUbicacion?.let { ubicMap[it]?.ubicacion } ?: ""
-            val tipoDisplay = r.idTipoInspeccion?.let { tipoMap[it]?.tipoInspeccion } ?: (r.idTipoInspeccion ?: "")
-
-            Problem(
-                id = r.idProblema,
-                no = r.numeroProblema ?: 0,
-                fecha = fecha,
-                numInspeccion = numInspDisplay,
-                tipo = tipoDisplay,
-                tipoId = r.idTipoInspeccion,
-                inspectionId = r.idInspeccion,
-                estatus = r.estatusProblema ?: "",
-                cronico = (r.esCronico ?: "").equals("SI", ignoreCase = true),
-                tempC = r.problemTemperature ?: 0.0,
-                deltaTC = r.aumentoTemperatura ?: 0.0,
-                severidad = severidadDisplay,
-                equipo = equipoDisplay,
-                comentarios = r.componentComment ?: ""
-            )
-        }
-        problemsCache = value
-    }
-
-    Box(modifier) {
-        ProblemsTable(
-            problems = uiProblems,
-            onDelete = { problem -> problemToDelete = problem },
-            onDoubleTap = onProblemDoubleTap
-        )
-
-        if (problemToDelete != null) {
-            val problem = problemToDelete!!
-            AlertDialog(
-                onDismissRequest = { problemToDelete = null },
-                confirmButton = {
-                    Button(onClick = {
-                        scope.launch {
-                            val entity = runCatching { dao.getById(problem.id) }.getOrNull()
-                            if (entity == null) {
-                                problemToDelete = null
-                                return@launch
-                            }
-                            val nowTs = java.time.LocalDateTime.now()
-                                .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
-                            val updated = entity.copy(
-                                estatus = "Inactivo",
-                                modificadoPor = currentUser?.idUsuario,
-                                fechaMod = nowTs
-                            )
-                            runCatching { dao.update(updated) }
-
-                            val inspectionId = entity.idInspeccion
-                            val tipoId = entity.idTipoInspeccion
-                            if (!inspectionId.isNullOrBlank() && !tipoId.isNullOrBlank()) {
-                                val activeRows = try {
-                                    dao.getActivosByInspeccionAndTipo(inspectionId, tipoId)
-                                } catch (_: Exception) { emptyList() }
-                                var num = 1
-                                activeRows.forEach { row ->
-                                    if (row.numeroProblema != num) {
-                                        val renumbered = row.copy(
-                                            numeroProblema = num,
-                                            modificadoPor = currentUser?.idUsuario,
-                                            fechaMod = nowTs
-                                        )
-                                        runCatching { dao.update(renumbered) }
-                                    }
-                                    num += 1
-                                }
-                            }
-
-                            val ubicacionId = entity.idUbicacion
-                            val inspeccionDetId = entity.idInspeccionDet
-                            if (!ubicacionId.isNullOrBlank() && !inspectionId.isNullOrBlank()) {
-                                val activeCount = try {
-                                    if (!inspeccionDetId.isNullOrBlank()) {
-                                        dao.countActivosByInspeccionDet(inspeccionDetId)
-                                    } else {
-                                        dao.countActivosByInspeccionAndUbicacion(inspectionId, ubicacionId)
-                                    }
-                                } catch (_: Exception) { null }
-                                if (activeCount != null && activeCount < 1) {
-                                    val detRow = try {
-                                        inspeccionDetDao.getByUbicacion(ubicacionId)
-                                            .firstOrNull { it.idInspeccion == inspectionId }
-                                    } catch (_: Exception) { null }
-                                    if (detRow != null) {
-                                        val updatedDet = detRow.copy(
-                                            idStatusInspeccionDet = STATUS_POR_VERIFICAR,
-                                            idEstatusColorText = 1,
-                                            modificadoPor = currentUser?.idUsuario,
-                                            fechaMod = nowTs
-                                        )
-                                        runCatching { inspeccionDetDao.update(updatedDet) }
-                                    }
-                                }
-                                updateParentInspectionStatuses(
-                                    inspectionId = inspectionId,
-                                    startUbicacionId = ubicacionId,
-                                    ubicacionDao = ubicacionDao,
-                                    inspeccionDetDao = inspeccionDetDao,
-                                    currentUserId = currentUser?.idUsuario,
-                                    nowTs = nowTs
-                                )
-                            }
-
-                            problemsCache = problemsCache.filter { it.id != problem.id }
-                            onProblemDeleted?.invoke()
-                            problemToDelete = null
-                        }
-                    }) { Text("Eliminar") }
-                },
-                dismissButton = {
-                    Button(onClick = { problemToDelete = null }) { Text("Cancelar") }
-                },
-                text = { Text("Eliminar problema seleccionado?") }
-            )
-        }
-    }
-}
-
-private suspend fun updateParentInspectionStatuses(
-    inspectionId: String,
-    startUbicacionId: String,
-    ubicacionDao: com.example.etic.data.local.dao.UbicacionDao,
-    inspeccionDetDao: com.example.etic.data.local.dao.InspeccionDetDao,
-    currentUserId: String?,
-    nowTs: String
-) {
-    val ubicaciones = runCatching { ubicacionDao.getAllActivas() }.getOrElse { emptyList() }
-    if (ubicaciones.isEmpty()) return
-
-    val detRows = runCatching { inspeccionDetDao.getByInspeccion(inspectionId) }.getOrElse { emptyList() }
-    if (detRows.isEmpty()) return
-
-    val ubicById = ubicaciones.associateBy { it.idUbicacion }
-    val childrenByParent = ubicaciones.groupBy { it.idUbicacionPadre }
-    val detByUbicacion = detRows.mapNotNull { row ->
-        row.idUbicacion?.let { it to row }
-    }.toMap().toMutableMap()
-
-    var currentId: String? = startUbicacionId
-    while (true) {
-        val parentId = currentId?.let { ubicById[it]?.idUbicacionPadre }
-        if (parentId.isNullOrBlank() || parentId == "0") break
-
-        val childIds = childrenByParent[parentId].orEmpty().map { it.idUbicacion }
-        if (childIds.isNotEmpty()) {
-            val hasPendingChild = childIds.any { childId ->
-                detByUbicacion[childId]?.idStatusInspeccionDet == STATUS_POR_VERIFICAR
-            }
-            val statusId = if (hasPendingChild) STATUS_POR_VERIFICAR else STATUS_VERIFICADO
-            val colorId = if (hasPendingChild) 1 else 4
-            val parentDet = detByUbicacion[parentId]
-            if (parentDet != null &&
-                (parentDet.idStatusInspeccionDet != statusId || parentDet.idEstatusColorText != colorId)
-            ) {
-                val updated = parentDet.copy(
-                    idStatusInspeccionDet = statusId,
-                    idEstatusColorText = colorId,
-                    modificadoPor = currentUserId,
-                    fechaMod = nowTs
-                )
-                runCatching { inspeccionDetDao.update(updated) }
-                detByUbicacion[parentId] = updated
-            }
-        }
-        currentId = parentId
-    }
-}
 
 private fun buildTreeFromVista(rows: List<com.example.etic.data.local.views.VistaUbicacionArbol>): MutableList<TreeNode> {
     android.util.Log.d("VistaUbicacionArbol", "Filas obtenidas en buildTreeFromVista: ${rows.size}")
