@@ -19,8 +19,8 @@ class InventarioPdfGenerator {
     ) {
         val doc = PdfDocument()
 
-        val pageWidth = 1240 // aprox A4 horizontal a 150dpi
-        val pageHeight = 1754
+        val pageWidth = 1754 // A4 horizontal aprox a 150dpi
+        val pageHeight = 1240
 
         val titlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             textSize = 34f
