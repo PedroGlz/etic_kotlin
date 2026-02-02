@@ -14,6 +14,7 @@ import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Inventory2
+import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -54,7 +55,6 @@ fun ReportsMenuSection(
 
         AnimatedVisibility(expanded) {
             Column(Modifier.fillMaxWidth().padding(start = 14.dp, bottom = 8.dp)) {
-                // Por ahora: SOLO Inventarios
                 TextButton(
                     enabled = enabled,
                     onClick = { onReport(ReportAction.InventarioPdf) },
@@ -64,6 +64,16 @@ fun ReportsMenuSection(
                     Icon(Icons.Outlined.Inventory2, contentDescription = null)
                     Spacer(Modifier.width(10.dp))
                     Text("Reporte de Inventarios", modifier = Modifier.weight(1f))
+                }
+                TextButton(
+                    enabled = enabled,
+                    onClick = { onReport(ReportAction.ProblemasPdf) },
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Outlined.WarningAmber, contentDescription = null)
+                    Spacer(Modifier.width(10.dp))
+                    Text("Reporte de Problemas", modifier = Modifier.weight(1f))
                 }
             }
         }

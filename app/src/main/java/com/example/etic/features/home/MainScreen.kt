@@ -96,6 +96,7 @@ import kotlinx.coroutines.withContext
 import com.example.etic.ui.inspection.ReportAction
 import com.example.etic.ui.inspection.ReportsMenuSection
 import com.example.etic.reports.GenerateInventarioPdfUseCase
+import com.example.etic.reports.GenerateProblemasPdfUseCase
 import com.example.etic.reports.ReportesFolderProvider
 import com.example.etic.data.local.queries.CurrentInspectionInfo
 import com.example.etic.ui.theme.FontSizeOption
@@ -142,6 +143,10 @@ fun MainScreen(
     var isLoadingInventoryOptions by rememberSaveable { mutableStateOf(false) }
     var inventoryOptions by remember { mutableStateOf<List<TreeNode>>(emptyList()) }
     var inventorySelection by remember { mutableStateOf<Map<String, Boolean>>(emptyMap()) }
+    var showProblemReportDialog by rememberSaveable { mutableStateOf(false) }
+    var isLoadingProblemOptions by rememberSaveable { mutableStateOf(false) }
+    var problemOptions by remember { mutableStateOf<List<ProblemReportOption>>(emptyList()) }
+    var problemSelection by remember { mutableStateOf<Map<String, Boolean>>(emptyMap()) }
     val imageExtensionRegex = remember { Regex("\\.(jpg|jpeg|png|bmp|gif)$", RegexOption.IGNORE_CASE) }
     val rootTreeUriStr by eticPrefs.rootTreeUriFlow.collectAsState(initial = null)
     val rootTreeUri = remember(rootTreeUriStr) { rootTreeUriStr?.let { Uri.parse(it) } }
@@ -196,6 +201,61 @@ fun MainScreen(
         }
     }
 
+    fun generateProblemasPdf(insp: CurrentInspectionInfo, selectedProblemaIds: List<String>) {
+        if (isGeneratingReport) return
+        val noInspeccion = insp.noInspeccion?.toString()
+        val inspeccionId = insp.idInspeccion
+        if (noInspeccion.isNullOrBlank() || inspeccionId.isNullOrBlank()) {
+            Toast.makeText(appContext, "Inspeccion invalida.", Toast.LENGTH_SHORT).show()
+            return
+        }
+        scope.launch {
+            isGeneratingReport = true
+            drawerState.close()
+            val folderProvider = ReportesFolderProvider(appContext) { inspectionNumber ->
+                val rootUri = rootTreeUri ?: return@ReportesFolderProvider null
+                val reportsDir = safManager.getReportsDir(appContext, rootUri, inspectionNumber)
+                reportsDir?.uri
+            }
+            val useCase = GenerateProblemasPdfUseCase(
+                context = appContext,
+                folderProvider = folderProvider,
+                getInspeccionImagenesTreeUri = { inspectionNumber ->
+                    val rootUri = rootTreeUri
+                    if (rootUri == null) {
+                        null
+                    } else {
+                        val imagesDir = safManager.getImagesDir(appContext, rootUri, inspectionNumber)
+                        imagesDir?.uri
+                    }
+                }
+            )
+            try {
+                val result = useCase.run(
+                    noInspeccion = noInspeccion,
+                    inspeccionId = inspeccionId,
+                    selectedProblemaIds = selectedProblemaIds,
+                    currentUserId = currentUserSnapshot?.idUsuario,
+                    currentUserName = currentUserSnapshot?.nombre ?: currentUserSnapshot?.usuario
+                )
+                result.fold(
+                    onSuccess = { uriString ->
+                        Toast.makeText(appContext, "PDF generado: $uriString", Toast.LENGTH_LONG).show()
+                    },
+                    onFailure = { e ->
+                        Toast.makeText(
+                            appContext,
+                            "Error al generar PDF: ${e.message ?: "desconocido"}",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                )
+            } finally {
+                isGeneratingReport = false
+            }
+        }
+    }
+
     val reportHandler: (ReportAction) -> Unit = { action ->
         when (action) {
             ReportAction.InventarioPdf -> {
@@ -218,9 +278,46 @@ fun MainScreen(
                     }
                 }
             }
+            ReportAction.ProblemasPdf -> {
+                val insp = currentInspectionSnapshot
+                if (insp == null) {
+                    Toast.makeText(appContext, "No hay inspeccion activa.", Toast.LENGTH_SHORT).show()
+                } else if (isLoadingProblemOptions) {
+                    Toast.makeText(appContext, "Cargando problemas...", Toast.LENGTH_SHORT).show()
+                } else {
+                    showProblemReportDialog = true
+                    if (problemOptions.isEmpty()) {
+                        isLoadingProblemOptions = true
+                        scope.launch {
+                            val db = DbProvider.get(appContext)
+                            val tipoById = db.tipoInspeccionDao().getAll().associateBy { it.idTipoInspeccion }
+                            val problemas = db.problemaDao()
+                                .getByInspeccionActivos(insp.idInspeccion)
+                                .filter { it.estatusProblema.equals("Abierto", ignoreCase = true) }
+                                .sortedWith(
+                                    compareBy(
+                                        { it.idTipoInspeccion ?: "ZZZ" },
+                                        { it.numeroProblema ?: Int.MAX_VALUE }
+                                    )
+                                )
+
+                            problemOptions = problemas.map { p ->
+                                val tipoNombre =
+                                    p.idTipoInspeccion?.let { tipoById[it]?.tipoInspeccion } ?: "Tipo"
+                                val numero = p.numeroProblema?.toString() ?: "S/N"
+                                ProblemReportOption(
+                                    id = p.idProblema,
+                                    label = "$tipoNombre / $numero"
+                                )
+                            }
+                            problemSelection = problemOptions.associate { it.id to false }
+                            isLoadingProblemOptions = false
+                        }
+                    }
+                }
+            }
         }
     }
-
     val drawerItemColors = NavigationDrawerItemDefaults.colors(
         selectedContainerColor = Color(0xFF202327),
         unselectedContainerColor = Color.Transparent,
@@ -861,6 +958,113 @@ fun MainScreen(
                     )
                 }
 
+                if (showProblemReportDialog) {
+                    AlertDialog(
+                        onDismissRequest = { if (!isGeneratingReport) showProblemReportDialog = false },
+                        title = { Text("Seleccionar problemas para reporte") },
+                        text = {
+                            Column(Modifier.fillMaxWidth()) {
+                                when {
+                                    isLoadingProblemOptions -> Text("Cargando problemas...")
+                                    problemOptions.isEmpty() -> Text("No hay problemas abiertos para seleccionar.")
+                                    else -> {
+                                        val selectedCount = problemSelection.values.count { it }
+                                        val totalCount = problemSelection.size
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text("Seleccionados: $selectedCount / $totalCount")
+                                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                                TextButton(
+                                                    onClick = {
+                                                        problemSelection =
+                                                            problemOptions.associate { it.id to true }
+                                                    }
+                                                ) { Text("Seleccionar todo") }
+                                                TextButton(
+                                                    onClick = {
+                                                        problemSelection =
+                                                            problemOptions.associate { it.id to false }
+                                                    }
+                                                ) { Text("Limpiar") }
+                                            }
+                                        }
+                                        Spacer(Modifier.height(8.dp))
+                                        val listState = rememberScrollState()
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .heightIn(max = 520.dp)
+                                                .verticalScroll(listState)
+                                        ) {
+                                            problemOptions.forEach { option ->
+                                                val checked = problemSelection[option.id] == true
+                                                Row(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .clickable {
+                                                            problemSelection =
+                                                                problemSelection + (option.id to !checked)
+                                                        }
+                                                        .padding(vertical = 4.dp),
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    Checkbox(
+                                                        checked = checked,
+                                                        onCheckedChange = { isChecked ->
+                                                            problemSelection =
+                                                                problemSelection + (option.id to isChecked)
+                                                        },
+                                                        modifier = Modifier.size(16.dp)
+                                                    )
+                                                    Spacer(Modifier.width(6.dp))
+                                                    Text(
+                                                        option.label,
+                                                        style = MaterialTheme.typography.bodySmall.merge(
+                                                            TextStyle(lineHeight = 12.sp)
+                                                        )
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(
+                                enabled = !isGeneratingReport,
+                                onClick = { showProblemReportDialog = false }
+                            ) { Text("Cancelar") }
+                        },
+                        confirmButton = {
+                            TextButton(
+                                enabled = !isGeneratingReport && problemSelection.values.any { it },
+                                onClick = {
+                                    val insp = currentInspectionSnapshot
+                                    if (insp == null) {
+                                        Toast.makeText(
+                                            appContext,
+                                            "No hay inspeccion activa.",
+                                            Toast.LENGTH_SHORT
+                                        ).show()
+                                        return@TextButton
+                                    }
+                                    val selectedIds = problemOptions
+                                        .asSequence()
+                                        .filter { problemSelection[it.id] == true }
+                                        .map { it.id }
+                                        .toList()
+                                    showProblemReportDialog = false
+                                    generateProblemasPdf(insp, selectedIds)
+                                }
+                            ) { Text("Generar PDF") }
+                        }
+                    )
+                }
+
             } // ProvideCurrentInspection
         } // ProvideCurrentUser
     }
@@ -973,6 +1177,11 @@ private data class ImageNameParts(
     val number: Long,
     val digits: Int,
     val suffix: String
+)
+
+private data class ProblemReportOption(
+    val id: String,
+    val label: String
 )
 
 private fun parseImageName(raw: String): ImageNameParts {
