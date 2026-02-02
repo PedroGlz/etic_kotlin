@@ -130,7 +130,7 @@ class InventarioPdfGenerator {
 
         fun drawHeaderBlocks(c: Canvas) {
             var x = mm(10f)
-            var y0 = headerBlockY
+            var y0 = headerBlockY + lineHeight
 
             fun drawTextLine(value: String, boldValue: Boolean = false) {
                 val paint = if (boldValue) boldPaint else textPaint
@@ -146,7 +146,7 @@ class InventarioPdfGenerator {
             drawTextLine("Fecha Reporte: ${header.fechaReporte}")
 
             x = mm(97f)
-            y0 = headerBlockY
+            y0 = headerBlockY + lineHeight
             c.drawText("No. Inspección Anterior:", x, y0, boldPaint)
             c.drawText(header.inspeccionAnterior, x + mm(24f), y0, textPaint)
             y0 += lineHeight
