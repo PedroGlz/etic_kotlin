@@ -173,8 +173,16 @@ class InventarioPdfGenerator {
                 val hPx = mm(hMm)
                 c.drawRect(xPx, yPx, xPx + wPx, yPx + hPx, linePaint)
                 c.drawText(title, xPx + mm(1f), yPx + lineHeight - mm(1f), boldPaint)
+                c.drawLine(xPx, yPx + lineHeight, xPx + wPx, yPx + lineHeight, linePaint)
                 var ly = yPx + (lineHeight * 2f) - mm(1f)
-                lines.forEach { line ->
+                lines.forEachIndexed { idx, line ->
+                    val rowTop = yPx + lineHeight * (idx + 1)
+                    val rowBottom = yPx + lineHeight * (idx + 2)
+                    c.drawLine(xPx, rowTop, xPx, rowBottom, linePaint)
+                    c.drawLine(xPx + wPx, rowTop, xPx + wPx, rowBottom, linePaint)
+                    if (idx == lines.lastIndex) {
+                        c.drawLine(xPx, rowBottom, xPx + wPx, rowBottom, linePaint)
+                    }
                     if (ly <= yPx + hPx - mm(0.5f)) {
                         c.drawText(line, xPx + mm(1f), ly, textPaint)
                     }
@@ -202,7 +210,7 @@ class InventarioPdfGenerator {
                 xMm = 237f,
                 yMm = 27f,
                 wMm = 50f,
-                hMm = 24f,
+                hMm = 28f,
                 title = "Estado De Equipo En Inspección",
                 lines = listOf(
                     "PVERIF = Para Verificar",

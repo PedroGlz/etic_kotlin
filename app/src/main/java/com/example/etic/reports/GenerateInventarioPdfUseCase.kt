@@ -19,7 +19,7 @@ class GenerateInventarioPdfUseCase(
     suspend fun run(
         noInspeccion: String,
         inspeccionId: String,
-        selectedUbicacionIds: Set<String>,
+        selectedUbicacionIds: List<String>,
         currentUserId: String? = null,
         currentUserName: String? = null
     ): Result<String> = withContext(Dispatchers.IO) {
@@ -38,11 +38,13 @@ class GenerateInventarioPdfUseCase(
             val inspeccion = inspeccionDao.getById(inspeccionId)
             val sitio = inspeccion?.idSitio
 
-            val ubicaciones = ubicacionDao.getAllActivas()
-                .filter { u ->
-                    selectedUbicacionIds.isEmpty() || selectedUbicacionIds.contains(u.idUbicacion)
-                }
-                .sortedBy { it.ruta ?: it.ubicacion ?: "" }
+            val ubicacionesById = ubicacionDao.getAllActivas().associateBy { it.idUbicacion }
+            val ubicaciones = if (selectedUbicacionIds.isEmpty()) {
+                ubicacionesById.values.sortedBy { it.ruta ?: it.ubicacion ?: "" }
+            } else {
+                // Igual que PHP: respetar el orden recibido en arrayElementosParaReporte.
+                selectedUbicacionIds.mapNotNull { ubicacionesById[it] }
+            }
             val dets = inspeccionDetDao.getByInspeccion(inspeccionId)
 
             val detByUb = dets.mapNotNull { d -> d.idUbicacion?.let { it to d } }.toMap()
@@ -96,6 +98,20 @@ class GenerateInventarioPdfUseCase(
             } ?: if (!currentUserName.isNullOrBlank()) {
                 usuarioDao.getByUsuario(currentUserName)
             } else null
+
+            fun formatDate(rawValue: String?): String {
+                val raw = rawValue?.take(10).orEmpty()
+                if (raw.isBlank()) return ""
+                return runCatching {
+                    LocalDate.parse(raw).format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+                }.getOrDefault(raw)
+            }
+
+            val fechaAnteriorRaw = runCatching {
+                val prevNo = inspeccion?.noInspeccionAnt ?: return@runCatching null
+                inspeccionDao.getAll().firstOrNull { it.noInspeccion == prevNo }?.fechaInicio
+            }.getOrNull()
+
             val now = LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
             val header = InventoryHeaderData(
                 cliente = cliente,
@@ -105,9 +121,9 @@ class GenerateInventarioPdfUseCase(
                     ?: usuarioActual?.usuario.orEmpty(),
                 nivel = usuarioActual?.nivelCertificacion.orEmpty(),
                 inspeccionAnterior = inspeccion?.noInspeccionAnt?.toString() ?: "",
-                fechaAnterior = "",
+                fechaAnterior = formatDate(fechaAnteriorRaw),
                 inspeccionActual = inspeccion?.noInspeccion?.toString() ?: "",
-                fechaActual = inspeccion?.fechaInicio ?: "",
+                fechaActual = formatDate(inspeccion?.fechaInicio),
                 fechaReporte = now
             )
 

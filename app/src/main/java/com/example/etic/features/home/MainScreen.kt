@@ -148,12 +148,12 @@ fun MainScreen(
     var currentInspectionSnapshot by remember { mutableStateOf<CurrentInspectionInfo?>(null) }
     var currentUserSnapshot by remember { mutableStateOf<com.example.etic.core.current.CurrentUserInfo?>(null) }
 
-    fun collectNodeIds(node: TreeNode, out: MutableSet<String>) {
+    fun collectNodeIds(node: TreeNode, out: MutableList<String>) {
         out.add(node.id)
         node.children.forEach { collectNodeIds(it, out) }
     }
 
-    fun generateInventarioPdf(insp: CurrentInspectionInfo, selectedUbicacionIds: Set<String>) {
+    fun generateInventarioPdf(insp: CurrentInspectionInfo, selectedUbicacionIds: List<String>) {
         if (isGeneratingReport) return
         val noInspeccion = insp.noInspeccion?.toString()
         val inspeccionId = insp.idInspeccion
@@ -847,7 +847,7 @@ fun MainScreen(
                                         ).show()
                                         return@TextButton
                                     }
-                                    val selectedIds = mutableSetOf<String>()
+                                    val selectedIds = mutableListOf<String>()
                                     inventoryOptions.forEach { node ->
                                         if (inventorySelection[node.id] == true) {
                                             collectNodeIds(node, selectedIds)
