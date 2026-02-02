@@ -2,8 +2,12 @@ package com.example.etic.reports
 
 import android.content.Context
 import android.graphics.BitmapFactory
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import com.example.etic.data.local.DbProvider
 import com.example.etic.reports.pdf.InventarioPdfGenerator
+import com.example.etic.reports.InventoryHeaderData
+import com.example.etic.reports.InventoryReportRow
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -22,28 +26,49 @@ class GenerateInventarioPdfUseCase(
             val ubicacionDao = db.ubicacionDao()
             val inspeccionDetDao = db.inspeccionDetDao()
             val inspeccionDao = db.inspeccionDao()
+            val clienteDao = db.clienteDao()
+            val sitioDao = db.sitioDao()
+            val tipoPrioridadDao = db.tipoPrioridadDao()
+            val estatusDetDao = db.estatusInspeccionDetDao()
+            val problemaDao = db.problemaDao()
 
             val inspeccion = inspeccionDao.getById(inspeccionId)
-            val sitio = inspeccion?.idSitio ?: ""
+            val sitio = inspeccion?.idSitio
 
             val ubicaciones = ubicacionDao.getAllActivas()
                 .filter { u ->
                     selectedUbicacionIds.isEmpty() || selectedUbicacionIds.contains(u.idUbicacion)
                 }
+                .sortedBy { it.ruta ?: it.ubicacion ?: "" }
             val dets = inspeccionDetDao.getByInspeccion(inspeccionId)
 
             val detByUb = dets.mapNotNull { d -> d.idUbicacion?.let { it to d } }.toMap()
+            val prioridadById = tipoPrioridadDao.getAll().associateBy { it.idTipoPrioridad }
+            val estatusById = estatusDetDao.getAll().associateBy { it.idStatusInspeccionDet }
 
             val rows = ubicaciones.map { u ->
                 val det = detByUb[u.idUbicacion]
-                InventoryRow(
-                    ruta = u.ruta ?: u.ubicacion ?: "",
-                    ubicacion = u.ubicacion ?: "",
+                val estatus = det?.idStatusInspeccionDet
+                    ?.let { estatusById[it]?.estatusInspeccionDet }
+                    ?: "Por verificar"
+                val prioridad = u.idTipoPrioridad
+                    ?.let { prioridadById[it]?.tipoPrioridad }
+                    ?: ""
+                val problemas = if (!u.idUbicacion.isNullOrBlank()) {
+                    runCatching {
+                        problemaDao.countActivosByInspeccionAndUbicacion(inspeccionId, u.idUbicacion)
+                    }.getOrDefault(0).toString()
+                } else ""
+                InventoryReportRow(
+                    estatus = estatus,
+                    prioridad = prioridad,
+                    problemas = problemas,
+                    elemento = u.ubicacion ?: "",
                     codigoBarras = u.codigoBarras ?: "",
-                    estatus = det?.idStatusInspeccionDet ?: "Por verificar",
-                    esEquipo = (u.esEquipo ?: "").equals("SI", ignoreCase = true)
+                    notas = det?.notasInspeccion ?: "",
+                    level = u.nivelArbol ?: 1
                 )
-            }.sortedBy { it.ruta }
+            }
 
             val folder = folderProvider.getReportesFolder(noInspeccion)
                 ?: return@withContext Result.failure(IllegalStateException("No hay acceso a carpeta Reportes (SAF)."))
@@ -59,11 +84,25 @@ class GenerateInventarioPdfUseCase(
                 ?: res.getIdentifier("etic_logo_login", "drawable", pkg).takeIf { it != 0 }
             val logoBmp = logoId?.let { BitmapFactory.decodeResource(res, it) }
 
+            val cliente = inspeccion?.idCliente?.let { clienteDao.getByIdActivo(it)?.razonSocial }.orEmpty()
+            val sitioNombre = sitio?.let { sitioDao.getByIdActivo(it)?.sitio }.orEmpty()
+            val now = LocalDate.now().format(DateTimeFormatter.ISO_DATE)
+            val header = InventoryHeaderData(
+                cliente = cliente,
+                sitio = sitioNombre,
+                analista = inspeccion?.creadoPor ?: "",
+                nivel = "",
+                inspeccionAnterior = inspeccion?.noInspeccionAnt?.toString() ?: "",
+                fechaAnterior = "",
+                inspeccionActual = inspeccion?.noInspeccion?.toString() ?: "",
+                fechaActual = inspeccion?.fechaInicio ?: "",
+                fechaReporte = now
+            )
+
             context.contentResolver.openOutputStream(file.uri)?.use { out ->
                 pdfGenerator.generate(
                     output = out,
-                    noInspeccion = noInspeccion,
-                    sitio = sitio,
+                    header = header,
                     rows = rows,
                     logo = logoBmp
                 )

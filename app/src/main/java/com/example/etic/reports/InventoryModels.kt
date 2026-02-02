@@ -7,3 +7,25 @@ data class InventoryRow(
     val estatus: String,
     val esEquipo: Boolean
 )
+
+data class InventoryReportRow(
+    val estatus: String,
+    val prioridad: String,
+    val problemas: String,
+    val elemento: String,
+    val codigoBarras: String,
+    val notas: String,
+    val level: Int
+)
+
+data class InventoryHeaderData(
+    val cliente: String,
+    val sitio: String,
+    val analista: String,
+    val nivel: String,
+    val inspeccionAnterior: String,
+    val fechaAnterior: String,
+    val inspeccionActual: String,
+    val fechaActual: String,
+    val fechaReporte: String
+)

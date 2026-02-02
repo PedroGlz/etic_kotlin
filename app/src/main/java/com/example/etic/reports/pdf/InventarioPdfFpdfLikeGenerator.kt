@@ -5,19 +5,32 @@ import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Typeface
 import android.graphics.pdf.PdfDocument
+import android.text.Layout
+import android.text.StaticLayout
 import android.text.TextPaint
-import com.example.etic.reports.InventoryHeaderData
 import com.example.etic.reports.InventoryReportRow
 import java.io.OutputStream
 import kotlin.math.ceil
 import kotlin.math.max
 import kotlin.math.min
 
-class InventarioPdfGenerator {
+data class InventoryReportHeader(
+    val cliente: String,
+    val sitio: String,
+    val noInspeccion: String,
+    val fechaInspeccion: String,
+    val fechaReporte: String,
+    val inspector: String,
+    val tipoProblema: List<String>,
+    val prioridadOperativa: List<String>,
+    val estadoEquipo: List<String>
+)
+
+class InventarioPdfFpdfLikeGenerator {
 
     fun generate(
         output: OutputStream,
-        header: InventoryHeaderData,
+        header: InventoryReportHeader,
         rows: List<InventoryReportRow>,
         logo: Bitmap? = null
     ) {
@@ -26,10 +39,8 @@ class InventarioPdfGenerator {
         val pageHeight = 1240
         val dpi = 150f
         val pxPerMm = dpi / 25.4f
-
         fun mm(v: Float) = v * pxPerMm
         fun pt(v: Float) = v * (dpi / 72f)
-        fun mmToPt(v: Float) = v * 2.83465f
 
         val titlePaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
             textSize = pt(13f)
@@ -43,20 +54,16 @@ class InventarioPdfGenerator {
             textSize = pt(8f)
             typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
         }
-        val footerPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
-            textSize = pt(7f)
-            typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL)
-        }
         val linePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             style = Paint.Style.STROKE
             strokeWidth = 1f
         }
 
-        val headerTopY = mm(10f)
+        val headerYTop = mm(10f)
         val headerBlockY = mm(27f)
         val tableTopY = mm(60f)
         val lineHeight = mm(4f)
-        val footerY = mm(195f)
+        val footerMargin = mm(12f)
 
         val colW = listOf(20f, 16f, 21f, 119f, 29f, 72f).map { mm(it) }
         val tableX = mm(10f)
@@ -66,43 +73,6 @@ class InventarioPdfGenerator {
         var page = doc.startPage(PdfDocument.PageInfo.Builder(pageWidth, pageHeight, pageNumber).create())
         var canvas = page.canvas
         var y = tableTopY
-
-        fun wrapText(text: String, paint: TextPaint, maxWidth: Float): List<String> {
-            if (text.isBlank()) return listOf("")
-            val words = text.split(" ")
-            val lines = mutableListOf<String>()
-            var current = ""
-            for (w in words) {
-                val candidate = if (current.isEmpty()) w else "$current $w"
-                if (paint.measureText(candidate) <= maxWidth) {
-                    current = candidate
-                } else {
-                    if (current.isNotEmpty()) lines.add(current)
-                    current = w
-                }
-            }
-            if (current.isNotEmpty()) lines.add(current)
-            return lines.ifEmpty { listOf("") }
-        }
-
-        fun measureLines(text: String, paint: TextPaint, maxWidth: Float): Int =
-            wrapText(text, paint, maxWidth).size
-
-        fun drawMultiCell(
-            c: Canvas,
-            text: String,
-            x: Float,
-            y: Float,
-            maxWidth: Float,
-            paint: TextPaint,
-            lineH: Float
-        ): Int {
-            val lines = wrapText(text, paint, maxWidth)
-            lines.forEachIndexed { idx, line ->
-                c.drawText(line, x, y + lineH * (idx + 1) - mm(1f), paint)
-            }
-            return lines.size
-        }
 
         fun drawLogo(c: Canvas) {
             if (logo == null) return
@@ -120,68 +90,93 @@ class InventarioPdfGenerator {
         }
 
         fun drawTitle(c: Canvas) {
-            val text = "Inventario De Equipo"
             val x = mm(86f)
             val width = mm(125f)
-            val textWidth = titlePaint.measureText(text)
-            val offset = max(0f, (width - textWidth) / 2f)
-            c.drawText(text, x + offset, headerTopY + mm(6f), titlePaint)
+            val layout = StaticLayout.Builder.obtain(
+                "Inventario De Equipo",
+                0,
+                "Inventario De Equipo".length,
+                titlePaint,
+                width.toInt()
+            )
+                .setAlignment(Layout.Alignment.ALIGN_CENTER)
+                .setLineSpacing(0f, 1f)
+                .build()
+            c.save()
+            c.translate(x, headerYTop)
+            layout.draw(c)
+            c.restore()
         }
 
         fun drawHeaderBlocks(c: Canvas) {
             var x = mm(10f)
             var y0 = headerBlockY
 
-            fun drawLine(label: String, value: String, boldValue: Boolean = false) {
+            fun drawLine(label: String, value: String, isBoldValue: Boolean = false) {
                 c.drawText(label, x, y0, textPaint)
                 val labelW = textPaint.measureText(label)
-                val paint = if (boldValue) boldPaint else textPaint
+                val paint = if (isBoldValue) boldPaint else textPaint
                 c.drawText(value, x + labelW + mm(2f), y0, paint)
                 y0 += lineHeight
             }
 
-            drawLine("Cliente:", header.cliente, boldValue = true)
+            drawLine("Cliente:", header.cliente, isBoldValue = true)
             drawLine("Sitio:", header.sitio)
-            drawLine("Analista:", header.analista)
-            drawLine("Nivel:", header.nivel)
+            drawLine("No. Inspección:", header.noInspeccion)
+            drawLine("Fecha Inspección:", header.fechaInspeccion)
             drawLine("Fecha Reporte:", header.fechaReporte)
+            drawLine("Inspector:", header.inspector)
 
+            // Bloque inspecciones
             x = mm(97f)
             y0 = headerBlockY
-            drawLine("Inspección Anterior:", header.inspeccionAnterior)
-            drawLine("Fecha:", header.fechaAnterior)
-            drawLine("Inspección Actual:", header.inspeccionActual)
-            drawLine("Fecha:", header.fechaActual)
-
-            fun drawBox(xMm: Float, yMm: Float, wMm: Float, hMm: Float) {
-                val xPx = mm(xMm)
-                val yPx = mm(yMm)
-                c.drawRect(xPx, yPx, xPx + mm(wMm), yPx + mm(hMm), linePaint)
+            header.estadoEquipo.forEachIndexed { index, line ->
+                if (index == 0) {
+                    c.drawText("Inspección:", x, y0, textPaint)
+                }
+                c.drawText(line, x + mm(20f), y0, textPaint)
+                y0 += lineHeight
             }
 
-            drawBox(150f, 27f, 30f, 16f)
-            drawBox(189f, 27f, 40f, 16f)
-            drawBox(237f, 27f, 50f, 24f)
+            // Recuadros con listas
+            fun drawBoxList(xMm: Float, yMm: Float, wMm: Float, hLines: Int, title: String, items: List<String>) {
+                val xPx = mm(xMm)
+                val yPx = mm(yMm)
+                val wPx = mm(wMm)
+                val hPx = lineHeight * hLines
+                c.drawRect(xPx, yPx, xPx + wPx, yPx + hPx, linePaint)
+                c.drawText(title, xPx + mm(1f), yPx + lineHeight - mm(1f), textPaint)
+                items.take(hLines - 1).forEachIndexed { idx, it ->
+                    c.drawText(it, xPx + mm(1f), yPx + lineHeight * (idx + 2) - mm(1f), textPaint)
+                }
+            }
+
+            drawBoxList(150f, 27f, 30f, 4, "Tipo De Problema", header.tipoProblema)
+            drawBoxList(189f, 27f, 40f, 4, "Prioridad Operativa", header.prioridadOperativa)
+            drawBoxList(237f, 27f, 50f, 6, "Estado De Equipo En Inspección", header.estadoEquipo)
         }
 
         fun drawTableHeader(c: Canvas) {
-            val labels = listOf("Estado", "Prioridad", "# Problema", " Ubicación", "Código Barras", "Notas")
+            val labels = listOf("Estado", "Prioridad", "# Problema", "Ubicación", "Código Barras", "Notas")
             var x = tableX
-            val yText = tableTopY + lineHeight - mm(1f)
+            val yTop = tableTopY
+            val yText = yTop + lineHeight - mm(1f)
             labels.forEachIndexed { idx, label ->
                 c.drawText(label, x, yText, boldPaint)
                 x += colW[idx]
             }
-            c.drawLine(tableX, tableTopY + lineHeight, tableX + tableW, tableTopY + lineHeight, linePaint)
+            c.drawLine(tableX, yTop + lineHeight, tableX + tableW, yTop + lineHeight, linePaint)
         }
 
         fun drawFooter(c: Canvas) {
             val line1 = "ETIC SA DE CV"
             val line2 = "Copyright © 2023 NefWorks Todos los derechos reservados."
-            val w1 = footerPaint.measureText(line1)
-            val w2 = footerPaint.measureText(line2)
-            c.drawText(line1, (pageWidth - w1) / 2f, footerY, footerPaint)
-            c.drawText(line2, (pageWidth - w2) / 2f, footerY + lineHeight, footerPaint)
+            val y1 = pageHeight - footerMargin
+            val y2 = y1 + lineHeight
+            val w1 = textPaint.measureText(line1)
+            val w2 = textPaint.measureText(line2)
+            c.drawText(line1, (pageWidth - w1) / 2f, y1, textPaint)
+            c.drawText(line2, (pageWidth - w2) / 2f, y2, textPaint)
         }
 
         fun startPage() {
@@ -204,14 +199,24 @@ class InventarioPdfGenerator {
         startPage()
 
         rows.forEach { row ->
-            val indentMm = if (row.level <= 1) 1f else row.level * 2f
-            val indentPx = mm(indentMm)
+            val levelIndentMm = if (row.level <= 1) 1f else row.level * 2f
+            val indentPx = mm(levelIndentMm)
             val ubicWidth = colW[3] - indentPx
 
-            val notesLines = max(1, measureLines(row.notas, textPaint, colW[5]))
+            val notesLayout = StaticLayout.Builder.obtain(
+                row.notas,
+                0,
+                row.notas.length,
+                textPaint,
+                colW[5].toInt()
+            )
+                .setLineSpacing(0f, 1f)
+                .build()
+
+            val notesLines = max(1, notesLayout.lineCount)
             val rowHeight = max(lineHeight, notesLines * lineHeight)
 
-            if (y + rowHeight + mm(10f) > pageHeight) {
+            if (y + rowHeight + footerMargin > pageHeight) {
                 newPage()
             }
 
@@ -225,7 +230,20 @@ class InventarioPdfGenerator {
             canvas.drawText(row.elemento, x + indentPx, baseline, ubPaint); x += colW[3]
             canvas.drawText(row.codigoBarras, x, baseline, textPaint); x += colW[4]
 
-            drawMultiCell(canvas, row.notas, x, y, colW[5], textPaint, lineHeight)
+            canvas.save()
+            canvas.translate(x, y)
+            val notesHeight = notesLines * lineHeight
+            val layout = StaticLayout.Builder.obtain(
+                row.notas,
+                0,
+                row.notas.length,
+                textPaint,
+                colW[5].toInt()
+            )
+                .setLineSpacing(0f, 1f)
+                .build()
+            layout.draw(canvas)
+            canvas.restore()
 
             y += rowHeight
         }
@@ -236,4 +254,13 @@ class InventarioPdfGenerator {
         doc.writeTo(output)
         doc.close()
     }
+}
+
+fun generateInventarioPdfLike(
+    output: OutputStream,
+    header: InventoryReportHeader,
+    rows: List<InventoryReportRow>,
+    logo: Bitmap? = null
+) {
+    InventarioPdfFpdfLikeGenerator().generate(output, header, rows, logo)
 }
