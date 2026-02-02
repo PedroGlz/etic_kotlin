@@ -75,6 +75,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.etic.R
 import com.example.etic.core.current.LocalCurrentInspection
+import com.example.etic.core.current.LocalCurrentUser
 import com.example.etic.core.current.ProvideCurrentInspection
 import com.example.etic.core.current.ProvideCurrentUser
 import com.example.etic.core.export.exportRoomDbToDownloads
@@ -145,6 +146,7 @@ fun MainScreen(
     val rootTreeUriStr by eticPrefs.rootTreeUriFlow.collectAsState(initial = null)
     val rootTreeUri = remember(rootTreeUriStr) { rootTreeUriStr?.let { Uri.parse(it) } }
     var currentInspectionSnapshot by remember { mutableStateOf<CurrentInspectionInfo?>(null) }
+    var currentUserSnapshot by remember { mutableStateOf<com.example.etic.core.current.CurrentUserInfo?>(null) }
 
     fun collectNodeIds(node: TreeNode, out: MutableSet<String>) {
         out.add(node.id)
@@ -169,7 +171,13 @@ fun MainScreen(
             }
             val useCase = GenerateInventarioPdfUseCase(appContext, folderProvider)
             try {
-                val result = useCase.run(noInspeccion, inspeccionId, selectedUbicacionIds)
+                val result = useCase.run(
+                    noInspeccion = noInspeccion,
+                    inspeccionId = inspeccionId,
+                    selectedUbicacionIds = selectedUbicacionIds,
+                    currentUserId = currentUserSnapshot?.idUsuario,
+                    currentUserName = currentUserSnapshot?.nombre ?: currentUserSnapshot?.usuario
+                )
                 result.fold(
                     onSuccess = { uriString ->
                         Toast.makeText(appContext, "PDF generado: $uriString", Toast.LENGTH_LONG).show()
@@ -407,8 +415,12 @@ fun MainScreen(
     ) {
         ProvideCurrentUser {
             ProvideCurrentInspection {
+                val currentUser = LocalCurrentUser.current
                 val currentInspection = LocalCurrentInspection.current
-                SideEffect { currentInspectionSnapshot = currentInspection }
+                SideEffect {
+                    currentUserSnapshot = currentUser
+                    currentInspectionSnapshot = currentInspection
+                }
                 val inspectionNumero = currentInspection?.noInspeccion?.toString()
 
                 LaunchedEffect(rootTreeUriStr, inspectionNumero) {

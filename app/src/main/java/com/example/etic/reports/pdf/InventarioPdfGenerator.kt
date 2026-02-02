@@ -132,36 +132,87 @@ class InventarioPdfGenerator {
             var x = mm(10f)
             var y0 = headerBlockY
 
-            fun drawLine(label: String, value: String, boldValue: Boolean = false) {
-                c.drawText(label, x, y0, textPaint)
-                val labelW = textPaint.measureText(label)
+            fun drawTextLine(value: String, boldValue: Boolean = false) {
                 val paint = if (boldValue) boldPaint else textPaint
-                c.drawText(value, x + labelW + mm(2f), y0, paint)
+                c.drawText(value, x, y0, paint)
                 y0 += lineHeight
             }
 
-            drawLine("Cliente:", header.cliente, boldValue = true)
-            drawLine("Sitio:", header.sitio)
-            drawLine("Analista:", header.analista)
-            drawLine("Nivel:", header.nivel)
-            drawLine("Fecha Reporte:", header.fechaReporte)
+            // Cliente y sitio sin prefijos.
+            drawTextLine(header.cliente, boldValue = true)
+            drawTextLine(header.sitio)
+            drawTextLine("Analista Termógrafo: ${header.analista}")
+            drawTextLine("Nivel De Certificación: ${header.nivel}")
+            drawTextLine("Fecha Reporte: ${header.fechaReporte}")
 
             x = mm(97f)
             y0 = headerBlockY
-            drawLine("Inspección Anterior:", header.inspeccionAnterior)
-            drawLine("Fecha:", header.fechaAnterior)
-            drawLine("Inspección Actual:", header.inspeccionActual)
-            drawLine("Fecha:", header.fechaActual)
+            c.drawText("No. Inspección Anterior:", x, y0, boldPaint)
+            c.drawText(header.inspeccionAnterior, x + mm(24f), y0, textPaint)
+            y0 += lineHeight
+            c.drawText("Fecha:", x, y0, boldPaint)
+            c.drawText(header.fechaAnterior, x + mm(9f), y0, textPaint)
+            y0 += lineHeight
+            c.drawText("No. Inspección Actual:", x, y0, boldPaint)
+            c.drawText(header.inspeccionActual, x + mm(24f), y0, textPaint)
+            y0 += lineHeight
+            c.drawText("Fecha:", x, y0, boldPaint)
+            c.drawText(header.fechaActual, x + mm(9f), y0, textPaint)
 
-            fun drawBox(xMm: Float, yMm: Float, wMm: Float, hMm: Float) {
+            fun drawBoxWithContent(
+                xMm: Float,
+                yMm: Float,
+                wMm: Float,
+                hMm: Float,
+                title: String,
+                lines: List<String>
+            ) {
                 val xPx = mm(xMm)
                 val yPx = mm(yMm)
-                c.drawRect(xPx, yPx, xPx + mm(wMm), yPx + mm(hMm), linePaint)
+                val wPx = mm(wMm)
+                val hPx = mm(hMm)
+                c.drawRect(xPx, yPx, xPx + wPx, yPx + hPx, linePaint)
+                c.drawText(title, xPx + mm(1f), yPx + lineHeight - mm(1f), boldPaint)
+                var ly = yPx + (lineHeight * 2f) - mm(1f)
+                lines.forEach { line ->
+                    if (ly <= yPx + hPx - mm(0.5f)) {
+                        c.drawText(line, xPx + mm(1f), ly, textPaint)
+                    }
+                    ly += lineHeight
+                }
             }
 
-            drawBox(150f, 27f, 30f, 16f)
-            drawBox(189f, 27f, 40f, 16f)
-            drawBox(237f, 27f, 50f, 24f)
+            drawBoxWithContent(
+                xMm = 150f,
+                yMm = 27f,
+                wMm = 30f,
+                hMm = 16f,
+                title = "Tipo De Problema",
+                lines = listOf("E = Eléctrico", "M = Mecánico", "V = Visual")
+            )
+            drawBoxWithContent(
+                xMm = 189f,
+                yMm = 27f,
+                wMm = 40f,
+                hMm = 16f,
+                title = "Prioridad Operativa",
+                lines = listOf("CTO = Crítico", "ETO = Esencial", "UN = No clasificado")
+            )
+            drawBoxWithContent(
+                xMm = 237f,
+                yMm = 27f,
+                wMm = 50f,
+                hMm = 24f,
+                title = "Estado De Equipo En Inspección",
+                lines = listOf(
+                    "PVERIF = Para Verificar",
+                    "VERIFICADO = Verificado",
+                    "NOCARGA = Sin Carga",
+                    "MTTO = En Mantenimiento",
+                    "BLOQ = Bloqueado",
+                    "NOACC = No Accesible"
+                )
+            )
         }
 
         fun drawTableHeader(c: Canvas) {

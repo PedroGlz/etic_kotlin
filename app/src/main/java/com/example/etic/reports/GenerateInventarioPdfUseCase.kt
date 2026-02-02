@@ -19,7 +19,9 @@ class GenerateInventarioPdfUseCase(
     suspend fun run(
         noInspeccion: String,
         inspeccionId: String,
-        selectedUbicacionIds: Set<String>
+        selectedUbicacionIds: Set<String>,
+        currentUserId: String? = null,
+        currentUserName: String? = null
     ): Result<String> = withContext(Dispatchers.IO) {
         try {
             val db = DbProvider.get(context)
@@ -31,6 +33,7 @@ class GenerateInventarioPdfUseCase(
             val tipoPrioridadDao = db.tipoPrioridadDao()
             val estatusDetDao = db.estatusInspeccionDetDao()
             val problemaDao = db.problemaDao()
+            val usuarioDao = db.usuarioDao()
 
             val inspeccion = inspeccionDao.getById(inspeccionId)
             val sitio = inspeccion?.idSitio
@@ -86,12 +89,21 @@ class GenerateInventarioPdfUseCase(
 
             val cliente = inspeccion?.idCliente?.let { clienteDao.getByIdActivo(it)?.razonSocial }.orEmpty()
             val sitioNombre = sitio?.let { sitioDao.getByIdActivo(it)?.sitio }.orEmpty()
-            val now = LocalDate.now().format(DateTimeFormatter.ISO_DATE)
+            val usuarioActual = if (!currentUserId.isNullOrBlank()) {
+                usuarioDao.getById(currentUserId)
+            } else {
+                null
+            } ?: if (!currentUserName.isNullOrBlank()) {
+                usuarioDao.getByUsuario(currentUserName)
+            } else null
+            val now = LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
             val header = InventoryHeaderData(
                 cliente = cliente,
                 sitio = sitioNombre,
-                analista = inspeccion?.creadoPor ?: "",
-                nivel = "",
+                analista = currentUserName?.takeIf { it.isNotBlank() }
+                    ?: usuarioActual?.nombre?.takeIf { it.isNotBlank() }
+                    ?: usuarioActual?.usuario.orEmpty(),
+                nivel = usuarioActual?.nivelCertificacion.orEmpty(),
                 inspeccionAnterior = inspeccion?.noInspeccionAnt?.toString() ?: "",
                 fechaAnterior = "",
                 inspeccionActual = inspeccion?.noInspeccion?.toString() ?: "",
