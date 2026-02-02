@@ -307,6 +307,114 @@ class ProblemasPdfGenerator {
             drawLabeledValue(canvas, mm(11f), ly, mm(64f), "Emisividad:", pageData.emisividad)
         }
 
+        fun drawHistoryGraph(canvas: Canvas, pageData: ProblemReportPageData) {
+            val points = pageData.graphPoints
+            if (points.isEmpty()) return
+
+            val borderColor = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                style = Paint.Style.STROKE
+                strokeWidth = 1f
+                color = android.graphics.Color.rgb(171, 171, 171)
+            }
+            val gridPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                style = Paint.Style.STROKE
+                strokeWidth = 1f
+                color = android.graphics.Color.rgb(220, 220, 220)
+            }
+            val textSmall = TextPaint(textPaint).apply { textSize = pt(7f) }
+            val redLine = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                style = Paint.Style.STROKE
+                strokeWidth = 2f
+                color = android.graphics.Color.rgb(245, 0, 0)
+            }
+            val tealLine = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                style = Paint.Style.STROKE
+                strokeWidth = 2f
+                color = android.graphics.Color.rgb(15, 142, 149)
+            }
+            val pointFill = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                style = Paint.Style.FILL
+                color = android.graphics.Color.rgb(243, 255, 0)
+            }
+
+            val x = mm(75f)
+            val y = mm(33f)
+            val w = mm(105f)
+            val h = mm(69f)
+            val axisW = mm(10f)
+            val labelH = mm(4f)
+            val graphX = x + axisW + mm(1f)
+            val graphY = y + mm(1f)
+            val graphW = w - mm(1f)
+            val graphH = h - mm(3f) - labelH
+
+            val values = points.flatMap { listOfNotNull(it.problemTemp, it.referenceTemp) }
+            if (values.isEmpty()) return
+            val maxVal = max(1.0, kotlin.math.ceil(values.maxOrNull() ?: 1.0))
+            val yDivs = 10
+
+            canvas.drawRect(RectF(x + mm(1f), y + mm(1f), x + w + mm(1f), y + graphH + mm(1f)), borderColor)
+
+            for (i in 0..yDivs) {
+                val yy = graphY + (graphH / yDivs) * i
+                canvas.drawLine(graphX, yy, graphX + graphW, yy, gridPaint)
+                val label = ((maxVal / yDivs) * (yDivs - i)).toInt().toString()
+                canvas.drawText(label, x + mm(2f), yy + mm(1f), textSmall)
+            }
+
+            val xCount = points.size
+            val xStep = if (xCount <= 1) graphW else graphW / (xCount - 1)
+            for (i in 0 until xCount) {
+                val xx = graphX + xStep * i
+                canvas.drawLine(xx, graphY, xx, graphY + graphH, gridPaint)
+            }
+
+            fun yFor(value: Double?): Float {
+                val v = value ?: 0.0
+                val p = (v / maxVal).coerceIn(0.0, 1.0)
+                return graphY + graphH - (p * graphH).toFloat()
+            }
+
+            fun drawSeries(series: List<Double?>, linePaint: Paint) {
+                if (series.isEmpty()) return
+                var prevX = graphX
+                var prevY = yFor(series.firstOrNull())
+                series.forEachIndexed { idx, value ->
+                    val xx = graphX + xStep * idx
+                    val yy = yFor(value)
+                    if (idx > 0) {
+                        canvas.drawLine(prevX, prevY, xx, yy, linePaint)
+                    }
+                    canvas.drawCircle(xx, yy, mm(1f), linePaint)
+                    canvas.drawCircle(xx, yy, mm(0.6f), pointFill)
+                    prevX = xx
+                    prevY = yy
+                }
+            }
+
+            drawSeries(points.map { it.problemTemp }, redLine)
+            drawSeries(points.map { it.referenceTemp }, tealLine)
+
+            val legendY = y - mm(3f)
+            canvas.drawLine(graphX + mm(2f), legendY, graphX + mm(8f), legendY, redLine)
+            canvas.drawText("Problema", graphX + mm(9f), legendY + mm(1f), textSmall)
+            canvas.drawLine(graphX + mm(26f), legendY, graphX + mm(32f), legendY, tealLine)
+            canvas.drawText("Referencia", graphX + mm(33f), legendY + mm(1f), textSmall)
+            canvas.drawText("C", x + mm(2f), legendY + mm(1f), textSmall)
+
+            points.forEachIndexed { idx, point ->
+                val xx = graphX + xStep * idx
+                val label = point.label
+                val tw = textSmall.measureText(label)
+                val lx = when (idx) {
+                    0 -> xx
+                    xCount - 1 -> xx - tw
+                    else -> xx - (tw / 2f)
+                }
+                canvas.drawText(label, lx, graphY + graphH + mm(3.5f), textSmall)
+            }
+        }
+
         fun drawVisualNarrative(canvas: Canvas, pageData: ProblemReportPageData) {
             val lineH = mm(4f)
             var y = mm(69f)
@@ -418,6 +526,7 @@ class ProblemasPdfGenerator {
                     time = pageData.photoFileTime
                 )
             } else {
+                drawHistoryGraph(canvas, pageData)
                 drawThermalBlocks(canvas, pageData)
                 drawImageBox(
                     canvas = canvas,

@@ -150,6 +150,27 @@ interface ProblemaDao {
         idInspeccion: String,
         idTipoInspeccion: String
     ): String?
+
+    @Query(
+        """
+        SELECT 
+            p.Problem_Temperature AS problemTemperature,
+            p.Reference_Temperature AS referenceTemperature,
+            p.Fecha_Creacion AS fechaCreacion,
+            i.No_Inspeccion AS noInspeccion
+        FROM problemas p
+        LEFT JOIN inspecciones i ON i.Id_Inspeccion = p.Id_Inspeccion
+        WHERE p.Id_Ubicacion = :ubicacionId
+          AND p.Id_Tipo_Inspeccion = :tipoInspeccionId
+          AND p.Es_Cronico = 'SI'
+          AND p.Estatus = 'Activo'
+        ORDER BY i.No_Inspeccion DESC
+        """
+    )
+    suspend fun getGraphHistoryFor(
+        ubicacionId: String,
+        tipoInspeccionId: String
+    ): List<ProblemGraphHistoryRow>
 }
 
 data class VisualProblemHistoryRow(
@@ -158,4 +179,11 @@ data class VisualProblemHistoryRow(
     val fecha: String?,
     val severidad: String?,
     val comentario: String?
+)
+
+data class ProblemGraphHistoryRow(
+    val problemTemperature: Double?,
+    val referenceTemperature: Double?,
+    val fechaCreacion: String?,
+    val noInspeccion: Int?
 )

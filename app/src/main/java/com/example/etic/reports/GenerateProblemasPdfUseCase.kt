@@ -6,6 +6,7 @@ import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.documentfile.provider.DocumentFile
 import com.example.etic.data.local.DbProvider
+import com.example.etic.reports.ProblemGraphPoint
 import com.example.etic.reports.pdf.ProblemasPdfGenerator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -92,6 +93,17 @@ class GenerateProblemasPdfUseCase(
                 return runCatching {
                     LocalDate.parse(raw).format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
                 }.getOrDefault(raw)
+            }
+
+            fun graphDateLabel(rawValue: String?): String {
+                val normalized = rawValue?.replace("T", " ")?.trim().orEmpty()
+                if (normalized.isBlank()) return ""
+                val datePart = normalized.take(10)
+                return runCatching {
+                    LocalDate.parse(datePart).format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+                }.getOrElse {
+                    if (normalized.length >= 10) normalized.substring(normalized.length - 10) else normalized
+                }
             }
 
             val fechaAnteriorRaw = runCatching {
@@ -214,6 +226,38 @@ class GenerateProblemasPdfUseCase(
                     problem.hazardType?.let { fallaById[it]?.falla }
                 ).firstOrNull { !it.isNullOrBlank() }.orEmpty()
 
+                val graphPoints = runCatching {
+                    val ubId = problem.idUbicacion
+                    val tipoId = problem.idTipoInspeccion
+                    if (ubId.isNullOrBlank() || tipoId.isNullOrBlank()) {
+                        emptyList()
+                    } else {
+                        val historial = problemaDao
+                            .getGraphHistoryFor(ubId, tipoId)
+                            .sortedBy { it.noInspeccion ?: Int.MIN_VALUE }
+
+                        val map = linkedMapOf<String, Pair<Double?, Double?>>()
+                        historial.forEach { row ->
+                            val label = graphDateLabel(row.fechaCreacion)
+                            if (label.isNotBlank()) {
+                                map[label] = row.problemTemperature to row.referenceTemperature
+                            }
+                        }
+                        val currentLabel = graphDateLabel(problem.fechaCreacion)
+                        if (currentLabel.isNotBlank()) {
+                            map[currentLabel] = problem.problemTemperature to problem.referenceTemperature
+                        }
+
+                        map.entries.map { (label, values) ->
+                            ProblemGraphPoint(
+                                label = label,
+                                problemTemp = values.first,
+                                referenceTemp = values.second
+                            )
+                        }
+                    }
+                }.getOrDefault(emptyList())
+
                 val ajusteViento = calcAjusteViento(
                     problemTemp = problem.problemTemperature,
                     ambientTemp = problem.tempAmbient,
@@ -273,7 +317,8 @@ class GenerateProblemasPdfUseCase(
                     photoFileDate = problem.photoFileDate.orEmpty(),
                     photoFileTime = problem.photoFileTime.orEmpty(),
                     irBitmap = findImage(imageFolder, problem.irFile),
-                    photoBitmap = findImage(imageFolder, problem.photoFile)
+                    photoBitmap = findImage(imageFolder, problem.photoFile),
+                    graphPoints = graphPoints
                 )
             }
 

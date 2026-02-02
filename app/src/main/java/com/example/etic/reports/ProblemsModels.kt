@@ -53,7 +53,14 @@ data class ProblemReportPageData(
     val photoFileDate: String,
     val photoFileTime: String,
     val irBitmap: Bitmap?,
-    val photoBitmap: Bitmap?
+    val photoBitmap: Bitmap?,
+    val graphPoints: List<ProblemGraphPoint> = emptyList()
+)
+
+data class ProblemGraphPoint(
+    val label: String,
+    val problemTemp: Double?,
+    val referenceTemp: Double?
 )
 
 object ProblemTypeIds {
