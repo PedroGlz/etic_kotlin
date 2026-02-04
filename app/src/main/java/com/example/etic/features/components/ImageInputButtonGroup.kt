@@ -1,14 +1,19 @@
-package com.example.etic.features.components
+﻿package com.example.etic.features.components
 
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
@@ -21,7 +26,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalMinimumInteractiveComponentEnforcement
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.Alignment
@@ -31,11 +35,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-/**
- * Grupo estándar de entrada para imágenes utilizado en baseline y problemas.
- * Estilo tipo input-group:
- *  [TextField] [↑/↓ (vertical)] [...] [folder] [camera]
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ImageInputButtonGroup(
@@ -52,77 +51,75 @@ fun ImageInputButtonGroup(
     onFolderClick: (() -> Unit)? = null,
     onCameraClick: (() -> Unit)? = null
 ) {
-    // Altura base del TextField
-    val textFieldHeight = 56.dp  // estándar aproximado de Material3
+    val fieldHeight = 38.dp
+    val fieldRadius = 4.dp
+    val fieldPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp)
 
-    // Para que ↑ y ↓ juntos midan lo mismo que el TextField:
-    val arrowsSpacing = 0.dp   // SIN ESPACIO ENTRE ↑ Y ↓
-    val arrowButtonSize = textFieldHeight / 2   // 2 botones = altura total
+    val buttonHeight = 42.dp
+    val arrowButtonSize = buttonHeight / 2
+    val dotsButtonWidth = 34.dp
+    val iconSize = 16.dp
 
-    // Otros tamaños
-    val smallIconSize = 16.dp
-    val dotsButtonWidth = 32.dp
-
-    // Colores botones
-    val arrowBgColor: Color = MaterialTheme.colorScheme.primary
-    val arrowContentColor: Color = MaterialTheme.colorScheme.onPrimary
-
-    val dotsBgColor: Color = MaterialTheme.colorScheme.tertiary
-    val dotsContentColor: Color = MaterialTheme.colorScheme.onTertiary
-
-    val folderBgColor: Color = MaterialTheme.colorScheme.secondary
-    val folderContentColor: Color = MaterialTheme.colorScheme.onSecondary
-
-    val cameraBgColor: Color = MaterialTheme.colorScheme.error
-    val cameraContentColor: Color = MaterialTheme.colorScheme.onError
+    val arrowBgColor: Color = MaterialTheme.colorScheme.surfaceVariant
+    val arrowContentColor: Color = MaterialTheme.colorScheme.onSurfaceVariant
+    val dotsBgColor: Color = MaterialTheme.colorScheme.primaryContainer
+    val dotsContentColor: Color = MaterialTheme.colorScheme.onPrimaryContainer
+    val folderBgColor: Color = MaterialTheme.colorScheme.secondaryContainer
+    val folderContentColor: Color = MaterialTheme.colorScheme.onSecondaryContainer
+    val cameraBgColor: Color = MaterialTheme.colorScheme.primary
+    val cameraContentColor: Color = MaterialTheme.colorScheme.onPrimary
 
     Row(
         modifier = modifier,
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(0.dp)  // pegado todo
+        verticalAlignment = Alignment.Bottom,
+        horizontalArrangement = Arrangement.spacedBy(0.dp)
     ) {
-        // ------------------ TEXTFIELD ------------------
-        TextField(
-            value = value,
-            onValueChange = onValueChange,
-            enabled = enabled,
+        Column(
             modifier = Modifier
                 .weight(1f)
-                .defaultMinSize(minWidth = textFieldMinWidth)
-                .height(textFieldHeight), // mismo alto que el grupo de botones
-            label = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(label, fontSize = 12.sp)
-                    if (isRequired) {
-                        Text(" *", color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
-                    }
-                }
-            },
-            singleLine = true
-        )
-
-        // Para hacer botones compactos (sin min 48dp)
-        CompositionLocalProvider(
-            LocalMinimumInteractiveComponentEnforcement provides false
+                .widthIn(min = textFieldMinWidth)
         ) {
-            // ------------------ FLECHAS ↑ ↓ (MISMO COLOR, MISMO ALTO TOTAL) ------------------
-            Column(
-                verticalArrangement = Arrangement.spacedBy(0.dp),   // SIN ESPACIO
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.height(textFieldHeight)         // MISMO ALTO QUE EL TEXTFIELD
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(label, fontSize = 11.sp)
+                if (isRequired) {
+                    Text(" *", color = MaterialTheme.colorScheme.error, fontSize = 11.sp)
+                }
+            }
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(fieldHeight)
+                    .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(fieldRadius))
+                    .padding(fieldPadding),
+                contentAlignment = Alignment.CenterStart
             ) {
-            SmallSquareButton(
+                BasicTextField(
+                    value = value,
+                    onValueChange = { if (enabled) onValueChange(it) },
+                    singleLine = true,
+                    textStyle = MaterialTheme.typography.bodySmall.copy(
+                        color = if (enabled) MaterialTheme.colorScheme.onSurface
+                        else MaterialTheme.colorScheme.onSurfaceVariant
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        }
+
+        CompositionLocalProvider(LocalMinimumInteractiveComponentEnforcement provides false) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(0.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.height(buttonHeight)
+            ) {
+                SmallSquareButton(
                     enabled = enabled && onMoveUp != null,
                     size = arrowButtonSize,
                     onClick = onMoveUp,
                     bgColor = arrowBgColor,
                     contentColor = arrowContentColor
                 ) {
-                    Icon(
-                        imageVector = Icons.Filled.KeyboardArrowUp,
-                        contentDescription = "Imagen anterior",
-                        modifier = Modifier.size(smallIconSize)
-                    )
+                    Icon(Icons.Filled.KeyboardArrowUp, contentDescription = "Imagen anterior", modifier = Modifier.size(iconSize))
                 }
 
                 SmallSquareButton(
@@ -132,75 +129,51 @@ fun ImageInputButtonGroup(
                     bgColor = arrowBgColor,
                     contentColor = arrowContentColor
                 ) {
-                    Icon(
-                        imageVector = Icons.Filled.KeyboardArrowDown,
-                        contentDescription = "Imagen siguiente",
-                        modifier = Modifier.size(smallIconSize)
-                    )
+                    Icon(Icons.Filled.KeyboardArrowDown, contentDescription = "Imagen siguiente", modifier = Modifier.size(iconSize))
                 }
             }
 
-            // ------------------ GRUPO [...] [folder] [camera] ------------------
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(0.dp)  // botones pegados entre sí
+                horizontalArrangement = Arrangement.spacedBy(0.dp)
             ) {
-                // Botón "..." – mismo alto que el TextField, color propio
                 GroupButton(
                     enabled = enabled && onDotsClick != null,
                     width = dotsButtonWidth,
-                    height = textFieldHeight,
+                    height = buttonHeight,
                     onClick = onDotsClick,
                     bgColor = dotsBgColor,
                     contentColor = dotsContentColor
                 ) {
-                    Text(
-                        "...",
-                        fontSize = 12.sp,
-                        maxLines = 1
-                    )
+                    Text("...", fontSize = 10.sp, maxLines = 1)
                 }
 
-                // Botón carpeta – cuadrado, mismo alto que el TextField
                 GroupButton(
                     enabled = enabled && onFolderClick != null,
-                    width = textFieldHeight,
-                    height = textFieldHeight,
+                    width = buttonHeight,
+                    height = buttonHeight,
                     onClick = onFolderClick,
                     bgColor = folderBgColor,
                     contentColor = folderContentColor
                 ) {
-                    Icon(
-                        Icons.Outlined.FolderOpen,
-                        contentDescription = "Abrir carpeta",
-                        modifier = Modifier.size(smallIconSize)
-                    )
+                    Icon(Icons.Outlined.FolderOpen, contentDescription = "Abrir carpeta", modifier = Modifier.size(iconSize))
                 }
 
-                // Botón cámara – cuadrado, mismo alto que el TextField
                 GroupButton(
                     enabled = enabled && onCameraClick != null,
-                    width = textFieldHeight,
-                    height = textFieldHeight,
+                    width = buttonHeight,
+                    height = buttonHeight,
                     onClick = onCameraClick,
                     bgColor = cameraBgColor,
                     contentColor = cameraContentColor
                 ) {
-                    Icon(
-                        Icons.Outlined.PhotoCamera,
-                        contentDescription = "Abrir cámara",
-                        modifier = Modifier.size(smallIconSize)
-                    )
+                    Icon(Icons.Outlined.PhotoCamera, contentDescription = "Abrir camara", modifier = Modifier.size(iconSize))
                 }
             }
         }
     }
 }
 
-/**
- * Botón pequeño cuadrado (para ↑ / ↓).
- * Dos de estos con spacing = arrowsSpacing suman la altura del TextField.
- */
 @Composable
 private fun SmallSquareButton(
     enabled: Boolean,
@@ -217,7 +190,7 @@ private fun SmallSquareButton(
             .width(size)
             .height(size),
         contentPadding = PaddingValues(0.dp),
-        shape = RoundedCornerShape(0.dp), // esquinas cuadradas
+        shape = RoundedCornerShape(0.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = bgColor,
             contentColor = contentColor,
@@ -229,10 +202,6 @@ private fun SmallSquareButton(
     }
 }
 
-/**
- * Botón rectangular de grupo para [...], carpeta y cámara,
- * con el mismo alto que el TextField y sin bordes redondos.
- */
 @Composable
 private fun GroupButton(
     enabled: Boolean,
@@ -250,7 +219,7 @@ private fun GroupButton(
             .width(width)
             .height(height),
         contentPadding = PaddingValues(0.dp),
-        shape = RoundedCornerShape(0.dp), // esquinas cuadradas
+        shape = RoundedCornerShape(0.dp),
         colors = ButtonDefaults.buttonColors(
             containerColor = bgColor,
             contentColor = contentColor,
