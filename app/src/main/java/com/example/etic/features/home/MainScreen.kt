@@ -559,7 +559,6 @@ fun MainScreen(
                             section = HomeSection.Inspection
                             scope.launch { drawerState.close() }
                         },
-                        modifier = Modifier.padding(vertical = 4.dp),
                         icon = { Icon(Icons.Filled.ChecklistRtl, contentDescription = null) },
                         colors = drawerItemColors
                     )
@@ -571,7 +570,6 @@ fun MainScreen(
                             fontsExpanded = false
                             scope.launch { drawerState.close() }
                         },
-                        modifier = Modifier.padding(vertical = 4.dp),
                         icon = { Icon(Icons.Filled.Image, contentDescription = null) },
                         colors = drawerItemColors
                     )
@@ -598,7 +596,6 @@ fun MainScreen(
                             section = HomeSection.FolderImages
                             scope.launch { drawerState.close() }
                         },
-                        modifier = Modifier.padding(vertical = 4.dp),
                         icon = { Icon(Icons.Outlined.Folder, contentDescription = null) },
                         colors = drawerItemColors
                     )
@@ -610,9 +607,13 @@ fun MainScreen(
                             section = HomeSection.FolderReports
                             scope.launch { drawerState.close() }
                         },
-                        modifier = Modifier.padding(vertical = 4.dp),
                         icon = { Icon(Icons.Outlined.Folder, contentDescription = null) },
                         colors = drawerItemColors
+                    )
+
+                    HorizontalDivider(
+                        thickness = androidx.compose.material3.DividerDefaults.Thickness,
+                        color = Color.White.copy(alpha = 0.15f)
                     )
 
                     // Opción Fuentes con sub-opciones
@@ -620,7 +621,6 @@ fun MainScreen(
                         label = { Text("Fuentes") },
                         selected = false,
                         onClick = { fontsExpanded = !fontsExpanded },
-                        modifier = Modifier.padding(vertical = 4.dp),
                         icon = {
                             Icon(
                                 imageVector = if (fontsExpanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
@@ -671,7 +671,6 @@ fun MainScreen(
                         )
                     }
 
-                    Spacer(modifier = Modifier.height(8.dp))
                     HorizontalDivider(
                         thickness = androidx.compose.material3.DividerDefaults.Thickness,
                         color = Color.White.copy(alpha = 0.15f)
