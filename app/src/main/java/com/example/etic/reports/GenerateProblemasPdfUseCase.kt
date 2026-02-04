@@ -50,7 +50,6 @@ class GenerateProblemasPdfUseCase(
             val selectedSet = selectedProblemaIds.toSet()
             val problemas = problemaDao.getByInspeccionActivos(inspeccionId)
                 .asSequence()
-                .filter { it.estatusProblema.equals("Abierto", ignoreCase = true) }
                 .filter { selectedSet.isEmpty() || it.idProblema in selectedSet }
                 .sortedWith(
                     compareBy(
@@ -243,17 +242,31 @@ class GenerateProblemasPdfUseCase(
                                 map[label] = row.problemTemperature to row.referenceTemperature
                             }
                         }
-                        val currentLabel = graphDateLabel(problem.fechaCreacion)
+                        val currentLabel = graphDateLabel(problem.fechaCreacion).ifBlank { now }
                         if (currentLabel.isNotBlank()) {
                             map[currentLabel] = problem.problemTemperature to problem.referenceTemperature
                         }
 
-                        map.entries.map { (label, values) ->
+                        val built = map.entries.map { (label, values) ->
                             ProblemGraphPoint(
                                 label = label,
                                 problemTemp = values.first,
                                 referenceTemp = values.second
                             )
+                        }
+
+                        if (built.isNotEmpty()) {
+                            built
+                        } else if (problem.problemTemperature != null || problem.referenceTemperature != null) {
+                            listOf(
+                                ProblemGraphPoint(
+                                    label = if (now.isNotBlank()) now else "Actual",
+                                    problemTemp = problem.problemTemperature,
+                                    referenceTemp = problem.referenceTemperature
+                                )
+                            )
+                        } else {
+                            emptyList()
                         }
                     }
                 }.getOrDefault(emptyList())

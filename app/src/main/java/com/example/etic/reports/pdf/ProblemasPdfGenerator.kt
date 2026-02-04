@@ -337,29 +337,40 @@ class ProblemasPdfGenerator {
                 color = android.graphics.Color.rgb(243, 255, 0)
             }
 
-            val x = mm(75f)
-            val y = mm(33f)
-            val w = mm(105f)
-            val h = mm(69f)
-            val axisW = mm(10f)
-            val labelH = mm(4f)
-            val graphX = x + axisW + mm(1f)
-            val graphY = y + mm(1f)
-            val graphW = w - mm(1f)
-            val graphH = h - mm(3f) - labelH
+            // Replica de docs/Inventarios.php:
+            // SetXY(75,33) + LineGraph(105,69,...)
+            val baseX = mm(75f)
+            val baseY = mm(33f)
+            val fullW = mm(105f)
+            val fullH = mm(69f)
+            val ordinateW = mm(10f)
+            val margin = mm(1f)
+            val graphValH = mm(4f)
+            val graphW = fullW - ordinateW
+            val graphH = fullH - (3f * margin) - graphValH
+            val graphX = baseX + ordinateW + margin
+            val graphY = baseY + margin
+            val graphValY = baseY + (2f * margin) + graphH
 
             val values = points.flatMap { listOfNotNull(it.problemTemp, it.referenceTemp) }
             if (values.isEmpty()) return
             val maxVal = max(1.0, kotlin.math.ceil(values.maxOrNull() ?: 1.0))
             val yDivs = 10
 
-            canvas.drawRect(RectF(x + mm(1f), y + mm(1f), x + w + mm(1f), y + graphH + mm(1f)), borderColor)
+            // Borde de gráfica (equivalente a opción dB).
+            canvas.drawRect(
+                RectF(graphX, graphY, graphX + graphW, graphY + graphH),
+                borderColor
+            )
+
+            // Etiqueta °C arriba-izquierda (como kB en PHP).
+            canvas.drawText("°C", graphX - mm(8f), baseY - mm(1f), textSmall)
 
             for (i in 0..yDivs) {
                 val yy = graphY + (graphH / yDivs) * i
                 canvas.drawLine(graphX, yy, graphX + graphW, yy, gridPaint)
                 val label = ((maxVal / yDivs) * (yDivs - i)).toInt().toString()
-                canvas.drawText(label, x + mm(2f), yy + mm(1f), textSmall)
+                canvas.drawText(label, graphX - mm(7f), yy + mm(1f), textSmall)
             }
 
             val xCount = points.size
@@ -395,12 +406,11 @@ class ProblemasPdfGenerator {
             drawSeries(points.map { it.problemTemp }, redLine)
             drawSeries(points.map { it.referenceTemp }, tealLine)
 
-            val legendY = y - mm(3f)
+            val legendY = baseY - mm(3f)
             canvas.drawLine(graphX + mm(2f), legendY, graphX + mm(8f), legendY, redLine)
             canvas.drawText("Problema", graphX + mm(9f), legendY + mm(1f), textSmall)
             canvas.drawLine(graphX + mm(26f), legendY, graphX + mm(32f), legendY, tealLine)
             canvas.drawText("Referencia", graphX + mm(33f), legendY + mm(1f), textSmall)
-            canvas.drawText("C", x + mm(2f), legendY + mm(1f), textSmall)
 
             points.forEachIndexed { idx, point ->
                 val xx = graphX + xStep * idx
@@ -411,7 +421,7 @@ class ProblemasPdfGenerator {
                     xCount - 1 -> xx - tw
                     else -> xx - (tw / 2f)
                 }
-                canvas.drawText(label, lx, graphY + graphH + mm(3.5f), textSmall)
+                canvas.drawText(label, lx, graphValY + mm(3.5f), textSmall)
             }
         }
 

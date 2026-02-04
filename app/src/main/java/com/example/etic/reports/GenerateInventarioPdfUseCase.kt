@@ -2,12 +2,14 @@ package com.example.etic.reports
 
 import android.content.Context
 import android.graphics.BitmapFactory
+import com.example.etic.data.local.entities.Problema
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import com.example.etic.data.local.DbProvider
 import com.example.etic.reports.pdf.InventarioPdfGenerator
 import com.example.etic.reports.InventoryHeaderData
 import com.example.etic.reports.InventoryReportRow
+import com.example.etic.reports.ProblemTypeIds
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -50,6 +52,30 @@ class GenerateInventarioPdfUseCase(
             val detByUb = dets.mapNotNull { d -> d.idUbicacion?.let { it to d } }.toMap()
             val prioridadById = tipoPrioridadDao.getAll().associateBy { it.idTipoPrioridad }
             val estatusById = estatusDetDao.getAll().associateBy { it.idStatusInspeccionDet }
+            val problemasActivos = problemaDao.getByInspeccionActivos(inspeccionId)
+
+            fun formatProblema(p: Problema): String {
+                val prefijo = when (p.idTipoInspeccion) {
+                    ProblemTypeIds.ELECTRICO, ProblemTypeIds.ELECTRICO_2 -> "E"
+                    ProblemTypeIds.VISUAL -> "V"
+                    else -> "M"
+                }
+                val numero = p.numeroProblema?.toString().orEmpty()
+                return if (numero.isBlank()) prefijo else "$prefijo $numero"
+            }
+
+            val problemasPorUbicacion: Map<String, String> = problemasActivos
+                .asSequence()
+                .filter { !it.idUbicacion.isNullOrBlank() }
+                .groupBy { it.idUbicacion!! }
+                .mapValues { (_, lista) ->
+                    lista.sortedWith(
+                        compareBy<Problema>(
+                            { it.idTipoInspeccion ?: "ZZZ" },
+                            { it.numeroProblema ?: Int.MAX_VALUE }
+                        )
+                    ).joinToString(",") { formatProblema(it) }
+                }
 
             val rows = ubicaciones.map { u ->
                 val det = detByUb[u.idUbicacion]
@@ -59,11 +85,7 @@ class GenerateInventarioPdfUseCase(
                 val prioridad = u.idTipoPrioridad
                     ?.let { prioridadById[it]?.tipoPrioridad }
                     ?: ""
-                val problemas = if (!u.idUbicacion.isNullOrBlank()) {
-                    runCatching {
-                        problemaDao.countActivosByInspeccionAndUbicacion(inspeccionId, u.idUbicacion)
-                    }.getOrDefault(0).toString()
-                } else ""
+                val problemas = u.idUbicacion?.let { problemasPorUbicacion[it].orEmpty() }.orEmpty()
                 InventoryReportRow(
                     estatus = estatus,
                     prioridad = prioridad,
