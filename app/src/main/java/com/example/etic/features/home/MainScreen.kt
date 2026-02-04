@@ -95,6 +95,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.example.etic.ui.inspection.ReportAction
 import com.example.etic.ui.inspection.ReportsMenuSection
+import com.example.etic.reports.GenerateBaselinePdfUseCase
 import com.example.etic.reports.GenerateInventarioPdfUseCase
 import com.example.etic.reports.GenerateProblemasPdfUseCase
 import com.example.etic.reports.ReportesFolderProvider
@@ -252,6 +253,59 @@ fun MainScreen(
         }
     }
 
+    fun generateBaselinePdf(insp: CurrentInspectionInfo) {
+        if (isGeneratingReport) return
+        val noInspeccion = insp.noInspeccion?.toString()
+        val inspeccionId = insp.idInspeccion
+        if (noInspeccion.isNullOrBlank() || inspeccionId.isNullOrBlank()) {
+            Toast.makeText(appContext, "Inspeccion invalida.", Toast.LENGTH_SHORT).show()
+            return
+        }
+        scope.launch {
+            isGeneratingReport = true
+            drawerState.close()
+            val folderProvider = ReportesFolderProvider(appContext) { inspectionNumber ->
+                val rootUri = rootTreeUri ?: return@ReportesFolderProvider null
+                val reportsDir = safManager.getReportsDir(appContext, rootUri, inspectionNumber)
+                reportsDir?.uri
+            }
+            val useCase = GenerateBaselinePdfUseCase(
+                context = appContext,
+                folderProvider = folderProvider,
+                getInspeccionImagenesTreeUri = { inspectionNumber ->
+                    val rootUri = rootTreeUri
+                    if (rootUri == null) {
+                        null
+                    } else {
+                        safManager.getImagesDir(appContext, rootUri, inspectionNumber)?.uri
+                    }
+                }
+            )
+            try {
+                val result = useCase.run(
+                    noInspeccion = noInspeccion,
+                    inspeccionId = inspeccionId,
+                    currentUserId = currentUserSnapshot?.idUsuario,
+                    currentUserName = currentUserSnapshot?.nombre ?: currentUserSnapshot?.usuario
+                )
+                result.fold(
+                    onSuccess = { uriString ->
+                        Toast.makeText(appContext, "PDF generado: $uriString", Toast.LENGTH_LONG).show()
+                    },
+                    onFailure = { e ->
+                        Toast.makeText(
+                            appContext,
+                            "Error al generar PDF: ${e.message ?: "desconocido"}",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                )
+            } finally {
+                isGeneratingReport = false
+            }
+        }
+    }
+
     val reportHandler: (ReportAction) -> Unit = { action ->
         when (action) {
             ReportAction.InventarioPdf -> {
@@ -280,6 +334,14 @@ fun MainScreen(
                     Toast.makeText(appContext, "No hay inspeccion activa.", Toast.LENGTH_SHORT).show()
                 } else {
                     generateProblemasPdf(insp)
+                }
+            }
+            ReportAction.BaselinePdf -> {
+                val insp = currentInspectionSnapshot
+                if (insp == null) {
+                    Toast.makeText(appContext, "No hay inspeccion activa.", Toast.LENGTH_SHORT).show()
+                } else {
+                    generateBaselinePdf(insp)
                 }
             }
         }

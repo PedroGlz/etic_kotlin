@@ -14,6 +14,7 @@ import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.Inventory2
+import androidx.compose.material.icons.outlined.Timeline
 import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -74,6 +75,16 @@ fun ReportsMenuSection(
                     Icon(Icons.Outlined.WarningAmber, contentDescription = null)
                     Spacer(Modifier.width(10.dp))
                     Text("Reporte de Problemas", modifier = Modifier.weight(1f))
+                }
+                TextButton(
+                    enabled = enabled,
+                    onClick = { onReport(ReportAction.BaselinePdf) },
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Outlined.Timeline, contentDescription = null)
+                    Spacer(Modifier.width(10.dp))
+                    Text("Reporte de Baseline", modifier = Modifier.weight(1f))
                 }
             }
         }
