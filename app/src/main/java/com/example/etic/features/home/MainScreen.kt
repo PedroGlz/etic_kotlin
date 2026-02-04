@@ -95,8 +95,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.example.etic.ui.inspection.ReportAction
 import com.example.etic.ui.inspection.ReportsMenuSection
+import com.example.etic.reports.GenerateAnomaliasChartPdfUseCase
 import com.example.etic.reports.GenerateBaselinePdfUseCase
 import com.example.etic.reports.GenerateInventarioPdfUseCase
+import com.example.etic.reports.GenerateProblemListPdfUseCase
 import com.example.etic.reports.GenerateProblemasPdfUseCase
 import com.example.etic.reports.ReportesFolderProvider
 import com.example.etic.data.local.queries.CurrentInspectionInfo
@@ -306,6 +308,92 @@ fun MainScreen(
         }
     }
 
+    fun generateListaProblemasPdf(
+        insp: CurrentInspectionInfo,
+        tipo: GenerateProblemListPdfUseCase.ProblemListType
+    ) {
+        if (isGeneratingReport) return
+        val noInspeccion = insp.noInspeccion?.toString()
+        val inspeccionId = insp.idInspeccion
+        if (noInspeccion.isNullOrBlank() || inspeccionId.isNullOrBlank()) {
+            Toast.makeText(appContext, "Inspeccion invalida.", Toast.LENGTH_SHORT).show()
+            return
+        }
+        scope.launch {
+            isGeneratingReport = true
+            drawerState.close()
+            val folderProvider = ReportesFolderProvider(appContext) { inspectionNumber ->
+                val rootUri = rootTreeUri ?: return@ReportesFolderProvider null
+                safManager.getReportsDir(appContext, rootUri, inspectionNumber)?.uri
+            }
+            val useCase = GenerateProblemListPdfUseCase(appContext, folderProvider)
+            try {
+                val result = useCase.run(
+                    noInspeccion = noInspeccion,
+                    inspeccionId = inspeccionId,
+                    listType = tipo,
+                    currentUserId = currentUserSnapshot?.idUsuario,
+                    currentUserName = currentUserSnapshot?.nombre ?: currentUserSnapshot?.usuario
+                )
+                result.fold(
+                    onSuccess = { uriString ->
+                        Toast.makeText(appContext, "PDF generado: $uriString", Toast.LENGTH_LONG).show()
+                    },
+                    onFailure = { e ->
+                        Toast.makeText(
+                            appContext,
+                            "Error al generar PDF: ${e.message ?: "desconocido"}",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                )
+            } finally {
+                isGeneratingReport = false
+            }
+        }
+    }
+
+    fun generateGraficaAnomaliasPdf(insp: CurrentInspectionInfo) {
+        if (isGeneratingReport) return
+        val noInspeccion = insp.noInspeccion?.toString()
+        val inspeccionId = insp.idInspeccion
+        if (noInspeccion.isNullOrBlank() || inspeccionId.isNullOrBlank()) {
+            Toast.makeText(appContext, "Inspeccion invalida.", Toast.LENGTH_SHORT).show()
+            return
+        }
+        scope.launch {
+            isGeneratingReport = true
+            drawerState.close()
+            val folderProvider = ReportesFolderProvider(appContext) { inspectionNumber ->
+                val rootUri = rootTreeUri ?: return@ReportesFolderProvider null
+                safManager.getReportsDir(appContext, rootUri, inspectionNumber)?.uri
+            }
+            val useCase = GenerateAnomaliasChartPdfUseCase(appContext, folderProvider)
+            try {
+                val result = useCase.run(
+                    noInspeccion = noInspeccion,
+                    inspeccionId = inspeccionId,
+                    currentUserId = currentUserSnapshot?.idUsuario,
+                    currentUserName = currentUserSnapshot?.nombre ?: currentUserSnapshot?.usuario
+                )
+                result.fold(
+                    onSuccess = { uriString ->
+                        Toast.makeText(appContext, "PDF generado: $uriString", Toast.LENGTH_LONG).show()
+                    },
+                    onFailure = { e ->
+                        Toast.makeText(
+                            appContext,
+                            "Error al generar PDF: ${e.message ?: "desconocido"}",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                )
+            } finally {
+                isGeneratingReport = false
+            }
+        }
+    }
+
     val reportHandler: (ReportAction) -> Unit = { action ->
         when (action) {
             ReportAction.InventarioPdf -> {
@@ -342,6 +430,30 @@ fun MainScreen(
                     Toast.makeText(appContext, "No hay inspeccion activa.", Toast.LENGTH_SHORT).show()
                 } else {
                     generateBaselinePdf(insp)
+                }
+            }
+            ReportAction.ListaProblemasAbiertosPdf -> {
+                val insp = currentInspectionSnapshot
+                if (insp == null) {
+                    Toast.makeText(appContext, "No hay inspeccion activa.", Toast.LENGTH_SHORT).show()
+                } else {
+                    generateListaProblemasPdf(insp, GenerateProblemListPdfUseCase.ProblemListType.ABIERTOS)
+                }
+            }
+            ReportAction.ListaProblemasCerradosPdf -> {
+                val insp = currentInspectionSnapshot
+                if (insp == null) {
+                    Toast.makeText(appContext, "No hay inspeccion activa.", Toast.LENGTH_SHORT).show()
+                } else {
+                    generateListaProblemasPdf(insp, GenerateProblemListPdfUseCase.ProblemListType.CERRADOS)
+                }
+            }
+            ReportAction.GraficaAnomaliasPdf -> {
+                val insp = currentInspectionSnapshot
+                if (insp == null) {
+                    Toast.makeText(appContext, "No hay inspeccion activa.", Toast.LENGTH_SHORT).show()
+                } else {
+                    generateGraficaAnomaliasPdf(insp)
                 }
             }
         }
