@@ -26,7 +26,7 @@ import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Menu
-import androidx.compose.material.icons.filled.InsertDriveFile
+import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -565,19 +565,33 @@ fun MainScreen(
                         colors = drawerItemColors
                     )
                     NavigationDrawerItem(
-                        label = { Text("Reportes") },
-                        selected = section == HomeSection.Reports,
+                        label = { Text("Inicializar imágenes") },
+                        selected = false,
                         onClick = {
-                            section = HomeSection.Reports
+                            showInitImagesDialog = true
+                            fontsExpanded = false
                             scope.launch { drawerState.close() }
                         },
                         modifier = Modifier.padding(vertical = 4.dp),
+                        icon = { Icon(Icons.Filled.Image, contentDescription = null) },
                         colors = drawerItemColors
                     )
+
+                    HorizontalDivider(
+                        thickness = androidx.compose.material3.DividerDefaults.Thickness,
+                        color = Color.White.copy(alpha = 0.15f)
+                    )
+
                     ReportsMenuSection(
                         onReport = { action -> (onReportAction ?: reportHandler)(action) },
                         enabled = !isGeneratingReport
                     )
+
+                    HorizontalDivider(
+                        thickness = androidx.compose.material3.DividerDefaults.Thickness,
+                        color = Color.White.copy(alpha = 0.15f)
+                    )
+
                     NavigationDrawerItem(
                         label = { Text("Carpeta Imagenes") },
                         selected = section == HomeSection.FolderImages,
@@ -586,20 +600,27 @@ fun MainScreen(
                             scope.launch { drawerState.close() }
                         },
                         modifier = Modifier.padding(vertical = 4.dp),
-                        icon = { Icon(Icons.Filled.Image, contentDescription = null) },
+                        icon = { Icon(Icons.Outlined.Folder, contentDescription = null) },
                         colors = drawerItemColors
                     )
+
                     NavigationDrawerItem(
-                        label = { Text("Carpeta Archivos") },
+                        label = { Text("Carpeta de reportes") },
                         selected = section == HomeSection.FolderReports,
                         onClick = {
                             section = HomeSection.FolderReports
                             scope.launch { drawerState.close() }
                         },
                         modifier = Modifier.padding(vertical = 4.dp),
-                        icon = { Icon(Icons.Filled.InsertDriveFile, contentDescription = null) },
+                        icon = { Icon(Icons.Outlined.Folder, contentDescription = null) },
                         colors = drawerItemColors
                     )
+
+                    HorizontalDivider(
+                        thickness = androidx.compose.material3.DividerDefaults.Thickness,
+                        color = Color.White.copy(alpha = 0.15f)
+                    )
+
                     NavigationDrawerItem(
                         label = { Text("Exportar DB") },
                         selected = false,
@@ -618,18 +639,6 @@ fun MainScreen(
                             }
                         },
                         modifier = Modifier.padding(vertical = 4.dp),
-                        colors = drawerItemColors
-                    )
-                    NavigationDrawerItem(
-                        label = { Text("Inicializar imágenes") },
-                        selected = false,
-                        onClick = {
-                            showInitImagesDialog = true
-                            fontsExpanded = false
-                            scope.launch { drawerState.close() }
-                        },
-                        modifier = Modifier.padding(vertical = 4.dp),
-                        icon = { Icon(Icons.Filled.Image, contentDescription = null) },
                         colors = drawerItemColors
                     )
 
@@ -1302,3 +1311,4 @@ private fun adjustImageSequence(current: String, delta: Int): String {
     val digits = if (parts.digits > 0) parts.digits else fallbackDigits
     return composeImageName(parts.copy(number = newNumber, digits = digits))
 }
+
