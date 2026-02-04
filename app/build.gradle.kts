@@ -44,6 +44,8 @@ android {
 }
 
 dependencies {
+    implementation("org.apache.poi:poi:5.2.5")
+    implementation("org.apache.poi:poi-ooxml:5.2.5")
     implementation("at.favre.lib:bcrypt:0.10.2")
     implementation(libs.androidx.navigation.compose)
     implementation("androidx.datastore:datastore-preferences:1.1.1")

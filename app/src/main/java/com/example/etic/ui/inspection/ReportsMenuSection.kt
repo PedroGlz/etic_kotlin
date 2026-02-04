@@ -15,6 +15,7 @@ import androidx.compose.material.icons.outlined.ExpandLess
 import androidx.compose.material.icons.outlined.ExpandMore
 import androidx.compose.material.icons.outlined.FormatListBulleted
 import androidx.compose.material.icons.outlined.Insights
+import androidx.compose.material.icons.outlined.TableView
 import androidx.compose.material.icons.outlined.Inventory2
 import androidx.compose.material.icons.outlined.Timeline
 import androidx.compose.material.icons.outlined.WarningAmber
@@ -117,6 +118,16 @@ fun ReportsMenuSection(
                     Icon(Icons.Outlined.Insights, contentDescription = null)
                     Spacer(Modifier.width(10.dp))
                     Text("Grafica de anomalias", modifier = Modifier.weight(1f))
+                }
+                TextButton(
+                    enabled = enabled,
+                    onClick = { onReport(ReportAction.ListaProblemasExcel) },
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Outlined.TableView, contentDescription = null)
+                    Spacer(Modifier.width(10.dp))
+                    Text("Excel lista de problemas", modifier = Modifier.weight(1f))
                 }
             }
         }

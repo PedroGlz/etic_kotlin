@@ -98,6 +98,7 @@ import com.example.etic.ui.inspection.ReportsMenuSection
 import com.example.etic.reports.GenerateAnomaliasChartPdfUseCase
 import com.example.etic.reports.GenerateBaselinePdfUseCase
 import com.example.etic.reports.GenerateInventarioPdfUseCase
+import com.example.etic.reports.GenerateProblemListExcelUseCase
 import com.example.etic.reports.GenerateProblemListPdfUseCase
 import com.example.etic.reports.GenerateProblemasPdfUseCase
 import com.example.etic.reports.ReportesFolderProvider
@@ -394,6 +395,45 @@ fun MainScreen(
         }
     }
 
+    fun generateListaProblemasExcel(insp: CurrentInspectionInfo) {
+        if (isGeneratingReport) return
+        val noInspeccion = insp.noInspeccion?.toString()
+        val inspeccionId = insp.idInspeccion
+        if (noInspeccion.isNullOrBlank() || inspeccionId.isNullOrBlank()) {
+            Toast.makeText(appContext, "Inspeccion invalida.", Toast.LENGTH_SHORT).show()
+            return
+        }
+        scope.launch {
+            isGeneratingReport = true
+            drawerState.close()
+            val folderProvider = ReportesFolderProvider(appContext) { inspectionNumber ->
+                val rootUri = rootTreeUri ?: return@ReportesFolderProvider null
+                safManager.getReportsDir(appContext, rootUri, inspectionNumber)?.uri
+            }
+            val useCase = GenerateProblemListExcelUseCase(appContext, folderProvider)
+            try {
+                val result = useCase.run(
+                    noInspeccion = noInspeccion,
+                    inspeccionId = inspeccionId
+                )
+                result.fold(
+                    onSuccess = { uriString ->
+                        Toast.makeText(appContext, "Excel generado: $uriString", Toast.LENGTH_LONG).show()
+                    },
+                    onFailure = { e ->
+                        Toast.makeText(
+                            appContext,
+                            "Error al generar Excel: ${e.message ?: "desconocido"}",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                )
+            } finally {
+                isGeneratingReport = false
+            }
+        }
+    }
+
     val reportHandler: (ReportAction) -> Unit = { action ->
         when (action) {
             ReportAction.InventarioPdf -> {
@@ -454,6 +494,14 @@ fun MainScreen(
                     Toast.makeText(appContext, "No hay inspeccion activa.", Toast.LENGTH_SHORT).show()
                 } else {
                     generateGraficaAnomaliasPdf(insp)
+                }
+            }
+            ReportAction.ListaProblemasExcel -> {
+                val insp = currentInspectionSnapshot
+                if (insp == null) {
+                    Toast.makeText(appContext, "No hay inspeccion activa.", Toast.LENGTH_SHORT).show()
+                } else {
+                    generateListaProblemasExcel(insp)
                 }
             }
         }

@@ -7,4 +7,5 @@ sealed interface ReportAction {
     data object ListaProblemasAbiertosPdf : ReportAction
     data object ListaProblemasCerradosPdf : ReportAction
     data object GraficaAnomaliasPdf : ReportAction
+    data object ListaProblemasExcel : ReportAction
 }
