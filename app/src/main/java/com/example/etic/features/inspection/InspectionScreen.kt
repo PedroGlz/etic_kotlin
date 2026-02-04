@@ -2342,8 +2342,12 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     cronicoEnabled = cronicoActionEnabled && !isSavingCronico,
                     cronicoChecked = editingProblemOriginal?.esCronico?.equals("SI", ignoreCase = true) == true,
                     cerradoChecked = visualProblemClosed,
-                    cerradoEnabled = editingProblemOriginal?.idInspeccion
-                        ?.equals(currentInspection?.idInspeccion, ignoreCase = true) == true,
+                    cerradoEnabled = (
+                        editingProblemOriginal?.estatusProblema?.equals("Cerrado", ignoreCase = true) != true
+                    ) || (
+                        editingProblemOriginal?.idInspeccion
+                            ?.equals(currentInspection?.idInspeccion, ignoreCase = true) == true
+                    ),
                     onCerradoChange = { visualProblemClosed = it },
                     onNavigatePrevious = if (editingProblemId != null) {
                         { navigateFromVisual(-1) }
@@ -2651,8 +2655,12 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     cronicoEnabled = cronicoActionEnabled && !isSavingCronico,
                     cronicoChecked = editingElectricProblemOriginal?.esCronico?.equals("SI", ignoreCase = true) == true,
                     cerradoChecked = electricProblemClosed,
-                    cerradoEnabled = editingElectricProblemOriginal?.idInspeccion
-                        ?.equals(currentInspection?.idInspeccion, ignoreCase = true) == true,
+                    cerradoEnabled = (
+                        editingElectricProblemOriginal?.estatusProblema?.equals("Cerrado", ignoreCase = true) != true
+                    ) || (
+                        editingElectricProblemOriginal?.idInspeccion
+                            ?.equals(currentInspection?.idInspeccion, ignoreCase = true) == true
+                    ),
                     onCerradoChange = { electricProblemClosed = it },
                     onNavigatePrevious = if (editingElectricProblemId != null) {
                         { data -> navigateFromElectric(-1, data) }
@@ -2715,8 +2723,12 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     cronicoEnabled = cronicoActionEnabled && !isSavingCronico,
                     cronicoChecked = editingMechanicalProblemOriginal?.esCronico?.equals("SI", ignoreCase = true) == true,
                     cerradoChecked = mechanicalProblemClosed,
-                    cerradoEnabled = editingMechanicalProblemOriginal?.idInspeccion
-                        ?.equals(currentInspection?.idInspeccion, ignoreCase = true) == true,
+                    cerradoEnabled = (
+                        editingMechanicalProblemOriginal?.estatusProblema?.equals("Cerrado", ignoreCase = true) != true
+                    ) || (
+                        editingMechanicalProblemOriginal?.idInspeccion
+                            ?.equals(currentInspection?.idInspeccion, ignoreCase = true) == true
+                    ),
                     onCerradoChange = { mechanicalProblemClosed = it },
                     onNavigatePrevious = if (editingMechanicalProblemId != null) {
                         { data -> navigateFromMechanical(-1, data) }
