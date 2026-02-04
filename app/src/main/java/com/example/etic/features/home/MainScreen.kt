@@ -78,7 +78,6 @@ import com.example.etic.core.current.LocalCurrentInspection
 import com.example.etic.core.current.LocalCurrentUser
 import com.example.etic.core.current.ProvideCurrentInspection
 import com.example.etic.core.current.ProvideCurrentUser
-import com.example.etic.core.export.exportRoomDbToDownloads
 import com.example.etic.core.saf.SafEticManager
 import com.example.etic.core.settings.EticPrefs
 import com.example.etic.core.settings.settingsDataStore
@@ -613,32 +612,6 @@ fun MainScreen(
                         },
                         modifier = Modifier.padding(vertical = 4.dp),
                         icon = { Icon(Icons.Outlined.Folder, contentDescription = null) },
-                        colors = drawerItemColors
-                    )
-
-                    HorizontalDivider(
-                        thickness = androidx.compose.material3.DividerDefaults.Thickness,
-                        color = Color.White.copy(alpha = 0.15f)
-                    )
-
-                    NavigationDrawerItem(
-                        label = { Text("Exportar DB") },
-                        selected = false,
-                        onClick = {
-                            scope.launch {
-                                val result = withContext(Dispatchers.IO) {
-                                    exportRoomDbToDownloads(appContext)
-                                }
-                                Toast.makeText(
-                                    appContext,
-                                    if (result.success) result.message
-                                    else "Fallo: ${result.message}",
-                                    Toast.LENGTH_LONG
-                                ).show()
-                                drawerState.close()
-                            }
-                        },
-                        modifier = Modifier.padding(vertical = 4.dp),
                         colors = drawerItemColors
                     )
 
