@@ -2,23 +2,27 @@ package com.example.etic.ui.inspection.tabs
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowLeft
 import androidx.compose.material.icons.outlined.ArrowRight
 import androidx.compose.material.icons.outlined.Image
-import androidx.compose.material.icons.outlined.PhotoCamera
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -32,7 +36,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.example.etic.features.components.ImageInputButtonGroup
 import com.example.etic.data.local.DbProvider
 import com.example.etic.data.repository.InspectionUiRepository
 import com.example.etic.core.current.LocalCurrentInspection
@@ -43,6 +50,8 @@ import com.example.etic.features.inspection.tree.Baseline
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
+import java.io.FileOutputStream
 
 @Composable
 fun BaselineTableFromDatabase(
@@ -195,14 +204,34 @@ fun BaselineTableFromDatabase(
         prefix: String
     ): String? {
         return try {
-            val dir = java.io.File(ctx.filesDir, "Imagenes").apply { mkdirs() }
+            val dir = File(ctx.filesDir, "Imagenes").apply { mkdirs() }
             val name = "$prefix-" + System.currentTimeMillis().toString() + ".jpg"
-            val file = java.io.File(dir, name)
-            java.io.FileOutputStream(file).use { out ->
+            val file = File(dir, name)
+            FileOutputStream(file).use { out ->
                 bmp.compress(Bitmap.CompressFormat.JPEG, 92, out)
             }
             name
         } catch (_: Exception) { null }
+    }
+
+    fun copyImageFromUri(
+        ctx: android.content.Context,
+        uri: Uri,
+        prefix: String
+    ): String? {
+        return try {
+            val dir = File(ctx.filesDir, "Imagenes").apply { mkdirs() }
+            val name = "$prefix-" + System.currentTimeMillis().toString() + ".jpg"
+            val file = File(dir, name)
+            ctx.contentResolver.openInputStream(uri)?.use { input ->
+                FileOutputStream(file).use { output ->
+                    input.copyTo(output, 8 * 1024)
+                }
+            } ?: return null
+            name
+        } catch (_: Exception) {
+            null
+        }
     }
 
     suspend fun persistBaselineDrafts(
@@ -270,32 +299,51 @@ fun BaselineTableFromDatabase(
 
         if (baselineToDelete != null) {
             val baseline = baselineToDelete!!
-            AlertDialog(
+            Dialog(
                 onDismissRequest = { baselineToDelete = null },
-                confirmButton = {
-                    Button(onClick = {
-                        scope.launch {
-                            val nowTs = java.time.LocalDateTime.now()
-                                .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
-                            val ok = repo.deleteBaselineAndRevertStatus(
-                                baselineId = baseline.id,
-                                currentUserId = currentUser?.idUsuario,
-                                nowTs = nowTs,
-                                statusPorVerificarId = STATUS_POR_VERIFICAR
-                            )
-                            if (ok) {
-                                baselinesCache = baselinesCache.filter { it.id != baseline.id }
-                                baselineToDelete = null
-                                onBaselineChanged()
-                            }
+                properties = DialogProperties(
+                    usePlatformDefaultWidth = false,
+                    dismissOnClickOutside = true,
+                    dismissOnBackPress = true
+                )
+            ) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(0.92f),
+                    shape = RoundedCornerShape(12.dp),
+                    tonalElevation = 6.dp
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Text("Eliminar baseline seleccionado?")
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End
+                        ) {
+                            TextButton(onClick = { baselineToDelete = null }) { Text("Cancelar") }
+                            Spacer(Modifier.width(8.dp))
+                            Button(onClick = {
+                                scope.launch {
+                                    val nowTs = java.time.LocalDateTime.now()
+                                        .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+                                    val ok = repo.deleteBaselineAndRevertStatus(
+                                        baselineId = baseline.id,
+                                        currentUserId = currentUser?.idUsuario,
+                                        nowTs = nowTs,
+                                        statusPorVerificarId = STATUS_POR_VERIFICAR
+                                    )
+                                    if (ok) {
+                                        baselinesCache = baselinesCache.filter { it.id != baseline.id }
+                                        baselineToDelete = null
+                                        onBaselineChanged()
+                                    }
+                                }
+                            }) { Text("Eliminar") }
                         }
-                    }) { Text("Eliminar") }
-                },
-                dismissButton = {
-                    Button(onClick = { baselineToDelete = null }) { Text("Cancelar") }
-                },
-                text = { Text("Eliminar baseline seleccionado?") }
-            )
+                    }
+                }
+            }
         }
 
         if (showBaselineDialog && baselineToEdit != null) {
@@ -347,6 +395,28 @@ fun BaselineTableFromDatabase(
                     }
                 }
             }
+            val irFolderLauncher = rememberLauncherForActivityResult(
+                ActivityResultContracts.GetContent()
+            ) { uri ->
+                if (uri != null) {
+                    val name = copyImageFromUri(ctx, uri, "IR")
+                    if (name != null) {
+                        imgIr = name
+                        irPreview = null
+                    }
+                }
+            }
+            val idFolderLauncher = rememberLauncherForActivityResult(
+                ActivityResultContracts.GetContent()
+            ) { uri ->
+                if (uri != null) {
+                    val name = copyImageFromUri(ctx, uri, "ID")
+                    if (name != null) {
+                        imgId = name
+                        idPreview = null
+                    }
+                }
+            }
 
             val ubId = baselineEditEntity?.idUbicacion
             val rutaEquipo by produceState(initialValue = "", ubId) {
@@ -355,55 +425,24 @@ fun BaselineTableFromDatabase(
                 } else ""
             }
 
-            AlertDialog(
+            Dialog(
                 onDismissRequest = { },
                 properties = DialogProperties(
+                    usePlatformDefaultWidth = true,
                     dismissOnClickOutside = false,
                     dismissOnBackPress = false
-                ),
-                confirmButton = {
-                    Button(
-                        enabled = isBaselineValid && !isSavingBaseline,
-                        onClick = {
-                            if (isSavingBaseline) return@Button
-                            val currentId = baselineToEdit?.id ?: return@Button
-                            scope.launch {
-                                if (isSavingBaseline) return@launch
-                                isSavingBaseline = true
-                                try {
-                                    val draftsToSave = baselineDrafts + (currentId to buildBaselineDraft())
-                                    val ok = persistBaselineDrafts(draftsToSave, currentUser?.idUsuario)
-                                    if (ok) {
-                                        showBaselineDialog = false
-                                        baselineToEdit = null
-                                        baselineDrafts = emptyMap()
-                                        baselineNavList = emptyList()
-                                        baselineNavIndex = -1
-                                        onBaselineChanged()
-                                    }
-                                } finally {
-                                    isSavingBaseline = false
-                                }
-                            }
-                        }
-                    ) { Text("Guardar") }
-                },
-                dismissButton = {
-                    Button(
-                        onClick = {
-                            if (!isSavingBaseline) {
-                                showBaselineDialog = false
-                                baselineToEdit = null
-                                baselineDrafts = emptyMap()
-                                baselineNavList = emptyList()
-                                baselineNavIndex = -1
-                            }
-                        },
-                        enabled = !isSavingBaseline
-                    ) { Text("Cancelar") }
-                },
-                text = {
-                    Column(Modifier.fillMaxWidth()) {
+                )
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    tonalElevation = 6.dp
+                ) {
+                    Column(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                            .verticalScroll(rememberScrollState())
+                    ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -433,53 +472,40 @@ fun BaselineTableFromDatabase(
                             Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            TextField(
+                            BaselineInputField(
+                                label = "MTA",
+                                required = true,
                                 value = mta,
                                 onValueChange = { mta = filter2Dec(it) },
-                                singleLine = true,
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                                modifier = Modifier.weight(1f),
-                                label = {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text("MTA")
-                                        Text(" *", color = MaterialTheme.colorScheme.error)
-                                    }
-                                }
+                                modifier = Modifier.weight(1f)
                             )
-                            TextField(
+                            BaselineInputField(
+                                label = "MAX",
+                                required = true,
                                 value = tempMax,
                                 onValueChange = { tempMax = filter2Dec(it) },
-                                singleLine = true,
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                                modifier = Modifier.weight(1f),
-                                label = {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text("MAX")
-                                        Text(" *", color = MaterialTheme.colorScheme.error)
-                                    }
-                                }
+                                modifier = Modifier.weight(1f)
                             )
-                            TextField(
+                            BaselineInputField(
+                                label = "AMB",
+                                required = true,
                                 value = tempAmb,
                                 onValueChange = { tempAmb = filter2Dec(it) },
-                                singleLine = true,
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                                modifier = Modifier.weight(1f),
-                                label = {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Text("AMB")
-                                        Text(" *", color = MaterialTheme.colorScheme.error)
-                                    }
-                                }
+                                modifier = Modifier.weight(1f)
                             )
                         }
 
                         Spacer(Modifier.height(8.dp))
-                        TextField(
+                        BaselineInputField(
+                            label = "Notas",
                             value = notas,
                             onValueChange = { notas = it },
-                            label = { Text("Notas") },
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = false,
+                            fieldHeight = 56.dp
                         )
 
                         Spacer(Modifier.height(8.dp))
@@ -488,23 +514,19 @@ fun BaselineTableFromDatabase(
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Column(Modifier.weight(1f)) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    TextField(
-                                        value = imgIr,
-                                        onValueChange = { imgIr = it },
-                                        label = {
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                Text("IR (archivo)")
-                                                Text(" *", color = MaterialTheme.colorScheme.error)
-                                            }
-                                        },
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                    Spacer(Modifier.width(8.dp))
-                                    IconButton(onClick = { irCameraLauncher.launch(null) }) {
-                                        Icon(Icons.Outlined.PhotoCamera, contentDescription = null)
-                                    }
-                                }
+                                ImageInputButtonGroup(
+                                    label = "Archivo IR",
+                                    value = imgIr,
+                                    onValueChange = { imgIr = it },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    isRequired = true,
+                                    enabled = true,
+                                    onMoveUp = { imgIr = adjustImageSequence(imgIr, +1, "IR") },
+                                    onMoveDown = { imgIr = adjustImageSequence(imgIr, -1, "IR") },
+                                    onDotsClick = { imgIr = nextImageName(imgIr, "IR") },
+                                    onFolderClick = { irFolderLauncher.launch("image/*") },
+                                    onCameraClick = { irCameraLauncher.launch(null) }
+                                )
                                 Spacer(Modifier.height(4.dp))
                                 val bmp = irPreview ?: run {
                                     if (imgIr.isNotBlank()) {
@@ -536,23 +558,19 @@ fun BaselineTableFromDatabase(
                                 }
                             }
                             Column(Modifier.weight(1f)) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    TextField(
-                                        value = imgId,
-                                        onValueChange = { imgId = it },
-                                        label = {
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                                Text("ID (archivo)")
-                                                Text(" *", color = MaterialTheme.colorScheme.error)
-                                            }
-                                        },
-                                        modifier = Modifier.weight(1f)
-                                    )
-                                    Spacer(Modifier.width(8.dp))
-                                    IconButton(onClick = { idCameraLauncher.launch(null) }) {
-                                        Icon(Icons.Outlined.PhotoCamera, contentDescription = null)
-                                    }
-                                }
+                                ImageInputButtonGroup(
+                                    label = "Archivo ID",
+                                    value = imgId,
+                                    onValueChange = { imgId = it },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    isRequired = true,
+                                    enabled = true,
+                                    onMoveUp = { imgId = adjustImageSequence(imgId, +1, "ID") },
+                                    onMoveDown = { imgId = adjustImageSequence(imgId, -1, "ID") },
+                                    onDotsClick = { imgId = nextImageName(imgId, "ID") },
+                                    onFolderClick = { idFolderLauncher.launch("image/*") },
+                                    onCameraClick = { idCameraLauncher.launch(null) }
+                                )
                                 Spacer(Modifier.height(4.dp))
                                 val bmp2 = idPreview ?: run {
                                     if (imgId.isNotBlank()) {
@@ -586,16 +604,128 @@ fun BaselineTableFromDatabase(
                         }
 
                         Spacer(Modifier.height(8.dp))
-                        TextField(
+                        BaselineInputField(
+                            label = "Ruta del equipo",
                             value = rutaEquipo,
                             onValueChange = {},
                             readOnly = true,
-                            label = { Text("Ruta del equipo") },
                             modifier = Modifier.fillMaxWidth()
                         )
+
+                        Spacer(Modifier.height(16.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            TextButton(
+                                onClick = {
+                                    if (!isSavingBaseline) {
+                                        showBaselineDialog = false
+                                        baselineToEdit = null
+                                        baselineDrafts = emptyMap()
+                                        baselineNavList = emptyList()
+                                        baselineNavIndex = -1
+                                    }
+                                },
+                                enabled = !isSavingBaseline
+                            ) { Text("Cancelar") }
+                            Button(
+                                enabled = isBaselineValid && !isSavingBaseline,
+                                onClick = {
+                                    if (isSavingBaseline) return@Button
+                                    val currentId = baselineToEdit?.id ?: return@Button
+                                    scope.launch {
+                                        if (isSavingBaseline) return@launch
+                                        isSavingBaseline = true
+                                        try {
+                                            val draftsToSave = baselineDrafts + (currentId to buildBaselineDraft())
+                                            val ok = persistBaselineDrafts(draftsToSave, currentUser?.idUsuario)
+                                            if (ok) {
+                                                showBaselineDialog = false
+                                                baselineToEdit = null
+                                                baselineDrafts = emptyMap()
+                                                baselineNavList = emptyList()
+                                                baselineNavIndex = -1
+                                                onBaselineChanged()
+                                            }
+                                        } finally {
+                                            isSavingBaseline = false
+                                        }
+                                    }
+                                }
+                            ) { Text("Guardar") }
+                        }
                     }
                 }
-            )
+            }
+        }
+    }
+}
+
+private fun nextImageName(current: String, prefix: String): String {
+    return if (current.isBlank()) "$prefix-001.jpg" else adjustImageSequence(current, +1, prefix)
+}
+
+private fun adjustImageSequence(current: String, delta: Int, fallbackPrefix: String): String {
+    val rx = Regex("""^(.*?)(\d+)(\.[^.]+)?$""")
+    val match = rx.matchEntire(current.trim())
+    if (match == null) {
+        return if (current.isBlank()) "$fallbackPrefix-001.jpg" else current
+    }
+    val prefix = match.groupValues[1]
+    val numberRaw = match.groupValues[2]
+    val suffix = match.groupValues[3].ifBlank { ".jpg" }
+    val digits = numberRaw.length
+    val number = numberRaw.toIntOrNull() ?: return current
+    val next = (number + delta).coerceAtLeast(1)
+    return prefix + next.toString().padStart(digits, '0') + suffix
+}
+
+@Composable
+private fun BaselineInputField(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    required: Boolean = false,
+    readOnly: Boolean = false,
+    singleLine: Boolean = true,
+    fieldHeight: androidx.compose.ui.unit.Dp = 30.dp,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default
+) {
+    Column(modifier = modifier) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(label, style = MaterialTheme.typography.labelSmall)
+            if (required) {
+                Text(" *", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelSmall)
+            }
+        }
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(fieldHeight)
+                .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(4.dp))
+                .padding(horizontal = 6.dp, vertical = 4.dp),
+            contentAlignment = Alignment.CenterStart
+        ) {
+            if (readOnly) {
+                Text(
+                    text = value,
+                    style = MaterialTheme.typography.bodySmall
+                )
+            } else {
+                BasicTextField(
+                    value = value,
+                    onValueChange = onValueChange,
+                    singleLine = singleLine,
+                    keyboardOptions = keyboardOptions,
+                    textStyle = MaterialTheme.typography.bodySmall.copy(
+                        color = MaterialTheme.colorScheme.onSurface
+                    ),
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
         }
     }
 }

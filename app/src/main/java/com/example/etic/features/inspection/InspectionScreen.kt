@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import android.content.Context
@@ -105,6 +106,7 @@ import com.example.etic.features.inspection.ui.components.FilterDropdownField
 import com.example.etic.features.inspection.ui.components.InspectionHeader
 import com.example.etic.features.inspection.ui.components.NewLocationDialog
 import com.example.etic.features.inspection.ui.state.rememberLocationFormState
+import com.example.etic.features.components.ImageInputButtonGroup
 import com.example.etic.features.inspection.logic.VisualProblemEditor
 import com.example.etic.features.inspection.tree.Baseline
 import com.example.etic.features.inspection.tree.Problem
@@ -3779,6 +3781,28 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                                             }
                                                         }
                                                     }
+                                                    val irFolderLauncher = rememberLauncherForActivityResult(
+                                                        ActivityResultContracts.GetContent()
+                                                    ) { uri ->
+                                                        if (uri != null) {
+                                                            val name = copyProblemImageFromUri(ctx, uri, "IR")
+                                                            if (name != null) {
+                                                                imgIr = name
+                                                                irPreview = null
+                                                            }
+                                                        }
+                                                    }
+                                                    val idFolderLauncher = rememberLauncherForActivityResult(
+                                                        ActivityResultContracts.GetContent()
+                                                    ) { uri ->
+                                                        if (uri != null) {
+                                                            val name = copyProblemImageFromUri(ctx, uri, "ID")
+                                                            if (name != null) {
+                                                                imgId = name
+                                                                idPreview = null
+                                                            }
+                                                        }
+                                                    }
 
                                                     val isBaselineValid by remember(mta, tempMax, tempAmb, imgIr, imgId) {
                                                         mutableStateOf(
@@ -3900,60 +3924,41 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                                                     Modifier.fillMaxWidth(),
                                                                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                                                                 ) {
-                                                                    TextField(
+                                                                    BaselineDialogField(
+                                                                        label = "MTA",
+                                                                        required = true,
                                                                         value = mta,
                                                                         onValueChange = { mta = filter2Dec(it) },
-                                                                        singleLine = true,
                                                                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                                                                        modifier = Modifier.weight(1f),
-                                                                        label = {
-                                                                            Row(
-                                                                                verticalAlignment = Alignment.CenterVertically
-                                                                            ) {
-                                                                                Text("MTA")
-                                                                                Text(" *", color = MaterialTheme.colorScheme.error)
-                                                                            }
-                                                                        }
+                                                                        modifier = Modifier.weight(1f)
                                                                     )
-                                                                    TextField(
+                                                                    BaselineDialogField(
+                                                                        label = "MAX",
+                                                                        required = true,
                                                                         value = tempMax,
                                                                         onValueChange = { tempMax = filter2Dec(it) },
-                                                                        singleLine = true,
                                                                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                                                                        modifier = Modifier.weight(1f),
-                                                                        label = {
-                                                                            Row(
-                                                                                verticalAlignment = Alignment.CenterVertically
-                                                                            ) {
-                                                                                Text("MAX")
-                                                                                Text(" *", color = MaterialTheme.colorScheme.error)
-                                                                            }
-                                                                        }
+                                                                        modifier = Modifier.weight(1f)
                                                                     )
-                                                                    TextField(
+                                                                    BaselineDialogField(
+                                                                        label = "AMB",
+                                                                        required = true,
                                                                         value = tempAmb,
                                                                         onValueChange = { tempAmb = filter2Dec(it) },
-                                                                        singleLine = true,
                                                                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                                                                        modifier = Modifier.weight(1f),
-                                                                        label = {
-                                                                            Row(
-                                                                                verticalAlignment = Alignment.CenterVertically
-                                                                            ) {
-                                                                                Text("AMB")
-                                                                                Text(" *", color = MaterialTheme.colorScheme.error)
-                                                                            }
-                                                                        }
+                                                                        modifier = Modifier.weight(1f)
                                                                     )
                                                                 }
 
                                                                 Spacer(Modifier.height(8.dp))
 
-                                                                TextField(
+                                                                BaselineDialogField(
+                                                                    label = "Notas",
                                                                     value = notas,
                                                                     onValueChange = { notas = it },
-                                                                    label = { Text("Notas") },
-                                                                    modifier = Modifier.fillMaxWidth()
+                                                                    modifier = Modifier.fillMaxWidth(),
+                                                                    singleLine = false,
+                                                                    fieldHeight = 56.dp
                                                                 )
 
                                                                 Spacer(Modifier.height(8.dp))
@@ -3964,25 +3969,19 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                                                     verticalAlignment = Alignment.CenterVertically
                                                                 ) {
                                                                     Column(Modifier.weight(1f)) {
-                                                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                                                            TextField(
-                                                                                value = imgIr,
-                                                                                onValueChange = { imgIr = it },
-                                                                                label = {
-                                                                                    Row(
-                                                                                        verticalAlignment = Alignment.CenterVertically
-                                                                                    ) {
-                                                                                        Text("IR (archivo)")
-                                                                                        Text(" *", color = MaterialTheme.colorScheme.error)
-                                                                                    }
-                                                                                },
-                                                                                modifier = Modifier.weight(1f)
-                                                                            )
-                                                                            Spacer(Modifier.width(8.dp))
-                                                                            IconButton(onClick = { irCameraLauncher.launch(null) }) {
-                                                                                Icon(Icons.Outlined.PhotoCamera, contentDescription = null)
-                                                                            }
-                                                                        }
+                                                                        ImageInputButtonGroup(
+                                                                            label = "Archivo IR",
+                                                                            value = imgIr,
+                                                                            onValueChange = { imgIr = it },
+                                                                            modifier = Modifier.fillMaxWidth(),
+                                                                            isRequired = true,
+                                                                            enabled = true,
+                                                                            onMoveUp = { imgIr = adjustImageSequence(imgIr, +1) },
+                                                                            onMoveDown = { imgIr = adjustImageSequence(imgIr, -1) },
+                                                                            onDotsClick = { imgIr = nextImageName(imgIr, "IR") },
+                                                                            onFolderClick = { irFolderLauncher.launch("image/*") },
+                                                                            onCameraClick = { irCameraLauncher.launch(null) }
+                                                                        )
                                                                         Spacer(Modifier.height(4.dp))
                                                                         val bmp = irPreview ?: run {
                                                                             if (imgIr.isNotBlank()) {
@@ -4017,25 +4016,19 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                                                         }
                                                                     }
                                                                     Column(Modifier.weight(1f)) {
-                                                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                                                            TextField(
-                                                                                value = imgId,
-                                                                                onValueChange = { imgId = it },
-                                                                                label = {
-                                                                                    Row(
-                                                                                        verticalAlignment = Alignment.CenterVertically
-                                                                                    ) {
-                                                                                        Text("ID (archivo)")
-                                                                                        Text(" *", color = MaterialTheme.colorScheme.error)
-                                                                                    }
-                                                                                },
-                                                                                modifier = Modifier.weight(1f)
-                                                                            )
-                                                                            Spacer(Modifier.width(8.dp))
-                                                                            IconButton(onClick = { idCameraLauncher.launch(null) }) {
-                                                                                Icon(Icons.Outlined.PhotoCamera, contentDescription = null)
-                                                                            }
-                                                                        }
+                                                                        ImageInputButtonGroup(
+                                                                            label = "Archivo ID",
+                                                                            value = imgId,
+                                                                            onValueChange = { imgId = it },
+                                                                            modifier = Modifier.fillMaxWidth(),
+                                                                            isRequired = true,
+                                                                            enabled = true,
+                                                                            onMoveUp = { imgId = adjustImageSequence(imgId, +1) },
+                                                                            onMoveDown = { imgId = adjustImageSequence(imgId, -1) },
+                                                                            onDotsClick = { imgId = nextImageName(imgId, "ID") },
+                                                                            onFolderClick = { idFolderLauncher.launch("image/*") },
+                                                                            onCameraClick = { idCameraLauncher.launch(null) }
+                                                                        )
                                                                         Spacer(Modifier.height(4.dp))
                                                                         val bmp2 = idPreview ?: run {
                                                                             if (imgId.isNotBlank()) {
@@ -4080,11 +4073,11 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                                                         }.getOrDefault("")
                                                                     } else ""
                                                                 }
-                                                                TextField(
+                                                                BaselineDialogField(
+                                                                    label = "Ruta del equipo",
                                                                     value = rutaEquipo,
                                                                     onValueChange = {},
                                                                     readOnly = true,
-                                                                    label = { Text("Ruta del equipo") },
                                                                     modifier = Modifier.fillMaxWidth()
                                                                 )
                                                             }
@@ -5359,6 +5352,47 @@ internal fun BaselineTable(
                     }
                     Divider(thickness = DIVIDER_THICKNESS)
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun BaselineDialogField(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    required: Boolean = false,
+    readOnly: Boolean = false,
+    singleLine: Boolean = true,
+    fieldHeight: Dp = 30.dp,
+    keyboardOptions: KeyboardOptions = KeyboardOptions.Default
+) {
+    Column(modifier = modifier) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(label, style = MaterialTheme.typography.labelSmall)
+            if (required) Text(" *", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelSmall)
+        }
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(fieldHeight)
+                .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(4.dp))
+                .padding(horizontal = 6.dp, vertical = 4.dp),
+            contentAlignment = Alignment.CenterStart
+        ) {
+            if (readOnly) {
+                Text(value, style = MaterialTheme.typography.bodySmall)
+            } else {
+                BasicTextField(
+                    value = value,
+                    onValueChange = onValueChange,
+                    singleLine = singleLine,
+                    keyboardOptions = keyboardOptions,
+                    textStyle = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurface),
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         }
     }
