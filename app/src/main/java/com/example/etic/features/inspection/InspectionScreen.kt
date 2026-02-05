@@ -3346,7 +3346,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                             Tab(
                                                 selected = editTab == 1,
                                                 onClick = { editTab = 1 },
-                                                text = { Text("Histórico") }
+                                                text = { Text("Histórico Inspecciones") }
                                             )
                                         }
 
@@ -4135,13 +4135,144 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                             // TAB 1 → HISTÓRICO
                                             // -----------------------------------------------------------
                                             1 -> {
-                                                val scroll = rememberScrollState()
-                                                Column(
-                                                    Modifier
-                                                        .fillMaxSize()
-                                                        .verticalScroll(scroll)
+                                                val ubId = editingUbId
+                                                var histSortColumn by rememberSaveable { mutableStateOf("INSPECCION") }
+                                                var histSortAsc by rememberSaveable { mutableStateOf(false) }
+                                                val historyRows by produceState(
+                                                    initialValue = emptyList<com.example.etic.data.local.dao.HistorialInspeccionRow>(),
+                                                    ubId,
+                                                    baselineRefreshTick,
+                                                    problemsRefreshTick
                                                 ) {
-                                                    Text("Contenido de Tab 3 (Historico)")
+                                                    value = if (ubId.isNullOrBlank()) {
+                                                        emptyList()
+                                                    } else {
+                                                        runCatching {
+                                                            inspeccionDetDao.getHistorialInspeccionesByUbicacion(ubId)
+                                                        }.getOrElse { emptyList() }
+                                                    }
+                                                }
+
+                                                fun formatHistDate(raw: String?): String {
+                                                    val onlyDate = raw?.takeIf { it.isNotBlank() }?.take(10) ?: return "-"
+                                                    return runCatching {
+                                                        java.time.LocalDate.parse(onlyDate)
+                                                            .format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+                                                    }.getOrElse { onlyDate }
+                                                }
+
+                                                fun toggleHistSort(column: String) {
+                                                    if (histSortColumn == column) histSortAsc = !histSortAsc
+                                                    else {
+                                                        histSortColumn = column
+                                                        histSortAsc = true
+                                                    }
+                                                }
+
+                                                val sortedHistoryRows = remember(historyRows, histSortColumn, histSortAsc) {
+                                                    val comparator = when (histSortColumn) {
+                                                        "INSPECCION" -> compareBy<com.example.etic.data.local.dao.HistorialInspeccionRow> { it.numInspeccion ?: Int.MIN_VALUE }
+                                                        "FECHA" -> compareBy { it.fechaCreacionInspeccion ?: "" }
+                                                        "ESTATUS" -> compareBy { it.estatusUbicacion ?: "" }
+                                                        "NOTAS" -> compareBy { it.notasInspeccion ?: "" }
+                                                        else -> compareBy<com.example.etic.data.local.dao.HistorialInspeccionRow> { it.numInspeccion ?: Int.MIN_VALUE }
+                                                    }
+                                                    if (histSortAsc) historyRows.sortedWith(comparator) else historyRows.sortedWith(comparator.reversed())
+                                                }
+
+                                                fun sortMarker(column: String): String {
+                                                    if (histSortColumn != column) return ""
+                                                    return if (histSortAsc) " ^" else " v"
+                                                }
+
+                                                val historyListState =
+                                                    rememberSaveable("historial_inspecciones_state", saver = LazyListState.Saver) { LazyListState() }
+                                                val zebraColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.18f)
+
+                                                Column(Modifier.fillMaxSize()) {
+                                                    Row(
+                                                        Modifier
+                                                            .fillMaxWidth()
+                                                            .background(MaterialTheme.colorScheme.surface)
+                                                            .padding(vertical = 8.dp, horizontal = 8.dp)
+                                                    ) {
+                                                        Box(
+                                                            modifier = Modifier
+                                                                .width(90.dp)
+                                                                .padding(horizontal = 4.dp)
+                                                                .clickable { toggleHistSort("INSPECCION") }
+                                                        ) {
+                                                            Text("No. Insp${sortMarker("INSPECCION")}", style = MaterialTheme.typography.bodySmall)
+                                                        }
+                                                        Box(
+                                                            modifier = Modifier
+                                                                .width(110.dp)
+                                                                .padding(horizontal = 4.dp)
+                                                                .clickable { toggleHistSort("FECHA") }
+                                                        ) {
+                                                            Text("Fecha${sortMarker("FECHA")}", style = MaterialTheme.typography.bodySmall)
+                                                        }
+                                                        Box(
+                                                            modifier = Modifier
+                                                                .width(130.dp)
+                                                                .padding(horizontal = 4.dp)
+                                                                .clickable { toggleHistSort("ESTATUS") }
+                                                        ) {
+                                                            Text("Estatus${sortMarker("ESTATUS")}", style = MaterialTheme.typography.bodySmall)
+                                                        }
+                                                        Box(
+                                                            modifier = Modifier
+                                                                .weight(1f)
+                                                                .padding(horizontal = 4.dp)
+                                                                .clickable { toggleHistSort("NOTAS") }
+                                                        ) {
+                                                            Text("Notas${sortMarker("NOTAS")}", style = MaterialTheme.typography.bodySmall)
+                                                        }
+                                                    }
+                                                    Divider(thickness = DIVIDER_THICKNESS)
+
+                                                    if (sortedHistoryRows.isEmpty()) {
+                                                        Box(
+                                                            Modifier
+                                                                .fillMaxWidth()
+                                                                .padding(8.dp),
+                                                            contentAlignment = Alignment.CenterStart
+                                                        ) {
+                                                            Text("Sin registros")
+                                                        }
+                                                    } else {
+                                                        LazyColumn(
+                                                            modifier = Modifier.fillMaxSize(),
+                                                            state = historyListState
+                                                        ) {
+                                                            itemsIndexed(
+                                                                sortedHistoryRows,
+                                                                key = { _, item -> item.idInspeccionDet ?: "${item.idInspeccion}-${item.numInspeccion}" }
+                                                            ) { index, row ->
+                                                                val rowColor = if (index % 2 == 1) zebraColor else Color.Transparent
+                                                                Row(
+                                                                    Modifier
+                                                                        .fillMaxWidth()
+                                                                        .background(rowColor)
+                                                                        .padding(vertical = 6.dp, horizontal = 8.dp)
+                                                                ) {
+                                                                    Box(modifier = Modifier.width(90.dp).padding(horizontal = 4.dp)) {
+                                                                        Text((row.numInspeccion?.toString() ?: "-"), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                                                    }
+                                                                    Box(modifier = Modifier.width(110.dp).padding(horizontal = 4.dp)) {
+                                                                        Text(formatHistDate(row.fechaCreacionInspeccion), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                                                    }
+                                                                    Box(modifier = Modifier.width(130.dp).padding(horizontal = 4.dp)) {
+                                                                        Text(row.estatusUbicacion.orEmpty().ifBlank { "-" }, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                                                    }
+                                                                    Box(modifier = Modifier.weight(1f).padding(horizontal = 4.dp)) {
+                                                                        Text(row.notasInspeccion.orEmpty().ifBlank { "-" }, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                                                    }
+                                                                }
+                                                                Divider(thickness = DIVIDER_THICKNESS)
+                                                            }
+                                                        }
+                                                    }
                                                 }
                                             }
                                         }

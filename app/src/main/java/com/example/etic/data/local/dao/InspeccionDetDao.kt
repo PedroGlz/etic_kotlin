@@ -64,4 +64,36 @@ interface InspeccionDetDao {
         idInspeccion: String,
         idUbicacion: String
     )
+
+    @Query(
+        """
+        SELECT
+            d.Id_Inspeccion_Det AS idInspeccionDet,
+            d.Id_Inspeccion AS idInspeccion,
+            d.Id_Ubicacion AS idUbicacion,
+            d.Id_Status_Inspeccion_Det AS idStatusInspeccionDet,
+            d.Notas_Inspeccion AS notasInspeccion,
+            i.No_Inspeccion AS numInspeccion,
+            i.Fecha_Creacion AS fechaCreacionInspeccion,
+            e.Estatus_Inspeccion_Det AS estatusUbicacion
+        FROM inspecciones_det d
+        LEFT JOIN inspecciones i ON i.Id_Inspeccion = d.Id_Inspeccion
+        LEFT JOIN estatus_inspeccion_det e ON e.Id_Status_Inspeccion_Det = d.Id_Status_Inspeccion_Det
+        WHERE d.Id_Ubicacion = :idUbicacion
+          AND d.Estatus = 'Activo'
+        ORDER BY COALESCE(i.No_Inspeccion, 0) DESC, i.Fecha_Creacion DESC, d.Id_Inspeccion DESC
+        """
+    )
+    suspend fun getHistorialInspeccionesByUbicacion(idUbicacion: String): List<HistorialInspeccionRow>
 }
+
+data class HistorialInspeccionRow(
+    val idInspeccionDet: String?,
+    val idInspeccion: String?,
+    val idUbicacion: String?,
+    val idStatusInspeccionDet: String?,
+    val notasInspeccion: String?,
+    val numInspeccion: Int?,
+    val fechaCreacionInspeccion: String?,
+    val estatusUbicacion: String?
+)
