@@ -3438,49 +3438,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                                     }
                                                 }
 
-                                                // Helpers locales para celdas con ancho fijo / flexible
-                                                @Composable
-                                                fun HeaderCellFixed(text: String, width: Dp) {
-                                                    Box(
-                                                        modifier = Modifier
-                                                            .width(width)
-                                                            .padding(horizontal = 4.dp),
-                                                        contentAlignment = Alignment.CenterStart
-                                                    ) {
-                                                        Text(
-                                                            text,
-                                                            maxLines = 1,
-                                                            overflow = TextOverflow.Ellipsis,
-                                                            style = MaterialTheme.typography.bodySmall
-                                                        )
-                                                    }
-                                                }
-
-                                                @Composable
-                                                fun RowCellFixed(width: Dp, content: @Composable () -> Unit) {
-                                                    Box(
-                                                        modifier = Modifier
-                                                            .width(width)
-                                                            .padding(horizontal = 4.dp),
-                                                        contentAlignment = Alignment.CenterStart
-                                                    ) {
-                                                        content()
-                                                    }
-                                                }
-
-                                                @Composable
-                                                fun RowCellFlexible(content: @Composable () -> Unit) {
-                                                    Box(
-                                                        modifier = Modifier
-                                                            .weight(1f)
-                                                            .padding(horizontal = 4.dp),
-                                                        contentAlignment = Alignment.CenterStart
-                                                    ) {
-                                                        content()
-                                                    }
-                                                }
-
-                                                // Layout con cabecera fija (botón arriba) + cuerpo con tabla
+                                                // Layout de baseline unico por ubicacion (vista detalle, no tabla)
                                                 Column(Modifier.fillMaxSize()) {
 
                                                     if (!hasActiveBaselineForUbicacion) {
@@ -3498,47 +3456,8 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                                     }
                                                     Spacer(Modifier.height(8.dp))
 
-                                                    // Encabezados con anchos fijos
-                                                    Row(
-                                                        Modifier
-                                                            .fillMaxWidth()
-                                                            .background(MaterialTheme.colorScheme.surface)
-                                                            .padding(vertical = 8.dp, horizontal = 8.dp)
-                                                    ) {
-                                                        HeaderCellFixed("No. Insp", 80.dp)
-                                                        HeaderCellFixed("Fecha", 100.dp)
-                                                        HeaderCellFixed("MTA C", 70.dp)
-                                                        HeaderCellFixed("Temp C", 70.dp)
-                                                        HeaderCellFixed("Amb C", 70.dp)
-                                                        HeaderCellFixed("IR", 80.dp)
-                                                        HeaderCellFixed("ID", 80.dp)
-
-                                                        // Notas ocupa el espacio restante
-                                                        Box(
-                                                            modifier = Modifier
-                                                                .weight(1f)
-                                                                .padding(horizontal = 4.dp),
-                                                            contentAlignment = Alignment.CenterStart
-                                                        ) {
-                                                            Text("Notas", style = MaterialTheme.typography.bodySmall)
-                                                        }
-
-                                                        // Columna Op: ancho justo para el botón
-                                                        Box(
-                                                            modifier = Modifier
-                                                                .width(56.dp),
-                                                            contentAlignment = Alignment.Center
-                                                        ) {
-                                                            Text("Op", style = MaterialTheme.typography.bodySmall)
-                                                        }
-                                                    }
-                                                    Divider(thickness = DIVIDER_THICKNESS)
-
-                                                    val baselineTabListState =
-                                                        rememberSaveable("baseline_tab2_state", saver = LazyListState.Saver) { LazyListState() }
-                                                    val zebraColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.18f)
-
-                                                    if (tableData.isEmpty()) {
+                                                    val baselineItem = tableData.lastOrNull()
+                                                    if (baselineItem == null) {
                                                         Box(
                                                             Modifier
                                                                 .fillMaxWidth()
@@ -3548,78 +3467,189 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                                             Text(stringResource(com.example.etic.R.string.msg_sin_baseline))
                                                         }
                                                     } else {
-                                                        LazyColumn(
-                                                            Modifier.fillMaxSize(),
-                                                            state = baselineTabListState
+                                                        Column(
+                                                            modifier = Modifier
+                                                                .fillMaxSize()
+                                                                .verticalScroll(rememberScrollState()),
+                                                            verticalArrangement = Arrangement.spacedBy(12.dp)
                                                         ) {
-                                                            itemsIndexed(tableData, key = { _, item -> item.id }) { index, b ->
-                                                                val rowColor = if (index % 2 == 1) zebraColor else Color.Transparent
-                                                                Row(
-                                                                    Modifier
-                                                                        .fillMaxWidth()
-                                                                        .background(rowColor)
-                                                                        .padding(vertical = 6.dp, horizontal = 8.dp)
-                                                                        .pointerInput(b.id) {
-                                                                            detectTapGestures(onDoubleTap = {
-                                                                                baselineToEdit = b
-                                                                                showNewBaseline = true
-                                                                            })
+                                                            Row(
+                                                                modifier = Modifier.fillMaxWidth(),
+                                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                                verticalAlignment = Alignment.CenterVertically
+                                                            ) {
+                                                                Text(
+                                                                    "Baseline actual",
+                                                                    style = MaterialTheme.typography.titleMedium
+                                                                )
+                                                                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                                                    TextButton(
+                                                                        onClick = {
+                                                                            baselineToEdit = baselineItem
+                                                                            showNewBaseline = true
                                                                         }
-                                                                ) {
-                                                                    RowCellFixed(80.dp) {
-                                                                        Text(
-                                                                            b.numInspeccion,
-                                                                            maxLines = 1,
-                                                                            overflow = TextOverflow.Ellipsis
+                                                                    ) { Text("Editar") }
+                                                                    IconButton(onClick = { confirmDeleteId = baselineItem.id }) {
+                                                                        Icon(
+                                                                            Icons.Outlined.Delete,
+                                                                            contentDescription = "Eliminar baseline",
+                                                                            tint = MaterialTheme.colorScheme.error
                                                                         )
-                                                                    }
-                                                                    RowCellFixed(100.dp) {
-                                                                        Text(
-                                                                            b.fecha.toString(),
-                                                                            maxLines = 1,
-                                                                            overflow = TextOverflow.Ellipsis
-                                                                        )
-                                                                    }
-                                                                    RowCellFixed(70.dp) { Text(b.mtaC.toString()) }
-                                                                    RowCellFixed(70.dp) { Text(b.tempC.toString()) }
-                                                                    RowCellFixed(70.dp) { Text(b.ambC.toString()) }
-                                                                    RowCellFixed(80.dp) {
-                                                                        Text(
-                                                                            b.imgR ?: "",
-                                                                            maxLines = 1,
-                                                                            overflow = TextOverflow.Ellipsis
-                                                                        )
-                                                                    }
-                                                                    RowCellFixed(80.dp) {
-                                                                        Text(
-                                                                            b.imgD ?: "",
-                                                                            maxLines = 1,
-                                                                            overflow = TextOverflow.Ellipsis
-                                                                        )
-                                                                    }
-                                                                    RowCellFlexible {
-                                                                        Text(
-                                                                            b.notas,
-                                                                            maxLines = 1,
-                                                                            overflow = TextOverflow.Ellipsis
-                                                                        )
-                                                                    }
-
-                                                                    // Columna Op con botón de eliminar (icono rojo)
-                                                                    Box(
-                                                                        modifier = Modifier.width(56.dp),
-                                                                        contentAlignment = Alignment.Center
-                                                                    ) {
-                                                                        IconButton(onClick = { confirmDeleteId = b.id }) {
-                                                                            Icon(
-                                                                                Icons.Outlined.Delete,
-                                                                                contentDescription = "Eliminar",
-                                                                                tint = MaterialTheme.colorScheme.error
-                                                                            )
-                                                                        }
                                                                     }
                                                                 }
-                                                                Divider(thickness = DIVIDER_THICKNESS)
+                                                            }
+                                                            Box(
+                                                                modifier = Modifier
+                                                                    .fillMaxWidth()
+                                                                    .border(
+                                                                        width = 1.dp,
+                                                                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.45f),
+                                                                        shape = RoundedCornerShape(12.dp)
+                                                                    )
+                                                                    .background(
+                                                                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.16f),
+                                                                        shape = RoundedCornerShape(12.dp)
+                                                                    )
+                                                                    .padding(12.dp)
+                                                            ) {
+                                                                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                                                    Text(
+                                                                        "No. inspeccion: ${baselineItem.numInspeccion.ifBlank { "-" }}",
+                                                                        style = MaterialTheme.typography.bodyMedium
+                                                                    )
+                                                                    Text(
+                                                                        "Fecha: ${baselineItem.fecha}",
+                                                                        style = MaterialTheme.typography.bodyMedium
+                                                                    )
+                                                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                                                        Box(
+                                                                            modifier = Modifier
+                                                                                .weight(1f)
+                                                                                .border(
+                                                                                    width = 1.dp,
+                                                                                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f),
+                                                                                    shape = RoundedCornerShape(10.dp)
+                                                                                )
+                                                                                .padding(10.dp)
+                                                                        ) {
+                                                                            Column {
+                                                                                Text("MTA", style = MaterialTheme.typography.labelSmall)
+                                                                                Text("${baselineItem.mtaC} C", style = MaterialTheme.typography.titleSmall)
+                                                                            }
+                                                                        }
+                                                                        Box(
+                                                                            modifier = Modifier
+                                                                                .weight(1f)
+                                                                                .border(
+                                                                                    width = 1.dp,
+                                                                                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f),
+                                                                                    shape = RoundedCornerShape(10.dp)
+                                                                                )
+                                                                                .padding(10.dp)
+                                                                        ) {
+                                                                            Column {
+                                                                                Text("Temp Max", style = MaterialTheme.typography.labelSmall)
+                                                                                Text("${baselineItem.tempC} C", style = MaterialTheme.typography.titleSmall)
+                                                                            }
+                                                                        }
+                                                                        Box(
+                                                                            modifier = Modifier
+                                                                                .weight(1f)
+                                                                                .border(
+                                                                                    width = 1.dp,
+                                                                                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f),
+                                                                                    shape = RoundedCornerShape(10.dp)
+                                                                                )
+                                                                                .padding(10.dp)
+                                                                        ) {
+                                                                            Column {
+                                                                                Text("Temp Amb", style = MaterialTheme.typography.labelSmall)
+                                                                                Text("${baselineItem.ambC} C", style = MaterialTheme.typography.titleSmall)
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                    Divider(thickness = DIVIDER_THICKNESS)
+                                                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                                                        val irPreviewBmp = remember(baselineItem.imgR) {
+                                                                            val name = baselineItem.imgR.orEmpty()
+                                                                            if (name.isBlank()) null else {
+                                                                                val f = java.io.File(ctx.filesDir, "Imagenes/$name")
+                                                                                if (f.exists()) android.graphics.BitmapFactory.decodeFile(f.absolutePath) else null
+                                                                            }
+                                                                        }
+                                                                        val idPreviewBmp = remember(baselineItem.imgD) {
+                                                                            val name = baselineItem.imgD.orEmpty()
+                                                                            if (name.isBlank()) null else {
+                                                                                val f = java.io.File(ctx.filesDir, "Imagenes/$name")
+                                                                                if (f.exists()) android.graphics.BitmapFactory.decodeFile(f.absolutePath) else null
+                                                                            }
+                                                                        }
+                                                                        Column(modifier = Modifier.weight(1f)) {
+                                                                            Text(
+                                                                                "IR: ${baselineItem.imgR.orEmpty().ifBlank { "-" }}",
+                                                                                maxLines = 1,
+                                                                                overflow = TextOverflow.Ellipsis
+                                                                            )
+                                                                            Spacer(Modifier.height(4.dp))
+                                                                            Box(
+                                                                                modifier = Modifier
+                                                                                    .fillMaxWidth()
+                                                                                    .height(120.dp)
+                                                                                    .border(
+                                                                                        width = 1.dp,
+                                                                                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f),
+                                                                                        shape = RoundedCornerShape(8.dp)
+                                                                                    ),
+                                                                                contentAlignment = Alignment.Center
+                                                                            ) {
+                                                                                if (irPreviewBmp != null) {
+                                                                                    androidx.compose.foundation.Image(
+                                                                                        bitmap = irPreviewBmp.asImageBitmap(),
+                                                                                        contentDescription = "Vista previa IR",
+                                                                                        modifier = Modifier.fillMaxSize()
+                                                                                    )
+                                                                                } else {
+                                                                                    Icon(Icons.Outlined.Image, contentDescription = null)
+                                                                                }
+                                                                            }
+                                                                        }
+                                                                        Column(modifier = Modifier.weight(1f)) {
+                                                                            Text(
+                                                                                "ID: ${baselineItem.imgD.orEmpty().ifBlank { "-" }}",
+                                                                                maxLines = 1,
+                                                                                overflow = TextOverflow.Ellipsis
+                                                                            )
+                                                                            Spacer(Modifier.height(4.dp))
+                                                                            Box(
+                                                                                modifier = Modifier
+                                                                                    .fillMaxWidth()
+                                                                                    .height(120.dp)
+                                                                                    .border(
+                                                                                        width = 1.dp,
+                                                                                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.35f),
+                                                                                        shape = RoundedCornerShape(8.dp)
+                                                                                    ),
+                                                                                contentAlignment = Alignment.Center
+                                                                            ) {
+                                                                                if (idPreviewBmp != null) {
+                                                                                    androidx.compose.foundation.Image(
+                                                                                        bitmap = idPreviewBmp.asImageBitmap(),
+                                                                                        contentDescription = "Vista previa ID",
+                                                                                        modifier = Modifier.fillMaxSize()
+                                                                                    )
+                                                                                } else {
+                                                                                    Icon(Icons.Outlined.Image, contentDescription = null)
+                                                                                }
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                    Divider(thickness = DIVIDER_THICKNESS)
+                                                                    Text("Notas", style = MaterialTheme.typography.labelMedium)
+                                                                    Text(
+                                                                        baselineItem.notas.ifBlank { "-" },
+                                                                        style = MaterialTheme.typography.bodyMedium
+                                                                    )
+                                                                }
                                                             }
                                                         }
                                                     }
