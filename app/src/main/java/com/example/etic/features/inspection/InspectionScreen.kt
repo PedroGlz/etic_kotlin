@@ -3424,6 +3424,19 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                                         }
                                                     baselineCache = value
                                                 }
+                                                val hasActiveBaselineForUbicacion by produceState(
+                                                    initialValue = false,
+                                                    ubId,
+                                                    baselineRefreshTick
+                                                ) {
+                                                    value = if (ubId.isNullOrBlank()) {
+                                                        false
+                                                    } else {
+                                                        runCatching {
+                                                            lineaBaseDao.existsActiveByUbicacion(ubId)
+                                                        }.getOrDefault(false)
+                                                    }
+                                                }
 
                                                 // Helpers locales para celdas con ancho fijo / flexible
                                                 @Composable
@@ -3470,16 +3483,17 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                                 // Layout con cabecera fija (botón arriba) + cuerpo con tabla
                                                 Column(Modifier.fillMaxSize()) {
 
-                                                    // Botón "Nuevo Baseline" siempre visible
-                                                    Row(
-                                                        Modifier.fillMaxWidth(),
-                                                        horizontalArrangement = Arrangement.End,
-                                                        verticalAlignment = Alignment.CenterVertically
-                                                    ) {
-                                                        Button(onClick = { baselineToEdit = null; showNewBaseline = true }) {
-                                                            Icon(Icons.Filled.Add, contentDescription = null)
-                                                            Spacer(Modifier.width(8.dp))
-                                                            Text("Nuevo Baseline")
+                                                    if (!hasActiveBaselineForUbicacion) {
+                                                        Row(
+                                                            Modifier.fillMaxWidth(),
+                                                            horizontalArrangement = Arrangement.End,
+                                                            verticalAlignment = Alignment.CenterVertically
+                                                        ) {
+                                                            Button(onClick = { baselineToEdit = null; showNewBaseline = true }) {
+                                                                Icon(Icons.Filled.Add, contentDescription = null)
+                                                                Spacer(Modifier.width(8.dp))
+                                                                Text("Nuevo Baseline")
+                                                            }
                                                         }
                                                     }
                                                     Spacer(Modifier.height(8.dp))
