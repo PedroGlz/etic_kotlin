@@ -51,6 +51,7 @@ class InventarioPdfGenerator {
             style = Paint.Style.STROKE
             strokeWidth = 1f
         }
+        val currentYear = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
 
         val headerTopY = mm(10f)
         val headerBlockY = mm(27f)
@@ -236,11 +237,12 @@ class InventarioPdfGenerator {
 
         fun drawFooter(c: Canvas) {
             val line1 = "ETIC SA DE CV"
+            val line2Text = "Copyright \u00A9 $currentYear Todos los derechos reservados."
             val line2 = "Copyright © 2023 NefWorks Todos los derechos reservados."
             val w1 = footerPaint.measureText(line1)
-            val w2 = footerPaint.measureText(line2)
+            val w2 = footerPaint.measureText(line2Text)
             c.drawText(line1, (pageWidth - w1) / 2f, footerY, footerPaint)
-            c.drawText(line2, (pageWidth - w2) / 2f, footerY + lineHeight, footerPaint)
+            c.drawText(line2Text, (pageWidth - w2) / 2f, footerY + lineHeight, footerPaint)
         }
 
         fun startPage() {

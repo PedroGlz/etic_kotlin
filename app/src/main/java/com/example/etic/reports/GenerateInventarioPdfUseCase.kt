@@ -100,7 +100,10 @@ class GenerateInventarioPdfUseCase(
             val folder = folderProvider.getReportesFolder(noInspeccion)
                 ?: return@withContext Result.failure(IllegalStateException("No hay acceso a carpeta Reportes (SAF)."))
 
-            val file = folderProvider.createPdfFile(folder, "Reporte_Inventarios_$noInspeccion.pdf")
+            val file = folderProvider.createPdfFile(
+                folder,
+                "ETIC_INVENTARIO_INSPECCION_$noInspeccion.pdf"
+            )
                 ?: return@withContext Result.failure(IllegalStateException("No se pudo crear el archivo PDF."))
 
             val res = context.resources
