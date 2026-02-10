@@ -104,9 +104,8 @@ import com.example.etic.reports.ReportesFolderProvider
 import com.example.etic.data.local.queries.CurrentInspectionInfo
 import com.example.etic.ui.theme.FontSizeOption
 import android.net.Uri
-import java.io.File
-import java.io.FileOutputStream
 import kotlin.math.max
+import com.example.etic.core.saf.EticImageStore
 
 private enum class HomeSection { Inspection, Reports, FolderImages, FolderReports }
 
@@ -700,17 +699,13 @@ fun MainScreen(
                     }
                 }
                 fun saveCameraBitmap(prefix: String, bmp: Bitmap): String? {
-                    return try {
-                        val dir = File(appContext.filesDir, "Imagenes").apply { mkdirs() }
-                        val name = "${prefix}_${System.currentTimeMillis()}.jpg"
-                        val file = File(dir, name)
-                        FileOutputStream(file).use { out ->
-                            bmp.compress(Bitmap.CompressFormat.JPEG, 92, out)
-                        }
-                        name
-                    } catch (_: Exception) {
-                        null
-                    }
+                    return EticImageStore.saveBitmap(
+                        context = appContext,
+                        rootTreeUri = rootTreeUri,
+                        inspectionNumero = inspectionNumero,
+                        prefix = prefix,
+                        bmp = bmp
+                    )
                 }
                 fun loadInitialImageFromDb(isThermal: Boolean, onResult: (String) -> Unit) {
                     val inspId = currentInspection?.idInspeccion

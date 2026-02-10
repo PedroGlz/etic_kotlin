@@ -1,6 +1,5 @@
 package com.example.etic.features.inspection.ui.problem
 
-import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
@@ -53,6 +52,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -72,7 +72,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.etic.features.components.ImageInputButtonGroup
-import java.io.File
+import com.example.etic.core.saf.EticImageStore
+import com.example.etic.core.settings.EticPrefs
+import com.example.etic.core.settings.settingsDataStore
 
 private val DIALOG_MIN_WIDTH = 710.dp
 private val DIALOG_MAX_WIDTH = 710.dp
@@ -643,6 +645,7 @@ fun MechanicalProblemDialog(
                                         title = "",
                                         label = "Archivo IR",
                                         value = thermalImageName,
+                                        inspectionNumber = inspectionNumber,
                                         onValueChange = onThermalImageChange,
                                         onIncrement = onThermalSequenceUp,
                                         onDecrement = onThermalSequenceDown,
@@ -656,6 +659,7 @@ fun MechanicalProblemDialog(
                                         title = "",
                                         label = "Archivo ID",
                                         value = digitalImageName,
+                                        inspectionNumber = inspectionNumber,
                                         onValueChange = onDigitalImageChange,
                                         onIncrement = onDigitalSequenceUp,
                                         onDecrement = onDigitalSequenceDown,
@@ -1054,14 +1058,18 @@ private fun MultilineField(
 /* ------------------------- Imágenes ------------------------- */
 
 @Composable
-private fun ImagePreviewBox(fileName: String) {
+private fun ImagePreviewBox(fileName: String, inspectionNumber: String) {
     val ctx = LocalContext.current
-    val bitmap = remember(fileName) {
-        if (fileName.isBlank()) null
-        else {
-            val file = File(ctx.filesDir, "Imagenes/$fileName")
-            if (file.exists()) BitmapFactory.decodeFile(file.absolutePath)?.asImageBitmap() else null
-        }
+    val eticPrefs = remember { EticPrefs(ctx.settingsDataStore) }
+    val rootTreeUriStr by eticPrefs.rootTreeUriFlow.collectAsState(initial = null)
+    val rootTreeUri = remember(rootTreeUriStr) { rootTreeUriStr?.let { android.net.Uri.parse(it) } }
+    val bitmap = remember(fileName, rootTreeUriStr, inspectionNumber) {
+        EticImageStore.loadBitmap(
+            context = ctx,
+            rootTreeUri = rootTreeUri,
+            inspectionNumero = inspectionNumber,
+            fileName = fileName
+        )?.asImageBitmap()
     }
 
     if (bitmap != null) {
@@ -1099,6 +1107,7 @@ private fun ImageInputColumn(
     title: String,
     label: String,
     value: String,
+    inspectionNumber: String,
     onValueChange: (String) -> Unit,
     onIncrement: () -> Unit,
     onDecrement: () -> Unit,
@@ -1134,7 +1143,7 @@ private fun ImageInputColumn(
             )
         }
 
-        ImagePreviewBox(fileName = value)
+        ImagePreviewBox(fileName = value, inspectionNumber = inspectionNumber)
     }
 }
 

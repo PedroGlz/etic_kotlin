@@ -24,8 +24,6 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.net.Uri
 import android.widget.Toast
-import java.io.File
-import java.io.FileOutputStream
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.ExpandMore
@@ -62,6 +60,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.*
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.produceState
@@ -92,6 +91,9 @@ import com.example.etic.core.session.SessionManager
 import com.example.etic.core.session.sessionDataStore
 import com.example.etic.core.current.LocalCurrentInspection
 import com.example.etic.core.current.LocalCurrentUser
+import com.example.etic.core.saf.EticImageStore
+import com.example.etic.core.settings.EticPrefs
+import com.example.etic.core.settings.settingsDataStore
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import kotlinx.coroutines.Dispatchers
@@ -295,6 +297,9 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
 
     var nodes by remember { mutableStateOf<List<TreeNode>>(emptyList()) }
     val ctx = androidx.compose.ui.platform.LocalContext.current
+    val eticPrefs = remember { EticPrefs(ctx.settingsDataStore) }
+    val rootTreeUriStr by eticPrefs.rootTreeUriFlow.collectAsState(initial = null)
+    val rootTreeUri = remember(rootTreeUriStr) { rootTreeUriStr?.let { Uri.parse(it) } }
     val keyboardController = LocalSoftwareKeyboardController.current
     val ubicacionDao = remember { com.example.etic.data.local.DbProvider.get(ctx).ubicacionDao() }
     val vistaUbicacionArbolDao = remember { com.example.etic.data.local.DbProvider.get(ctx).vistaUbicacionArbolDao() }
@@ -314,6 +319,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
     val faseDao = remember { com.example.etic.data.local.DbProvider.get(ctx).faseDao() }
     val tipoAmbienteDao = remember { com.example.etic.data.local.DbProvider.get(ctx).tipoAmbienteDao() }
     val currentInspection = LocalCurrentInspection.current
+    val inspectionNumero = currentInspection?.noInspeccion?.toString()
     val rootTitle = currentInspection?.nombreSitio ?: "Sitio"
     val rootId = remember(currentInspection?.idSitio) { (currentInspection?.idSitio?.let { "root:$it" } ?: "root:site") }
     val expanded = remember { mutableStateListOf<String>() }
@@ -564,7 +570,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             }
             val thermalCameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { bmp ->
                 if (bmp != null) {
-                    val saved = saveProblemBitmap(ctx, bmp, "IR")
+                    val saved = saveProblemBitmap(ctx, rootTreeUri, inspectionNumero, bmp, "IR")
                     if (saved != null) {
                         pendingThermalImage = saved
                     } else {
@@ -576,7 +582,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             }
             val digitalCameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { bmp ->
                 if (bmp != null) {
-                    val saved = saveProblemBitmap(ctx, bmp, "ID")
+                    val saved = saveProblemBitmap(ctx, rootTreeUri, inspectionNumero, bmp, "ID")
                     if (saved != null) {
                         pendingDigitalImage = saved
                     } else {
@@ -588,7 +594,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             }
             val thermalFolderLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
                 if (uri != null) {
-                    val saved = copyProblemImageFromUri(ctx, uri, "IR")
+                    val saved = copyProblemImageFromUri(ctx, rootTreeUri, inspectionNumero, uri, "IR")
                     if (saved != null) {
                         pendingThermalImage = saved
                     } else {
@@ -598,7 +604,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             }
             val digitalFolderLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
                 if (uri != null) {
-                    val saved = copyProblemImageFromUri(ctx, uri, "ID")
+                    val saved = copyProblemImageFromUri(ctx, rootTreeUri, inspectionNumero, uri, "ID")
                     if (saved != null) {
                         pendingDigitalImage = saved
                     } else {
@@ -3570,19 +3576,21 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                                                     }
                                                                     Divider(thickness = DIVIDER_THICKNESS)
                                                                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                                                        val irPreviewBmp = remember(baselineItem.imgR) {
-                                                                            val name = baselineItem.imgR.orEmpty()
-                                                                            if (name.isBlank()) null else {
-                                                                                val f = java.io.File(ctx.filesDir, "Imagenes/$name")
-                                                                                if (f.exists()) android.graphics.BitmapFactory.decodeFile(f.absolutePath) else null
-                                                                            }
+                                                                        val irPreviewBmp = remember(baselineItem.imgR, inspectionNumero, rootTreeUriStr) {
+                                                                            EticImageStore.loadBitmap(
+                                                                                context = ctx,
+                                                                                rootTreeUri = rootTreeUri,
+                                                                                inspectionNumero = inspectionNumero,
+                                                                                fileName = baselineItem.imgR
+                                                                            )
                                                                         }
-                                                                        val idPreviewBmp = remember(baselineItem.imgD) {
-                                                                            val name = baselineItem.imgD.orEmpty()
-                                                                            if (name.isBlank()) null else {
-                                                                                val f = java.io.File(ctx.filesDir, "Imagenes/$name")
-                                                                                if (f.exists()) android.graphics.BitmapFactory.decodeFile(f.absolutePath) else null
-                                                                            }
+                                                                        val idPreviewBmp = remember(baselineItem.imgD, inspectionNumero, rootTreeUriStr) {
+                                                                            EticImageStore.loadBitmap(
+                                                                                context = ctx,
+                                                                                rootTreeUri = rootTreeUri,
+                                                                                inspectionNumero = inspectionNumero,
+                                                                                fileName = baselineItem.imgD
+                                                                            )
                                                                         }
                                                                         Column(modifier = Modifier.weight(1f)) {
                                                                             Text(
@@ -3792,15 +3800,13 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                                     }
 
                                                     fun saveBitmapToImagenes(ctx: android.content.Context, bmp: android.graphics.Bitmap, prefix: String): String? {
-                                                        return try {
-                                                            val dir = java.io.File(ctx.filesDir, "Imagenes").apply { mkdirs() }
-                                                            val name = "$prefix-" + System.currentTimeMillis().toString() + ".jpg"
-                                                            val file = java.io.File(dir, name)
-                                                            java.io.FileOutputStream(file).use { out ->
-                                                                bmp.compress(android.graphics.Bitmap.CompressFormat.JPEG, 92, out)
-                                                            }
-                                                            name
-                                                        } catch (_: Exception) { null }
+                                                        return EticImageStore.saveBitmap(
+                                                            context = ctx,
+                                                            rootTreeUri = rootTreeUri,
+                                                            inspectionNumero = inspectionNumero,
+                                                            prefix = prefix,
+                                                            bmp = bmp
+                                                        )
                                                     }
 
                                                     val irCameraLauncher = rememberLauncherForActivityResult(
@@ -3829,7 +3835,13 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                                         ActivityResultContracts.GetContent()
                                                     ) { uri ->
                                                         if (uri != null) {
-                                                            val name = copyProblemImageFromUri(ctx, uri, "IR")
+                                                            val name = copyProblemImageFromUri(
+                                                                ctx,
+                                                                rootTreeUri,
+                                                                inspectionNumero,
+                                                                uri,
+                                                                "IR"
+                                                            )
                                                             if (name != null) {
                                                                 imgIr = name
                                                                 irPreview = null
@@ -3840,7 +3852,13 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                                         ActivityResultContracts.GetContent()
                                                     ) { uri ->
                                                         if (uri != null) {
-                                                            val name = copyProblemImageFromUri(ctx, uri, "ID")
+                                                            val name = copyProblemImageFromUri(
+                                                                ctx,
+                                                                rootTreeUri,
+                                                                inspectionNumero,
+                                                                uri,
+                                                                "ID"
+                                                            )
                                                             if (name != null) {
                                                                 imgId = name
                                                                 idPreview = null
@@ -4028,13 +4046,12 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                                                         )
                                                                         Spacer(Modifier.height(4.dp))
                                                                         val bmp = irPreview ?: run {
-                                                                            if (imgIr.isNotBlank()) {
-                                                                                val f = java.io.File(
-                                                                                    androidx.compose.ui.platform.LocalContext.current.filesDir,
-                                                                                    "Imagenes/$imgIr"
-                                                                                )
-                                                                                if (f.exists()) android.graphics.BitmapFactory.decodeFile(f.absolutePath) else null
-                                                                            } else null
+                                                                            EticImageStore.loadBitmap(
+                                                                                context = ctx,
+                                                                                rootTreeUri = rootTreeUri,
+                                                                                inspectionNumero = inspectionNumero,
+                                                                                fileName = imgIr
+                                                                            )
                                                                         }
                                                                         if (bmp != null) {
                                                                             androidx.compose.foundation.Image(
@@ -4075,13 +4092,12 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                                                         )
                                                                         Spacer(Modifier.height(4.dp))
                                                                         val bmp2 = idPreview ?: run {
-                                                                            if (imgId.isNotBlank()) {
-                                                                                val f = java.io.File(
-                                                                                    androidx.compose.ui.platform.LocalContext.current.filesDir,
-                                                                                    "Imagenes/$imgId"
-                                                                                )
-                                                                                if (f.exists()) android.graphics.BitmapFactory.decodeFile(f.absolutePath) else null
-                                                                            } else null
+                                                                            EticImageStore.loadBitmap(
+                                                                                context = ctx,
+                                                                                rootTreeUri = rootTreeUri,
+                                                                                inspectionNumero = inspectionNumero,
+                                                                                fileName = imgId
+                                                                            )
                                                                         }
                                                                         if (bmp2 != null) {
                                                                             androidx.compose.foundation.Image(
@@ -4774,41 +4790,36 @@ private fun nextImageName(lastName: String?, prefix: String): String {
     return if (next == base) "${prefix}0001" else next
 }
 
-private fun saveProblemBitmap(ctx: Context, bmp: Bitmap, prefix: String): String? {
-    return try {
-        val dir = File(ctx.filesDir, "Imagenes").apply { mkdirs() }
-        val name = "$prefix-${System.currentTimeMillis()}.jpg"
-        val file = File(dir, name)
-        FileOutputStream(file).use { out ->
-            bmp.compress(Bitmap.CompressFormat.JPEG, 92, out)
-        }
-        name
-    } catch (_: Exception) {
-        null
-    }
+private fun saveProblemBitmap(
+    ctx: Context,
+    rootTreeUri: Uri?,
+    inspectionNumero: String?,
+    bmp: Bitmap,
+    prefix: String
+): String? {
+    return EticImageStore.saveBitmap(
+        context = ctx,
+        rootTreeUri = rootTreeUri,
+        inspectionNumero = inspectionNumero,
+        prefix = prefix,
+        bmp = bmp
+    )
 }
 
-private fun copyProblemImageFromUri(ctx: Context, uri: Uri, prefix: String): String? {
-    return try {
-        val dir = File(ctx.filesDir, "Imagenes").apply { mkdirs() }
-        val ext = ctx.contentResolver.getType(uri)?.let {
-            when {
-                it.contains("png") -> ".png"
-                it.contains("jpeg") || it.contains("jpg") -> ".jpg"
-                else -> ".jpg"
-            }
-        } ?: ".jpg"
-        val name = "$prefix-${System.currentTimeMillis()}$ext"
-        val file = File(dir, name)
-        ctx.contentResolver.openInputStream(uri)?.use { input ->
-            FileOutputStream(file).use { output ->
-                input.copyTo(output)
-            }
-        } ?: return null
-        name
-    } catch (_: Exception) {
-        null
-    }
+private fun copyProblemImageFromUri(
+    ctx: Context,
+    rootTreeUri: Uri?,
+    inspectionNumero: String?,
+    uri: Uri,
+    prefix: String
+): String? {
+    return EticImageStore.copyFromUri(
+        context = ctx,
+        rootTreeUri = rootTreeUri,
+        inspectionNumero = inspectionNumero,
+        prefix = prefix,
+        uri = uri
+    )
 }
 
 // -------------------------

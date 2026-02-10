@@ -1,7 +1,6 @@
 package com.example.etic.ui.inspection.tabs
 
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -25,6 +24,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -50,8 +50,9 @@ import com.example.etic.features.inspection.tree.Baseline
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.File
-import java.io.FileOutputStream
+import com.example.etic.core.saf.EticImageStore
+import com.example.etic.core.settings.EticPrefs
+import com.example.etic.core.settings.settingsDataStore
 
 @Composable
 fun BaselineTableFromDatabase(
@@ -64,6 +65,9 @@ fun BaselineTableFromDatabase(
     val currentInspection = LocalCurrentInspection.current
     val currentUser = LocalCurrentUser.current
     val scope = rememberCoroutineScope()
+    val eticPrefs = remember { EticPrefs(ctx.settingsDataStore) }
+    val rootTreeUriStr by eticPrefs.rootTreeUriFlow.collectAsState(initial = null)
+    val rootTreeUri = remember(rootTreeUriStr) { rootTreeUriStr?.let { Uri.parse(it) } }
 
     val repo = remember {
         val db = DbProvider.get(ctx)
@@ -203,15 +207,13 @@ fun BaselineTableFromDatabase(
         bmp: Bitmap,
         prefix: String
     ): String? {
-        return try {
-            val dir = File(ctx.filesDir, "Imagenes").apply { mkdirs() }
-            val name = "$prefix-" + System.currentTimeMillis().toString() + ".jpg"
-            val file = File(dir, name)
-            FileOutputStream(file).use { out ->
-                bmp.compress(Bitmap.CompressFormat.JPEG, 92, out)
-            }
-            name
-        } catch (_: Exception) { null }
+        return EticImageStore.saveBitmap(
+            context = ctx,
+            rootTreeUri = rootTreeUri,
+            inspectionNumero = currentInspection?.noInspeccion?.toString(),
+            prefix = prefix,
+            bmp = bmp
+        )
     }
 
     fun copyImageFromUri(
@@ -219,19 +221,13 @@ fun BaselineTableFromDatabase(
         uri: Uri,
         prefix: String
     ): String? {
-        return try {
-            val dir = File(ctx.filesDir, "Imagenes").apply { mkdirs() }
-            val name = "$prefix-" + System.currentTimeMillis().toString() + ".jpg"
-            val file = File(dir, name)
-            ctx.contentResolver.openInputStream(uri)?.use { input ->
-                FileOutputStream(file).use { output ->
-                    input.copyTo(output, 8 * 1024)
-                }
-            } ?: return null
-            name
-        } catch (_: Exception) {
-            null
-        }
+        return EticImageStore.copyFromUri(
+            context = ctx,
+            rootTreeUri = rootTreeUri,
+            inspectionNumero = currentInspection?.noInspeccion?.toString(),
+            prefix = prefix,
+            uri = uri
+        )
     }
 
     suspend fun persistBaselineDrafts(
@@ -529,10 +525,12 @@ fun BaselineTableFromDatabase(
                                 )
                                 Spacer(Modifier.height(4.dp))
                                 val bmp = irPreview ?: run {
-                                    if (imgIr.isNotBlank()) {
-                                        val f = java.io.File(ctx.filesDir, "Imagenes/$imgIr")
-                                        if (f.exists()) BitmapFactory.decodeFile(f.absolutePath) else null
-                                    } else null
+                                    EticImageStore.loadBitmap(
+                                        context = ctx,
+                                        rootTreeUri = rootTreeUri,
+                                        inspectionNumero = currentInspection?.noInspeccion?.toString(),
+                                        fileName = imgIr
+                                    )
                                 }
                                 if (bmp != null) {
                                     Image(
@@ -573,10 +571,12 @@ fun BaselineTableFromDatabase(
                                 )
                                 Spacer(Modifier.height(4.dp))
                                 val bmp2 = idPreview ?: run {
-                                    if (imgId.isNotBlank()) {
-                                        val f = java.io.File(ctx.filesDir, "Imagenes/$imgId")
-                                        if (f.exists()) BitmapFactory.decodeFile(f.absolutePath) else null
-                                    } else null
+                                    EticImageStore.loadBitmap(
+                                        context = ctx,
+                                        rootTreeUri = rootTreeUri,
+                                        inspectionNumero = currentInspection?.noInspeccion?.toString(),
+                                        fileName = imgId
+                                    )
                                 }
                                 if (bmp2 != null) {
                                     Image(
