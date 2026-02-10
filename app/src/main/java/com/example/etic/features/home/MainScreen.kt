@@ -101,6 +101,7 @@ import com.example.etic.reports.GenerateProblemListExcelUseCase
 import com.example.etic.reports.GenerateProblemListPdfUseCase
 import com.example.etic.reports.GenerateProblemasPdfUseCase
 import com.example.etic.reports.ReportesFolderProvider
+import com.example.etic.reports.ProblemTypeIds
 import com.example.etic.data.local.queries.CurrentInspectionInfo
 import com.example.etic.ui.theme.FontSizeOption
 import android.net.Uri
@@ -235,6 +236,63 @@ fun MainScreen(
                     selectedProblemaIds = emptyList(),
                     currentUserId = currentUserSnapshot?.idUsuario,
                     currentUserName = currentUserSnapshot?.nombre ?: currentUserSnapshot?.usuario
+                )
+                result.fold(
+                    onSuccess = { uriString ->
+                        Toast.makeText(appContext, "PDF generado: $uriString", Toast.LENGTH_LONG).show()
+                    },
+                    onFailure = { e ->
+                        Toast.makeText(
+                            appContext,
+                            "Error al generar PDF: ${e.message ?: "desconocido"}",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                )
+            } finally {
+                isGeneratingReport = false
+            }
+        }
+    }
+
+    fun generateAislamientoTermicoPdf(insp: CurrentInspectionInfo) {
+        if (isGeneratingReport) return
+        val noInspeccion = insp.noInspeccion?.toString()
+        val inspeccionId = insp.idInspeccion
+        if (noInspeccion.isNullOrBlank() || inspeccionId.isNullOrBlank()) {
+            Toast.makeText(appContext, "Inspeccion invalida.", Toast.LENGTH_SHORT).show()
+            return
+        }
+        scope.launch {
+            isGeneratingReport = true
+            drawerState.close()
+            val folderProvider = ReportesFolderProvider(appContext) { inspectionNumber ->
+                val rootUri = rootTreeUri ?: return@ReportesFolderProvider null
+                val reportsDir = safManager.getReportsDir(appContext, rootUri, inspectionNumber)
+                reportsDir?.uri
+            }
+            val useCase = GenerateProblemasPdfUseCase(
+                context = appContext,
+                folderProvider = folderProvider,
+                getInspeccionImagenesTreeUri = { inspectionNumber ->
+                    val rootUri = rootTreeUri
+                    if (rootUri == null) {
+                        null
+                    } else {
+                        val imagesDir = safManager.getImagesDir(appContext, rootUri, inspectionNumber)
+                        imagesDir?.uri
+                    }
+                }
+            )
+            try {
+                val result = useCase.run(
+                    noInspeccion = noInspeccion,
+                    inspeccionId = inspeccionId,
+                    selectedProblemaIds = emptyList(),
+                    currentUserId = currentUserSnapshot?.idUsuario,
+                    currentUserName = currentUserSnapshot?.nombre ?: currentUserSnapshot?.usuario,
+                    allowedTypeIds = listOf(ProblemTypeIds.AISLAMIENTO_TERMICO),
+                    fileNameOverride = "ETIC_AISLAMIENTO_TERMICO_INSPECCION_$noInspeccion.pdf"
                 )
                 result.fold(
                     onSuccess = { uriString ->
@@ -460,6 +518,14 @@ fun MainScreen(
                     Toast.makeText(appContext, "No hay inspeccion activa.", Toast.LENGTH_SHORT).show()
                 } else {
                     generateProblemasPdf(insp)
+                }
+            }
+            ReportAction.AislamientoTermicoPdf -> {
+                val insp = currentInspectionSnapshot
+                if (insp == null) {
+                    Toast.makeText(appContext, "No hay inspeccion activa.", Toast.LENGTH_SHORT).show()
+                } else {
+                    generateAislamientoTermicoPdf(insp)
                 }
             }
             ReportAction.BaselinePdf -> {

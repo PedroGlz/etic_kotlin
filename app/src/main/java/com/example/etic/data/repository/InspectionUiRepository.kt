@@ -98,7 +98,9 @@ class InspectionUiRepository(
             val numInspDisplay = r.idInspeccion?.let { inspMap[it]?.noInspeccion?.toString() } ?: ""
             val severidadDisplay = r.idSeveridad?.let { sevMap[it]?.severidad } ?: (r.idSeveridad ?: "")
             val equipoDisplay = r.idUbicacion?.let { ubicMap[it]?.ubicacion } ?: ""
-            val tipoDisplay = r.idTipoInspeccion?.let { tipoMap[it]?.tipoInspeccion } ?: (r.idTipoInspeccion ?: "")
+            val tipoDisplay = r.idTipoInspeccion?.let { tipoMap[it]?.tipoInspeccion }
+                ?: typeLabelForId(r.idTipoInspeccion)
+                ?: (r.idTipoInspeccion ?: "")
 
             Problem(
                 id = r.idProblema,
@@ -365,5 +367,22 @@ private val PROBLEM_TYPE_FILTERS = listOf(
         "mecanico",
         "Mecanico",
         listOf("0D32B334-76C3-11D3-82BF-00104BC75DC2")
+    ),
+    ProblemTypeFilter(
+        "aislamiento",
+        "Aislamiento Termico",
+        listOf("0D32B335-76C3-11D3-82BF-00104BC75DC2")
     )
 )
+
+private fun typeLabelForId(typeId: String?): String? {
+    if (typeId.isNullOrBlank()) return null
+    return when {
+        typeId.equals("0D32B331-76C3-11D3-82BF-00104BC75DC2", ignoreCase = true) -> "Eléctrico"
+        typeId.equals("0D32B332-76C3-11D3-82BF-00104BC75DC2", ignoreCase = true) -> "Eléctrico"
+        typeId.equals("0D32B333-76C3-11D3-82BF-00104BC75DC2", ignoreCase = true) -> "Visual"
+        typeId.equals("0D32B334-76C3-11D3-82BF-00104BC75DC2", ignoreCase = true) -> "Mecánico"
+        typeId.equals("0D32B335-76C3-11D3-82BF-00104BC75DC2", ignoreCase = true) -> "Aislamiento Térmico"
+        else -> null
+    }
+}

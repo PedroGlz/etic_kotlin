@@ -128,6 +128,8 @@ import com.example.etic.features.inspection.ui.problem.ElectricProblemFormData
 import com.example.etic.features.inspection.ui.problem.VisualProblemDialog
 import com.example.etic.features.inspection.ui.problem.MechanicalProblemDialog
 import com.example.etic.features.inspection.ui.problem.MechanicalProblemFormData
+import com.example.etic.features.inspection.ui.problem.AislamientoTermicoProblemDialog
+import com.example.etic.features.inspection.ui.problem.AislamientoTermicoProblemFormData
 import com.example.etic.data.local.entities.Severidad
 import com.example.etic.data.local.entities.Problema
 import com.example.etic.data.local.dao.VisualProblemHistoryRow
@@ -155,7 +157,8 @@ private val ICON_NO_EQUIPO_COLOR: Color = Color(0xFF4CAF50)  // Verde (DragIndic
 private val PROBLEM_TYPE_IDS = mapOf(
     "Eléctrico" to "0D32B331-76C3-11D3-82BF-00104BC75DC2",
     "Visual" to "0D32B333-76C3-11D3-82BF-00104BC75DC2",
-    "Mecánico" to "0D32B334-76C3-11D3-82BF-00104BC75DC2"
+    "Mecánico" to "0D32B334-76C3-11D3-82BF-00104BC75DC2",
+    "Aislamiento Térmico" to "0D32B335-76C3-11D3-82BF-00104BC75DC2"
 )
 
 private const val PROBLEM_STATUS_ALL = "0"
@@ -194,6 +197,13 @@ private sealed class ProblemDraft {
         val digitalImage: String,
         val closed: Boolean
     ) : ProblemDraft()
+
+    data class AislamientoTermicoDraft(
+        val formData: AislamientoTermicoProblemFormData,
+        val thermalImage: String,
+        val digitalImage: String,
+        val closed: Boolean
+    ) : ProblemDraft()
 }
 
 private val PROBLEM_TYPE_FILTERS = listOf(
@@ -215,6 +225,11 @@ private val PROBLEM_TYPE_FILTERS = listOf(
         "mecanico",
         "Mecánico",
         listOf("0D32B334-76C3-11D3-82BF-00104BC75DC2")
+    ),
+    ProblemTypeFilter(
+        "aislamiento",
+        "Aislamiento Térmico",
+        listOf("0D32B335-76C3-11D3-82BF-00104BC75DC2")
     )
 )
 
@@ -241,6 +256,7 @@ private enum class BaselineColumn {
     INSPECCION, EQUIPO, FECHA, MTA, TEMP, AMB, IR, ID, NOTAS
 }
 private val MECHANICAL_PROBLEM_TYPE_ID = PROBLEM_TYPE_IDS["Mecánico"]
+private val AISLAMIENTO_TERMICO_PROBLEM_TYPE_ID = PROBLEM_TYPE_IDS["Aislamiento Térmico"]
 
 private fun problemTypeLabelForId(typeId: String?): String {
     val fallback = PROBLEM_TYPE_IDS.entries.firstOrNull { it.key.contains("Visual", ignoreCase = true) }
@@ -265,6 +281,7 @@ private fun String.canonicalProblemLabel(): String =
     when (this.normalizeProblemKey()) {
         "electrico" -> "Eléctrico"
         "mecanico" -> "Mecánico"
+        "aislamiento termico" -> "Aislamiento Térmico"
         else -> this
     }
 private val VISUAL_SEVERITY_OPTIONS = listOf(
@@ -355,7 +372,8 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
         val visualTypeId = PROBLEM_TYPE_IDS["Visual"]
         val electricTypeId = ELECTRIC_PROBLEM_TYPE_ID
         val mechanicalTypeId = MECHANICAL_PROBLEM_TYPE_ID
-        val typesToLoad = listOfNotNull(visualTypeId, electricTypeId, mechanicalTypeId)
+        val aislamientoTermicoTypeId = AISLAMIENTO_TERMICO_PROBLEM_TYPE_ID
+        val typesToLoad = listOfNotNull(visualTypeId, electricTypeId, mechanicalTypeId, aislamientoTermicoTypeId)
 
         coroutineScope {
             val hazardsDeferred = async(Dispatchers.IO) {
@@ -498,6 +516,8 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             var electricProblemFormKey by rememberSaveable { mutableStateOf(0) }
             var showMechanicalProblemDialog by rememberSaveable { mutableStateOf(false) }
             var mechanicalProblemFormKey by rememberSaveable { mutableStateOf(0) }
+            var showAislamientoTermicoProblemDialog by rememberSaveable { mutableStateOf(false) }
+            var aislamientoTermicoProblemFormKey by rememberSaveable { mutableStateOf(0) }
             var cronicoActionEnabled by rememberSaveable { mutableStateOf(false) }
             var showEditUbDialog by remember { mutableStateOf(false) }
             var isSavingEditUb by remember { mutableStateOf(false) }
@@ -519,6 +539,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             var isSavingVisualProblem by remember { mutableStateOf(false) }
             var isSavingElectricProblem by remember { mutableStateOf(false) }
             var isSavingMechanicalProblem by remember { mutableStateOf(false) }
+            var isSavingAislamientoTermicoProblem by remember { mutableStateOf(false) }
             var isSavingCronico by remember { mutableStateOf(false) }
             var showCronicoConfirmDialog by rememberSaveable { mutableStateOf(false) }
             var pendingCronicoEntity by remember { mutableStateOf<Problema?>(null) }
@@ -530,6 +551,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             var problemDrafts by remember { mutableStateOf<Map<String, ProblemDraft>>(emptyMap()) }
             var electricProblemDraftData by remember { mutableStateOf<ElectricProblemFormData?>(null) }
             var mechanicalProblemDraftData by remember { mutableStateOf<MechanicalProblemFormData?>(null) }
+            var aislamientoTermicoProblemDraftData by remember { mutableStateOf<AislamientoTermicoProblemFormData?>(null) }
             fun resetVisualProblemForm() {
                 editingProblemId = null
                 editingProblemOriginal = null
@@ -560,6 +582,9 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             var editingMechanicalProblemId by rememberSaveable { mutableStateOf<String?>(null) }
             var editingMechanicalProblemOriginal by remember { mutableStateOf<Problema?>(null) }
             var mechanicalProblemClosed by rememberSaveable { mutableStateOf(false) }
+            var editingAislamientoTermicoProblemId by rememberSaveable { mutableStateOf<String?>(null) }
+            var editingAislamientoTermicoProblemOriginal by remember { mutableStateOf<Problema?>(null) }
+            var aislamientoTermicoProblemClosed by rememberSaveable { mutableStateOf(false) }
             fun resetMechanicalProblemState() {
                 editingMechanicalProblemId = null
                 editingMechanicalProblemOriginal = null
@@ -567,6 +592,15 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                 pendingThermalImage = ""
                 pendingDigitalImage = ""
                 mechanicalProblemDraftData = null
+                aislamientoTermicoProblemDraftData = null
+            }
+            fun resetAislamientoTermicoProblemState() {
+                editingAislamientoTermicoProblemId = null
+                editingAislamientoTermicoProblemOriginal = null
+                aislamientoTermicoProblemClosed = false
+                pendingThermalImage = ""
+                pendingDigitalImage = ""
+                aislamientoTermicoProblemDraftData = null
             }
             val thermalCameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { bmp ->
                 if (bmp != null) {
@@ -794,6 +828,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                 problemDrafts = emptyMap()
                 electricProblemDraftData = null
                 mechanicalProblemDraftData = null
+                aislamientoTermicoProblemDraftData = null
             }
 
             fun applyVisualDraft(problemId: String) {
@@ -823,6 +858,14 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                 pendingThermalImage = draft.thermalImage
                 pendingDigitalImage = draft.digitalImage
                 mechanicalProblemClosed = draft.closed
+            }
+
+            fun applyAislamientoTermicoDraft(problemId: String) {
+                val draft = problemDrafts[problemId] as? ProblemDraft.AislamientoTermicoDraft ?: return
+                aislamientoTermicoProblemDraftData = draft.formData
+                pendingThermalImage = draft.thermalImage
+                pendingDigitalImage = draft.digitalImage
+                aislamientoTermicoProblemClosed = draft.closed
             }
 
             fun normalizeEmissivityValue(raw: String): String = raw.trim().replace(',', '.')
@@ -891,6 +934,25 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                 return true
             }
 
+            fun validateAislamientoTermicoForNavigation(formData: AislamientoTermicoProblemFormData): Boolean {
+                val missing = buildList {
+                    if (formData.failureId.isNullOrBlank()) add("Falla")
+                    if (formData.componentTemperature.isBlank()) add("Temp. componente")
+                    if (formData.referenceTemperature.isBlank()) add("Temp. referencia")
+                    if (pendingThermalImage.isBlank()) add("Imagen tÃ©rmica")
+                    if (pendingDigitalImage.isBlank()) add("Imagen digital")
+                }
+                if (missing.isNotEmpty()) {
+                    Toast.makeText(ctx, "Completa: ${missing.joinToString()}", Toast.LENGTH_SHORT).show()
+                    return false
+                }
+                if (!isEmissivityValid(formData.emissivityChecked, formData.emissivity)) {
+                    Toast.makeText(ctx, "Revisa el valor de emisividad.", Toast.LENGTH_SHORT).show()
+                    return false
+                }
+                return true
+            }
+
             fun startVisualProblemEdit(problem: Problem) {
                 val visualTypeId = PROBLEM_TYPE_IDS["Visual"]
                 if (visualTypeId.isNullOrBlank()) {
@@ -900,6 +962,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                 scope.launch {
                     showElectricProblemDialog = false
                     showMechanicalProblemDialog = false
+                    showAislamientoTermicoProblemDialog = false
                     resetVisualProblemForm()
                     val draft = withContext(Dispatchers.IO) {
                         runCatching {
@@ -973,6 +1036,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                 scope.launch {
                     showVisualInspectionDialog = false
                     showMechanicalProblemDialog = false
+                    showAislamientoTermicoProblemDialog = false
                     val entity = withContext(Dispatchers.IO) {
                         runCatching { problemaDao.getById(problem.id) }.getOrNull()
                     }
@@ -1062,15 +1126,72 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     showMechanicalProblemDialog = true
                 }
             }
+            fun startAislamientoTermicoProblemEdit(problem: Problem) {
+                val aislamientoTypeId = AISLAMIENTO_TERMICO_PROBLEM_TYPE_ID
+                if (aislamientoTypeId.isNullOrBlank()) {
+                    Toast.makeText(ctx, "No se encontro el tipo aislamiento térrmico.", Toast.LENGTH_SHORT).show()
+                    return
+                }
+                scope.launch {
+                    showVisualInspectionDialog = false
+                    showElectricProblemDialog = false
+                    showMechanicalProblemDialog = false
+                    showAislamientoTermicoProblemDialog = false
+                    val entity = withContext(Dispatchers.IO) {
+                        runCatching { problemaDao.getById(problem.id) }.getOrNull()
+                    }
+                    if (entity == null || entity.idTipoInspeccion.isNullOrBlank()
+                        || !entity.idTipoInspeccion.equals(aislamientoTypeId, ignoreCase = true)
+                    ) {
+                        Toast.makeText(
+                            ctx,
+                            "Solo se pueden editar problemas de aislamiento térrmico.",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                        return@launch
+                    }
+                    val ubicacionId = entity.idUbicacion
+                    if (ubicacionId.isNullOrBlank()) {
+                        Toast.makeText(ctx, "El problema no tiene una ubicacion asociada.", Toast.LENGTH_SHORT).show()
+                        return@launch
+                    }
+                    resetAislamientoTermicoProblemState()
+                    val equipmentName = problem.equipo.takeIf { it.isNotBlank() } ?: ubicacionId
+                    val fallbackRoute = titlePathForId(nodes, ubicacionId).joinToString(" / ")
+                    val resolvedRoute = fallbackRoute.takeIf { it.isNotBlank() } ?: entity.ruta ?: "-"
+                    val inspectionNumber = entity.idInspeccion?.let { inspId ->
+                        withContext(Dispatchers.IO) {
+                            runCatching { inspeccionDao.getById(inspId) }.getOrNull()?.noInspeccion?.toString()
+                        }
+                    } ?: currentInspection?.noInspeccion?.toString() ?: "-"
+                    pendingProblemEquipmentName = equipmentName
+                    pendingProblemRoute = resolvedRoute
+                    pendingProblemUbicacionId = ubicacionId
+                    pendingProblemNumber = entity.numeroProblema?.toString() ?: problem.no.toString()
+                    pendingInspectionNumber = inspectionNumber
+                    pendingProblemType = problemTypeLabelForId(aislamientoTypeId)
+                    pendingThermalImage = entity.irFile.orEmpty()
+                    pendingDigitalImage = entity.photoFile.orEmpty()
+                    editingAislamientoTermicoProblemOriginal = entity
+                    editingAislamientoTermicoProblemId = entity.idProblema
+                    aislamientoTermicoProblemClosed = entity.estatusProblema?.equals("Cerrado", ignoreCase = true) == true
+                    aislamientoTermicoProblemFormKey += 1
+                    cronicoActionEnabled = canEnableCronico(entity)
+                    applyAislamientoTermicoDraft(entity.idProblema)
+                    showAislamientoTermicoProblemDialog = true
+                }
+            }
             fun openProblemForNavigation(problem: Problem) {
                 val normalizedType = problem.tipo?.normalizeProblemKey()
                 when {
                     problem.tipoId?.equals(VISUAL_PROBLEM_TYPE_ID, ignoreCase = true) == true -> startVisualProblemEdit(problem)
                     problem.tipoId?.equals(ELECTRIC_PROBLEM_TYPE_ID, ignoreCase = true) == true -> startElectricProblemEdit(problem)
                     problem.tipoId?.equals(MECHANICAL_PROBLEM_TYPE_ID, ignoreCase = true) == true -> startMechanicalProblemEdit(problem)
+                    problem.tipoId?.equals(AISLAMIENTO_TERMICO_PROBLEM_TYPE_ID, ignoreCase = true) == true -> startAislamientoTermicoProblemEdit(problem)
                     normalizedType == "visual" -> startVisualProblemEdit(problem)
                     normalizedType == "electrico" -> startElectricProblemEdit(problem)
                     normalizedType == "mecanico" -> startMechanicalProblemEdit(problem)
+                    normalizedType == "aislamiento termico" -> startAislamientoTermicoProblemEdit(problem)
                     else -> Toast.makeText(ctx, "La edición de este tipo de problema no está disponible.", Toast.LENGTH_SHORT).show()
                 }
             }
@@ -1170,6 +1291,21 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                             ?: statusId
                     }
                 }
+            }
+            fun navigateFromAislamientoTermico(delta: Int, formData: AislamientoTermicoProblemFormData) {
+                val currentId = editingAislamientoTermicoProblemId ?: return
+                if (!validateAislamientoTermicoForNavigation(formData)) return
+                val draft = ProblemDraft.AislamientoTermicoDraft(
+                    formData = formData,
+                    thermalImage = pendingThermalImage,
+                    digitalImage = pendingDigitalImage,
+                    closed = aislamientoTermicoProblemClosed
+                )
+                val nextIndex = problemNavIndex + delta
+                if (nextIndex !in problemNavList.indices) return
+                problemDrafts = problemDrafts + (currentId to draft)
+                problemNavIndex = nextIndex
+                openProblemForNavigation(problemNavList[nextIndex])
             }
     var deleteUbConfirmNode by remember { mutableStateOf<TreeNode?>(null) }
 
@@ -1329,6 +1465,56 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                 )
                             }
                             is ProblemDraft.MechanicalDraft -> {
+                                val formData = draft.formData
+                                val componentTemp = formData.componentTemperature.toDoubleOrNull()
+                                val referenceTemp = formData.referenceTemperature.toDoubleOrNull()
+                                val difference = componentTemp?.let { comp ->
+                                    referenceTemp?.let { ref -> comp - ref }
+                                }
+                                val severityId = calculateSeverityId(difference)
+                                val emissivityValue = normalizeEmissivityValue(formData.emissivity).toDoubleOrNull()
+                                val finalComment = formData.comments.ifBlank {
+                                    base.componentComment.orEmpty()
+                                }
+                                base.copy(
+                                    problemTemperature = componentTemp,
+                                    referenceTemperature = referenceTemp,
+                                    problemPhase = null,
+                                    referencePhase = null,
+                                    problemRms = formData.componentRms.toDoubleOrNull(),
+                                    referenceRms = formData.referenceRms.toDoubleOrNull(),
+                                    additionalInfo = null,
+                                    additionalRms = null,
+                                    emissivityCheck = if (formData.emissivityChecked) "on" else "off",
+                                    emissivity = emissivityValue,
+                                    indirectTempCheck = "off",
+                                    tempAmbientCheck = if (formData.ambientTempChecked) "on" else "off",
+                                    tempAmbient = formData.ambientTemp.toDoubleOrNull(),
+                                    environmentCheck = if (formData.environmentChecked) "on" else "off",
+                                    environment = formData.environmentId,
+                                    windSpeedCheck = "off",
+                                    windSpeed = null,
+                                    idFabricante = formData.manufacturerId,
+                                    ratedLoadCheck = "off",
+                                    ratedLoad = formData.ratedLoad.takeIf { it.isNotBlank() },
+                                    circuitVoltageCheck = "off",
+                                    circuitVoltage = formData.circuitVoltage.takeIf { it.isNotBlank() },
+                                    idFalla = formData.failureId,
+                                    componentComment = finalComment,
+                                    estatusProblema = if (draft.closed) "Cerrado" else "Abierto",
+                                    cerradoEnInspeccion = if (draft.closed) inspection.idInspeccion
+                                    else base.cerradoEnInspeccion,
+                                    aumentoTemperatura = difference,
+                                    idSeveridad = severityId,
+                                    rpm = formData.rpm.toDoubleOrNull(),
+                                    bearingType = formData.bearingType.takeIf { it.isNotBlank() },
+                                    irFile = draft.thermalImage,
+                                    photoFile = draft.digitalImage,
+                                    modificadoPor = currentUserId,
+                                    fechaMod = nowTs
+                                )
+                            }
+                            is ProblemDraft.AislamientoTermicoDraft -> {
                                 val formData = draft.formData
                                 val componentTemp = formData.componentTemperature.toDoubleOrNull()
                                 val referenceTemp = formData.referenceTemperature.toDoubleOrNull()
@@ -1941,6 +2127,217 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                 }
             }
 
+            fun saveAislamientoTermicoProblem(formData: AislamientoTermicoProblemFormData) {
+                val inspection = currentInspection
+                if (inspection == null) {
+                    Toast.makeText(ctx, "No hay inspecciÃ³n activa.", Toast.LENGTH_SHORT).show()
+                    return
+                }
+                val locationId = pendingProblemUbicacionId ?: selectedId
+                if (locationId.isNullOrBlank()) {
+                    Toast.makeText(ctx, "Selecciona un equipo.", Toast.LENGTH_SHORT).show()
+                    return
+                }
+                if (pendingThermalImage.isBlank() || pendingDigitalImage.isBlank()) {
+                    Toast.makeText(ctx, "Carga las imÃ¡genes tÃ©rmica y digital para guardar el problema.", Toast.LENGTH_SHORT).show()
+                    return
+                }
+                val navigationSave = editingAislamientoTermicoProblemId != null && problemNavList.isNotEmpty()
+                if (navigationSave) {
+                    if (!validateAislamientoTermicoForNavigation(formData)) return
+                    val currentId = editingAislamientoTermicoProblemId ?: return
+                    scope.launch {
+                        if (isSavingAislamientoTermicoProblem) return@launch
+                        isSavingAislamientoTermicoProblem = true
+                        try {
+                            val draft = ProblemDraft.AislamientoTermicoDraft(
+                                formData = formData,
+                                thermalImage = pendingThermalImage,
+                                digitalImage = pendingDigitalImage,
+                                closed = aislamientoTermicoProblemClosed
+                            )
+                            val saved = persistProblemDrafts(currentId, draft, currentUser?.idUsuario)
+                            if (saved) {
+                                resetAislamientoTermicoProblemState()
+                                showAislamientoTermicoProblemDialog = false
+                            }
+                        } finally {
+                            isSavingAislamientoTermicoProblem = false
+                        }
+                    }
+                    return
+                }
+                val typeId = AISLAMIENTO_TERMICO_PROBLEM_TYPE_ID ?: "0D32B335-76C3-11D3-82BF-00104BC75DC2"
+                val numero = pendingProblemNumber.toIntOrNull() ?: 1
+                scope.launch {
+                    if (isSavingAislamientoTermicoProblem) return@launch
+                    isSavingAislamientoTermicoProblem = true
+                    try {
+                        val componentTemp = formData.componentTemperature.toDoubleOrNull()
+                        val referenceTemp = formData.referenceTemperature.toDoubleOrNull()
+                        val difference = componentTemp?.let { comp ->
+                            referenceTemp?.let { ref -> comp - ref }
+                        }
+                        val severityId = calculateSeverityId(difference)
+                        val failureLabel = formData.failureId?.let { id ->
+                            electricHazardOptions.firstOrNull { it.first == id }?.second
+                        }
+                        val emissivityInput = formData.emissivity.trim()
+                        val emissivityValue = emissivityInput.replace(',', '.').toDoubleOrNull()
+                        if (formData.emissivityChecked) {
+                            if (emissivityValue == null || emissivityValue < 0.0 || emissivityValue > 1.0) {
+                                Toast.makeText(
+                                    ctx,
+                                    "La emisividad debe estar entre 0.00 y 1.00.",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                                return@launch
+                            }
+                        }
+                        val autoComment = buildList {
+                            failureLabel?.takeIf { it.isNotBlank() }?.let { add(it) }
+                            pendingProblemEquipmentName?.takeIf { it.isNotBlank() }?.let { add(it) }
+                        }.joinToString(", ")
+                        val finalComment = formData.comments.takeIf { it.isNotBlank() } ?: autoComment
+
+                        val detRow = withContext(Dispatchers.IO) {
+                            runCatching {
+                                inspeccionDetDao.getByUbicacion(locationId)
+                                    .firstOrNull { it.idInspeccion == inspection.idInspeccion }
+                            }.getOrNull()
+                        }
+                        val detId = detRow?.idInspeccionDet
+                        val nowTs = java.time.LocalDateTime.now()
+                            .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+
+                        val editingProblem = editingAislamientoTermicoProblemOriginal
+                        val isEditingProblem = editingProblem != null && editingAislamientoTermicoProblemId != null
+                        val problema = if (isEditingProblem) {
+                            editingProblem!!.copy(
+                                numeroProblema = numero,
+                                idInspeccionDet = detId,
+                                problemTemperature = componentTemp,
+                                referenceTemperature = referenceTemp,
+                                problemPhase = null,
+                                referencePhase = null,
+                                problemRms = formData.componentRms.toDoubleOrNull(),
+                                referenceRms = formData.referenceRms.toDoubleOrNull(),
+                                additionalInfo = null,
+                                additionalRms = null,
+                                emissivityCheck = if (formData.emissivityChecked) "on" else "off",
+                                emissivity = emissivityValue,
+                                indirectTempCheck = "off",
+                                tempAmbientCheck = if (formData.ambientTempChecked) "on" else "off",
+                                tempAmbient = formData.ambientTemp.toDoubleOrNull(),
+                                environmentCheck = if (formData.environmentChecked) "on" else "off",
+                                environment = formData.environmentId,
+                                windSpeedCheck = "off",
+                                windSpeed = null,
+                                idFabricante = formData.manufacturerId,
+                                ratedLoadCheck = "off",
+                                ratedLoad = formData.ratedLoad.takeIf { it.isNotBlank() },
+                                circuitVoltageCheck = "off",
+                                circuitVoltage = formData.circuitVoltage.takeIf { it.isNotBlank() },
+                                idFalla = formData.failureId,
+                                componentComment = finalComment,
+                                estatusProblema = if (aislamientoTermicoProblemClosed) "Cerrado" else "Abierto",
+                                cerradoEnInspeccion = if (aislamientoTermicoProblemClosed) inspection.idInspeccion else editingProblem.cerradoEnInspeccion,
+                                aumentoTemperatura = difference,
+                                idSeveridad = severityId,
+                                ruta = pendingProblemRoute ?: pendingProblemEquipmentName ?: "-",
+                                estatus = editingProblem.estatus ?: "Activo",
+                                esCronico = editingProblem.esCronico ?: "NO",
+                                rpm = formData.rpm.toDoubleOrNull(),
+                                bearingType = formData.bearingType.takeIf { it.isNotBlank() },
+                                irFile = pendingThermalImage,
+                                photoFile = pendingDigitalImage,
+                                modificadoPor = currentUser?.idUsuario,
+                                fechaMod = nowTs
+                            )
+                        } else {
+                            Problema(
+                                idProblema = java.util.UUID.randomUUID().toString().uppercase(),
+                                numeroProblema = numero,
+                                idTipoInspeccion = typeId,
+                                idSitio = inspection.idSitio,
+                                idInspeccion = inspection.idInspeccion,
+                                idInspeccionDet = detId,
+                                idUbicacion = locationId,
+                                problemTemperature = componentTemp,
+                                referenceTemperature = referenceTemp,
+                                problemPhase = null,
+                                referencePhase = null,
+                                problemRms = formData.componentRms.toDoubleOrNull(),
+                                referenceRms = formData.referenceRms.toDoubleOrNull(),
+                                additionalInfo = null,
+                                additionalRms = null,
+                                emissivityCheck = if (formData.emissivityChecked) "on" else "off",
+                                emissivity = emissivityValue,
+                                indirectTempCheck = "off",
+                                tempAmbientCheck = if (formData.ambientTempChecked) "on" else "off",
+                                tempAmbient = formData.ambientTemp.toDoubleOrNull(),
+                                environmentCheck = if (formData.environmentChecked) "on" else "off",
+                                environment = formData.environmentId,
+                                windSpeedCheck = "off",
+                                windSpeed = null,
+                                idFabricante = formData.manufacturerId,
+                                ratedLoadCheck = "off",
+                                ratedLoad = formData.ratedLoad.takeIf { it.isNotBlank() },
+                                circuitVoltageCheck = "off",
+                                circuitVoltage = formData.circuitVoltage.takeIf { it.isNotBlank() },
+                                idFalla = formData.failureId,
+                                componentComment = finalComment,
+                                estatusProblema = "Abierto",
+                                aumentoTemperatura = difference,
+                                idSeveridad = severityId,
+                                ruta = pendingProblemRoute ?: pendingProblemEquipmentName ?: "-",
+                                estatus = "Activo",
+                                esCronico = "NO",
+                                rpm = formData.rpm.toDoubleOrNull(),
+                                bearingType = formData.bearingType.takeIf { it.isNotBlank() },
+                                irFile = pendingThermalImage,
+                                photoFile = pendingDigitalImage,
+                                creadoPor = currentUser?.idUsuario,
+                                fechaCreacion = nowTs
+                            )
+                        }
+                        val result = withContext(Dispatchers.IO) {
+                            if (isEditingProblem) runCatching { problemaDao.update(problema) }
+                            else runCatching { problemaDao.insert(problema) }
+                        }
+                        if (result.isSuccess) {
+                            if (detRow != null) {
+                                val updatedDet = detRow.copy(
+                                    idStatusInspeccionDet = "568798D2-76BB-11D3-82BF-00104BC75DC2",
+                                    idEstatusColorText = 2,
+                                    modificadoPor = currentUser?.idUsuario,
+                                    fechaMod = nowTs
+                                )
+                                withContext(Dispatchers.IO) { runCatching { inspeccionDetDao.update(updatedDet) } }
+                            }
+                            problemsRefreshTick++
+                            refreshTree(preserveSelection = locationId)
+                            val successMessage = if (isEditingProblem)
+                                "Problema aislamiento térrmico actualizado."
+                            else
+                                "Problema aislamiento térrmico guardado."
+                            Toast.makeText(ctx, successMessage, Toast.LENGTH_SHORT).show()
+                            resetAislamientoTermicoProblemState()
+                            showAislamientoTermicoProblemDialog = false
+                        } else {
+                            val message = result.exceptionOrNull()?.localizedMessage ?: "Error desconocido"
+                            Toast.makeText(
+                                ctx,
+                                "No se pudo guardar el problema aislamiento térrmico: $message",
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    } finally {
+                        isSavingAislamientoTermicoProblem = false
+                    }
+                }
+            }
+
             LaunchedEffect(showNewUbDialog) {
                 if (showNewUbDialog) {
                     // Siempre que se abre \"Nueva ubicacion\", forzamos modo creacion (no edicion)
@@ -2104,6 +2501,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                             val visualTypeId = VISUAL_PROBLEM_TYPE_ID
                             val electricTypeId = ELECTRIC_PROBLEM_TYPE_ID
                             val mechanicalTypeId = MECHANICAL_PROBLEM_TYPE_ID
+                            val aislamientoTypeId = AISLAMIENTO_TERMICO_PROBLEM_TYPE_ID
                             when {
                                 selectedTypeId != null && visualTypeId != null && selectedTypeId.equals(visualTypeId, ignoreCase = true) -> {
                                     scope.launch {
@@ -2167,7 +2565,27 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                         showMechanicalProblemDialog = true
                                     }
                                 }
-                                else -> {
+                                selectedTypeId != null && aislamientoTypeId != null && selectedTypeId.equals(aislamientoTypeId, ignoreCase = true) -> {
+                                    scope.launch {
+                                        showProblemTypeDialog = false
+                                        val node = selectedId?.let { findById(it, nodes) }
+                                        resetAislamientoTermicoProblemState()
+                                        pendingProblemType = problemTypeLabelForId(aislamientoTypeId)
+                                        if (pendingProblemEquipmentName.isNullOrBlank()) {
+                                            pendingProblemEquipmentName = node?.title ?: "-"
+                                            pendingProblemUbicacionId = node?.id ?: selectedId
+                                        }
+                                        if (pendingProblemRoute.isNullOrBlank()) {
+                                            pendingProblemRoute = selectedId?.let { titlePathForId(nodes, it).joinToString(" / ") } ?: "-"
+                                        }
+                                        if (pendingProblemUbicacionId.isNullOrBlank()) {
+                                            pendingProblemUbicacionId = selectedId
+                                        }
+                                        pendingProblemNumber = fetchNextProblemNumber(aislamientoTypeId)
+                                        aislamientoTermicoProblemFormKey += 1
+                                        showAislamientoTermicoProblemDialog = true
+                                    }
+                                }                                else -> {
                                     showProblemTypeDialog = false
                                     Toast.makeText(ctx, "Selecciona un tipo válido.", Toast.LENGTH_SHORT).show()
                                 }
@@ -2627,6 +3045,35 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                         bearingType = entity.bearingType ?: ""
                     )
                 }
+            val aislamientoTermicoProblemInitialData = aislamientoTermicoProblemDraftData
+                ?: editingAislamientoTermicoProblemOriginal?.let { entity ->
+                    AislamientoTermicoProblemFormData(
+                        failureId = entity.idFalla,
+                        componentTemperature = entity.problemTemperature?.toString() ?: "",
+                        componentPhaseId = null,
+                        componentRms = entity.problemRms?.toString() ?: "",
+                        referenceTemperature = entity.referenceTemperature?.toString() ?: "",
+                        referencePhaseId = null,
+                        referenceRms = entity.referenceRms?.toString() ?: "",
+                        additionalInfoId = null,
+                        additionalRms = "",
+                        emissivityChecked = (entity.emissivityCheck ?: "").equals("on", ignoreCase = true),
+                        emissivity = entity.emissivity?.toString() ?: "",
+                        indirectTempChecked = false,
+                        ambientTempChecked = (entity.tempAmbientCheck ?: "").equals("on", ignoreCase = true),
+                        ambientTemp = entity.tempAmbient?.toString() ?: "",
+                        environmentChecked = (entity.environmentCheck ?: "").equals("on", ignoreCase = true),
+                        environmentId = entity.environment,
+                        windSpeedChecked = false,
+                        windSpeed = "",
+                        manufacturerId = entity.idFabricante,
+                        ratedLoad = entity.ratedLoad ?: "",
+                        circuitVoltage = entity.circuitVoltage ?: "",
+                        comments = entity.componentComment ?: "",
+                        rpm = entity.rpm?.toString() ?: "",
+                        bearingType = entity.bearingType ?: ""
+                    )
+                }
             val manufacturerOptionsPairs = fabricanteOptions
                 .sortedBy { it.fabricante?.lowercase(Locale.getDefault()) ?: "" }
                 .map { it.idFabricante to (it.fabricante ?: it.idFabricante) }
@@ -2766,6 +3213,74 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     dialogKey = mechanicalProblemFormKey
                 )
             }
+            if (showAislamientoTermicoProblemDialog && pendingProblemEquipmentName != null) {
+                AislamientoTermicoProblemDialog(
+                    inspectionNumber = pendingInspectionNumber,
+                    problemNumber = pendingProblemNumber,
+                    problemType = pendingProblemType,
+                    equipmentName = pendingProblemEquipmentName ?: "-",
+                    equipmentRoute = pendingProblemRoute ?: "-",
+                    failureOptions = electricHazardOptions,
+                    phaseOptions = electricPhaseOptions,
+                    environmentOptions = electricEnvironmentOptions,
+                    manufacturerOptions = manufacturerOptionsPairs,
+                    thermalImageName = pendingThermalImage,
+                    digitalImageName = pendingDigitalImage,
+                    onThermalImageChange = { pendingThermalImage = it },
+                    onDigitalImageChange = { pendingDigitalImage = it },
+                    onThermalSequenceUp = { pendingThermalImage = adjustImageSequence(pendingThermalImage, +1) },
+                    onThermalSequenceDown = { pendingThermalImage = adjustImageSequence(pendingThermalImage, -1) },
+                    onDigitalSequenceUp = { pendingDigitalImage = adjustImageSequence(pendingDigitalImage, +1) },
+                    onDigitalSequenceDown = { pendingDigitalImage = adjustImageSequence(pendingDigitalImage, -1) },
+                    onThermalPickInitial = { loadInitialImageFromInspection(true) { pendingThermalImage = it } },
+                    onDigitalPickInitial = { loadInitialImageFromInspection(false) { pendingDigitalImage = it } },
+                    onThermalFolder = { thermalFolderLauncher.launch("image/*") },
+                    onDigitalFolder = { digitalFolderLauncher.launch("image/*") },
+                    onThermalCamera = { thermalCameraLauncher.launch(null) },
+                    onDigitalCamera = { digitalCameraLauncher.launch(null) },
+                    onCronicoClick = {
+                        val entity = editingAislamientoTermicoProblemOriginal ?: return@AislamientoTermicoProblemDialog
+                        pendingCronicoEntity = entity
+                        showCronicoConfirmDialog = true
+                    },
+                    cronicoEnabled = cronicoActionEnabled && !isSavingCronico,
+                    cronicoChecked = editingAislamientoTermicoProblemOriginal?.esCronico?.equals("SI", ignoreCase = true) == true,
+                    cerradoChecked = aislamientoTermicoProblemClosed,
+                    cerradoEnabled = (
+                        editingAislamientoTermicoProblemOriginal?.estatusProblema?.equals("Cerrado", ignoreCase = true) != true
+                    ) || (
+                        editingAislamientoTermicoProblemOriginal?.idInspeccion
+                            ?.equals(currentInspection?.idInspeccion, ignoreCase = true) == true
+                    ),
+                    onCerradoChange = { aislamientoTermicoProblemClosed = it },
+                    onNavigatePrevious = if (editingAislamientoTermicoProblemId != null) {
+                        { data -> navigateFromAislamientoTermico(-1, data) }
+                    } else {
+                        null
+                    },
+                    onNavigateNext = if (editingAislamientoTermicoProblemId != null) {
+                        { data -> navigateFromAislamientoTermico(1, data) }
+                    } else {
+                        null
+                    },
+                    canNavigatePrevious = canNavigatePrevious,
+                    canNavigateNext = canNavigateNext,
+                    showEditControls = editingAislamientoTermicoProblemId != null,
+                    selectedTabIndex = problemDialogTab,
+                    onSelectedTabChange = { problemDialogTab = it },
+                    transitionKey = editingAislamientoTermicoProblemId ?: pendingProblemNumber,
+                    onDismiss = {
+                        showAislamientoTermicoProblemDialog = false
+                        cronicoActionEnabled = false
+                        resetProblemNavigation()
+                        resetAislamientoTermicoProblemState()
+                    },
+                    onContinue = { saveAislamientoTermicoProblem(it) },
+                    continueEnabled = !isSavingAislamientoTermicoProblem,
+                    initialFormData = aislamientoTermicoProblemInitialData,
+                    dialogKey = aislamientoTermicoProblemFormKey
+                )
+            }
 
             if (showCronicoConfirmDialog) {
                 AlertDialog(
@@ -2794,6 +3309,10 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                         MECHANICAL_PROBLEM_TYPE_ID?.lowercase(Locale.ROOT) -> {
                                             editingMechanicalProblemId = created.idProblema
                                             editingMechanicalProblemOriginal = created
+                                        }
+                                        AISLAMIENTO_TERMICO_PROBLEM_TYPE_ID?.lowercase(Locale.ROOT) -> {
+                                            editingAislamientoTermicoProblemId = created.idProblema
+                                            editingAislamientoTermicoProblemOriginal = created
                                         }
                                     }
                                     cronicoActionEnabled = false
@@ -5631,4 +6150,7 @@ private fun buildTreeFromVista(rows: List<com.example.etic.data.local.views.Vist
 
     return roots
 }
+
+
+
 

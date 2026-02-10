@@ -26,7 +26,9 @@ class GenerateProblemasPdfUseCase(
         inspeccionId: String,
         selectedProblemaIds: List<String>,
         currentUserId: String? = null,
-        currentUserName: String? = null
+        currentUserName: String? = null,
+        allowedTypeIds: List<String> = emptyList(),
+        fileNameOverride: String? = null
     ): Result<String> = withContext(Dispatchers.IO) {
         try {
             val db = DbProvider.get(context)
@@ -51,6 +53,10 @@ class GenerateProblemasPdfUseCase(
             val problemas = problemaDao.getByInspeccionActivos(inspeccionId)
                 .asSequence()
                 .filter { selectedSet.isEmpty() || it.idProblema in selectedSet }
+                .filter {
+                    allowedTypeIds.isEmpty() ||
+                        allowedTypeIds.any { allowed -> it.idTipoInspeccion?.equals(allowed, true) == true }
+                }
                 .sortedWith(
                     compareBy(
                         { it.idTipoInspeccion ?: "ZZZ" },
@@ -132,7 +138,7 @@ class GenerateProblemasPdfUseCase(
 
             val file = folderProvider.createPdfFile(
                 folder,
-                "ETIC_PROBLEMAS_INSPECCION_$noInspeccion.pdf"
+                fileNameOverride ?: "ETIC_PROBLEMAS_INSPECCION_$noInspeccion.pdf"
             ) ?: return@withContext Result.failure(
                 IllegalStateException("No se pudo crear el archivo PDF.")
             )
@@ -288,6 +294,7 @@ class GenerateProblemasPdfUseCase(
                 val typeTag = when (problem.idTipoInspeccion) {
                     ProblemTypeIds.ELECTRICO, ProblemTypeIds.ELECTRICO_2 -> "E"
                     ProblemTypeIds.VISUAL -> "V"
+                    ProblemTypeIds.AISLAMIENTO_TERMICO -> "AT"
                     else -> "M"
                 }
 

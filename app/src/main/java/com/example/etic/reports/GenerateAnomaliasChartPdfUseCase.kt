@@ -74,6 +74,11 @@ class GenerateAnomaliasChartPdfUseCase(
                     countBy("0D32B334-76C3-11D3-82BF-00104BC75DC2", "Abierto")
                 ),
                 AnomaliaBarData(
+                    "Hallazgos Abiertos Aislamiento Termico",
+                    Color.rgb(124, 174, 230),
+                    countBy(ProblemTypeIds.AISLAMIENTO_TERMICO, "Abierto")
+                ),
+                AnomaliaBarData(
                     "Hallazgos Abiertos Visuales",
                     Color.rgb(181, 181, 181),
                     countBy(ProblemTypeIds.VISUAL, "Abierto")

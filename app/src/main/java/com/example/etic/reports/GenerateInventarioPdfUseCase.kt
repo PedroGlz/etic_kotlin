@@ -58,6 +58,7 @@ class GenerateInventarioPdfUseCase(
                 val prefijo = when (p.idTipoInspeccion) {
                     ProblemTypeIds.ELECTRICO, ProblemTypeIds.ELECTRICO_2 -> "E"
                     ProblemTypeIds.VISUAL -> "V"
+                    ProblemTypeIds.AISLAMIENTO_TERMICO -> "AT"
                     else -> "M"
                 }
                 val numero = p.numeroProblema?.toString().orEmpty()

@@ -69,7 +69,9 @@ class GenerateProblemListPdfUseCase(
 
             fun formatTemp(v: Double?): String = if (v == null) "" else "${"%.1f".format(v)}°C"
             fun typeAndNo(p: Problema): String {
-                val t = p.idTipoInspeccion?.let { tipoById[it]?.tipoInspeccion }.orEmpty()
+                val t = p.idTipoInspeccion?.let { tipoById[it]?.tipoInspeccion }
+                    ?: typeLabelForId(p.idTipoInspeccion)
+                    ?: ""
                 val n = p.numeroProblema?.toString().orEmpty()
                 return "$t $n".trim()
             }
@@ -140,6 +142,18 @@ class GenerateProblemListPdfUseCase(
         } catch (e: Exception) {
             Result.failure(e)
         }
+    }
+}
+
+private fun typeLabelForId(typeId: String?): String? {
+    if (typeId.isNullOrBlank()) return null
+    return when {
+        typeId.equals("0D32B331-76C3-11D3-82BF-00104BC75DC2", ignoreCase = true) -> "Eléctrico"
+        typeId.equals("0D32B332-76C3-11D3-82BF-00104BC75DC2", ignoreCase = true) -> "Eléctrico"
+        typeId.equals("0D32B333-76C3-11D3-82BF-00104BC75DC2", ignoreCase = true) -> "Visual"
+        typeId.equals("0D32B334-76C3-11D3-82BF-00104BC75DC2", ignoreCase = true) -> "Mecánico"
+        typeId.equals("0D32B335-76C3-11D3-82BF-00104BC75DC2", ignoreCase = true) -> "Aisl. Térmico"
+        else -> null
     }
 }
 
