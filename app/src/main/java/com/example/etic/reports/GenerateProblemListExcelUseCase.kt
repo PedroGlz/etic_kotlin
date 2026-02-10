@@ -145,25 +145,13 @@ class GenerateProblemListExcelUseCase(
             )
             widths.forEachIndexed { idx, w -> sheet.setColumnWidth(idx, w) }
 
-            fun createXlsxFile(folderDoc: DocumentFile, baseName: String): DocumentFile? {
-                var attempt = 0
-                var name = "$baseName.xlsx"
-                while (folderDoc.findFile(name) != null && attempt < 20) {
-                    attempt++
-                    name = "${baseName}_$attempt.xlsx"
-                }
-                return folderDoc.createFile(
-                    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    name
-                )
-            }
-
             val sitioFilePart = sitioNombre
                 .replace(Regex("[^A-Za-z0-9_-]"), "_")
                 .ifBlank { "SITIO" }
-            val file = createXlsxFile(
+            val file = folderProvider.createOrReplaceFile(
                 folder,
-                "ETIC_LISTADO_DE_PROBLEMAS_${sitioFilePart}_INSPECCION_$noInspeccion"
+                "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                "ETIC_LISTADO_DE_PROBLEMAS_${sitioFilePart}_INSPECCION_$noInspeccion.xlsx"
             ) ?: return@withContext Result.failure(IllegalStateException("No se pudo crear el archivo Excel."))
 
             context.contentResolver.openOutputStream(file.uri)?.use { out ->

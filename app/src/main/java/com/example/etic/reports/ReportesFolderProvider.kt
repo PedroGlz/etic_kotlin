@@ -15,14 +15,18 @@ class ReportesFolderProvider(
     }
 
     fun createPdfFile(folder: DocumentFile, filename: String): DocumentFile? {
-        // Limpia duplicados simples: si existe, lo recreamos con suffix
-        val base = filename.removeSuffix(".pdf")
-        var attempt = 0
-        var name = "$base.pdf"
-        while (folder.findFile(name) != null && attempt < 20) {
-            attempt++
-            name = "${base}_$attempt.pdf"
+        return createOrReplaceFile(folder, "application/pdf", filename)
+    }
+
+    fun createOrReplaceFile(
+        folder: DocumentFile,
+        mimeType: String,
+        filename: String
+    ): DocumentFile? {
+        val existing = folder.findFile(filename)
+        if (existing != null && !existing.delete()) {
+            return null
         }
-        return folder.createFile("application/pdf", name)
+        return folder.createFile(mimeType, filename)
     }
 }
