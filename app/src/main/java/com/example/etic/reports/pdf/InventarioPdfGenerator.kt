@@ -282,7 +282,7 @@ class InventarioPdfGenerator {
             canvas.drawText(row.prioridad, x, baseline, textPaint); x += colW[1]
             canvas.drawText(row.problemas, x, baseline, textPaint); x += colW[2]
 
-            val ubPaint = if (row.level == 1) boldPaint else textPaint
+            val ubPaint = if (row.isParentUbicacion) boldPaint else textPaint
             canvas.drawText(row.elemento, x + indentPx, baseline, ubPaint); x += colW[3]
             canvas.drawText(row.codigoBarras, x, baseline, textPaint); x += colW[4]
 

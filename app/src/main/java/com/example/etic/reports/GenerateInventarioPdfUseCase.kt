@@ -93,7 +93,8 @@ class GenerateInventarioPdfUseCase(
                     elemento = u.ubicacion ?: "",
                     codigoBarras = u.codigoBarras ?: "",
                     notas = det?.notasInspeccion ?: "",
-                    level = u.nivelArbol ?: 1
+                    level = u.nivelArbol ?: 1,
+                    isParentUbicacion = u.idUbicacionPadre.isNullOrBlank() || u.idUbicacionPadre == "0"
                 )
             }
 

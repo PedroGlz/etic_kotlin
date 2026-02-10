@@ -15,7 +15,8 @@ data class InventoryReportRow(
     val elemento: String,
     val codigoBarras: String,
     val notas: String,
-    val level: Int
+    val level: Int,
+    val isParentUbicacion: Boolean
 )
 
 data class InventoryHeaderData(
