@@ -183,16 +183,16 @@ fun FilterTextField(
         IconButton(
             onClick = onSearch,
             modifier = Modifier
-                .width(20.dp)
-                .height(20.dp)
+                .width(28.dp)
+                .height(28.dp)
         ) {
             Icon(
                 imageVector = Icons.Outlined.Search,
                 contentDescription = "Buscar",
                 tint = searchIconTint,
                 modifier = Modifier
-                    .width(14.dp)
-                    .height(14.dp)
+                    .width(20.dp)
+                    .height(20.dp)
             )
         }
     }
