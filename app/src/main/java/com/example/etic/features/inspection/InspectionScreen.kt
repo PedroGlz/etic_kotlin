@@ -4509,7 +4509,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                                                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                                                                 ) {
                                                                     BaselineDialogField(
-                                                                        label = "MTA",
+                                                                        label = "MTA \u00B0C",
                                                                         required = true,
                                                                         value = mta,
                                                                         onValueChange = { mta = filter2Dec(it) },
@@ -4517,7 +4517,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                                                         modifier = Modifier.weight(1f)
                                                                     )
                                                                     BaselineDialogField(
-                                                                        label = "MAX",
+                                                                        label = "MAX \u00B0C",
                                                                         required = true,
                                                                         value = tempMax,
                                                                         onValueChange = { tempMax = filter2Dec(it) },
@@ -4525,7 +4525,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                                                         modifier = Modifier.weight(1f)
                                                                     )
                                                                     BaselineDialogField(
-                                                                        label = "AMB",
+                                                                        label = "AMB \u00B0C",
                                                                         required = true,
                                                                         value = tempAmb,
                                                                         onValueChange = { tempAmb = filter2Dec(it) },
