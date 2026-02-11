@@ -2448,10 +2448,13 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             )
 
             if (searchMessage != null) {
-                Text(
-                    searchMessage!!,
-                    color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.padding(horizontal = 12.dp)
+                AlertDialog(
+                    onDismissRequest = { searchMessage = null },
+                    confirmButton = {
+                        Button(onClick = { searchMessage = null }) { Text("Aceptar") }
+                    },
+                    title = { Text("Informacion") },
+                    text = { Text(searchMessage!!) }
                 )
             }
             Divider(thickness = DIVIDER_THICKNESS)

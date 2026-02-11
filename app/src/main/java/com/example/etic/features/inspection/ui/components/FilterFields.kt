@@ -21,6 +21,7 @@ import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -146,7 +147,7 @@ fun FilterTextField(
     minWidth: Dp = 180.dp,
     maxWidth: Dp = 320.dp,
     placeholder: String = "Buscar",
-    leadingIconTint: Color = MaterialTheme.colorScheme.onSurfaceVariant
+    searchIconTint: Color = MaterialTheme.colorScheme.onSurfaceVariant
 ) {
     FilterFieldContainer(
         label = label,
@@ -154,15 +155,6 @@ fun FilterTextField(
         minWidth = minWidth,
         maxWidth = maxWidth
     ) {
-        Icon(
-            imageVector = Icons.Outlined.Search,
-            contentDescription = null,
-            tint = leadingIconTint,
-            modifier = Modifier
-                .width(14.dp)
-                .height(14.dp)
-        )
-        Spacer(Modifier.width(4.dp))
         BasicTextField(
             value = value,
             onValueChange = onValueChange,
@@ -171,7 +163,10 @@ fun FilterTextField(
                 color = MaterialTheme.colorScheme.onSurface
             ),
             keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-            keyboardActions = KeyboardActions(onSearch = { onSearch() }),
+            keyboardActions = KeyboardActions(
+                onSearch = { onSearch() },
+                onDone = { onSearch() }
+            ),
             modifier = Modifier.weight(1f),
             decorationBox = { innerTextField ->
                 if (value.isBlank()) {
@@ -184,5 +179,21 @@ fun FilterTextField(
                 innerTextField()
             }
         )
+        Spacer(Modifier.width(2.dp))
+        IconButton(
+            onClick = onSearch,
+            modifier = Modifier
+                .width(20.dp)
+                .height(20.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Outlined.Search,
+                contentDescription = "Buscar",
+                tint = searchIconTint,
+                modifier = Modifier
+                    .width(14.dp)
+                    .height(14.dp)
+            )
+        }
     }
 }
