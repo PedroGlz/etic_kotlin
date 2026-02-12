@@ -394,23 +394,12 @@ fun ElectricProblemDialog(
                     horizontalArrangement = Arrangement.spacedBy(ROW_GAP),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column() {
-                        Text(text = "*Falla", style = MaterialTheme.typography.labelSmall)
-                        DropdownSelectorNoLabel(
-                            options = failureOptions,
-                            selectedId = failureId,
-                            onSelected = { failureId = it },
-                            ancho = 180.dp
-                        )
-                    }
-                    Column() {
-                        ReadOnlyFormField(
-                            label = "Ruta del equipo",
-                            value = equipmentRoute,
-                            modifier = Modifier.fillMaxWidth(),
-                            ancho = 480.dp
-                        )
-                    }
+                    ReadOnlyFormField(
+                        label = "Ruta del equipo",
+                        value = equipmentRoute,
+                        modifier = Modifier.fillMaxWidth(),
+                        ancho = 480.dp
+                    )
                 }
 
                 Spacer(Modifier.height(12.dp))
@@ -593,7 +582,7 @@ fun ElectricProblemDialog(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(IntrinsicSize.Min),
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                horizontalArrangement = Arrangement.spacedBy(9.dp)
                             ) {
                                 // Col 1 (25%)
                                 Column(modifier = Modifier.weight(1f)) {
@@ -701,6 +690,18 @@ fun ElectricProblemDialog(
                                         value = circuitVoltage,
                                         onValueChange = { circuitVoltage = it },
                                         unit = "V"
+                                    )
+                                }
+                            }
+
+                            Row(){
+                                Column() {
+                                    Text(text = "*Falla", style = MaterialTheme.typography.labelSmall)
+                                    DropdownSelectorNoLabel(
+                                        options = failureOptions,
+                                        selectedId = failureId,
+                                        onSelected = { failureId = it },
+                                        ancho = 180.dp
                                     )
                                 }
                             }
@@ -1063,35 +1064,46 @@ private fun CheckboxNumericRow(
 ) {
     Row(
         modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(CHECKBOX_GAP),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Checkbox(
             checked = checked,
-            onCheckedChange = onCheckedChange,
-            modifier = Modifier
-                .wrapContentWidth()
-                .padding(0.dp)
+            onCheckedChange = onCheckedChange
         )
 
+        Spacer(modifier = Modifier.width(CHECKBOX_GAP))
+
         Column(modifier = Modifier.weight(1f)) {
-            Text(text = label, style = MaterialTheme.typography.labelSmall)
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall
+            )
 
             OutlinedFieldBox {
                 BasicTextField(
                     value = value,
                     onValueChange = onValueChange,
                     singleLine = true,
-                    textStyle = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurface),
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    textStyle = MaterialTheme.typography.bodySmall.copy(
+                        color = MaterialTheme.colorScheme.onSurface
+                    ),
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Number
+                    ),
                     modifier = Modifier.weight(1f)
                 )
+
                 if (unit != null) {
-                    Text(unit, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        unit,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
         }
     }
+
 }
 
 @Composable
