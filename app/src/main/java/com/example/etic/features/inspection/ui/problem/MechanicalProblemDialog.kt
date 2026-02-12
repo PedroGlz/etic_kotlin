@@ -317,12 +317,17 @@ fun MechanicalProblemDialog(
                     Modifier
                         .widthIn(min = DIALOG_MIN_WIDTH, max = DIALOG_MAX_WIDTH)
                         .verticalScroll(scrollState)
-                        .padding(24.dp)
+                        .padding(
+                            start = 17.dp,
+                            end = 17.dp,
+                            top = 11.dp,
+                            bottom = 4.dp
+                        )
                 ) {
                     Text("Problema Mecánico", style = MaterialTheme.typography.titleMedium)
 
                     if (showEditControls) {
-                        Divider(Modifier.padding(top = 12.dp, bottom = 8.dp))
+                        Divider(Modifier.padding(top = 5.dp))
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,

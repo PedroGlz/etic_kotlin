@@ -312,12 +312,17 @@ fun ElectricProblemDialog(
                 Modifier
                     .widthIn(min = DIALOG_MIN_WIDTH, max = DIALOG_MAX_WIDTH)
                     .verticalScroll(scrollState)
-                    .padding(24.dp)
+                    .padding(
+                        start = 17.dp,
+                        end = 17.dp,
+                        top = 11.dp,
+                        bottom = 4.dp
+                    )
             ) {
                 Text("Problema Eléctrico", style = MaterialTheme.typography.titleMedium)
 
                 if (showEditControls) {
-                    Divider(Modifier.padding(top = 12.dp, bottom = 8.dp))
+                    Divider(Modifier.padding(top = 5.dp))
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -367,7 +372,7 @@ fun ElectricProblemDialog(
                             }
                         }
                     }
-                    Divider(Modifier.padding(top = 8.dp, bottom = 12.dp))
+                    Divider()
                 }
                 Spacer(Modifier.height(12.dp))
                 Row(
@@ -590,7 +595,7 @@ fun ElectricProblemDialog(
                                     .height(IntrinsicSize.Min),
                                 horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                // Col 1 (50%)
+                                // Col 1 (25%)
                                 Column(modifier = Modifier.weight(1f)) {
                                     val currentEmissivityError = emissivityError
 
@@ -625,7 +630,13 @@ fun ElectricProblemDialog(
                                                 .padding(0.dp)
                                         )
                                         Text("Temp. indirecta", style = MaterialTheme.typography.labelSmall)
-                                    }
+                                    }                                    
+                                }
+
+                                VerticalDivider()
+
+                                // Col 2 (25%)
+                                Column(modifier = Modifier.weight(1f)) {
 
                                     CheckboxNumericRow(
                                         label = "Temp. ambiente",
@@ -648,7 +659,7 @@ fun ElectricProblemDialog(
 
                                 VerticalDivider()
 
-                                // Col 2 (50%)
+                                // Col 3 (25%)
                                 Column(
                                     modifier = Modifier.weight(1f),
                                     verticalArrangement = Arrangement.spacedBy(6.dp)
@@ -668,9 +679,15 @@ fun ElectricProblemDialog(
                                         selectedId = manufacturerId,
                                         onSelected = { manufacturerId = it }
                                     )
+                                }
 
-                                    Divider()
+                                VerticalDivider()
 
+                                // Col 4 (25%)
+                                Column(
+                                    modifier = Modifier.weight(1f),
+                                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
                                     Text("Especificación eléctrica", style = MaterialTheme.typography.labelMedium)
 
                                     LabeledField(

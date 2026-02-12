@@ -79,7 +79,12 @@ fun FolderPickerScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(24.dp),
+            .padding(
+            start = 16.dp,
+            end = 16.dp,
+            top = 11.dp,
+            bottom = 9.dp
+        ),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text("Seleccionar carpeta ETIC", style = MaterialTheme.typography.titleMedium)
