@@ -1,4 +1,4 @@
-package com.example.etic.features.inspection.ui.problem
+﻿package com.example.etic.features.inspection.ui.problem
 
 import androidx.compose.foundation.Image
 import androidx.compose.animation.AnimatedContent
@@ -6,6 +6,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -29,8 +30,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Tab
-import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Divider
@@ -39,7 +38,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -58,8 +56,8 @@ import com.example.etic.core.saf.EticImageStore
 import com.example.etic.core.settings.EticPrefs
 import com.example.etic.core.settings.settingsDataStore
 
-private val DIALOG_MIN_WIDTH = 710.dp
-private val DIALOG_MAX_WIDTH = 710.dp
+private val DIALOG_MIN_WIDTH = 980.dp
+private val DIALOG_MAX_WIDTH = 980.dp
 private val INFO_FIELD_MIN_WIDTH = 130.dp
 private val INFO_FIELD_MAX_WIDTH = 220.dp
 
@@ -200,48 +198,42 @@ fun VisualProblemDialog(
                     }
                     Divider(Modifier.padding(top = 8.dp, bottom = 16.dp))
                 }
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(infoRowScroll),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    InfoField("Inspección No.", inspectionNumber)
-                    InfoField("Problema No.", problemNumber)
-                    InfoField("Tipo de problema", problemType)
-                    InfoField("Equipo", equipmentName)
-                }
-
-                Spacer(Modifier.height(12.dp))
-                ReadOnlyFormField(
-                    label = "Ruta del equipo",
-                    value = equipmentRoute,
-                    modifier = Modifier.fillMaxWidth()
-                )
-
-                val useExternalTabState = selectedTabIndex != null && onSelectedTabChange != null
-                var internalSelectedTab by rememberSaveable { mutableStateOf(selectedTabIndex ?: 0) }
-                val selectedTab = if (useExternalTabState) selectedTabIndex!! else internalSelectedTab
-                val onTabChange: (Int) -> Unit = { index ->
-                    if (useExternalTabState) {
-                        onSelectedTabChange?.invoke(index)
-                    } else {
-                        internalSelectedTab = index
-                    }
-                }
-                TabRow(selectedTabIndex = selectedTab) {
-                    Tab(selected = selectedTab == 0, onClick = { onTabChange(0) }, text = { Text("Datos") })
-                    Tab(selected = selectedTab == 1, onClick = { onTabChange(1) }, text = { Text("Imágenes") })
-                }
-
-                Spacer(Modifier.height(16.dp))
                 val hazardError = selectedHazardIssue.isNullOrBlank()
                 val severityError = selectedSeverity.isNullOrBlank()
                 val thermalError = thermalImageName.isBlank()
                 val digitalError = digitalImageName.isBlank()
-                when (selectedTab) {
-                    0 -> {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(IntrinsicSize.Min),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Column(
+                        modifier = Modifier.weight(1.65f),
+                        verticalArrangement = Arrangement.Top
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(infoRowScroll),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            InfoField("Inspección No.", inspectionNumber)
+                            InfoField("Problema No.", problemNumber)
+                            InfoField("Tipo de problema", problemType)
+                            InfoField("Equipo", equipmentName)
+                        }
+
+                        Spacer(Modifier.height(12.dp))
+                        ReadOnlyFormField(
+                            label = "Ruta del equipo",
+                            value = equipmentRoute,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        Spacer(Modifier.height(16.dp))
                         Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 DropdownSelector(
@@ -280,43 +272,42 @@ fun VisualProblemDialog(
                             }
                         }
                     }
-                    else -> {
-                        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                            Text("Cargas de imágenes", style = MaterialTheme.typography.labelLarge)
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(16.dp)
-                            ) {
-                                ImageInputColumn(
-                                    label = "Archivo IR",
-                                    value = thermalImageName,
-                                    inspectionNumber = inspectionNumber,
-                                    onValueChange = onThermalImageChange,
-                                    onIncrement = onThermalSequenceUp,
-                                    onDecrement = onThermalSequenceDown,
-                                    onPickInitial = onThermalPickInitial,
-                                    onFolder = onThermalFolder,
-                                    onCamera = onThermalCamera,
-                                    modifier = Modifier.weight(1f),
-                                    isError = thermalError,
-                                    title = ""
-                                )
-                                ImageInputColumn(
-                                    label = "Archivo ID",
-                                    value = digitalImageName,
-                                    inspectionNumber = inspectionNumber,
-                                    onValueChange = onDigitalImageChange,
-                                    onIncrement = onDigitalSequenceUp,
-                                    onDecrement = onDigitalSequenceDown,
-                                    onPickInitial = onDigitalPickInitial,
-                                    onFolder = onDigitalFolder,
-                                    onCamera = onDigitalCamera,
-                                    modifier = Modifier.weight(1f),
-                                    isError = digitalError,
-                                    title = ""
-                                )
-                            }
-                        }
+
+                    VerticalDivider()
+
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Text("Cargas de imágenes", style = MaterialTheme.typography.labelLarge)
+                        ImageInputColumn(
+                            label = "Archivo IR",
+                            value = thermalImageName,
+                            inspectionNumber = inspectionNumber,
+                            onValueChange = onThermalImageChange,
+                            onIncrement = onThermalSequenceUp,
+                            onDecrement = onThermalSequenceDown,
+                            onPickInitial = onThermalPickInitial,
+                            onFolder = onThermalFolder,
+                            onCamera = onThermalCamera,
+                            modifier = Modifier.fillMaxWidth(),
+                            isError = thermalError,
+                            title = ""
+                        )
+                        ImageInputColumn(
+                            label = "Archivo ID",
+                            value = digitalImageName,
+                            inspectionNumber = inspectionNumber,
+                            onValueChange = onDigitalImageChange,
+                            onIncrement = onDigitalSequenceUp,
+                            onDecrement = onDigitalSequenceDown,
+                            onPickInitial = onDigitalPickInitial,
+                            onFolder = onDigitalFolder,
+                            onCamera = onDigitalCamera,
+                            modifier = Modifier.fillMaxWidth(),
+                            isError = digitalError,
+                            title = ""
+                        )
                     }
                 }
 
@@ -334,6 +325,16 @@ fun VisualProblemDialog(
             }
         }
     }
+}
+
+@Composable
+private fun VerticalDivider(modifier: Modifier = Modifier) {
+    Box(
+        modifier
+            .fillMaxHeight()
+            .width(1.dp)
+            .background(MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+    )
 }
 
 @Composable
@@ -515,7 +516,7 @@ private fun HistorySection(rows: List<VisualProblemHistoryRow>, isLoading: Boole
             }
         }
         rows.isEmpty() -> {
-            Text("Sin registros previos para esta ubicación.", style = MaterialTheme.typography.bodyMedium)
+            Text("Sin registros previos para esta ubicaciÃ³n.", style = MaterialTheme.typography.bodyMedium)
         }
         else -> {
             HistoryTable(rows = rows)
@@ -533,7 +534,7 @@ private fun HistoryTable(rows: List<VisualProblemHistoryRow>) {
             .border(1.dp, outline, RoundedCornerShape(8.dp))
     ) {
         HistoryRow(
-            cells = listOf("No", "No. Inspección", "Fecha", "Severidad", "Comentarios"),
+            cells = listOf("No", "No. InspecciÃ³n", "Fecha", "Severidad", "Comentarios"),
             isHeader = true,
             textStyle = headerStyle
         )
@@ -642,13 +643,13 @@ private fun ImagePreviewBox(fileName: String, inspectionNumber: String) {
             contentDescription = null,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(200.dp)
+                .height(130.dp)
         )
     } else {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(200.dp)
+                .height(130.dp)
                 .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(8.dp)),
             contentAlignment = Alignment.Center
         ) {
@@ -667,3 +668,10 @@ private fun ImagePreviewBox(fileName: String, inspectionNumber: String) {
         }
     }
 }
+
+
+
+
+
+
+
