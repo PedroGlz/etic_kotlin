@@ -870,6 +870,224 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
 
             fun normalizeEmissivityValue(raw: String): String = raw.trim().replace(',', '.')
 
+            fun toElectricFormData(entity: Problema): ElectricProblemFormData =
+                ElectricProblemFormData(
+                    failureId = entity.idFalla,
+                    componentTemperature = entity.problemTemperature?.toString() ?: "",
+                    componentPhaseId = entity.problemPhase,
+                    componentRms = entity.problemRms?.toString() ?: "",
+                    referenceTemperature = entity.referenceTemperature?.toString() ?: "",
+                    referencePhaseId = entity.referencePhase,
+                    referenceRms = entity.referenceRms?.toString() ?: "",
+                    additionalInfoId = entity.additionalInfo,
+                    additionalRms = entity.additionalRms?.toString() ?: "",
+                    emissivityChecked = (entity.emissivityCheck ?: "").equals("on", ignoreCase = true),
+                    emissivity = entity.emissivity?.toString() ?: "",
+                    indirectTempChecked = (entity.indirectTempCheck ?: "").equals("on", ignoreCase = true),
+                    ambientTempChecked = (entity.tempAmbientCheck ?: "").equals("on", ignoreCase = true),
+                    ambientTemp = entity.tempAmbient?.toString() ?: "",
+                    environmentChecked = (entity.environmentCheck ?: "").equals("on", ignoreCase = true),
+                    environmentId = entity.environment,
+                    windSpeedChecked = (entity.windSpeedCheck ?: "").equals("on", ignoreCase = true),
+                    windSpeed = entity.windSpeed?.toString() ?: "",
+                    manufacturerId = entity.idFabricante,
+                    ratedLoad = entity.ratedLoad ?: "",
+                    circuitVoltage = entity.circuitVoltage ?: "",
+                    comments = entity.componentComment ?: "",
+                    rpm = entity.rpm?.toString() ?: ""
+                )
+
+            fun toMechanicalFormData(entity: Problema): MechanicalProblemFormData =
+                MechanicalProblemFormData(
+                    failureId = entity.idFalla,
+                    componentTemperature = entity.problemTemperature?.toString() ?: "",
+                    componentPhaseId = null,
+                    componentRms = entity.problemRms?.toString() ?: "",
+                    referenceTemperature = entity.referenceTemperature?.toString() ?: "",
+                    referencePhaseId = null,
+                    referenceRms = entity.referenceRms?.toString() ?: "",
+                    additionalInfoId = null,
+                    additionalRms = "",
+                    emissivityChecked = (entity.emissivityCheck ?: "").equals("on", ignoreCase = true),
+                    emissivity = entity.emissivity?.toString() ?: "",
+                    indirectTempChecked = false,
+                    ambientTempChecked = (entity.tempAmbientCheck ?: "").equals("on", ignoreCase = true),
+                    ambientTemp = entity.tempAmbient?.toString() ?: "",
+                    environmentChecked = (entity.environmentCheck ?: "").equals("on", ignoreCase = true),
+                    environmentId = entity.environment,
+                    windSpeedChecked = false,
+                    windSpeed = "",
+                    manufacturerId = entity.idFabricante,
+                    ratedLoad = entity.ratedLoad ?: "",
+                    circuitVoltage = entity.circuitVoltage ?: "",
+                    comments = entity.componentComment ?: "",
+                    rpm = entity.rpm?.toString() ?: "",
+                    bearingType = entity.bearingType ?: ""
+                )
+
+            fun toAislamientoFormData(entity: Problema): AislamientoTermicoProblemFormData =
+                AislamientoTermicoProblemFormData(
+                    failureId = entity.idFalla,
+                    componentTemperature = entity.problemTemperature?.toString() ?: "",
+                    componentPhaseId = null,
+                    componentRms = entity.problemRms?.toString() ?: "",
+                    referenceTemperature = entity.referenceTemperature?.toString() ?: "",
+                    referencePhaseId = null,
+                    referenceRms = entity.referenceRms?.toString() ?: "",
+                    additionalInfoId = null,
+                    additionalRms = "",
+                    emissivityChecked = (entity.emissivityCheck ?: "").equals("on", ignoreCase = true),
+                    emissivity = entity.emissivity?.toString() ?: "",
+                    indirectTempChecked = false,
+                    ambientTempChecked = (entity.tempAmbientCheck ?: "").equals("on", ignoreCase = true),
+                    ambientTemp = entity.tempAmbient?.toString() ?: "",
+                    environmentChecked = (entity.environmentCheck ?: "").equals("on", ignoreCase = true),
+                    environmentId = entity.environment,
+                    windSpeedChecked = false,
+                    windSpeed = "",
+                    manufacturerId = entity.idFabricante,
+                    ratedLoad = entity.ratedLoad ?: "",
+                    circuitVoltage = entity.circuitVoltage ?: "",
+                    comments = entity.componentComment ?: "",
+                    rpm = entity.rpm?.toString() ?: "",
+                    bearingType = entity.bearingType ?: ""
+                )
+
+            fun toElectricRememberedFields(entity: Problema): ElectricProblemFormData =
+                ElectricProblemFormData().let { base ->
+                    val emissivityChecked = (entity.emissivityCheck ?: "").equals("on", ignoreCase = true)
+                    val indirectTempChecked = (entity.indirectTempCheck ?: "").equals("on", ignoreCase = true)
+                    val ambientTempChecked = (entity.tempAmbientCheck ?: "").equals("on", ignoreCase = true)
+                    val environmentChecked = (entity.environmentCheck ?: "").equals("on", ignoreCase = true)
+                    val windSpeedChecked = (entity.windSpeedCheck ?: "").equals("on", ignoreCase = true)
+                    base.copy(
+                        emissivityChecked = emissivityChecked,
+                        emissivity = if (emissivityChecked) entity.emissivity?.toString() ?: "" else "",
+                        indirectTempChecked = indirectTempChecked,
+                        ambientTempChecked = ambientTempChecked,
+                        ambientTemp = if (ambientTempChecked) entity.tempAmbient?.toString() ?: "" else "",
+                        environmentChecked = environmentChecked,
+                        environmentId = if (environmentChecked) entity.environment else null,
+                        windSpeedChecked = windSpeedChecked,
+                        windSpeed = if (windSpeedChecked) entity.windSpeed?.toString() ?: "" else ""
+                    )
+                }
+
+            fun applySharedRememberedFields(
+                source: Problema?,
+                base: ElectricProblemFormData
+            ): ElectricProblemFormData {
+                if (source == null) return base
+                val emissivityChecked = (source.emissivityCheck ?: "").equals("on", ignoreCase = true)
+                val ambientTempChecked = (source.tempAmbientCheck ?: "").equals("on", ignoreCase = true)
+                val environmentChecked = (source.environmentCheck ?: "").equals("on", ignoreCase = true)
+                return base.copy(
+                    emissivityChecked = emissivityChecked,
+                    emissivity = if (emissivityChecked) source.emissivity?.toString() ?: "" else "",
+                    ambientTempChecked = ambientTempChecked,
+                    ambientTemp = if (ambientTempChecked) source.tempAmbient?.toString() ?: "" else "",
+                    environmentChecked = environmentChecked,
+                    environmentId = if (environmentChecked) source.environment else null
+                )
+            }
+
+            fun toMechanicalRememberedFields(entity: Problema): MechanicalProblemFormData =
+                MechanicalProblemFormData().let { base ->
+                    val emissivityChecked = (entity.emissivityCheck ?: "").equals("on", ignoreCase = true)
+                    val indirectTempChecked = (entity.indirectTempCheck ?: "").equals("on", ignoreCase = true)
+                    val ambientTempChecked = (entity.tempAmbientCheck ?: "").equals("on", ignoreCase = true)
+                    val environmentChecked = (entity.environmentCheck ?: "").equals("on", ignoreCase = true)
+                    val windSpeedChecked = (entity.windSpeedCheck ?: "").equals("on", ignoreCase = true)
+                    base.copy(
+                        emissivityChecked = emissivityChecked,
+                        emissivity = if (emissivityChecked) entity.emissivity?.toString() ?: "" else "",
+                        indirectTempChecked = indirectTempChecked,
+                        ambientTempChecked = ambientTempChecked,
+                        ambientTemp = if (ambientTempChecked) entity.tempAmbient?.toString() ?: "" else "",
+                        environmentChecked = environmentChecked,
+                        environmentId = if (environmentChecked) entity.environment else null,
+                        windSpeedChecked = windSpeedChecked,
+                        windSpeed = if (windSpeedChecked) entity.windSpeed?.toString() ?: "" else ""
+                    )
+                }
+
+            fun applySharedRememberedFields(
+                source: Problema?,
+                base: MechanicalProblemFormData
+            ): MechanicalProblemFormData {
+                if (source == null) return base
+                val emissivityChecked = (source.emissivityCheck ?: "").equals("on", ignoreCase = true)
+                val ambientTempChecked = (source.tempAmbientCheck ?: "").equals("on", ignoreCase = true)
+                val environmentChecked = (source.environmentCheck ?: "").equals("on", ignoreCase = true)
+                return base.copy(
+                    emissivityChecked = emissivityChecked,
+                    emissivity = if (emissivityChecked) source.emissivity?.toString() ?: "" else "",
+                    ambientTempChecked = ambientTempChecked,
+                    ambientTemp = if (ambientTempChecked) source.tempAmbient?.toString() ?: "" else "",
+                    environmentChecked = environmentChecked,
+                    environmentId = if (environmentChecked) source.environment else null
+                )
+            }
+
+            fun toAislamientoRememberedFields(entity: Problema): AislamientoTermicoProblemFormData =
+                AislamientoTermicoProblemFormData().let { base ->
+                    val emissivityChecked = (entity.emissivityCheck ?: "").equals("on", ignoreCase = true)
+                    val indirectTempChecked = (entity.indirectTempCheck ?: "").equals("on", ignoreCase = true)
+                    val ambientTempChecked = (entity.tempAmbientCheck ?: "").equals("on", ignoreCase = true)
+                    val environmentChecked = (entity.environmentCheck ?: "").equals("on", ignoreCase = true)
+                    val windSpeedChecked = (entity.windSpeedCheck ?: "").equals("on", ignoreCase = true)
+                    base.copy(
+                        emissivityChecked = emissivityChecked,
+                        emissivity = if (emissivityChecked) entity.emissivity?.toString() ?: "" else "",
+                        indirectTempChecked = indirectTempChecked,
+                        ambientTempChecked = ambientTempChecked,
+                        ambientTemp = if (ambientTempChecked) entity.tempAmbient?.toString() ?: "" else "",
+                        environmentChecked = environmentChecked,
+                        environmentId = if (environmentChecked) entity.environment else null,
+                        windSpeedChecked = windSpeedChecked,
+                        windSpeed = if (windSpeedChecked) entity.windSpeed?.toString() ?: "" else ""
+                    )
+                }
+
+            fun applySharedRememberedFields(
+                source: Problema?,
+                base: AislamientoTermicoProblemFormData
+            ): AislamientoTermicoProblemFormData {
+                if (source == null) return base
+                val emissivityChecked = (source.emissivityCheck ?: "").equals("on", ignoreCase = true)
+                val ambientTempChecked = (source.tempAmbientCheck ?: "").equals("on", ignoreCase = true)
+                val environmentChecked = (source.environmentCheck ?: "").equals("on", ignoreCase = true)
+                return base.copy(
+                    emissivityChecked = emissivityChecked,
+                    emissivity = if (emissivityChecked) source.emissivity?.toString() ?: "" else "",
+                    ambientTempChecked = ambientTempChecked,
+                    ambientTemp = if (ambientTempChecked) source.tempAmbient?.toString() ?: "" else "",
+                    environmentChecked = environmentChecked,
+                    environmentId = if (environmentChecked) source.environment else null
+                )
+            }
+
+            suspend fun loadLastProblemDefaultsByType(problemTypeId: String?): Problema? {
+                val inspId = currentInspection?.idInspeccion ?: return null
+                val typeId = problemTypeId ?: return null
+                return withContext(Dispatchers.IO) {
+                    runCatching { problemaDao.getLastByInspectionAndType(inspId, typeId) }.getOrNull()
+                }
+            }
+
+            suspend fun loadLastProblemDefaultsGlobalForThermalTypes(): Problema? {
+                val inspId = currentInspection?.idInspeccion ?: return null
+                val typeIds = listOfNotNull(
+                    ELECTRIC_PROBLEM_TYPE_ID,
+                    MECHANICAL_PROBLEM_TYPE_ID,
+                    AISLAMIENTO_TERMICO_PROBLEM_TYPE_ID
+                )
+                if (typeIds.isEmpty()) return null
+                return withContext(Dispatchers.IO) {
+                    runCatching { problemaDao.getLastByInspectionAndTypes(inspId, typeIds) }.getOrNull()
+                }
+            }
+
             fun isEmissivityValid(checked: Boolean, value: String): Boolean {
                 if (!checked) return true
                 val normalized = normalizeEmissivityValue(value)
@@ -2530,6 +2748,15 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                 selectedTypeId != null && electricTypeId != null && selectedTypeId.equals(electricTypeId, ignoreCase = true) -> {
                                     scope.launch {
                                         showProblemTypeDialog = false
+                                        resetElectricProblemState()
+                                        val globalDefaults = loadLastProblemDefaultsGlobalForThermalTypes()
+                                        val electricDefaults = loadLastProblemDefaultsByType(electricTypeId)
+                                        val base = electricDefaults?.let { toElectricRememberedFields(it) }
+                                            ?: ElectricProblemFormData()
+                                        electricProblemDraftData = applySharedRememberedFields(
+                                            source = globalDefaults,
+                                            base = base
+                                        )
                                         pendingProblemType = problemTypeLabelForId(electricTypeId)
                                         if (pendingProblemEquipmentName.isNullOrBlank()) {
                                             val node = selectedId?.let { findById(it, nodes) }
@@ -2552,6 +2779,14 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                     showProblemTypeDialog = false
                                     val node = selectedId?.let { findById(it, nodes) }
                                     resetMechanicalProblemState()
+                                        val globalDefaults = loadLastProblemDefaultsGlobalForThermalTypes()
+                                        val mechanicalDefaults = loadLastProblemDefaultsByType(mechanicalTypeId)
+                                        val base = mechanicalDefaults?.let { toMechanicalRememberedFields(it) }
+                                            ?: MechanicalProblemFormData()
+                                        mechanicalProblemDraftData = applySharedRememberedFields(
+                                            source = globalDefaults,
+                                            base = base
+                                        )
                                         pendingProblemType = problemTypeLabelForId(mechanicalTypeId)
                                         if (pendingProblemEquipmentName.isNullOrBlank()) {
                                             pendingProblemEquipmentName = node?.title ?: "-"
@@ -2573,6 +2808,14 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                         showProblemTypeDialog = false
                                         val node = selectedId?.let { findById(it, nodes) }
                                         resetAislamientoTermicoProblemState()
+                                        val globalDefaults = loadLastProblemDefaultsGlobalForThermalTypes()
+                                        val aislamientoDefaults = loadLastProblemDefaultsByType(aislamientoTypeId)
+                                        val base = aislamientoDefaults?.let { toAislamientoRememberedFields(it) }
+                                            ?: AislamientoTermicoProblemFormData()
+                                        aislamientoTermicoProblemDraftData = applySharedRememberedFields(
+                                            source = globalDefaults,
+                                            base = base
+                                        )
                                         pendingProblemType = problemTypeLabelForId(aislamientoTypeId)
                                         if (pendingProblemEquipmentName.isNullOrBlank()) {
                                             pendingProblemEquipmentName = node?.title ?: "-"
@@ -2992,91 +3235,11 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             }
 
             val electricProblemInitialData = electricProblemDraftData
-                ?: editingElectricProblemOriginal?.let { entity ->
-                    ElectricProblemFormData(
-                        failureId = entity.idFalla,
-                        componentTemperature = entity.problemTemperature?.toString() ?: "",
-                        componentPhaseId = entity.problemPhase,
-                        componentRms = entity.problemRms?.toString() ?: "",
-                        referenceTemperature = entity.referenceTemperature?.toString() ?: "",
-                        referencePhaseId = entity.referencePhase,
-                        referenceRms = entity.referenceRms?.toString() ?: "",
-                        additionalInfoId = entity.additionalInfo,
-                        additionalRms = entity.additionalRms?.toString() ?: "",
-                        emissivityChecked = (entity.emissivityCheck ?: "").equals("on", ignoreCase = true),
-                        emissivity = entity.emissivity?.toString() ?: "",
-                        indirectTempChecked = (entity.indirectTempCheck ?: "").equals("on", ignoreCase = true),
-                        ambientTempChecked = (entity.tempAmbientCheck ?: "").equals("on", ignoreCase = true),
-                        ambientTemp = entity.tempAmbient?.toString() ?: "",
-                        environmentChecked = (entity.environmentCheck ?: "").equals("on", ignoreCase = true),
-                        environmentId = entity.environment,
-                        windSpeedChecked = (entity.windSpeedCheck ?: "").equals("on", ignoreCase = true),
-                        windSpeed = entity.windSpeed?.toString() ?: "",
-                        manufacturerId = entity.idFabricante,
-                        ratedLoad = entity.ratedLoad ?: "",
-                        circuitVoltage = entity.circuitVoltage ?: "",
-                        comments = entity.componentComment ?: "",
-                        rpm = entity.rpm?.toString() ?: ""
-                    )
-                }
+                ?: editingElectricProblemOriginal?.let { entity -> toElectricFormData(entity) }
             val mechanicalProblemInitialData = mechanicalProblemDraftData
-                ?: editingMechanicalProblemOriginal?.let { entity ->
-                    MechanicalProblemFormData(
-                        failureId = entity.idFalla,
-                        componentTemperature = entity.problemTemperature?.toString() ?: "",
-                        componentPhaseId = null,
-                        componentRms = entity.problemRms?.toString() ?: "",
-                        referenceTemperature = entity.referenceTemperature?.toString() ?: "",
-                        referencePhaseId = null,
-                        referenceRms = entity.referenceRms?.toString() ?: "",
-                        additionalInfoId = null,
-                        additionalRms = "",
-                        emissivityChecked = (entity.emissivityCheck ?: "").equals("on", ignoreCase = true),
-                        emissivity = entity.emissivity?.toString() ?: "",
-                        indirectTempChecked = false,
-                        ambientTempChecked = (entity.tempAmbientCheck ?: "").equals("on", ignoreCase = true),
-                        ambientTemp = entity.tempAmbient?.toString() ?: "",
-                        environmentChecked = (entity.environmentCheck ?: "").equals("on", ignoreCase = true),
-                        environmentId = entity.environment,
-                        windSpeedChecked = false,
-                        windSpeed = "",
-                        manufacturerId = entity.idFabricante,
-                        ratedLoad = entity.ratedLoad ?: "",
-                        circuitVoltage = entity.circuitVoltage ?: "",
-                        comments = entity.componentComment ?: "",
-                        rpm = entity.rpm?.toString() ?: "",
-                        bearingType = entity.bearingType ?: ""
-                    )
-                }
+                ?: editingMechanicalProblemOriginal?.let { entity -> toMechanicalFormData(entity) }
             val aislamientoTermicoProblemInitialData = aislamientoTermicoProblemDraftData
-                ?: editingAislamientoTermicoProblemOriginal?.let { entity ->
-                    AislamientoTermicoProblemFormData(
-                        failureId = entity.idFalla,
-                        componentTemperature = entity.problemTemperature?.toString() ?: "",
-                        componentPhaseId = null,
-                        componentRms = entity.problemRms?.toString() ?: "",
-                        referenceTemperature = entity.referenceTemperature?.toString() ?: "",
-                        referencePhaseId = null,
-                        referenceRms = entity.referenceRms?.toString() ?: "",
-                        additionalInfoId = null,
-                        additionalRms = "",
-                        emissivityChecked = (entity.emissivityCheck ?: "").equals("on", ignoreCase = true),
-                        emissivity = entity.emissivity?.toString() ?: "",
-                        indirectTempChecked = false,
-                        ambientTempChecked = (entity.tempAmbientCheck ?: "").equals("on", ignoreCase = true),
-                        ambientTemp = entity.tempAmbient?.toString() ?: "",
-                        environmentChecked = (entity.environmentCheck ?: "").equals("on", ignoreCase = true),
-                        environmentId = entity.environment,
-                        windSpeedChecked = false,
-                        windSpeed = "",
-                        manufacturerId = entity.idFabricante,
-                        ratedLoad = entity.ratedLoad ?: "",
-                        circuitVoltage = entity.circuitVoltage ?: "",
-                        comments = entity.componentComment ?: "",
-                        rpm = entity.rpm?.toString() ?: "",
-                        bearingType = entity.bearingType ?: ""
-                    )
-                }
+                ?: editingAislamientoTermicoProblemOriginal?.let { entity -> toAislamientoFormData(entity) }
             val manufacturerOptionsPairs = fabricanteOptions
                 .sortedBy { it.fabricante?.lowercase(Locale.getDefault()) ?: "" }
                 .map { it.idFabricante to (it.fabricante ?: it.idFabricante) }

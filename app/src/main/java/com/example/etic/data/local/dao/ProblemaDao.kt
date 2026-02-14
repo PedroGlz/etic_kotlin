@@ -99,6 +99,36 @@ interface ProblemaDao {
 
     @Query(
         """
+        SELECT * FROM problemas
+        WHERE Id_Inspeccion = :idInspeccion
+          AND Id_Tipo_Inspeccion = :idTipoInspeccion
+          AND Estatus = 'Activo'
+        ORDER BY Numero_Problema DESC, Fecha_Creacion DESC
+        LIMIT 1
+        """
+    )
+    suspend fun getLastByInspectionAndType(
+        idInspeccion: String,
+        idTipoInspeccion: String
+    ): Problema?
+
+    @Query(
+        """
+        SELECT * FROM problemas
+        WHERE Id_Inspeccion = :idInspeccion
+          AND Id_Tipo_Inspeccion IN (:tipoIds)
+          AND Estatus = 'Activo'
+        ORDER BY Fecha_Creacion DESC, Numero_Problema DESC
+        LIMIT 1
+        """
+    )
+    suspend fun getLastByInspectionAndTypes(
+        idInspeccion: String,
+        tipoIds: List<String>
+    ): Problema?
+
+    @Query(
+        """
         SELECT 
             p.Numero_Problema AS numero,
             i.No_Inspeccion AS numeroInspeccion,
