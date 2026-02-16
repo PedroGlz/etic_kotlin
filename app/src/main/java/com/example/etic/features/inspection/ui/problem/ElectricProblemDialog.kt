@@ -26,7 +26,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentWidth
-//import androidx.compose.foundation.layout.weight
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -74,6 +74,9 @@ import com.example.etic.features.components.ImageInputButtonGroup
 import com.example.etic.core.saf.EticImageStore
 import com.example.etic.core.settings.EticPrefs
 import com.example.etic.core.settings.settingsDataStore
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.LocalMinimumInteractiveComponentEnforcement
+import androidx.compose.runtime.CompositionLocalProvider
 
 private val DIALOG_MIN_WIDTH = 980.dp
 private val DIALOG_MAX_WIDTH = 980.dp
@@ -600,19 +603,24 @@ fun ElectricProblemDialog(
                                     }
 
                                     Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.spacedBy(CHECKBOX_GAP),
+                                        modifier = Modifier.wrapContentWidth(),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Checkbox(
-                                            checked = indirectTempChecked,
-                                            onCheckedChange = { indirectTempChecked = it },
-                                            modifier = Modifier
-                                                .wrapContentWidth()
-                                                .padding(0.dp)
+                                        CompactCheckbox {
+                                            Checkbox(
+                                                checked = indirectTempChecked,
+                                                onCheckedChange = { indirectTempChecked = it },
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                        }
+
+                                        Spacer(Modifier.width(4.dp))
+
+                                        Text(
+                                            "Temp. indirecta",
+                                            style = MaterialTheme.typography.labelSmall
                                         )
-                                        Text("Temp. indirecta", style = MaterialTheme.typography.labelSmall)
-                                    }                                    
+                                    }
                                 }
 
                                 VerticalDivider()
@@ -1067,17 +1075,20 @@ private fun CheckboxNumericRow(
     modifier: Modifier = Modifier
 ) {
     Row(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier, // ✅ sin fillMaxWidth
         verticalAlignment = Alignment.CenterVertically
     ) {
         Checkbox(
             checked = checked,
-            onCheckedChange = onCheckedChange
+            onCheckedChange = onCheckedChange,
+            modifier = Modifier.size(20.dp) // ✅ sin espacio extra
         )
 
         Spacer(modifier = Modifier.width(CHECKBOX_GAP))
 
-        Column(modifier = Modifier.weight(1f)) {
+        Column(
+            modifier = Modifier.weight(1f, fill = false) // ✅ no empuja de más
+        ) {
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelSmall
@@ -1107,7 +1118,24 @@ private fun CheckboxNumericRow(
             }
         }
     }
+}
 
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CompactCheckbox(
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    CompositionLocalProvider(
+        LocalMinimumInteractiveComponentEnforcement provides false
+    ) {
+        Checkbox(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            modifier = Modifier.size(20.dp)
+        )
+    }
 }
 
 @Composable
@@ -1125,16 +1153,14 @@ private fun CheckboxDropdownRow(
 
     Row(
         modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(CHECKBOX_GAP),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Checkbox(
+        CompactCheckbox(
             checked = checked,
-            onCheckedChange = onCheckedChange,
-            modifier = Modifier
-                .wrapContentWidth()
-                .padding(0.dp)
+            onCheckedChange = onCheckedChange
         )
+
+        Spacer(Modifier.width(4.dp))
 
         Column(modifier = Modifier.weight(1f)) {
             Text(text = label, style = MaterialTheme.typography.labelSmall)
@@ -1143,12 +1169,19 @@ private fun CheckboxDropdownRow(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(FIELD_HEIGHT)
-                    .border(FIELD_BORDER, MaterialTheme.colorScheme.outline, RoundedCornerShape(FIELD_RADIUS))
+                    .border(
+                        FIELD_BORDER,
+                        MaterialTheme.colorScheme.outline,
+                        RoundedCornerShape(FIELD_RADIUS)
+                    )
                     .padding(FIELD_PADDING)
                     .clickable { expanded = true },
                 contentAlignment = Alignment.CenterStart
             ) {
-                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text(
                         text = if (selectedLabel.isNotBlank()) selectedLabel else "Seleccionar",
                         style = MaterialTheme.typography.bodySmall,
@@ -1156,14 +1189,26 @@ private fun CheckboxDropdownRow(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                    Text("▼", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        "▼",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
 
-            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
                 options.forEach { (id, text) ->
                     DropdownMenuItem(
-                        text = { Text(text = text.ifBlank { id }, style = MaterialTheme.typography.bodySmall) },
+                        text = {
+                            Text(
+                                text = text.ifBlank { id },
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        },
                         onClick = {
                             expanded = false
                             onSelected(id)
@@ -1314,4 +1359,13 @@ private fun RowScope.CenterCell(
     ) {
         content()
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CompactCheckbox(content: @Composable () -> Unit) {
+    CompositionLocalProvider(
+        LocalMinimumInteractiveComponentEnforcement provides false,
+        content = content
+    )
 }
