@@ -571,7 +571,7 @@ fun ElectricProblemDialog(
                                 }
                             }
 
-                            Divider(Modifier.padding(top = 6.dp, bottom = 6.dp))
+                            Divider(Modifier.padding(top = 6.dp, bottom = 6.dp))                            
 
                             // ✅ 2 columnas 50/50, compactas y con checkbox pegado al input
                             Row(
@@ -698,6 +698,8 @@ fun ElectricProblemDialog(
                                     )
                                 }
                             }                    
+
+                            Divider(Modifier.padding(top = 6.dp, bottom = 6.dp))
 
                             Row(){
                                 Column() {
