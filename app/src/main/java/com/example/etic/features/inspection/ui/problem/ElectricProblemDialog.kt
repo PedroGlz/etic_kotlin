@@ -415,7 +415,7 @@ fun ElectricProblemDialog(
                                 )
                             }
 
-                            Spacer(Modifier.height(12.dp))
+                            Divider(Modifier.padding(top = 6.dp, bottom = 6.dp))
 
                             val headerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.30f)
                             val lineColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.23f)
@@ -571,7 +571,7 @@ fun ElectricProblemDialog(
                                 }
                             }
 
-                            Divider(Modifier.padding(top = 5.dp, bottom = 5.dp))
+                            Divider(Modifier.padding(top = 6.dp, bottom = 6.dp))
 
                             // ✅ 2 columnas 50/50, compactas y con checkbox pegado al input
                             Row(
@@ -601,6 +601,8 @@ fun ElectricProblemDialog(
                                             )
                                         }
                                     }
+
+                                    Spacer(Modifier.height(20.dp))
 
                                     Row(
                                         modifier = Modifier.wrapContentWidth(),
@@ -636,6 +638,8 @@ fun ElectricProblemDialog(
                                         onValueChange = { ambientTemp = it },
                                         unit = "°C"
                                     )
+
+                                    Spacer(Modifier.height(6.dp))
 
                                     CheckboxDropdownRow(
                                         label = "Tipo ambiente",
@@ -693,7 +697,7 @@ fun ElectricProblemDialog(
                                         unit = "V"
                                     )
                                 }
-                            }
+                            }                    
 
                             Row(){
                                 Column() {
@@ -706,6 +710,8 @@ fun ElectricProblemDialog(
                                     )
                                 }
                             }
+
+                            Spacer(Modifier.height(6.dp))
 
                             MultilineField(
                                 label = "Comentarios",
@@ -1075,19 +1081,21 @@ private fun CheckboxNumericRow(
     modifier: Modifier = Modifier
 ) {
     Row(
-        modifier = modifier, // ✅ sin fillMaxWidth
-        verticalAlignment = Alignment.CenterVertically
+        modifier = modifier,
+        verticalAlignment = Alignment.Bottom // ✅ alineado al input
     ) {
         Checkbox(
             checked = checked,
             onCheckedChange = onCheckedChange,
-            modifier = Modifier.size(20.dp) // ✅ sin espacio extra
+            modifier = Modifier
+                .size(20.dp)
+                .padding(bottom = 2.dp) // 🔥 micro-ajuste visual
         )
 
         Spacer(modifier = Modifier.width(CHECKBOX_GAP))
 
         Column(
-            modifier = Modifier.weight(1f, fill = false) // ✅ no empuja de más
+            modifier = Modifier.weight(1f, fill = false)
         ) {
             Text(
                 text = label,
@@ -1120,12 +1128,12 @@ private fun CheckboxNumericRow(
     }
 }
 
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun CompactCheckbox(
     checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit
+    onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     CompositionLocalProvider(
         LocalMinimumInteractiveComponentEnforcement provides false
@@ -1133,10 +1141,11 @@ private fun CompactCheckbox(
         Checkbox(
             checked = checked,
             onCheckedChange = onCheckedChange,
-            modifier = Modifier.size(20.dp)
+            modifier = modifier.size(20.dp)
         )
     }
 }
+
 
 @Composable
 private fun CheckboxDropdownRow(
@@ -1153,11 +1162,12 @@ private fun CheckboxDropdownRow(
 
     Row(
         modifier = modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.Bottom // ✅ alineado al input
     ) {
         CompactCheckbox(
             checked = checked,
-            onCheckedChange = onCheckedChange
+            onCheckedChange = onCheckedChange,
+            modifier = Modifier.padding(bottom = 2.dp) // 🔥 micro-ajuste
         )
 
         Spacer(Modifier.width(4.dp))
@@ -1218,6 +1228,7 @@ private fun CheckboxDropdownRow(
             }
         }
     }
+
 }
 
 /* ------------------------- Multiline ------------------------- */
