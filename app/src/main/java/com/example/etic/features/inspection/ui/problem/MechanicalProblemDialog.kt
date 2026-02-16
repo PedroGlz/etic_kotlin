@@ -369,7 +369,7 @@ fun MechanicalProblemDialog(
                                 }
                             }
                         }
-                        Divider(Modifier.padding(top = 8.dp, bottom = 12.dp))
+                        Divider()
                     }
                     Spacer(Modifier.height(12.dp))
                     Row(
@@ -417,7 +417,7 @@ fun MechanicalProblemDialog(
 
                             Divider(Modifier.padding(top = 6.dp, bottom = 6.dp))
                             
-                            Column(verticalArrangement = Arrangement.spacedBy(SECTION_GAP)) {
+                            Column {
                                 val headerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.30f)
                                 val lineColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.23f)
 
