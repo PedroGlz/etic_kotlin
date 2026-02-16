@@ -383,7 +383,13 @@ fun ElectricProblemDialog(
                                 InfoField("Inspección No.", inspectionNumber, 85.dp)
                                 InfoField("Problema No.", problemNumber, 85.dp)
                                 InfoField("Tipo de problema", problemType, 95.dp)
-                                InfoField("Equipo", equipmentName, 210.dp)
+                                // ✅ ESTE se expande
+                                InfoField(
+                                    label = "Equipo",
+                                    value = equipmentName,
+                                    ancho = null,
+                                    modifier = Modifier.weight(1f)
+                                )
                             }
 
                             Spacer(Modifier.height(8.dp))
@@ -392,11 +398,17 @@ fun ElectricProblemDialog(
                                 horizontalArrangement = Arrangement.spacedBy(ROW_GAP),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                ReadOnlyFormField(
+                                /*ReadOnlyFormField(
                                     label = "Ruta del equipo",
                                     value = equipmentRoute,
                                     modifier = Modifier.fillMaxWidth(),
                                     ancho = 480.dp
+                                )*/
+                                InfoField(
+                                    label = "Ruta del equipo",
+                                    value = equipmentName,
+                                    ancho = null,
+                                    modifier = Modifier.weight(1f)
                                 )
                             }
 
@@ -556,7 +568,7 @@ fun ElectricProblemDialog(
                                 }
                             }
 
-                            Divider()
+                            Divider(Modifier.padding(top = 5.dp, bottom = 5.dp))
 
                             // ✅ 2 columnas 50/50, compactas y con checkbox pegado al input
                             Row(
@@ -705,7 +717,6 @@ fun ElectricProblemDialog(
                         modifier = Modifier.weight(1f),
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Text("Cargas de imágenes", style = MaterialTheme.typography.labelMedium)
                         ImageInputColumn(
                             title = "",
                             label = "Archivo IR",
@@ -819,14 +830,29 @@ private fun OutlinedFieldBox(
 }
 
 @Composable
-private fun InfoField(label: String, value: String, ancho: Dp) {
-    Column(Modifier.widthIn(min = INFO_FIELD_MIN_WIDTH, max = ancho)) {
+private fun InfoField(
+    label: String,
+    value: String,
+    ancho: Dp? = null,
+    modifier: Modifier = Modifier
+) {
+    val widthModifier = if (ancho != null) {
+        Modifier.widthIn(min = INFO_FIELD_MIN_WIDTH, max = ancho)
+    } else {
+        Modifier.fillMaxWidth()
+    }
+
+    Column(modifier.then(widthModifier)) {
         Text(text = label, style = MaterialTheme.typography.labelSmall)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(FIELD_HEIGHT)
-                .border(FIELD_BORDER, MaterialTheme.colorScheme.outline, RoundedCornerShape(FIELD_RADIUS))
+                .border(
+                    FIELD_BORDER,
+                    MaterialTheme.colorScheme.outline,
+                    RoundedCornerShape(FIELD_RADIUS)
+                )
                 .padding(FIELD_PADDING),
             contentAlignment = Alignment.CenterStart
         ) {
