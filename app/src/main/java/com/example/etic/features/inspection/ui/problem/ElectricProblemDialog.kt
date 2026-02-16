@@ -203,6 +203,7 @@ fun ElectricProblemDialog(
                 var lastAutoComment by rememberSaveable {
                     mutableStateOf(if (initialCommentWasAuto) initial.comments else "")
                 }
+                var saveAttempted by rememberSaveable { mutableStateOf(false) }
 
             val failureLabel = failureOptions.firstOrNull { it.first == failureId }?.second?.takeIf { it.isNotBlank() }
             val phaseLabel = phaseOptions.firstOrNull { it.first == componentPhaseId }?.second?.takeIf { it.isNotBlank() }
@@ -262,9 +263,9 @@ fun ElectricProblemDialog(
                 emissivityError = if (emissivityChecked && emissivity.isBlank()) "Fuera del rango valido" else null
             }
 
-            val thermalError = thermalImageName.isBlank()
-            val digitalError = digitalImageName.isBlank()
-            val imagesProvided = !thermalError && !digitalError
+            val imagesProvided = thermalImageName.isNotBlank() && digitalImageName.isNotBlank()
+            val thermalError = saveAttempted && thermalImageName.isBlank()
+            val digitalError = saveAttempted && digitalImageName.isBlank()
 
             fun buildFormData(): ElectricProblemFormData =
                 ElectricProblemFormData(
@@ -386,7 +387,6 @@ fun ElectricProblemDialog(
                                 InfoField("Inspección No.", inspectionNumber, 85.dp)
                                 InfoField("Problema No.", problemNumber, 85.dp)
                                 InfoField("Tipo de problema", problemType, 95.dp)
-                                // ✅ ESTE se expande
                                 InfoField(
                                     label = "Equipo",
                                     value = equipmentName,
@@ -401,12 +401,6 @@ fun ElectricProblemDialog(
                                 horizontalArrangement = Arrangement.spacedBy(ROW_GAP),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                /*ReadOnlyFormField(
-                                    label = "Ruta del equipo",
-                                    value = equipmentRoute,
-                                    modifier = Modifier.fillMaxWidth(),
-                                    ancho = 480.dp
-                                )*/
                                 InfoField(
                                     label = "Ruta del equipo",
                                     value = equipmentName,
@@ -775,9 +769,10 @@ fun ElectricProblemDialog(
                         continueEnabled && emissivityError == null && requiredFieldsFilled && imagesProvided
                     Button(
                         onClick = {
-                            onContinue(buildFormData())
+                            saveAttempted = true
+                            if (canSubmit) onContinue(buildFormData())
                         },
-                        enabled = canSubmit
+                        enabled = continueEnabled && emissivityError == null && requiredFieldsFilled
                     ) {
                         Text("Guardar")
                     }

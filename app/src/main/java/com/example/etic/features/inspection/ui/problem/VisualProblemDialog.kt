@@ -1,5 +1,6 @@
 ﻿package com.example.etic.features.inspection.ui.problem
 
+import android.annotation.SuppressLint
 import androidx.compose.foundation.Image
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
@@ -65,7 +66,11 @@ private val FIELD_HEIGHT = 25.dp
 private val FIELD_RADIUS = 4.dp
 private val FIELD_BORDER = 1.dp
 private val FIELD_PADDING = PaddingValues(horizontal = 4.dp, vertical = 2.dp)
+private val CONTENT_GAP = 10.dp
+private val SECTION_GAP = 12.dp
+private val ROW_GAP = 12.dp
 
+@SuppressLint("UnusedContentLambdaTargetStateParameter")
 @Composable
 fun VisualProblemDialog(
     inspectionNumber: String,
@@ -144,7 +149,7 @@ fun VisualProblemDialog(
                             bottom = 4.dp
                         )
             ) {
-                Text("Problema Visual", style = MaterialTheme.typography.headlineSmall)
+                Text("Problema Visual", style = MaterialTheme.typography.titleMedium)
                 if (showEditControls) {
                     Divider(Modifier.padding(top = 5.dp))
                     Row(
@@ -196,7 +201,7 @@ fun VisualProblemDialog(
                             }
                         }
                     }
-                    Divider(Modifier.padding(top = 8.dp, bottom = 16.dp))
+                    Divider(Modifier.padding(top = 8.dp, bottom = 10.dp))
                 }
                 val hazardError = selectedHazardIssue.isNullOrBlank()
                 val severityError = selectedSeverity.isNullOrBlank()
@@ -220,22 +225,36 @@ fun VisualProblemDialog(
                             horizontalArrangement = Arrangement.spacedBy(12.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            InfoField("Inspección No.", inspectionNumber)
-                            InfoField("Problema No.", problemNumber)
-                            InfoField("Tipo de problema", problemType)
-                            InfoField("Equipo", equipmentName)
+                            InfoField("Inspección No.", inspectionNumber, 85.dp)
+                            InfoField("Problema No.", problemNumber, 85.dp)
+                            InfoField("Tipo de problema", problemType, 95.dp)
+                            InfoField(
+                                label = "Equipo",
+                                value = equipmentName,
+                                ancho = null,
+                                modifier = Modifier.weight(1f)
+                            )
                         }
 
-                        Spacer(Modifier.height(12.dp))
-                        ReadOnlyFormField(
-                            label = "Ruta del equipo",
-                            value = equipmentRoute,
-                            modifier = Modifier.fillMaxWidth()
-                        )
+                        Spacer(Modifier.height(6.dp))
 
-                        Spacer(Modifier.height(16.dp))
-                        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                                   Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(ROW_GAP),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                InfoField(
+                                    label = "Ruta del equipo",
+                                    value = equipmentName,
+                                    ancho = null,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+
+                        Divider(Modifier.padding(top = 6.dp, bottom = 6.dp))
+
+                        Column(verticalArrangement = Arrangement.spacedBy(SECTION_GAP)) {
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                 DropdownSelector(
                                     label = "Problema *",
                                     options = hazardIssues,
@@ -264,7 +283,7 @@ fun VisualProblemDialog(
 
                             Column {
                                 Text("Historia de este problema", style = MaterialTheme.typography.labelLarge)
-                                Spacer(Modifier.height(8.dp))
+                                Spacer(Modifier.height(4.dp))
                                 HistorySection(
                                     rows = historyRows,
                                     isLoading = historyLoading
@@ -277,7 +296,7 @@ fun VisualProblemDialog(
 
                     Column(
                         modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                        verticalArrangement = Arrangement.spacedBy(SECTION_GAP)
                     ) {
                         Text("Cargas de imágenes", style = MaterialTheme.typography.labelLarge)
                         ImageInputColumn(
@@ -312,7 +331,7 @@ fun VisualProblemDialog(
                 }
 
                 val canSave = !hazardError && !severityError && !thermalError && !digitalError
-                Spacer(Modifier.height(24.dp))
+                Spacer(Modifier.height(14.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -338,44 +357,29 @@ private fun VerticalDivider(modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun InfoField(label: String, value: String) {
-    Column(
-        Modifier
-            .widthIn(min = INFO_FIELD_MIN_WIDTH, max = INFO_FIELD_MAX_WIDTH)
-            .defaultMinSize(minWidth = INFO_FIELD_MIN_WIDTH)
-    ) {
-        Text(text = label, style = MaterialTheme.typography.labelSmall)
-        Box(
-            modifier = Modifier
-                .widthIn(min = INFO_FIELD_MIN_WIDTH, max = INFO_FIELD_MAX_WIDTH)
-                .height(FIELD_HEIGHT)
-                .border(FIELD_BORDER, MaterialTheme.colorScheme.outline, RoundedCornerShape(FIELD_RADIUS))
-                .padding(FIELD_PADDING),
-            contentAlignment = Alignment.CenterStart
-        ) {
-            Text(
-                text = value,
-                style = MaterialTheme.typography.bodySmall,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-    }
-}
-
-@Composable
-private fun ReadOnlyFormField(
+private fun InfoField(
     label: String,
     value: String,
+    ancho: Dp? = null,
     modifier: Modifier = Modifier
 ) {
-    Column(modifier) {
+    val widthModifier = if (ancho != null) {
+        Modifier.widthIn(min = INFO_FIELD_MIN_WIDTH, max = ancho)
+    } else {
+        Modifier.fillMaxWidth()
+    }
+
+    Column(modifier.then(widthModifier)) {
         Text(text = label, style = MaterialTheme.typography.labelSmall)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(FIELD_HEIGHT)
-                .border(FIELD_BORDER, MaterialTheme.colorScheme.outline, RoundedCornerShape(FIELD_RADIUS))
+                .border(
+                    FIELD_BORDER,
+                    MaterialTheme.colorScheme.outline,
+                    RoundedCornerShape(FIELD_RADIUS)
+                )
                 .padding(FIELD_PADDING),
             contentAlignment = Alignment.CenterStart
         ) {
@@ -516,7 +520,7 @@ private fun HistorySection(rows: List<VisualProblemHistoryRow>, isLoading: Boole
             }
         }
         rows.isEmpty() -> {
-            Text("Sin registros previos para esta ubicaciÃ³n.", style = MaterialTheme.typography.bodyMedium)
+            Text("Sin registros previos para esta ubicación.", style = MaterialTheme.typography.bodyMedium)
         }
         else -> {
             HistoryTable(rows = rows)
@@ -534,7 +538,7 @@ private fun HistoryTable(rows: List<VisualProblemHistoryRow>) {
             .border(1.dp, outline, RoundedCornerShape(8.dp))
     ) {
         HistoryRow(
-            cells = listOf("No", "No. InspecciÃ³n", "Fecha", "Severidad", "Comentarios"),
+            cells = listOf("No", "No. Inspección", "Fecha", "Severidad", "Comentarios"),
             isHeader = true,
             textStyle = headerStyle
         )
@@ -596,9 +600,11 @@ private fun ImageInputColumn(
 ) {
     Column(
         modifier = modifier,
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(CONTENT_GAP)
     ) {
-        Text(title, style = MaterialTheme.typography.titleSmall)
+        if (title.isNotBlank()) {
+            Text(title, style = MaterialTheme.typography.titleSmall)
+        }
         ImageInputButtonGroup(
             label = label,
             value = value,
@@ -614,7 +620,7 @@ private fun ImageInputColumn(
         )
         if (isError) {
             Text(
-                text = "",
+                text = "Cargar imagen requerida",
                 color = MaterialTheme.colorScheme.error,
                 style = MaterialTheme.typography.bodySmall
             )

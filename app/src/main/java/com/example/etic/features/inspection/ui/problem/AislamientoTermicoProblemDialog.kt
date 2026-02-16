@@ -89,7 +89,7 @@ private val FIELD_RADIUS = 4.dp
 private val FIELD_BORDER = 1.dp
 private val FIELD_PADDING = PaddingValues(horizontal = 4.dp, vertical = 2.dp)
 
-// âœ… CompactaciÃ³n checkbox + input
+// âœ… Compactación checkbox + input
 private val CHECKBOX_GAP = 4.dp
 private val SECTION_GAP = 12.dp
 private val ROW_GAP = 12.dp
@@ -206,6 +206,7 @@ fun AislamientoTermicoProblemDialog(
                 }
                 var rpm by rememberSaveable { mutableStateOf(initial.rpm) }
                 var bearingType by rememberSaveable { mutableStateOf(initial.bearingType) }
+                var saveAttempted by rememberSaveable { mutableStateOf(false) }
 
                 val failureLabel =
                     failureOptions.firstOrNull { it.first == failureId }?.second?.takeIf { it.isNotBlank() }
@@ -248,13 +249,13 @@ fun AislamientoTermicoProblemDialog(
                     when {
                         filtered.isBlank() -> {
                             emissivity = ""
-                            emissivityError = if (shouldValidate) "Fuera del rango vÃ¡lido" else null
+                            emissivityError = if (shouldValidate) "Fuera del rango válido" else null
                         }
-                        number == null -> emissivityError = if (shouldValidate) "Fuera del rango vÃ¡lido" else null
+                        number == null -> emissivityError = if (shouldValidate) "Fuera del rango válido" else null
                         number < 0.0 || number > 1.0 ->
                             emissivityError = if (shouldValidate) "Ingresar valor entre 0.00 y 1.00" else null
                         hasTooManyDecimals ->
-                            emissivityError = if (shouldValidate) "Ingresar valor con mÃ¡ximo 2 decimales" else null
+                            emissivityError = if (shouldValidate) "Ingresar valor con máximo 2 decimales" else null
                         else -> {
                             emissivity = filtered
                             emissivityError = null
@@ -264,12 +265,12 @@ fun AislamientoTermicoProblemDialog(
 
                 LaunchedEffect(emissivityChecked) {
                     emissivityError =
-                        if (emissivityChecked && emissivity.isBlank()) "Fuera del rango vÃ¡lido" else null
+                        if (emissivityChecked && emissivity.isBlank()) "Fuera del rango válido" else null
                 }
 
-                val thermalError = thermalImageName.isBlank()
-                val digitalError = digitalImageName.isBlank()
-                val imagesProvided = !thermalError && !digitalError
+                val imagesProvided = thermalImageName.isNotBlank() && digitalImageName.isNotBlank()
+                val thermalError = saveAttempted && thermalImageName.isBlank()
+                val digitalError = saveAttempted && digitalImageName.isBlank()
 
                 fun buildFormData(): AislamientoTermicoProblemFormData =
                     AislamientoTermicoProblemFormData(
@@ -315,7 +316,7 @@ fun AislamientoTermicoProblemDialog(
                             bottom = 4.dp
                         )
                 ) {
-                Text("Problema Aislamiento TÃ©rmico", style = MaterialTheme.typography.titleMedium)
+                Text("Problema Aislamiento Térmico", style = MaterialTheme.typography.titleMedium)
 
                     if (showEditControls) {
                         Divider(Modifier.padding(top = 5.dp))
@@ -663,8 +664,11 @@ fun AislamientoTermicoProblemDialog(
                         val canSubmit =
                             continueEnabled && emissivityError == null && requiredFieldsFilled && imagesProvided
                         Button(
-                            onClick = { onContinue(buildFormData()) },
-                            enabled = canSubmit
+                            onClick = {
+                                saveAttempted = true
+                                if (canSubmit) onContinue(buildFormData())
+                            },
+                            enabled = continueEnabled && emissivityError == null && requiredFieldsFilled
                         ) {
                             Text("Guardar")
                         }
@@ -713,7 +717,7 @@ private fun VerticalDivider(modifier: Modifier = Modifier) {
     )
 }
 
-/* ------------------------- Campos base (homogÃ©neos) ------------------------- */
+/* ------------------------- Campos base (homogéneos) ------------------------- */
 
 @Composable
 private fun OutlinedFieldBox(
@@ -1056,7 +1060,7 @@ private fun MultilineField(
     }
 }
 
-/* ------------------------- ImÃ¡genes ------------------------- */
+/* ------------------------- Imágenes ------------------------- */
 
 @Composable
 private fun ImagePreviewBox(fileName: String, inspectionNumber: String) {

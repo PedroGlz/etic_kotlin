@@ -1157,7 +1157,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     if (formData.failureId.isNullOrBlank()) add("Falla")
                     if (formData.componentTemperature.isBlank()) add("Temp. componente")
                     if (formData.referenceTemperature.isBlank()) add("Temp. referencia")
-                    if (pendingThermalImage.isBlank()) add("Imagen tÃ©rmica")
+                    if (pendingThermalImage.isBlank()) add("Imagen térmica")
                     if (pendingDigitalImage.isBlank()) add("Imagen digital")
                 }
                 if (missing.isNotEmpty()) {
@@ -2348,7 +2348,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             fun saveAislamientoTermicoProblem(formData: AislamientoTermicoProblemFormData) {
                 val inspection = currentInspection
                 if (inspection == null) {
-                    Toast.makeText(ctx, "No hay inspecciÃ³n activa.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(ctx, "No hay inspección activa.", Toast.LENGTH_SHORT).show()
                     return
                 }
                 val locationId = pendingProblemUbicacionId ?: selectedId
@@ -2357,7 +2357,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     return
                 }
                 if (pendingThermalImage.isBlank() || pendingDigitalImage.isBlank()) {
-                    Toast.makeText(ctx, "Carga las imÃ¡genes tÃ©rmica y digital para guardar el problema.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(ctx, "Carga las imágenes térmica y digital para guardar el problema.", Toast.LENGTH_SHORT).show()
                     return
                 }
                 val navigationSave = editingAislamientoTermicoProblemId != null && problemNavList.isNotEmpty()
