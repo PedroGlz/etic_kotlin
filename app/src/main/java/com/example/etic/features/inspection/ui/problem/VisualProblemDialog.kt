@@ -39,6 +39,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -133,6 +134,7 @@ fun VisualProblemDialog(
         ) {
             val scrollState = rememberScrollState()
             val infoRowScroll = rememberScrollState()
+            var saveAttempted by rememberSaveable { mutableStateOf(false) }
             AnimatedContent(
                 targetState = transitionKey,
                 transitionSpec = { fadeIn(tween(140)) togetherWith fadeOut(tween(140)) },
@@ -205,8 +207,9 @@ fun VisualProblemDialog(
                 }
                 val hazardError = selectedHazardIssue.isNullOrBlank()
                 val severityError = selectedSeverity.isNullOrBlank()
-                val thermalError = thermalImageName.isBlank()
-                val digitalError = digitalImageName.isBlank()
+                val imagesProvided = thermalImageName.isNotBlank() && digitalImageName.isNotBlank()
+                val thermalError = saveAttempted && thermalImageName.isBlank()
+                val digitalError = saveAttempted && digitalImageName.isBlank()
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -298,7 +301,6 @@ fun VisualProblemDialog(
                         modifier = Modifier.weight(1f),
                         verticalArrangement = Arrangement.spacedBy(SECTION_GAP)
                     ) {
-                        Text("Cargas de imágenes", style = MaterialTheme.typography.labelLarge)
                         ImageInputColumn(
                             label = "Archivo IR",
                             value = thermalImageName,
@@ -330,7 +332,7 @@ fun VisualProblemDialog(
                     }
                 }
 
-                val canSave = !hazardError && !severityError && !thermalError && !digitalError
+                val canSave = !hazardError && !severityError && imagesProvided
                 Spacer(Modifier.height(14.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -338,7 +340,13 @@ fun VisualProblemDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     TextButton(onClick = onDismiss) { Text("Cancelar") }
-                    Button(onClick = onContinue, enabled = canSave) { Text("Guardar") }
+                    Button(
+                        onClick = {
+                            saveAttempted = true
+                            if (canSave) onContinue()
+                        },
+                        enabled = !hazardError && !severityError
+                    ) { Text("Guardar") }
                 }
                 }
             }

@@ -393,7 +393,12 @@ fun MechanicalProblemDialog(
                                 InfoField("Inspección No.", inspectionNumber, 85.dp)
                                 InfoField("Problema No.", problemNumber, 85.dp)
                                 InfoField("Tipo de problema", problemType, 95.dp)
-                                InfoField("Equipo", equipmentName, 210.dp)
+                                InfoField(
+                                    label = "Equipo",
+                                    value = equipmentName,
+                                    ancho = null,
+                                    modifier = Modifier.weight(1f)
+                                )
                             }
 
                             Spacer(Modifier.height(8.dp))
