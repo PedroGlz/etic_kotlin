@@ -83,13 +83,13 @@ private val DIALOG_MAX_WIDTH = 980.dp
 private val INFO_FIELD_MIN_WIDTH = 100.dp
 private val INFO_FIELD_MAX_WIDTH = 100.dp
 
-// âœ… Homogeneidad de inputs
+// Homogeneidad de inputs
 private val FIELD_HEIGHT = 25.dp
 private val FIELD_RADIUS = 4.dp
 private val FIELD_BORDER = 1.dp
 private val FIELD_PADDING = PaddingValues(horizontal = 4.dp, vertical = 2.dp)
 
-// âœ… Compactación checkbox + input
+// Compactación checkbox + input
 private val CHECKBOX_GAP = 4.dp
 private val SECTION_GAP = 12.dp
 private val ROW_GAP = 12.dp
@@ -407,26 +407,16 @@ fun MechanicalProblemDialog(
                                 horizontalArrangement = Arrangement.spacedBy(ROW_GAP),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Column {
-                                    Text(text = "*Falla", style = MaterialTheme.typography.labelSmall)
-                                    DropdownSelectorNoLabel(
-                                        options = failureOptions,
-                                        selectedId = failureId,
-                                        onSelected = { failureId = it },
-                                        ancho = 180.dp
-                                    )
-                                }
-                                Column {
-                                    ReadOnlyFormField(
-                                        label = "Ruta del equipo",
-                                        value = equipmentRoute,
-                                        modifier = Modifier.fillMaxWidth(),
-                                        ancho = 480.dp
-                                    )
-                                }
+                                InfoField(
+                                    label = "Ruta del equipo",
+                                    value = equipmentName,
+                                    ancho = null,
+                                    modifier = Modifier.weight(1f)
+                                )
                             }
 
-                            Spacer(Modifier.height(12.dp))
+                            Divider(Modifier.padding(top = 6.dp, bottom = 6.dp))
+                            
                             Column(verticalArrangement = Arrangement.spacedBy(SECTION_GAP)) {
                                 val headerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.30f)
                                 val lineColor = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.23f)
@@ -525,100 +515,117 @@ fun MechanicalProblemDialog(
                                     }
                                 }
 
-                                Divider()
+                            Divider(Modifier.padding(top = 6.dp, bottom = 6.dp))
+                            
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(IntrinsicSize.Min),
+                                horizontalArrangement = Arrangement.spacedBy(9.dp)
+                            ) {
+                                // Col 1 (25%)
+                                Column(modifier = Modifier.weight(1f)) {
+                                    val currentEmissivityError = emissivityError
 
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(IntrinsicSize.Min),
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                                ) {
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        val currentEmissivityError = emissivityError
-
-                                        Column {
-                                            CheckboxNumericRow(
-                                                label = "Emisividad",
-                                                checked = emissivityChecked,
-                                                onCheckedChange = { emissivityChecked = it },
-                                                value = emissivity,
-                                                onValueChange = handleEmissivityInput
-                                            )
-                                            if (currentEmissivityError != null) {
-                                                Spacer(Modifier.height(3.dp))
-                                                Text(
-                                                    text = currentEmissivityError,
-                                                    style = MaterialTheme.typography.bodySmall,
-                                                    color = MaterialTheme.colorScheme.error
-                                                )
-                                            }
-                                        }
-
+                                    Column {
                                         CheckboxNumericRow(
-                                            label = "Temp. ambiente",
-                                            checked = ambientTempChecked,
-                                            onCheckedChange = { ambientTempChecked = it },
-                                            value = ambientTemp,
-                                            onValueChange = { ambientTemp = it },
-                                            unit = "°C"
+                                            label = "Emisividad",
+                                            checked = emissivityChecked,
+                                            onCheckedChange = { emissivityChecked = it },
+                                            value = emissivity,
+                                            onValueChange = handleEmissivityInput
                                         )
-
-                                        Spacer(Modifier.height(6.dp))
-
-                                        CheckboxDropdownRow(
-                                            label = "Tipo ambiente",
-                                            checked = environmentChecked,
-                                            onCheckedChange = { environmentChecked = it },
-                                            options = environmentOptions,
-                                            selectedId = environmentId,
-                                            onSelected = { environmentId = it }
-                                        )
+                                        if (currentEmissivityError != null) {
+                                            Spacer(Modifier.height(3.dp))
+                                            Text(
+                                                text = currentEmissivityError,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.error
+                                            )
+                                        }
                                     }
 
-                                    VerticalDivider()
+                                    Spacer(Modifier.height(6.dp))
 
-                                    Column(
-                                        modifier = Modifier.weight(1f),
-                                        verticalArrangement = Arrangement.spacedBy(6.dp)
-                                    ) {
+                                    CheckboxNumericRow(
+                                        label = "Temp. ambiente",
+                                        checked = ambientTempChecked,
+                                        onCheckedChange = { ambientTempChecked = it },
+                                        value = ambientTemp,
+                                        onValueChange = { ambientTemp = it },
+                                        unit = "°C"
+                                    )
+                                    
+                                }
 
-                                        LabeledField(
-                                            label = "RPM",
-                                            value = rpm,
-                                            onValueChange = { rpm = it }
-                                        )
+                                VerticalDivider()
 
-                                        LabeledField(
-                                            label = "Tipo de rodamiento",
-                                            value = bearingType,
-                                            onValueChange = { bearingType = it }
-                                        )
+                                // Col 2 (25%)
+                                Column(modifier = Modifier.weight(1f)) {
+                                    CheckboxDropdownRow(
+                                        label = "Tipo ambiente",
+                                        checked = environmentChecked,
+                                        onCheckedChange = { environmentChecked = it },
+                                        options = environmentOptions,
+                                        selectedId = environmentId,
+                                        onSelected = { environmentId = it }
+                                    )
+                                }
 
-                                        DropdownSelector(
-                                            label = "Fabricante",
-                                            options = manufacturerOptions,
-                                            selectedId = manufacturerId,
-                                            onSelected = { manufacturerId = it }
-                                        )
+                                VerticalDivider()
 
-                                        Divider()
+                                // Col 3 (25%)
+                                Column(
+                                    modifier = Modifier.weight(1f),
+                                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    DropdownSelector(
+                                        label = "Fabricante",
+                                        options = manufacturerOptions,
+                                        selectedId = manufacturerId,
+                                        onSelected = { manufacturerId = it }
+                                    )
+                                }
 
-                                        Text("Especificación eléctrica", style = MaterialTheme.typography.labelMedium)
+                                VerticalDivider()
 
-                                        LabeledField(
-                                            label = "Corriente nominal (A)",
-                                            value = ratedLoad,
-                                            onValueChange = { ratedLoad = it },
-                                            unit = "A"
-                                        )
-                                        LabeledField(
-                                            label = "Voltaje nominal (V)",
-                                            value = circuitVoltage,
-                                            onValueChange = { circuitVoltage = it },
-                                            unit = "V"
+                                // Col 4 (25%)
+                                Column(
+                                    modifier = Modifier.weight(1f),
+                                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Text("Especificación eléctrica", style = MaterialTheme.typography.labelMedium)
+
+                                    LabeledField(
+                                        label = "Corriente nominal (A)",
+                                        value = ratedLoad,
+                                        onValueChange = { ratedLoad = it },
+                                        unit = "A"
+                                    )
+                                    LabeledField(
+                                        label = "Voltaje nominal (V)",
+                                        value = circuitVoltage,
+                                        onValueChange = { circuitVoltage = it },
+                                        unit = "V"
+                                    )
+                                }
+                            }
+
+                            Divider(Modifier.padding(top = 6.dp, bottom = 6.dp))
+
+                                Row {
+                                    Column {
+                                        Text(text = "*Falla", style = MaterialTheme.typography.labelSmall)
+                                        DropdownSelectorNoLabel(
+                                            options = failureOptions,
+                                            selectedId = failureId,
+                                            onSelected = { failureId = it },
+                                            ancho = 180.dp
                                         )
                                     }
                                 }
+
+                                Spacer(Modifier.height(6.dp))
 
                                 MultilineField(
                                     label = "Comentarios",
@@ -755,14 +762,29 @@ private fun OutlinedFieldBox(
 }
 
 @Composable
-private fun InfoField(label: String, value: String, ancho: Dp) {
-    Column(Modifier.widthIn(min = INFO_FIELD_MIN_WIDTH, max = ancho)) {
+private fun InfoField(
+    label: String,
+    value: String,
+    ancho: Dp? = null,
+    modifier: Modifier = Modifier
+) {
+    val widthModifier = if (ancho != null) {
+        Modifier.widthIn(min = INFO_FIELD_MIN_WIDTH, max = ancho)
+    } else {
+        Modifier.fillMaxWidth()
+    }
+
+    Column(modifier.then(widthModifier)) {
         Text(text = label, style = MaterialTheme.typography.labelSmall)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(FIELD_HEIGHT)
-                .border(FIELD_BORDER, MaterialTheme.colorScheme.outline, RoundedCornerShape(FIELD_RADIUS))
+                .border(
+                    FIELD_BORDER,
+                    MaterialTheme.colorScheme.outline,
+                    RoundedCornerShape(FIELD_RADIUS)
+                )
                 .padding(FIELD_PADDING),
             contentAlignment = Alignment.CenterStart
         ) {
@@ -863,24 +885,35 @@ private fun DropdownSelectorNoLabel(
     options: List<Pair<String, String>>,
     selectedId: String?,
     onSelected: (String) -> Unit,
-    ancho: Dp? = null,
+    ancho: Dp? = null,              // ✅ ancho personalizado opcional
     modifier: Modifier = Modifier
 ) {
     var expanded by remember { mutableStateOf(false) }
     val selectedLabel = options.firstOrNull { it.first == selectedId }?.second.orEmpty()
 
-    val widthModifier = if (ancho != null) Modifier.width(ancho) else Modifier.fillMaxWidth()
+    val widthModifier = if (ancho != null) {
+        Modifier.width(ancho)
+    } else {
+        Modifier.fillMaxWidth()
+    }
 
     Box(
         modifier = modifier
-            .then(widthModifier)
+            .then(widthModifier)   // ✅ aplica el ancho definido
             .height(FIELD_HEIGHT)
-            .border(FIELD_BORDER, MaterialTheme.colorScheme.outline, RoundedCornerShape(FIELD_RADIUS))
+            .border(
+                FIELD_BORDER,
+                MaterialTheme.colorScheme.outline,
+                RoundedCornerShape(FIELD_RADIUS)
+            )
             .padding(FIELD_PADDING)
             .clickable { expanded = true },
         contentAlignment = Alignment.CenterStart
     ) {
-        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Text(
                 text = if (selectedLabel.isNotBlank()) selectedLabel else "Seleccionar",
                 style = MaterialTheme.typography.bodySmall,
@@ -888,14 +921,26 @@ private fun DropdownSelectorNoLabel(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            Text("â–¼", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                text = "▼",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 
-    DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+    DropdownMenu(
+        expanded = expanded,
+        onDismissRequest = { expanded = false }
+    ) {
         options.forEach { (id, text) ->
             DropdownMenuItem(
-                text = { Text(text = text.ifBlank { id }, style = MaterialTheme.typography.bodySmall) },
+                text = {
+                    Text(
+                        text = text.ifBlank { id },
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                },
                 onClick = {
                     expanded = false
                     onSelected(id)
@@ -997,12 +1042,12 @@ private fun CheckboxDropdownRow(
 
     Row(
         modifier = modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.Bottom
+        verticalAlignment = Alignment.Bottom // ✅ alineado al input
     ) {
         CompactCheckbox(
             checked = checked,
             onCheckedChange = onCheckedChange,
-            modifier = Modifier.padding(bottom = 2.dp)
+            modifier = Modifier.padding(bottom = 2.dp) // 🔥 micro-ajuste
         )
 
         Spacer(Modifier.width(4.dp))
@@ -1014,12 +1059,19 @@ private fun CheckboxDropdownRow(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(FIELD_HEIGHT)
-                    .border(FIELD_BORDER, MaterialTheme.colorScheme.outline, RoundedCornerShape(FIELD_RADIUS))
+                    .border(
+                        FIELD_BORDER,
+                        MaterialTheme.colorScheme.outline,
+                        RoundedCornerShape(FIELD_RADIUS)
+                    )
                     .padding(FIELD_PADDING)
                     .clickable { expanded = true },
                 contentAlignment = Alignment.CenterStart
             ) {
-                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text(
                         text = if (selectedLabel.isNotBlank()) selectedLabel else "Seleccionar",
                         style = MaterialTheme.typography.bodySmall,
@@ -1027,14 +1079,26 @@ private fun CheckboxDropdownRow(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                    Text("â–¼", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text(
+                        "▼",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
 
-            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
                 options.forEach { (id, text) ->
                     DropdownMenuItem(
-                        text = { Text(text = text.ifBlank { id }, style = MaterialTheme.typography.bodySmall) },
+                        text = {
+                            Text(
+                                text = text.ifBlank { id },
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        },
                         onClick = {
                             expanded = false
                             onSelected(id)

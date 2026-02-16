@@ -403,15 +403,6 @@ fun AislamientoTermicoProblemDialog(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Column {
-                                    Text(text = "*Falla", style = MaterialTheme.typography.labelSmall)
-                                    DropdownSelectorNoLabel(
-                                        options = failureOptions,
-                                        selectedId = failureId,
-                                        onSelected = { failureId = it },
-                                        ancho = 180.dp
-                                    )
-                                }
-                                Column {
                                     ReadOnlyFormField(
                                         label = "Ruta del equipo",
                                         value = equipmentRoute,
@@ -602,6 +593,22 @@ fun AislamientoTermicoProblemDialog(
                                         )
                                     }
                                 }
+
+                                Divider(Modifier.padding(top = 6.dp, bottom = 6.dp))
+
+                                Row {
+                                    Column {
+                                        Text(text = "*Falla", style = MaterialTheme.typography.labelSmall)
+                                        DropdownSelectorNoLabel(
+                                            options = failureOptions,
+                                            selectedId = failureId,
+                                            onSelected = { failureId = it },
+                                            ancho = 180.dp
+                                        )
+                                    }
+                                }
+
+                                Spacer(Modifier.height(6.dp))
 
                                 MultilineField(
                                     label = "Comentarios",

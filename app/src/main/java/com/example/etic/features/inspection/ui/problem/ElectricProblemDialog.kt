@@ -565,9 +565,8 @@ fun ElectricProblemDialog(
                                 }
                             }
 
-                            Divider(Modifier.padding(top = 6.dp, bottom = 6.dp))                            
-
-                            // ✅ 2 columnas 50/50, compactas y con checkbox pegado al input
+                            Divider(Modifier.padding(top = 6.dp, bottom = 6.dp))
+                            
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -691,7 +690,7 @@ fun ElectricProblemDialog(
                                         unit = "V"
                                     )
                                 }
-                            }                    
+                            }
 
                             Divider(Modifier.padding(top = 6.dp, bottom = 6.dp))
 
@@ -1225,7 +1224,6 @@ private fun CheckboxDropdownRow(
             }
         }
     }
-
 }
 
 /* ------------------------- Multiline ------------------------- */
