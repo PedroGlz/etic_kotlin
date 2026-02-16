@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.wrapContentWidth
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -48,9 +49,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.LocalMinimumInteractiveComponentEnforcement
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -553,6 +557,8 @@ fun MechanicalProblemDialog(
                                             unit = "°C"
                                         )
 
+                                        Spacer(Modifier.height(6.dp))
+
                                         CheckboxDropdownRow(
                                             label = "Tipo ambiente",
                                             checked = environmentChecked,
@@ -916,17 +922,20 @@ private fun CheckboxNumericRow(
     modifier: Modifier = Modifier
 ) {
     Row(
-        modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(CHECKBOX_GAP),
-        verticalAlignment = Alignment.CenterVertically
+        modifier = modifier,
+        verticalAlignment = Alignment.Bottom
     ) {
         Checkbox(
             checked = checked,
             onCheckedChange = onCheckedChange,
-            modifier = Modifier.wrapContentWidth().padding(0.dp)
+            modifier = Modifier
+                .size(20.dp)
+                .padding(bottom = 2.dp)
         )
 
-        Column(modifier = Modifier.weight(1f)) {
+        Spacer(modifier = Modifier.width(CHECKBOX_GAP))
+
+        Column(modifier = Modifier.weight(1f, fill = false)) {
             Text(text = label, style = MaterialTheme.typography.labelSmall)
 
             OutlinedFieldBox {
@@ -946,6 +955,24 @@ private fun CheckboxNumericRow(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CompactCheckbox(
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    CompositionLocalProvider(
+        LocalMinimumInteractiveComponentEnforcement provides false
+    ) {
+        Checkbox(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            modifier = modifier.size(20.dp)
+        )
+    }
+}
+
 @Composable
 private fun CheckboxDropdownRow(
     label: String,
@@ -961,14 +988,15 @@ private fun CheckboxDropdownRow(
 
     Row(
         modifier = modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(CHECKBOX_GAP),
-        verticalAlignment = Alignment.CenterVertically
+        verticalAlignment = Alignment.Bottom
     ) {
-        Checkbox(
+        CompactCheckbox(
             checked = checked,
             onCheckedChange = onCheckedChange,
-            modifier = Modifier.wrapContentWidth().padding(0.dp)
+            modifier = Modifier.padding(bottom = 2.dp)
         )
+
+        Spacer(Modifier.width(4.dp))
 
         Column(modifier = Modifier.weight(1f)) {
             Text(text = label, style = MaterialTheme.typography.labelSmall)
