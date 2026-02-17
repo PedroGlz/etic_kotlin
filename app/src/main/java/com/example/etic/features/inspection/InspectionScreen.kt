@@ -69,6 +69,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.platform.LocalDensity
@@ -2721,7 +2722,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                 if (code.isEmpty()) return
                 val path = findPathByBarcode(nodes, code)
                 if (path == null) {
-                    searchMessage = "No hay elementos con ese Codigo de barras"
+                    searchMessage = "No hay elementos con ese Código De Barras"
                 } else {
                     // expandir ancestros y seleccionar objetivo
                     path.dropLast(1).forEach { id -> if (!expanded.contains(id)) expanded.add(id) }
@@ -5656,12 +5657,12 @@ private fun DetailsTable(
             Modifier
                 .fillMaxWidth()
                 .background(MaterialTheme.colorScheme.surface)
-                .padding(vertical = 4.dp, horizontal = 8.dp)
+                .padding(vertical = 2.dp, horizontal = 4.dp)
         ) {
-            HeaderCell("ubicacion", 3)
-            HeaderCell("Codigo de barras", 2)
+            HeaderCell("Ubicación", 3)
+            HeaderCell("Código de barras", 2)
             HeaderCell("Estatus", 2)
-            HeaderCell("Op", 1)
+            HeaderCell("", 1)
         }
         Divider(thickness = DIVIDER_THICKNESS)
 
@@ -5689,17 +5690,26 @@ private fun DetailsTable(
                         Modifier
                             .fillMaxWidth()
                             .background(rowColor)
-                            .padding(vertical = 2.dp, horizontal = 8.dp)
+                            .padding(vertical = 0.dp, horizontal = 4.dp)
                             .pointerInput(n.id) {
                                 detectTapGestures(onDoubleTap = { onEdit(n) })
-                            }
+                            },
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         BodyCell(3) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Checkbox(
-                                    checked = selectedForStatus.contains(n.id),
-                                    onCheckedChange = { onStatusCheckChanged(n, it) }
-                                )
+                                androidx.compose.runtime.CompositionLocalProvider(
+                                    androidx.compose.material3.LocalMinimumInteractiveComponentEnforcement provides false
+                                ) {
+                                    Checkbox(
+                                        checked = selectedForStatus.contains(n.id),
+                                        onCheckedChange = { onStatusCheckChanged(n, it) },
+                                        modifier = Modifier
+                                            .size(16.dp)
+                                            .scale(0.78f)
+                                    )
+                                }
+                                Spacer(Modifier.width(6.dp))
                                 Text(n.title, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
                         }
@@ -5742,7 +5752,10 @@ private fun DetailsTable(
 }
 
 @Composable private fun RowScope.BodyCell(flex: Int, content: @Composable () -> Unit) {
-    Box(Modifier.weight(flex.toFloat())) {
+    Box(
+        modifier = Modifier.weight(flex.toFloat()),
+        contentAlignment = Alignment.CenterStart
+    ) {
         content()
     }
 }

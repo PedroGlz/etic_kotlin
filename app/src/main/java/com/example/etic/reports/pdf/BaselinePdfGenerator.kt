@@ -245,7 +245,7 @@ class BaselinePdfGenerator {
             c.drawRect(RectF(mm(175f), mm(27f), mm(238f), mm(43f)), linePaint)
             c.drawText("Informacion Del Equipo", mm(176f), mm(30f), boldPaint)
             c.drawLine(mm(175f), mm(31f), mm(238f), mm(31f), linePaint)
-            c.drawText("Codigo De Barras: ${pageData.codigoBarras}", mm(176f), mm(35f), textPaint)
+            c.drawText("Código De Barras: ${pageData.codigoBarras}", mm(176f), mm(35f), textPaint)
             c.drawText("Fabricante: ${pageData.fabricante}", mm(176f), mm(39f), textPaint)
             c.drawText("Prioridad Operacion: ${pageData.prioridadOperacion}", mm(176f), mm(43f), textPaint)
 

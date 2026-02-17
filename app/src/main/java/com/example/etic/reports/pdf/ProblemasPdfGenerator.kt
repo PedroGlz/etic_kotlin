@@ -211,7 +211,7 @@ class ProblemasPdfGenerator {
                 canvas.drawLine(x, y + lineH, x + w, y + lineH, linePaint)
                 drawMultiline(
                     canvas,
-                    "Codigo De Barras: ${pageData.codigoBarras}",
+                    "Código De Barras: ${pageData.codigoBarras}",
                     x + mm(1.2f),
                     y + lineH,
                     w - mm(2f),
@@ -242,7 +242,7 @@ class ProblemasPdfGenerator {
             canvas.drawLine(x, y + lineH, x + w, y + lineH, linePaint)
             drawMultiline(
                 canvas,
-                "Codigo De Barras: ${pageData.codigoBarras}",
+                "Código De Barras: ${pageData.codigoBarras}",
                 x + mm(1.2f),
                 y + lineH,
                 w - mm(2f),
