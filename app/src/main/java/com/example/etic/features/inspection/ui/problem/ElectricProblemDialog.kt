@@ -107,6 +107,7 @@ fun ElectricProblemDialog(
     phaseOptions: List<Pair<String, String>>,
     environmentOptions: List<Pair<String, String>>,
     manufacturerOptions: List<Pair<String, String>>,
+    onAddFailure: () -> Unit = {},
     onAddComponentPhase: () -> Unit = {},
     onAddReferencePhase: () -> Unit = {},
     onAddAdditionalInfo: () -> Unit = {},
@@ -718,10 +719,11 @@ fun ElectricProblemDialog(
                             Row(){
                                 Column() {
                                     Text(text = "*Falla", style = MaterialTheme.typography.labelSmall)
-                                    DropdownSelectorNoLabel(
+                                    FilterableSelectorNoLabel(
                                         options = failureOptions,
                                         selectedId = failureId,
                                         onSelected = { failureId = it },
+                                        onAddClick = onAddFailure,
                                         ancho = 180.dp
                                     )
                                 }

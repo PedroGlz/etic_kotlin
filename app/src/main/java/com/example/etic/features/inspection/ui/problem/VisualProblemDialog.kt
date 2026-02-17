@@ -52,6 +52,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.PopupProperties
 import com.example.etic.data.local.dao.VisualProblemHistoryRow
 import com.example.etic.features.components.ImageInputButtonGroup
 import com.example.etic.core.saf.EticImageStore
@@ -104,6 +105,8 @@ fun VisualProblemDialog(
     onDigitalCamera: () -> Unit,
     onHazardSelected: (String) -> Unit,
     onSeveritySelected: (String) -> Unit,
+    onAddHazardIssue: () -> Unit = {},
+    onAddSeverity: () -> Unit = {},
     onCronicoClick: (() -> Unit)? = null,
     cronicoEnabled: Boolean = false,
     cronicoChecked: Boolean = false,
@@ -217,8 +220,10 @@ fun VisualProblemDialog(
                     }
                     Divider(Modifier.padding(top = 8.dp, bottom = 10.dp))
                 }
-                val hazardError = selectedHazardIssue.isNullOrBlank()
-                val severityError = selectedSeverity.isNullOrBlank()
+                val hazardMissing = selectedHazardIssue.isNullOrBlank()
+                val severityMissing = selectedSeverity.isNullOrBlank()
+                val hazardError = saveAttempted && hazardMissing
+                val severityError = saveAttempted && severityMissing
                 val imagesProvided = thermalImageName.isNotBlank() && digitalImageName.isNotBlank()
                 val thermalError = saveAttempted && thermalImageName.isBlank()
                 val digitalError = saveAttempted && digitalImageName.isBlank()
@@ -276,7 +281,8 @@ fun VisualProblemDialog(
                                     selectedId = selectedHazardIssue,
                                     onSelected = onHazardSelected,
                                     modifier = Modifier.fillMaxWidth(),
-                                    isError = hazardError
+                                    isError = hazardError,
+                                    onAddClick = onAddHazardIssue
                                 )
                                 DropdownSelector(
                                     label = "Severidad *",
@@ -284,7 +290,8 @@ fun VisualProblemDialog(
                                     selectedId = selectedSeverity,
                                     onSelected = onSeveritySelected,
                                     modifier = Modifier.fillMaxWidth(),
-                                    isError = severityError
+                                    isError = severityError,
+                                    onAddClick = onAddSeverity
                                 )
                             }
 
@@ -344,7 +351,7 @@ fun VisualProblemDialog(
                     }
                 }
 
-                val canSave = !hazardError && !severityError && imagesProvided
+                val canSave = !hazardMissing && !severityMissing && imagesProvided
                 Spacer(Modifier.height(14.dp))
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -357,7 +364,7 @@ fun VisualProblemDialog(
                             saveAttempted = true
                             if (canSave) onContinue()
                         },
-                        enabled = !hazardError && !severityError
+                        enabled = true
                     ) { Text("Guardar") }
                 }
                 }
@@ -420,79 +427,118 @@ private fun DropdownSelector(
     selectedId: String?,
     onSelected: (String) -> Unit,
     modifier: Modifier = Modifier,
-    isError: Boolean = false
+    isError: Boolean = false,
+    onAddClick: () -> Unit = {}
 ) {
     Column(modifier) {
         Text(text = label, style = MaterialTheme.typography.labelSmall)
-        DropdownSelectorNoLabel(
+        FilterableSelectorNoLabel(
             options = options,
             selectedId = selectedId,
             onSelected = onSelected,
-            isError = isError
+            isError = isError,
+            onAddClick = onAddClick
         )
     }
 }
 
 @Composable
-private fun DropdownSelectorNoLabel(
+private fun AddInlineButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .size(FIELD_HEIGHT)
+            .border(
+                FIELD_BORDER,
+                MaterialTheme.colorScheme.outline,
+                RoundedCornerShape(FIELD_RADIUS)
+            )
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = "+",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.primary
+        )
+    }
+}
+
+@Composable
+private fun FilterableSelectorNoLabel(
     options: List<Pair<String, String>>,
     selectedId: String?,
     onSelected: (String) -> Unit,
     modifier: Modifier = Modifier,
-    isError: Boolean = false
+    isError: Boolean = false,
+    onAddClick: () -> Unit = {}
 ) {
     var expanded by remember { mutableStateOf(false) }
-    val selectedLabel = options.firstOrNull { it.first == selectedId }?.second.orEmpty()
+    var query by remember(selectedId, options) {
+        mutableStateOf(options.firstOrNull { it.first == selectedId }?.second.orEmpty())
+    }
+    val filtered = remember(query, options) {
+        val q = query.trim()
+        if (q.isBlank()) options else options.filter { (_, text) -> text.contains(q, ignoreCase = true) }
+    }
     val outlineColor = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline
 
-    Box(
+    Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(FIELD_HEIGHT)
-            .border(FIELD_BORDER, outlineColor, RoundedCornerShape(FIELD_RADIUS))
-            .padding(FIELD_PADDING)
-            .clickable(enabled = options.isNotEmpty()) { expanded = true },
-        contentAlignment = Alignment.CenterStart
+            .height(FIELD_HEIGHT),
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = if (selectedLabel.isNotBlank()) selectedLabel else "Seleccionar",
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.weight(1f),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                text = "v",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
-
-    DropdownMenu(
-        expanded = expanded,
-        onDismissRequest = { expanded = false }
-    ) {
-        DropdownMenuItem(
-            text = { Text("Seleccionar...") },
-            onClick = {
-                expanded = false
-                onSelected("")
-            }
-        )
-        if (options.isNotEmpty()) {
-            Divider()
-        }
-        options.forEach { (id, text) ->
-            DropdownMenuItem(
-                text = { Text(text) },
-                onClick = {
-                    expanded = false
-                    onSelected(id)
+        Box(modifier = Modifier.weight(1f)) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(FIELD_HEIGHT)
+                    .border(FIELD_BORDER, outlineColor, RoundedCornerShape(FIELD_RADIUS))
+                    .padding(FIELD_PADDING)
+                    .clickable(enabled = options.isNotEmpty()) { expanded = true },
+                contentAlignment = Alignment.CenterStart
+            ) {
+                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    BasicTextField(
+                        value = query,
+                        onValueChange = {
+                            query = it
+                            expanded = true
+                        },
+                        singleLine = true,
+                        textStyle = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurface),
+                        modifier = Modifier.weight(1f)
+                    )
+                    Text(
+                        text = "▼",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
-            )
+            }
+
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+                properties = PopupProperties(focusable = false)
+            ) {
+                filtered.forEach { (id, text) ->
+                    DropdownMenuItem(
+                        text = { Text(text.ifBlank { id }) },
+                        onClick = {
+                            expanded = false
+                            query = text.ifBlank { id }
+                            onSelected(id)
+                        }
+                    )
+                }
+            }
         }
+        AddInlineButton(onClick = onAddClick)
     }
 }
 

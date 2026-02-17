@@ -73,6 +73,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.PopupProperties
 import com.example.etic.features.components.ImageInputButtonGroup
 import com.example.etic.core.saf.EticImageStore
 import com.example.etic.core.settings.EticPrefs
@@ -106,6 +107,8 @@ fun AislamientoTermicoProblemDialog(
     phaseOptions: List<Pair<String, String>>,
     environmentOptions: List<Pair<String, String>>,
     manufacturerOptions: List<Pair<String, String>>,
+    onAddFailure: () -> Unit = {},
+    onAddManufacturer: () -> Unit = {},
     thermalImageName: String,
     digitalImageName: String,
     onThermalImageChange: (String) -> Unit,
@@ -595,7 +598,8 @@ fun AislamientoTermicoProblemDialog(
                                         label = "Fabricante",
                                         options = manufacturerOptions,
                                         selectedId = manufacturerId,
-                                        onSelected = { manufacturerId = it }
+                                        onSelected = { manufacturerId = it },
+                                        onAddClick = onAddManufacturer
                                     )
                                 }
 
@@ -628,10 +632,11 @@ fun AislamientoTermicoProblemDialog(
                                 Row {
                                     Column {
                                         Text(text = "*Falla", style = MaterialTheme.typography.labelSmall)
-                                        DropdownSelectorNoLabel(
+                                        FilterableSelectorNoLabel(
                                             options = failureOptions,
                                             selectedId = failureId,
                                             onSelected = { failureId = it },
+                                            onAddClick = onAddFailure,
                                             ancho = 180.dp
                                         )
                                     }
@@ -893,15 +898,50 @@ private fun ValueFieldNoLabel(
 /* ------------------------- Dropdowns ------------------------- */
 
 @Composable
-private fun DropdownSelectorNoLabel(
+private fun AddInlineButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .size(FIELD_HEIGHT)
+            .border(
+                FIELD_BORDER,
+                MaterialTheme.colorScheme.outline,
+                RoundedCornerShape(FIELD_RADIUS)
+            )
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = "+",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.primary
+        )
+    }
+}
+
+@Composable
+private fun FilterableSelectorNoLabel(
     options: List<Pair<String, String>>,
     selectedId: String?,
     onSelected: (String) -> Unit,
-    ancho: Dp? = null,              // ? ancho personalizado opcional
+    onAddClick: () -> Unit = {},
+    ancho: Dp? = null,
     modifier: Modifier = Modifier
 ) {
     var expanded by remember { mutableStateOf(false) }
-    val selectedLabel = options.firstOrNull { it.first == selectedId }?.second.orEmpty()
+    var query by remember(selectedId, options) {
+        mutableStateOf(options.firstOrNull { it.first == selectedId }?.second.orEmpty())
+    }
+    val normalizedQuery = query.trim()
+    val filtered = remember(normalizedQuery, options) {
+        if (normalizedQuery.isBlank()) {
+            options
+        } else {
+            options.filter { (_, text) -> text.contains(normalizedQuery, ignoreCase = true) }
+        }
+    }
 
     val widthModifier = if (ancho != null) {
         Modifier.width(ancho)
@@ -909,56 +949,57 @@ private fun DropdownSelectorNoLabel(
         Modifier.fillMaxWidth()
     }
 
-    Box(
-        modifier = modifier
-            .then(widthModifier)   // ? aplica el ancho definido
-            .height(FIELD_HEIGHT)
-            .border(
-                FIELD_BORDER,
-                MaterialTheme.colorScheme.outline,
-                RoundedCornerShape(FIELD_RADIUS)
-            )
-            .padding(FIELD_PADDING)
-            .clickable { expanded = true },
-        contentAlignment = Alignment.CenterStart
+    Row(
+        modifier = modifier.then(widthModifier),
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = if (selectedLabel.isNotBlank()) selectedLabel else "Seleccionar",
-                style = MaterialTheme.typography.bodySmall,
-                modifier = Modifier.weight(1f),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                text = "?",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-    }
+        Box(modifier = Modifier.weight(1f)) {
+            OutlinedFieldBox(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { expanded = true }
+            ) {
+                BasicTextField(
+                    value = query,
+                    onValueChange = {
+                        query = it
+                        expanded = true
+                    },
+                    singleLine = true,
+                    textStyle = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurface),
+                    modifier = Modifier.weight(1f)
+                )
+                Text(
+                    text = "▼",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
 
-    DropdownMenu(
-        expanded = expanded,
-        onDismissRequest = { expanded = false }
-    ) {
-        options.forEach { (id, text) ->
-            DropdownMenuItem(
-                text = {
-                    Text(
-                        text = text.ifBlank { id },
-                        style = MaterialTheme.typography.bodySmall
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+                properties = PopupProperties(focusable = false)
+            ) {
+                filtered.forEach { (id, text) ->
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                text = text.ifBlank { id },
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        },
+                        onClick = {
+                            expanded = false
+                            query = text.ifBlank { id }
+                            onSelected(id)
+                        }
                     )
-                },
-                onClick = {
-                    expanded = false
-                    onSelected(id)
                 }
-            )
+            }
         }
+        AddInlineButton(onClick = onAddClick)
     }
 }
 
@@ -967,11 +1008,17 @@ private fun DropdownSelector(
     label: String,
     options: List<Pair<String, String>>,
     selectedId: String?,
-    onSelected: (String) -> Unit
+    onSelected: (String) -> Unit,
+    onAddClick: () -> Unit = {}
 ) {
     Column(Modifier.fillMaxWidth()) {
         Text(text = label, style = MaterialTheme.typography.labelSmall)
-        DropdownSelectorNoLabel(options = options, selectedId = selectedId, onSelected = onSelected)
+        FilterableSelectorNoLabel(
+            options = options,
+            selectedId = selectedId,
+            onSelected = onSelected,
+            onAddClick = onAddClick
+        )
     }
 }
 
