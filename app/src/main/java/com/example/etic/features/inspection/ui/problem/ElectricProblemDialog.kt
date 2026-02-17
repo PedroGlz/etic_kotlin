@@ -82,6 +82,7 @@ private val DIALOG_MIN_WIDTH = 980.dp
 private val DIALOG_MAX_WIDTH = 980.dp
 private val INFO_FIELD_MIN_WIDTH = 100.dp
 private val INFO_FIELD_MAX_WIDTH = 100.dp
+private val DIALOG_HEADER_TURQUOISE = Color(0xFF159BA6)
 
 // ✅ Homogeneidad de inputs
 private val FIELD_HEIGHT = 25.dp
@@ -310,7 +311,18 @@ fun ElectricProblemDialog(
                         bottom = 4.dp
                     )
             ) {
-                Text("Problema Eléctrico", style = MaterialTheme.typography.titleMedium)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(DIALOG_HEADER_TURQUOISE, RoundedCornerShape(6.dp))
+                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                ) {
+                    Text(
+                        "Problema Eléctrico",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color.White
+                    )
+                }
 
                 if (showEditControls) {
                     Divider(Modifier.padding(top = 5.dp))

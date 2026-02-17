@@ -62,6 +62,7 @@ private val DIALOG_MIN_WIDTH = 980.dp
 private val DIALOG_MAX_WIDTH = 980.dp
 private val INFO_FIELD_MIN_WIDTH = 130.dp
 private val INFO_FIELD_MAX_WIDTH = 220.dp
+private val DIALOG_HEADER_TURQUOISE = Color(0xFF159BA6)
 
 private val FIELD_HEIGHT = 25.dp
 private val FIELD_RADIUS = 4.dp
@@ -151,7 +152,18 @@ fun VisualProblemDialog(
                             bottom = 4.dp
                         )
             ) {
-                Text("Problema Visual", style = MaterialTheme.typography.titleMedium)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(DIALOG_HEADER_TURQUOISE, RoundedCornerShape(6.dp))
+                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                ) {
+                    Text(
+                        "Problema Visual",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Color.White
+                    )
+                }
                 if (showEditControls) {
                     Divider(Modifier.padding(top = 5.dp))
                     Row(
