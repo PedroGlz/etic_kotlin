@@ -70,6 +70,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.PopupProperties
 import com.example.etic.features.components.ImageInputButtonGroup
 import com.example.etic.core.saf.EticImageStore
 import com.example.etic.core.settings.EticPrefs
@@ -106,6 +107,10 @@ fun ElectricProblemDialog(
     phaseOptions: List<Pair<String, String>>,
     environmentOptions: List<Pair<String, String>>,
     manufacturerOptions: List<Pair<String, String>>,
+    onAddComponentPhase: () -> Unit = {},
+    onAddReferencePhase: () -> Unit = {},
+    onAddAdditionalInfo: () -> Unit = {},
+    onAddManufacturer: () -> Unit = {},
     thermalImageName: String,
     digitalImageName: String,
     onThermalImageChange: (String) -> Unit,
@@ -499,10 +504,11 @@ fun ElectricProblemDialog(
 
                                     // Columna 3: elemento
                                     CenterCell(0.3f) {
-                                        DropdownSelectorNoLabel(
+                                        FilterableSelectorNoLabel(
                                             options = phaseOptions,
                                             selectedId = componentPhaseId,
                                             onSelected = { componentPhaseId = it },
+                                            onAddClick = onAddComponentPhase
                                         )
                                     }
 
@@ -534,10 +540,11 @@ fun ElectricProblemDialog(
                                         )
                                     }
                                     Column(Modifier.weight(0.3f)) {
-                                        DropdownSelectorNoLabel(
+                                        FilterableSelectorNoLabel(
                                             options = phaseOptions,
                                             selectedId = referencePhaseId,
                                             onSelected = { referencePhaseId = it },
+                                            onAddClick = onAddReferencePhase
                                         )
                                     }
                                     Column(Modifier.weight(0.1f)) {
@@ -561,10 +568,11 @@ fun ElectricProblemDialog(
                                     }
                                     Column(Modifier.weight(0.1f)) {}
                                     Column(Modifier.weight(0.3f)) {
-                                        DropdownSelectorNoLabel(
+                                        FilterableSelectorNoLabel(
                                             options = phaseOptions,
                                             selectedId = additionalInfoId,
                                             onSelected = { additionalInfoId = it },
+                                            onAddClick = onAddAdditionalInfo
                                         )
                                     }
                                     Column(Modifier.weight(0.1f)) {
@@ -672,11 +680,12 @@ fun ElectricProblemDialog(
                                         unit = "m/s"
                                     )
 
-                                    DropdownSelector(
+                                    FilterableSelector(
                                         label = "Fabricante",
                                         options = manufacturerOptions,
                                         selectedId = manufacturerId,
-                                        onSelected = { manufacturerId = it }
+                                        onSelected = { manufacturerId = it },
+                                        onAddClick = onAddManufacturer
                                     )
                                 }
 
@@ -1072,6 +1081,129 @@ private fun DropdownSelector(
             options = options,
             selectedId = selectedId,
             onSelected = onSelected
+        )
+    }
+}
+
+@Composable
+private fun AddInlineButton(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Box(
+        modifier = modifier
+            .size(FIELD_HEIGHT)
+            .border(
+                FIELD_BORDER,
+                MaterialTheme.colorScheme.outline,
+                RoundedCornerShape(FIELD_RADIUS)
+            )
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = "+",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.primary
+        )
+    }
+}
+
+@Composable
+private fun FilterableSelectorNoLabel(
+    options: List<Pair<String, String>>,
+    selectedId: String?,
+    onSelected: (String) -> Unit,
+    onAddClick: () -> Unit,
+    ancho: Dp? = null,
+    modifier: Modifier = Modifier
+) {
+    var expanded by remember { mutableStateOf(false) }
+    var query by remember(selectedId, options) {
+        mutableStateOf(options.firstOrNull { it.first == selectedId }?.second.orEmpty())
+    }
+
+    val normalizedQuery = query.trim()
+    val filtered = remember(normalizedQuery, options) {
+        if (normalizedQuery.isBlank()) {
+            options
+        } else {
+            options.filter { (_, text) ->
+                text.contains(normalizedQuery, ignoreCase = true)
+            }
+        }
+    }
+
+    Row(
+        modifier = modifier.then(if (ancho != null) Modifier.width(ancho) else Modifier.fillMaxWidth()),
+        horizontalArrangement = Arrangement.spacedBy(2.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(modifier = Modifier.weight(1f)) {
+            OutlinedFieldBox(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { expanded = true }
+            ) {
+                BasicTextField(
+                    value = query,
+                    onValueChange = {
+                        query = it
+                        expanded = true
+                    },
+                    singleLine = true,
+                    textStyle = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurface),
+                    modifier = Modifier.weight(1f)
+                )
+                Text(
+                    text = "▼",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false },
+                properties = PopupProperties(focusable = false)
+            ) {
+                filtered.forEach { (id, text) ->
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                text = text.ifBlank { id },
+                                style = MaterialTheme.typography.bodySmall
+                            )
+                        },
+                        onClick = {
+                            query = text.ifBlank { id }
+                            expanded = false
+                            onSelected(id)
+                        }
+                    )
+                }
+            }
+        }
+
+        AddInlineButton(onClick = onAddClick)
+    }
+}
+
+@Composable
+private fun FilterableSelector(
+    label: String,
+    options: List<Pair<String, String>>,
+    selectedId: String?,
+    onSelected: (String) -> Unit,
+    onAddClick: () -> Unit
+) {
+    Column(Modifier.fillMaxWidth()) {
+        Text(text = label, style = MaterialTheme.typography.labelSmall)
+        FilterableSelectorNoLabel(
+            options = options,
+            selectedId = selectedId,
+            onSelected = onSelected,
+            onAddClick = onAddClick
         )
     }
 }
