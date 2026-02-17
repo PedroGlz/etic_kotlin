@@ -35,6 +35,7 @@ fun InspectionHeader(
     selectedStatusId: String?,
     statusOptions: List<EstatusInspeccionDet>,
     onStatusSelected: (EstatusInspeccionDet?) -> Unit,
+    onApplyStatus: () -> Unit,
     onClickNewLocation: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -75,6 +76,18 @@ fun InspectionHeader(
             minWidth = 160.dp,
             maxWidth = 240.dp
         )
+        Spacer(Modifier.width(HEADER_ACTION_SPACING))
+        Button(
+            onClick = onApplyStatus,
+            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1F7A8C)),
+            shape = RoundedCornerShape(4.dp),
+            contentPadding = PaddingValues(
+                horizontal = 10.dp,
+                vertical = 0.dp
+            )
+        ) {
+            Text("Aplicar", color = Color.White)
+        }
         Spacer(Modifier.width(HEADER_ACTION_SPACING))
 
         Button(

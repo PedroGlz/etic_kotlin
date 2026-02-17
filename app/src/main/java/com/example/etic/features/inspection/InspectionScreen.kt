@@ -42,6 +42,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Divider
 import androidx.compose.material3.DividerDefaults
 import androidx.compose.material3.DropdownMenu
@@ -478,6 +479,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             // Controles superiores (fuera de los paneles)
             var barcode by rememberSaveable { mutableStateOf("") }
             var selectedStatusId by rememberSaveable { mutableStateOf<String?>(null) }
+            val checkedStatusLocationIds = remember { mutableStateListOf<String>() }
             var statusOptions by remember { mutableStateOf<List<EstatusInspeccionDet>>(emptyList()) }
             LaunchedEffect(statusOptionsCache) {
                 statusOptions = statusOptionsCache
@@ -1560,6 +1562,102 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             onSelectNode(targetSelection)
         }
     }
+            suspend fun updateParentStatusesAfterManualChange(
+                inspectionId: String,
+                startUbicacionId: String,
+                nowTs: String
+            ) {
+                val ubicaciones = runCatching { ubicacionDao.getAllActivas() }.getOrElse { emptyList() }
+                if (ubicaciones.isEmpty()) return
+
+                val detRows = runCatching { inspeccionDetDao.getByInspeccion(inspectionId) }.getOrElse { emptyList() }
+                if (detRows.isEmpty()) return
+
+                val ubicById = ubicaciones.associateBy { it.idUbicacion }
+                val childrenByParent = ubicaciones.groupBy { it.idUbicacionPadre }
+                val detByUbicacion = detRows.mapNotNull { row -> row.idUbicacion?.let { it to row } }.toMap().toMutableMap()
+
+                var currentId: String? = startUbicacionId
+                while (true) {
+                    val parentId = currentId?.let { ubicById[it]?.idUbicacionPadre }
+                    if (parentId.isNullOrBlank() || parentId == "0") break
+
+                    val childIds = childrenByParent[parentId].orEmpty().map { it.idUbicacion }
+                    if (childIds.isNotEmpty()) {
+                        val hasPendingChild = childIds.any { childId ->
+                            detByUbicacion[childId]?.idStatusInspeccionDet.equals(STATUS_POR_VERIFICAR, ignoreCase = true)
+                        }
+                        val parentStatusId = if (hasPendingChild) STATUS_POR_VERIFICAR else STATUS_VERIFICADO
+                        val parentColorId = if (hasPendingChild) 1 else 4
+                        val parentDet = detByUbicacion[parentId]
+
+                        if (parentDet != null &&
+                            (!parentDet.idStatusInspeccionDet.equals(parentStatusId, ignoreCase = true) ||
+                                parentDet.idEstatusColorText != parentColorId)
+                        ) {
+                            val updated = parentDet.copy(
+                                idStatusInspeccionDet = parentStatusId,
+                                idEstatusColorText = parentColorId,
+                                modificadoPor = currentUserId,
+                                fechaMod = nowTs
+                            )
+                            runCatching { inspeccionDetDao.update(updated) }
+                            detByUbicacion[parentId] = updated
+                        }
+                    }
+                    currentId = parentId
+                }
+            }
+
+            suspend fun applyManualStatusToUbicacionIds(statusId: String, ubicacionIds: List<String>) {
+                val inspectionId = currentInspection?.idInspeccion
+                if (inspectionId.isNullOrBlank()) return
+
+                val targetIds = ubicacionIds
+                    .filter { it.isNotBlank() && !it.startsWith("root:") }
+                    .distinct()
+                if (targetIds.isEmpty()) {
+                    withContext(Dispatchers.Main) {
+                        Toast.makeText(ctx, "Selecciona una ubicación del árbol.", Toast.LENGTH_SHORT).show()
+                    }
+                    return
+                }
+
+                val nowTs = java.time.LocalDateTime.now()
+                    .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+                val colorId = if (statusId.equals(STATUS_POR_VERIFICAR, ignoreCase = true)) 1 else 4
+                var updatedCount = 0
+
+                targetIds.forEach { ubicacionId ->
+                    val detRow = runCatching {
+                        inspeccionDetDao.getByUbicacion(ubicacionId).firstOrNull { it.idInspeccion == inspectionId }
+                    }.getOrNull() ?: return@forEach
+
+                    val updatedDet = detRow.copy(
+                        idStatusInspeccionDet = statusId,
+                        idEstatusColorText = colorId,
+                        modificadoPor = currentUserId,
+                        fechaMod = nowTs
+                    )
+                    runCatching { inspeccionDetDao.update(updatedDet) }
+                    updateParentStatusesAfterManualChange(
+                        inspectionId = inspectionId,
+                        startUbicacionId = ubicacionId,
+                        nowTs = nowTs
+                    )
+                    updatedCount += 1
+                }
+
+                refreshTree(preserveSelection = selectedId)
+                checkedStatusLocationIds.clear()
+                withContext(Dispatchers.Main) {
+                    if (updatedCount > 0) {
+                        Toast.makeText(ctx, "Estatus actualizado.", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(ctx, "No se encontró detalle de inspección para los elementos seleccionados.", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
             // Lee el usuario actual del CompositionLocal en contexto @Composable
             val currentUser = LocalCurrentUser.current
             LaunchedEffect(statusOptions, locationForm.statusId) {
@@ -2637,6 +2735,9 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     }
                 }
             }
+            LaunchedEffect(selectedId) {
+                checkedStatusLocationIds.clear()
+            }
 
             InspectionHeader(
                 barcode = barcode,
@@ -2646,6 +2747,21 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                 statusOptions = statusOptions,
                 onStatusSelected = { opt ->
                     selectedStatusId = opt?.idStatusInspeccionDet
+                },
+                onApplyStatus = {
+                    val statusId = selectedStatusId
+                    if (statusId.isNullOrBlank()) {
+                        Toast.makeText(ctx, "Seleccionar estatus", Toast.LENGTH_SHORT).show()
+                    } else {
+                        scope.launch {
+                            val targets = if (checkedStatusLocationIds.isNotEmpty()) {
+                                checkedStatusLocationIds.toList()
+                            } else {
+                                listOfNotNull(selectedId)
+                            }
+                            applyManualStatusToUbicacionIds(statusId, targets)
+                        }
+                    }
                 },
                 onClickNewLocation = {
                     if (selectedId == null) {
@@ -5091,6 +5207,16 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     DetailsTable(
                         children = children,
                         modifier = Modifier.fillMaxSize(),
+                        selectedForStatus = checkedStatusLocationIds.toSet(),
+                        onStatusCheckChanged = { node, checked ->
+                            if (checked) {
+                                if (!checkedStatusLocationIds.contains(node.id)) {
+                                    checkedStatusLocationIds.add(node.id)
+                                }
+                            } else {
+                                checkedStatusLocationIds.remove(node.id)
+                            }
+                        },
                         onDelete = { node ->
                             scope.launch {
                                 val ubId = node.id
@@ -5515,6 +5641,8 @@ private fun copyProblemImageFromUri(
 @OptIn(ExperimentalMaterial3Api::class)
 private fun DetailsTable(
     children: List<TreeNode>,
+    selectedForStatus: Set<String>,
+    onStatusCheckChanged: (TreeNode, Boolean) -> Unit,
     modifier: Modifier = Modifier,
     onDelete: (TreeNode) -> Unit,
     onEdit: (TreeNode) -> Unit,
@@ -5566,7 +5694,15 @@ private fun DetailsTable(
                                 detectTapGestures(onDoubleTap = { onEdit(n) })
                             }
                     ) {
-                        BodyCell(3) { Text(n.title) }
+                        BodyCell(3) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Checkbox(
+                                    checked = selectedForStatus.contains(n.id),
+                                    onCheckedChange = { onStatusCheckChanged(n, it) }
+                                )
+                                Text(n.title, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            }
+                        }
                         BodyCell(2) { Text(n.barcode ?: "-") }
                         val statusLabel = n.estatusInspeccionDet ?: statusNameForId(n.idStatusInspeccionDet)
                         BodyCell(2) { Text(statusLabel ?: "Por verificar") }
