@@ -248,7 +248,7 @@ fun VisualProblemDialog(
                             ) {
                                 InfoField(
                                     label = "Ruta del equipo",
-                                    value = equipmentName,
+                                    value = equipmentRoute,
                                     ancho = null,
                                     modifier = Modifier.weight(1f)
                                 )
