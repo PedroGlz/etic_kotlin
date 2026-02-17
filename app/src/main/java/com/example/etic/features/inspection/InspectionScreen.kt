@@ -1566,7 +1566,8 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             suspend fun updateParentStatusesAfterManualChange(
                 inspectionId: String,
                 startUbicacionId: String,
-                nowTs: String
+                nowTs: String,
+                knownParentId: String? = null
             ) {
                 val ubicaciones = runCatching { ubicacionDao.getAllActivas() }.getOrElse { emptyList() }
                 if (ubicaciones.isEmpty()) return
@@ -1579,8 +1580,10 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                 val detByUbicacion = detRows.mapNotNull { row -> row.idUbicacion?.let { it to row } }.toMap().toMutableMap()
 
                 var currentId: String? = startUbicacionId
+                var forcedParentId: String? = knownParentId
                 while (true) {
-                    val parentId = currentId?.let { ubicById[it]?.idUbicacionPadre }
+                    val parentId = forcedParentId ?: currentId?.let { ubicById[it]?.idUbicacionPadre }
+                    forcedParentId = null
                     if (parentId.isNullOrBlank() || parentId == "0") break
 
                     val childIds = childrenByParent[parentId].orEmpty().map { it.idUbicacion }
@@ -1901,6 +1904,11 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                     fechaMod = nowTs
                                 )
                                 runCatching { inspeccionDetDao.update(updatedDet) }
+                                updateParentStatusesAfterManualChange(
+                                    inspectionId = inspection.idInspeccion,
+                                    startUbicacionId = locationId,
+                                    nowTs = nowTs
+                                )
                             }
                         }
                     }
@@ -2011,6 +2019,11 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                     fechaMod = nowTs
                                 )
                                 withContext(Dispatchers.IO) { runCatching { inspeccionDetDao.update(updatedDet) } }
+                                updateParentStatusesAfterManualChange(
+                                    inspectionId = inspection.idInspeccion,
+                                    startUbicacionId = ubicacionId,
+                                    nowTs = nowTs
+                                )
                             }
                             problemsRefreshTick++
                             refreshTree(preserveSelection = ubicacionId)
@@ -2209,6 +2222,11 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                     fechaMod = nowTs
                                 )
                                 withContext(Dispatchers.IO) { runCatching { inspeccionDetDao.update(updatedDet) } }
+                                updateParentStatusesAfterManualChange(
+                                    inspectionId = inspection.idInspeccion,
+                                    startUbicacionId = locationId,
+                                    nowTs = nowTs
+                                )
                             }
                             problemsRefreshTick++
                             refreshTree(preserveSelection = locationId)
@@ -2420,6 +2438,11 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                     fechaMod = nowTs
                                 )
                                 withContext(Dispatchers.IO) { runCatching { inspeccionDetDao.update(updatedDet) } }
+                                updateParentStatusesAfterManualChange(
+                                    inspectionId = inspection.idInspeccion,
+                                    startUbicacionId = locationId,
+                                    nowTs = nowTs
+                                )
                             }
                             problemsRefreshTick++
                             refreshTree(preserveSelection = locationId)
@@ -2631,6 +2654,11 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                     fechaMod = nowTs
                                 )
                                 withContext(Dispatchers.IO) { runCatching { inspeccionDetDao.update(updatedDet) } }
+                                updateParentStatusesAfterManualChange(
+                                    inspectionId = inspection.idInspeccion,
+                                    startUbicacionId = locationId,
+                                    nowTs = nowTs
+                                )
                             }
                             problemsRefreshTick++
                             refreshTree(preserveSelection = locationId)
@@ -3322,6 +3350,11 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                         runCatching {
                                             withContext(Dispatchers.IO) { inspeccionDetDao.update(updatedDet) }
                                         }
+                                        updateParentStatusesAfterManualChange(
+                                            inspectionId = inspection.idInspeccion,
+                                            startUbicacionId = ubicacionId,
+                                            nowTs = nowTs
+                                        )
                                     }
                                     updateInspectionInitialImages(thermal, digital)
                                     showVisualInspectionDialog = false
@@ -3633,8 +3666,18 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                 val nowTs = java.time.LocalDateTime.now()
                                     .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
                                 val userId = currentUser?.idUsuario
+                                val inspectionId = currentInspection?.idInspeccion
+                                val parentUbicacionId = runCatching { ubicacionDao.getById(ubId)?.idUbicacionPadre }.getOrNull()
 
                                 inspectionRepository.markUbicacionInactive(ubId, userId, nowTs)
+                                if (!inspectionId.isNullOrBlank()) {
+                                    updateParentStatusesAfterManualChange(
+                                        inspectionId = inspectionId,
+                                        startUbicacionId = ubId,
+                                        nowTs = nowTs,
+                                        knownParentId = parentUbicacionId
+                                    )
+                                }
 
                                 val preservedSelection = selectedId?.takeIf { it != ubId }
                                 refreshTree(
@@ -4499,6 +4542,11 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                                                                     fechaMod = nowTs
                                                                                 )
                                                                                 runCatching { inspeccionDetDao.update(revertedDet) }
+                                                                                updateParentStatusesAfterManualChange(
+                                                                                    inspectionId = idInsp,
+                                                                                    startUbicacionId = idUb,
+                                                                                    nowTs = nowTs
+                                                                                )
                                                                             }
                                                                         }
 
@@ -4752,6 +4800,11 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                                                                         fechaMod = nowTs
                                                                                     )
                                                                                     runCatching { inspeccionDetDao.update(updatedDet) }
+                                                                                    updateParentStatusesAfterManualChange(
+                                                                                        inspectionId = idInsp,
+                                                                                        startUbicacionId = idUb,
+                                                                                        nowTs = nowTs
+                                                                                    )
                                                                                 }
                                                                                 delay(3000)
                                                                                 showNewBaseline = false
