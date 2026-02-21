@@ -3,6 +3,7 @@ package com.example.etic.features.inspection.ui.components
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,6 +15,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.text.BasicTextField
@@ -33,8 +36,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.PaddingValues
@@ -48,6 +54,7 @@ import com.example.etic.data.local.entities.EstatusInspeccionDet
 import com.example.etic.data.local.entities.Fabricante
 import com.example.etic.data.local.entities.TipoPrioridad
 import com.example.etic.features.inspection.ui.state.LocationFormState
+import kotlin.math.roundToInt
 
 @Composable
 fun NewLocationDialog(
@@ -72,21 +79,37 @@ fun NewLocationDialog(
             dismissOnBackPress = false
         )
     ) {
-        Surface(
-            shape = RoundedCornerShape(12.dp),
-            tonalElevation = 6.dp
+        var dialogOffset by remember { mutableStateOf(Offset.Zero) }
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .wrapContentSize(Alignment.Center)
         ) {
-            val scrollState = rememberScrollState()
-            Column(
+            Surface(
                 modifier = Modifier
                     .widthIn(min = 520.dp, max = 520.dp)
-                    .verticalScroll(scrollState)
+                    .offset {
+                        IntOffset(dialogOffset.x.roundToInt(), dialogOffset.y.roundToInt())
+                    },
+                shape = RoundedCornerShape(12.dp),
+                tonalElevation = 6.dp
             ) {
+                val scrollState = rememberScrollState()
+                Column(
+                    modifier = Modifier
+                        .verticalScroll(scrollState)
+                ) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .background(DIALOG_HEADER_TURQUOISE)
                         .padding(start = 17.dp, end = 17.dp)
+                        .pointerInput(Unit) {
+                            detectDragGestures { change, dragAmount ->
+                                change.consume()
+                                dialogOffset += Offset(dragAmount.x, dragAmount.y)
+                            }
+                        }
                 ) {
                     Box(
                         modifier = Modifier
@@ -209,6 +232,7 @@ fun NewLocationDialog(
                             Text("Guardar")
                         }
                     }
+                }
                 }
             }
         }
