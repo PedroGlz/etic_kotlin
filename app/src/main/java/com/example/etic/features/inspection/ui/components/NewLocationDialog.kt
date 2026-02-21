@@ -81,122 +81,133 @@ fun NewLocationDialog(
                 modifier = Modifier
                     .widthIn(min = 520.dp, max = 520.dp)
                     .verticalScroll(scrollState)
-                    .padding(start = 17.dp, end = 17.dp, top = 11.dp, bottom = 4.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(DIALOG_HEADER_TURQUOISE, RoundedCornerShape(6.dp))
-                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                        .background(DIALOG_HEADER_TURQUOISE)
+                        .padding(start = 17.dp, end = 17.dp)
                 ) {
-                    Text(
-                        text = stringResource(R.string.dlg_nueva_ubicacion),
-                        color = Color.White,
-                        style = MaterialTheme.typography.titleMedium
-                    )
-                }
-
-                DropdownSelector(
-                    label = stringResource(R.string.label_estatus_inspeccion),
-                    options = statusOptions.map { it.idStatusInspeccionDet to (it.estatusInspeccionDet ?: it.idStatusInspeccionDet) },
-                    selectedId = formState.statusId,
-                    selectedLabelOverride = formState.statusLabel,
-                    placeholder = "Seleccionar estatus",
-                    onExpandedChange = { formState.statusExpanded = it },
-                    expanded = formState.statusExpanded,
-                    onSelected = { id, label ->
-                        formState.statusId = id
-                        formState.statusLabel = label
-                        formState.statusExpanded = false
-                    }
-                )
-
-                DropdownSelector(
-                    label = "Tipo de prioridad",
-                    options = prioridadOptions.map { it.idTipoPrioridad to (it.tipoPrioridad ?: it.idTipoPrioridad) },
-                    selectedId = formState.prioridadId,
-                    selectedLabelOverride = formState.prioridadLabel,
-                    placeholder = "Seleccionar prioridad",
-                    onExpandedChange = { formState.prioridadExpanded = it },
-                    expanded = formState.prioridadExpanded,
-                    onSelected = { id, label ->
-                        formState.prioridadId = id
-                        formState.prioridadLabel = label
-                        formState.prioridadExpanded = false
-                    }
-                )
-
-                FilterableSelector(
-                    label = "Fabricante",
-                    options = fabricanteOptions.map { it.idFabricante to (it.fabricante ?: it.idFabricante) },
-                    selectedId = formState.fabricanteId,
-                    selectedLabelOverride = formState.fabricanteLabel,
-                    onExpandedChange = { formState.fabricanteExpanded = it },
-                    expanded = formState.fabricanteExpanded,
-                    placeholder = "Seleccionar fabricante",
-                    onSelected = { id, label ->
-                        formState.fabricanteId = id
-                        formState.fabricanteLabel = label
-                        formState.fabricanteExpanded = false
-                    },
-                    onAddClick = onAddManufacturer
-                )
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Es equipo")
-                    Spacer(Modifier.width(12.dp))
-                    Switch(checked = formState.isEquipment, onCheckedChange = { formState.isEquipment = it })
-                }
-
-                LabeledInputField(
-                    value = formState.name,
-                    onValueChange = { formState.name = it },
-                    label = stringResource(R.string.label_nombre_ubicacion),
-                    required = true,
-                    isError = formState.error != null,
-                    singleLine = true
-                )
-
-                LabeledInputField(
-                    value = formState.description,
-                    onValueChange = { formState.description = it },
-                    label = stringResource(R.string.label_descripcion),
-                    singleLine = false,
-                    fieldHeight = 52.dp,
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp)
-                )
-
-                LabeledInputField(
-                    value = formState.barcode,
-                    onValueChange = { formState.barcode = it },
-                    label = stringResource(R.string.label_codigo_barras),
-                    singleLine = true
-                )
-
-                LabeledInputField(
-                    value = previewRoute,
-                    onValueChange = {},
-                    label = "Ruta destino",
-                    readOnly = true,
-                    singleLine = true
-                )
-
-                if (formState.error != null) {
-                    Text(formState.error!!, color = MaterialTheme.colorScheme.error)
-                }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    TextButton(onClick = onDismiss, enabled = !isSaving) { Text("Cerrar") }
-                    Button(
-                        enabled = formState.name.isNotBlank() && !isSaving,
-                        onClick = onConfirm
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(DIALOG_HEADER_TURQUOISE, RoundedCornerShape(6.dp))
+                            .padding(start = 10.dp, end = 10.dp, top = 12.dp, bottom = 4.dp)
                     ) {
-                        Text("Guardar")
+                        Text(
+                            text = stringResource(R.string.dlg_nueva_ubicacion),
+                            color = Color.White,
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                    }
+                }
+                Spacer(Modifier.height(6.dp))
+
+                Column(
+                    modifier = Modifier.padding(start = 17.dp, end = 17.dp, bottom = 4.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    DropdownSelector(
+                        label = stringResource(R.string.label_estatus_inspeccion),
+                        options = statusOptions.map { it.idStatusInspeccionDet to (it.estatusInspeccionDet ?: it.idStatusInspeccionDet) },
+                        selectedId = formState.statusId,
+                        selectedLabelOverride = formState.statusLabel,
+                        placeholder = "Seleccionar estatus",
+                        onExpandedChange = { formState.statusExpanded = it },
+                        expanded = formState.statusExpanded,
+                        onSelected = { id, label ->
+                            formState.statusId = id
+                            formState.statusLabel = label
+                            formState.statusExpanded = false
+                        }
+                    )
+
+                    DropdownSelector(
+                        label = "Tipo de prioridad",
+                        options = prioridadOptions.map { it.idTipoPrioridad to (it.tipoPrioridad ?: it.idTipoPrioridad) },
+                        selectedId = formState.prioridadId,
+                        selectedLabelOverride = formState.prioridadLabel,
+                        placeholder = "Seleccionar prioridad",
+                        onExpandedChange = { formState.prioridadExpanded = it },
+                        expanded = formState.prioridadExpanded,
+                        onSelected = { id, label ->
+                            formState.prioridadId = id
+                            formState.prioridadLabel = label
+                            formState.prioridadExpanded = false
+                        }
+                    )
+
+                    FilterableSelector(
+                        label = "Fabricante",
+                        options = fabricanteOptions.map { it.idFabricante to (it.fabricante ?: it.idFabricante) },
+                        selectedId = formState.fabricanteId,
+                        selectedLabelOverride = formState.fabricanteLabel,
+                        onExpandedChange = { formState.fabricanteExpanded = it },
+                        expanded = formState.fabricanteExpanded,
+                        placeholder = "Seleccionar fabricante",
+                        onSelected = { id, label ->
+                            formState.fabricanteId = id
+                            formState.fabricanteLabel = label
+                            formState.fabricanteExpanded = false
+                        },
+                        onAddClick = onAddManufacturer
+                    )
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("Es equipo")
+                        Spacer(Modifier.width(12.dp))
+                        Switch(checked = formState.isEquipment, onCheckedChange = { formState.isEquipment = it })
+                    }
+
+                    LabeledInputField(
+                        value = formState.name,
+                        onValueChange = { formState.name = it },
+                        label = stringResource(R.string.label_nombre_ubicacion),
+                        required = true,
+                        isError = formState.error != null,
+                        singleLine = true
+                    )
+
+                    LabeledInputField(
+                        value = formState.description,
+                        onValueChange = { formState.description = it },
+                        label = stringResource(R.string.label_descripcion),
+                        singleLine = false,
+                        fieldHeight = 52.dp,
+                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp)
+                    )
+
+                    LabeledInputField(
+                        value = formState.barcode,
+                        onValueChange = { formState.barcode = it },
+                        label = stringResource(R.string.label_codigo_barras),
+                        singleLine = true
+                    )
+
+                    LabeledInputField(
+                        value = previewRoute,
+                        onValueChange = {},
+                        label = "Ruta destino",
+                        readOnly = true,
+                        singleLine = true
+                    )
+
+                    if (formState.error != null) {
+                        Text(formState.error!!, color = MaterialTheme.colorScheme.error)
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        TextButton(onClick = onDismiss, enabled = !isSaving) { Text("Cerrar") }
+                        Button(
+                            enabled = formState.name.isNotBlank() && !isSaving,
+                            onClick = onConfirm
+                        ) {
+                            Text("Guardar")
+                        }
                     }
                 }
             }
