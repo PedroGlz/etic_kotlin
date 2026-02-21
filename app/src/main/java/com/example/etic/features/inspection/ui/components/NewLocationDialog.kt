@@ -2,6 +2,8 @@ package com.example.etic.features.inspection.ui.components
 
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,17 +12,19 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -28,12 +32,15 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.PopupProperties
 import androidx.compose.ui.window.DialogProperties
 import com.example.etic.R
@@ -57,126 +64,151 @@ fun NewLocationDialog(
 ) {
     if (!show) return
 
-    AlertDialog(
+    Dialog(
         onDismissRequest = { },
         properties = DialogProperties(
             usePlatformDefaultWidth = false,
             dismissOnClickOutside = false,
             dismissOnBackPress = false
-        ),
-        shape = RoundedCornerShape(12.dp),
-        title = { Text(stringResource(R.string.dlg_nueva_ubicacion)) },
-        text = {
-            Box(Modifier.fillMaxWidth().widthIn(min = 520.dp)) {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    DropdownSelector(
-                        label = stringResource(R.string.label_estatus_inspeccion),
-                        options = statusOptions.map { it.idStatusInspeccionDet to (it.estatusInspeccionDet ?: it.idStatusInspeccionDet) },
-                        selectedId = formState.statusId,
-                        selectedLabelOverride = formState.statusLabel,
-                        placeholder = "Seleccionar estatus",
-                        onExpandedChange = { formState.statusExpanded = it },
-                        expanded = formState.statusExpanded,
-                        onSelected = { id, label ->
-                            formState.statusId = id
-                            formState.statusLabel = label
-                            formState.statusExpanded = false
-                        }
+        )
+    ) {
+        Surface(
+            shape = RoundedCornerShape(12.dp),
+            tonalElevation = 6.dp
+        ) {
+            val scrollState = rememberScrollState()
+            Column(
+                modifier = Modifier
+                    .widthIn(min = 520.dp, max = 520.dp)
+                    .verticalScroll(scrollState)
+                    .padding(start = 17.dp, end = 17.dp, top = 11.dp, bottom = 4.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(DIALOG_HEADER_TURQUOISE, RoundedCornerShape(6.dp))
+                        .padding(horizontal = 10.dp, vertical = 6.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.dlg_nueva_ubicacion),
+                        color = Color.White,
+                        style = MaterialTheme.typography.titleMedium
                     )
+                }
 
-                    DropdownSelector(
-                        label = "Tipo de prioridad",
-                        options = prioridadOptions.map { it.idTipoPrioridad to (it.tipoPrioridad ?: it.idTipoPrioridad) },
-                        selectedId = formState.prioridadId,
-                        selectedLabelOverride = formState.prioridadLabel,
-                        placeholder = "Seleccionar prioridad",
-                        onExpandedChange = { formState.prioridadExpanded = it },
-                        expanded = formState.prioridadExpanded,
-                        onSelected = { id, label ->
-                            formState.prioridadId = id
-                            formState.prioridadLabel = label
-                            formState.prioridadExpanded = false
-                        }
-                    )
-
-                    FilterableSelector(
-                        label = "Fabricante",
-                        options = fabricanteOptions.map { it.idFabricante to (it.fabricante ?: it.idFabricante) },
-                        selectedId = formState.fabricanteId,
-                        selectedLabelOverride = formState.fabricanteLabel,
-                        onExpandedChange = { formState.fabricanteExpanded = it },
-                        expanded = formState.fabricanteExpanded,
-                        placeholder = "Seleccionar fabricante",
-                        onSelected = { id, label ->
-                            formState.fabricanteId = id
-                            formState.fabricanteLabel = label
-                            formState.fabricanteExpanded = false
-                        },
-                        onAddClick = onAddManufacturer
-                    )
-
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("Es equipo")
-                        Spacer(Modifier.width(12.dp))
-                        Switch(checked = formState.isEquipment, onCheckedChange = { formState.isEquipment = it })
+                DropdownSelector(
+                    label = stringResource(R.string.label_estatus_inspeccion),
+                    options = statusOptions.map { it.idStatusInspeccionDet to (it.estatusInspeccionDet ?: it.idStatusInspeccionDet) },
+                    selectedId = formState.statusId,
+                    selectedLabelOverride = formState.statusLabel,
+                    placeholder = "Seleccionar estatus",
+                    onExpandedChange = { formState.statusExpanded = it },
+                    expanded = formState.statusExpanded,
+                    onSelected = { id, label ->
+                        formState.statusId = id
+                        formState.statusLabel = label
+                        formState.statusExpanded = false
                     }
+                )
 
-                    LabeledInputField(
-                        value = formState.name,
-                        onValueChange = { formState.name = it },
-                        label = stringResource(R.string.label_nombre_ubicacion),
-                        required = true,
-                        isError = formState.error != null,
-                        singleLine = true
-                    )
+                DropdownSelector(
+                    label = "Tipo de prioridad",
+                    options = prioridadOptions.map { it.idTipoPrioridad to (it.tipoPrioridad ?: it.idTipoPrioridad) },
+                    selectedId = formState.prioridadId,
+                    selectedLabelOverride = formState.prioridadLabel,
+                    placeholder = "Seleccionar prioridad",
+                    onExpandedChange = { formState.prioridadExpanded = it },
+                    expanded = formState.prioridadExpanded,
+                    onSelected = { id, label ->
+                        formState.prioridadId = id
+                        formState.prioridadLabel = label
+                        formState.prioridadExpanded = false
+                    }
+                )
 
-                    LabeledInputField(
-                        value = formState.description,
-                        onValueChange = { formState.description = it },
-                        label = stringResource(R.string.label_descripcion),
-                        singleLine = false,
-                        fieldHeight = 64.dp
-                    )
+                FilterableSelector(
+                    label = "Fabricante",
+                    options = fabricanteOptions.map { it.idFabricante to (it.fabricante ?: it.idFabricante) },
+                    selectedId = formState.fabricanteId,
+                    selectedLabelOverride = formState.fabricanteLabel,
+                    onExpandedChange = { formState.fabricanteExpanded = it },
+                    expanded = formState.fabricanteExpanded,
+                    placeholder = "Seleccionar fabricante",
+                    onSelected = { id, label ->
+                        formState.fabricanteId = id
+                        formState.fabricanteLabel = label
+                        formState.fabricanteExpanded = false
+                    },
+                    onAddClick = onAddManufacturer
+                )
 
-                    LabeledInputField(
-                        value = formState.barcode,
-                        onValueChange = { formState.barcode = it },
-                        label = stringResource(R.string.label_codigo_barras),
-                        singleLine = true
-                    )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Es equipo")
+                    Spacer(Modifier.width(12.dp))
+                    Switch(checked = formState.isEquipment, onCheckedChange = { formState.isEquipment = it })
+                }
 
-                    LabeledInputField(
-                        value = previewRoute,
-                        onValueChange = {},
-                        label = "Ruta destino",
-                        readOnly = true,
-                        singleLine = true
-                    )
+                LabeledInputField(
+                    value = formState.name,
+                    onValueChange = { formState.name = it },
+                    label = stringResource(R.string.label_nombre_ubicacion),
+                    required = true,
+                    isError = formState.error != null,
+                    singleLine = true
+                )
 
-                    if (formState.error != null) {
-                        Text(formState.error!!, color = MaterialTheme.colorScheme.error)
+                LabeledInputField(
+                    value = formState.description,
+                    onValueChange = { formState.description = it },
+                    label = stringResource(R.string.label_descripcion),
+                    singleLine = false,
+                    fieldHeight = 52.dp,
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp)
+                )
+
+                LabeledInputField(
+                    value = formState.barcode,
+                    onValueChange = { formState.barcode = it },
+                    label = stringResource(R.string.label_codigo_barras),
+                    singleLine = true
+                )
+
+                LabeledInputField(
+                    value = previewRoute,
+                    onValueChange = {},
+                    label = "Ruta destino",
+                    readOnly = true,
+                    singleLine = true
+                )
+
+                if (formState.error != null) {
+                    Text(formState.error!!, color = MaterialTheme.colorScheme.error)
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    TextButton(onClick = onDismiss, enabled = !isSaving) { Text("Cerrar") }
+                    Button(
+                        enabled = formState.name.isNotBlank() && !isSaving,
+                        onClick = onConfirm
+                    ) {
+                        Text("Guardar")
                     }
                 }
             }
-        },
-        confirmButton = {
-            Button(
-                enabled = formState.name.isNotBlank() && !isSaving,
-                onClick = onConfirm
-            ) {
-                Text("Guardar")
-            }
-        },
-        dismissButton = {
-            Button(onClick = onDismiss, enabled = !isSaving) { Text("Cerrar") }
         }
-    )
+    }
 }
 
 private val FIELD_HEIGHT = 25.dp
 private val FIELD_RADIUS = 4.dp
 private val FIELD_BORDER = 1.dp
 private val FIELD_PADDING = PaddingValues(horizontal = 4.dp, vertical = 2.dp)
+private val DIALOG_HEADER_TURQUOISE = Color(0xFF159BA6)
 
 @Composable
 private fun LabeledInputField(
@@ -187,7 +219,8 @@ private fun LabeledInputField(
     isError: Boolean = false,
     readOnly: Boolean = false,
     singleLine: Boolean = true,
-    fieldHeight: Dp = FIELD_HEIGHT
+    fieldHeight: Dp = FIELD_HEIGHT,
+    contentPadding: PaddingValues = FIELD_PADDING
 ) {
     Column(Modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -205,8 +238,8 @@ private fun LabeledInputField(
                     if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline,
                     RoundedCornerShape(FIELD_RADIUS)
                 )
-                .padding(FIELD_PADDING),
-            contentAlignment = Alignment.CenterStart
+                .padding(contentPadding),
+            contentAlignment = if (singleLine) Alignment.CenterStart else Alignment.TopStart
         ) {
             if (readOnly) {
                 Text(
@@ -221,7 +254,7 @@ private fun LabeledInputField(
                     onValueChange = onValueChange,
                     singleLine = singleLine,
                     textStyle = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurface),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = if (singleLine) Modifier.fillMaxWidth() else Modifier.fillMaxSize()
                 )
             }
         }
@@ -404,5 +437,3 @@ private fun AddInlineButton(
         )
     }
 }
-
-
