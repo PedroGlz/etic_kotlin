@@ -330,30 +330,19 @@ fun MechanicalProblemDialog(
                         .widthIn(min = DIALOG_MIN_WIDTH, max = DIALOG_MAX_WIDTH)
                         .verticalScroll(scrollState)
                         .padding(
-                            start = 17.dp,
-                            end = 17.dp,
-                            top = 11.dp,
-                            bottom = 4.dp
+                            top = 0.dp,
+                            bottom = 0.dp
                         )
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .pointerInput(Unit) {
-                                detectDragGestures { change, dragAmount ->
-                                    change.consume()
-                                    dialogOffset += Offset(dragAmount.x, dragAmount.y)
-                                }
-                            }
-                            .fillMaxWidth()
-                            .background(DIALOG_HEADER_TURQUOISE, RoundedCornerShape(6.dp))
-                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                    ProblemDialogDraggableHeader(
+                        title = "Problema Mecánico",
+                        onDrag = { drag -> dialogOffset += drag }
+                    )
+                    Spacer(Modifier.height(6.dp))
+
+                    Column(
+                        modifier = Modifier.padding(start = 17.dp, end = 17.dp, bottom = 4.dp)
                     ) {
-                        Text(
-                            "Problema Mecánico",
-                            style = MaterialTheme.typography.titleMedium,
-                            color = Color.White
-                        )
-                    }
 
                     if (showEditControls) {
                         Divider(Modifier.padding(top = 5.dp))
@@ -735,6 +724,7 @@ fun MechanicalProblemDialog(
                         ) {
                             Text("Guardar")
                         }
+                    }
                     }
                     }
                 }

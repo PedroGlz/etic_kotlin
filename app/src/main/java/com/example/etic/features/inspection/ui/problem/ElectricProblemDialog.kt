@@ -327,30 +327,40 @@ fun ElectricProblemDialog(
                     .widthIn(min = DIALOG_MIN_WIDTH, max = DIALOG_MAX_WIDTH)
                     .verticalScroll(scrollState)
                     .padding(
-                        start = 17.dp,
-                        end = 17.dp,
-                        top = 11.dp,
-                        bottom = 4.dp
+                        top = 0.dp,
+                        bottom = 0.dp
                     )
             ) {
                 Box(
                     modifier = Modifier
+                        .fillMaxWidth()
+                        .background(DIALOG_HEADER_TURQUOISE)
+                        .padding(start = 17.dp, end = 17.dp)
                         .pointerInput(Unit) {
                             detectDragGestures { change, dragAmount ->
                                 change.consume()
                                 dialogOffset += Offset(dragAmount.x, dragAmount.y)
                             }
                         }
-                        .fillMaxWidth()
-                        .background(DIALOG_HEADER_TURQUOISE, RoundedCornerShape(6.dp))
-                        .padding(horizontal = 10.dp, vertical = 6.dp)
                 ) {
-                    Text(
-                        "Problema Eléctrico",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = Color.White
-                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(DIALOG_HEADER_TURQUOISE, RoundedCornerShape(6.dp))
+                            .padding(start = 10.dp, end = 10.dp, top = 12.dp, bottom = 4.dp)
+                    ) {
+                        Text(
+                            text = "Problema Eléctrico",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = Color.White
+                        )
+                    }
                 }
+                Spacer(Modifier.height(6.dp))
+
+                Column(
+                    modifier = Modifier.padding(start = 17.dp, end = 17.dp, bottom = 4.dp)
+                ) {
 
                 if (showEditControls) {
                     Divider(Modifier.padding(top = 5.dp))
@@ -820,6 +830,7 @@ fun ElectricProblemDialog(
                     ) {
                         Text("Guardar")
                     }
+                }
                 }
                 }
             }
