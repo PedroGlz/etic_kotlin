@@ -5,6 +5,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -48,18 +49,16 @@ import androidx.compose.material3.DividerDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
-import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextField
 import androidx.compose.runtime.*
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -71,6 +70,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.zIndex
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.graphics.asImageBitmap
@@ -81,6 +81,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
 import com.example.etic.ui.theme.EticTheme
@@ -103,12 +104,16 @@ import kotlinx.coroutines.withContext
 import kotlin.collections.LinkedHashSet
 import kotlin.collections.buildList
 import kotlin.math.max
+import kotlin.math.roundToInt
 import com.example.etic.features.inspection.data.InspectionRepository
 import com.example.etic.features.inspection.data.UbicacionSaveContext
 import com.example.etic.features.inspection.ui.components.FILTER_FIELD_ROW_SPACING
 import com.example.etic.features.inspection.ui.components.FilterDropdownField
+import com.example.etic.features.inspection.ui.components.FilterableSelector
 import com.example.etic.features.inspection.ui.components.InspectionHeader
 import com.example.etic.features.inspection.ui.components.NewLocationDialog
+import com.example.etic.features.inspection.ui.components.DropdownSelector
+import com.example.etic.features.inspection.ui.components.LabeledInputField
 import com.example.etic.features.inspection.ui.state.rememberLocationFormState
 import com.example.etic.features.components.ImageInputButtonGroup
 import com.example.etic.features.inspection.logic.VisualProblemEditor
@@ -156,6 +161,7 @@ private const val SURFACE_VARIANT_ALPHA: Float = 0.4f
 private const val SELECT_ALPHA: Float = 0.10f
 private val ICON_EQUIPO_COLOR: Color = Color(0xFFFFC107)     // Amarillo (Traffic)
 private val ICON_NO_EQUIPO_COLOR: Color = Color(0xFF4CAF50)  // Verde (DragIndicator)
+private val DIALOG_HEADER_TURQUOISE: Color = Color(0xFF159BA6)
 private val PROBLEM_TYPE_IDS = mapOf(
     "Eléctrico" to "0D32B331-76C3-11D3-82BF-00104BC75DC2",
     "Visual" to "0D32B333-76C3-11D3-82BF-00104BC75DC2",
@@ -3850,6 +3856,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             //   - Columna derecha ancha (Baseline / Histórico)
             // =====================================================================
             if (showEditUbDialog) {
+                var dialogOffset by remember { mutableStateOf(Offset.Zero) }
 
                 Dialog(
                     onDismissRequest = { },
@@ -3866,19 +3873,24 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     // ---------------------------------------------------------------
                     Box(
                         modifier = Modifier
-                            .fillMaxWidth(0.98f)   // 98% del ancho de la pantalla
-                            .fillMaxHeight(0.98f)  // 98% del alto de la pantalla
-                            .padding(16.dp),
-                        contentAlignment = Alignment.Center
+                            .fillMaxSize()
+                            .wrapContentSize(Alignment.Center)
                     ) {
 
                         // ---------------------------------------------------------------
                         // CARD PRINCIPAL DEL DIÁLOGO
                         // Se expande a todo el ancho permitido por el Box
                         // ---------------------------------------------------------------
-                        androidx.compose.material3.Card(
+                        Surface(
                             modifier = Modifier
-                                .fillMaxSize(),    // ← importante: usa TODO el Box (que ya es 98% x 98%)
+                                .fillMaxWidth(0.95f)
+                                .fillMaxHeight(0.95f)
+                                .offset {
+                                    IntOffset(
+                                        dialogOffset.x.roundToInt(),
+                                        dialogOffset.y.roundToInt()
+                                    )
+                                },
                             shape = RoundedCornerShape(12.dp)
                         ) {
 
@@ -3888,13 +3900,29 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                             Column(
                                 Modifier
                                     .fillMaxSize()
-                                    .padding(16.dp)
                             ) {
 
                                 // ---------------------------------------------------------------
                                 // TÍTULO DEL DIÁLOGO
                                 // ---------------------------------------------------------------
-                                Text("Editar ubicación", style = MaterialTheme.typography.titleLarge)
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .background(DIALOG_HEADER_TURQUOISE)
+                                        .pointerInput(Unit) {
+                                            detectDragGestures { change, dragAmount ->
+                                                change.consume()
+                                                dialogOffset += Offset(dragAmount.x, dragAmount.y)
+                                            }
+                                        }
+                                ) {
+                                    Text(
+                                        text = "Editar ubicación",
+                                        color = Color.White,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                                    )
+                                }
                                 Spacer(Modifier.height(8.dp))
 
 
@@ -3906,7 +3934,8 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .weight(1f, fill = true),
+                                        .weight(1f, fill = true)
+                                        .padding(horizontal = 16.dp),
                                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                                 ) {
 
@@ -3924,95 +3953,57 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                         verticalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
                                         
-                                        ExposedDropdownMenuBox(
+                                        DropdownSelector(
+                                            label = stringResource(com.example.etic.R.string.label_estatus_inspeccion),
+                                            options = statusOptions.map {
+                                                it.idStatusInspeccionDet to (it.estatusInspeccionDet ?: it.idStatusInspeccionDet)
+                                            },
+                                            selectedId = locationForm.statusId,
+                                            selectedLabelOverride = locationForm.statusLabel,
+                                            placeholder = "Seleccionar estatus",
                                             expanded = locationForm.statusExpanded,
-                                            onExpandedChange = { locationForm.statusExpanded = !locationForm.statusExpanded }
-                                        ) {
-                                            TextField(
-                                                value = if (locationForm.statusLabel.isNotBlank()) locationForm.statusLabel else "Seleccionar estatus",
-                                                onValueChange = {},
-                                                readOnly = true,
-                                                label = { Text(stringResource(com.example.etic.R.string.label_estatus_inspeccion)) },
-                                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = locationForm.statusExpanded) },
-                                                modifier = Modifier.menuAnchor().fillMaxWidth()
-                                            )
-                                            DropdownMenu(
-                                                expanded = locationForm.statusExpanded,
-                                                onDismissRequest = { locationForm.statusExpanded = false }
-                                            ) {
-                                                statusOptions.forEach { opt ->
-                                                    val label = opt.estatusInspeccionDet ?: opt.idStatusInspeccionDet
-                                                    DropdownMenuItem(
-                                                        text = { Text(label) },
-                                                        onClick = {
-                                                            locationForm.statusLabel = label
-                                                            locationForm.statusId = opt.idStatusInspeccionDet
-                                                            locationForm.statusExpanded = false
-                                                        }
-                                                    )
-                                                }
+                                            onExpandedChange = { locationForm.statusExpanded = it },
+                                            onSelected = { id, label ->
+                                                locationForm.statusLabel = label
+                                                locationForm.statusId = id
+                                                locationForm.statusExpanded = false
                                             }
-                                        }
+                                        )
 
-                                        ExposedDropdownMenuBox(
+                                        DropdownSelector(
+                                            label = "Tipo de prioridad",
+                                            options = prioridadOptions.map {
+                                                it.idTipoPrioridad to (it.tipoPrioridad ?: it.idTipoPrioridad)
+                                            },
+                                            selectedId = locationForm.prioridadId,
+                                            selectedLabelOverride = locationForm.prioridadLabel,
+                                            placeholder = "Seleccionar prioridad",
                                             expanded = locationForm.prioridadExpanded,
-                                            onExpandedChange = { locationForm.prioridadExpanded = !locationForm.prioridadExpanded }
-                                        ) {
-                                            TextField(
-                                                value = if (locationForm.prioridadLabel.isNotBlank()) locationForm.prioridadLabel else "Seleccionar prioridad",
-                                                onValueChange = {},
-                                                readOnly = true,
-                                                label = { Text("Tipo de prioridad") },
-                                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = locationForm.prioridadExpanded) },
-                                                modifier = Modifier.menuAnchor().fillMaxWidth()
-                                            )
-                                            DropdownMenu(
-                                                expanded = locationForm.prioridadExpanded,
-                                                onDismissRequest = { locationForm.prioridadExpanded = false }
-                                            ) {
-                                                prioridadOptions.forEach { opt ->
-                                                    val label = opt.tipoPrioridad ?: opt.idTipoPrioridad
-                                                    DropdownMenuItem(
-                                                        text = { Text(label) },
-                                                        onClick = {
-                                                            locationForm.prioridadLabel = label
-                                                            locationForm.prioridadId = opt.idTipoPrioridad
-                                                            locationForm.prioridadExpanded = false
-                                                        }
-                                                    )
-                                                }
+                                            onExpandedChange = { locationForm.prioridadExpanded = it },
+                                            onSelected = { id, label ->
+                                                locationForm.prioridadLabel = label
+                                                locationForm.prioridadId = id
+                                                locationForm.prioridadExpanded = false
                                             }
-                                        }
+                                        )
 
-                                        ExposedDropdownMenuBox(
+                                        FilterableSelector(
+                                            label = "Fabricante",
+                                            options = fabricanteOptions.map {
+                                                it.idFabricante to (it.fabricante ?: it.idFabricante)
+                                            },
+                                            selectedId = locationForm.fabricanteId,
+                                            selectedLabelOverride = locationForm.fabricanteLabel,
+                                            placeholder = "Seleccionar fabricante",
                                             expanded = locationForm.fabricanteExpanded,
-                                            onExpandedChange = { locationForm.fabricanteExpanded = !locationForm.fabricanteExpanded }
-                                        ) {
-                                            TextField(
-                                                value = if (locationForm.fabricanteLabel.isNotBlank()) locationForm.fabricanteLabel else "Seleccionar fabricante",
-                                                onValueChange = {},
-                                                readOnly = true,
-                                                label = { Text("Fabricante") },
-                                                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = locationForm.fabricanteExpanded) },
-                                                modifier = Modifier.menuAnchor().fillMaxWidth()
-                                            )
-                                            DropdownMenu(
-                                                expanded = locationForm.fabricanteExpanded,
-                                                onDismissRequest = { locationForm.fabricanteExpanded = false }
-                                            ) {
-                                                fabricanteOptions.forEach { opt ->
-                                                    val label = opt.fabricante ?: opt.idFabricante
-                                                    DropdownMenuItem(
-                                                        text = { Text(label) },
-                                                        onClick = {
-                                                            locationForm.fabricanteLabel = label
-                                                            locationForm.fabricanteId = opt.idFabricante
-                                                            locationForm.fabricanteExpanded = false
-                                                        }
-                                                    )
-                                                }
-                                            }
-                                        }
+                                            onExpandedChange = { locationForm.fabricanteExpanded = it },
+                                            onSelected = { id, label ->
+                                                locationForm.fabricanteLabel = label
+                                                locationForm.fabricanteId = id
+                                                locationForm.fabricanteExpanded = false
+                                            },
+                                            onAddClick = {}
+                                        )
 
                                         Row(verticalAlignment = Alignment.CenterVertically) {
                                             Text("Es equipo")
@@ -4023,34 +4014,29 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                             )
                                         }
 
-                                        TextField(
+                                        LabeledInputField(
                                             value = locationForm.name,
                                             onValueChange = { locationForm.name = it },
-                                            singleLine = true,
-                                            label = {
-                                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                                    Text(stringResource(com.example.etic.R.string.label_nombre_ubicacion))
-                                                    Text(" *", color = MaterialTheme.colorScheme.error)
-                                                }
-                                            },
+                                            label = stringResource(com.example.etic.R.string.label_nombre_ubicacion),
+                                            required = true,
                                             isError = locationForm.error != null,
-                                            modifier = Modifier.fillMaxWidth()
+                                            singleLine = true,
                                         )
 
-                                        TextField(
+                                        LabeledInputField(
                                             value = locationForm.description,
                                             onValueChange = { locationForm.description = it },
+                                            label = stringResource(com.example.etic.R.string.label_descripcion),
                                             singleLine = false,
-                                            label = { Text(stringResource(com.example.etic.R.string.label_descripcion)) },
-                                            modifier = Modifier.fillMaxWidth()
+                                            fieldHeight = 52.dp,
+                                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp)
                                         )
 
-                                        TextField(
+                                        LabeledInputField(
                                             value = locationForm.barcode,
                                             onValueChange = { locationForm.barcode = it },
+                                            label = stringResource(com.example.etic.R.string.label_codigo_barras),
                                             singleLine = true,
-                                            label = { Text(stringResource(com.example.etic.R.string.label_codigo_barras)) },
-                                            modifier = Modifier.fillMaxWidth()
                                         )
 
                                         if (locationForm.error != null) {

@@ -246,7 +246,7 @@ private val FIELD_PADDING = PaddingValues(horizontal = 4.dp, vertical = 2.dp)
 private val DIALOG_HEADER_TURQUOISE = Color(0xFF159BA6)
 
 @Composable
-private fun LabeledInputField(
+internal fun LabeledInputField(
     value: String,
     onValueChange: (String) -> Unit,
     label: String,
@@ -297,7 +297,7 @@ private fun LabeledInputField(
 }
 
 @Composable
-private fun DropdownSelector(
+internal fun DropdownSelector(
     label: String,
     options: List<Pair<String, String>>,
     selectedId: String?,
@@ -355,7 +355,7 @@ private fun DropdownSelector(
 }
 
 @Composable
-private fun FilterableSelector(
+internal fun FilterableSelector(
     label: String,
     options: List<Pair<String, String>>,
     selectedId: String?,

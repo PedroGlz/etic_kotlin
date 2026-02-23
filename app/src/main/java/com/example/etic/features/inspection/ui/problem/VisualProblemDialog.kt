@@ -10,6 +10,7 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.PaddingValues
@@ -43,12 +44,15 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -58,6 +62,7 @@ import com.example.etic.features.components.ImageInputButtonGroup
 import com.example.etic.core.saf.EticImageStore
 import com.example.etic.core.settings.EticPrefs
 import com.example.etic.core.settings.settingsDataStore
+import kotlin.math.roundToInt
 
 private val DIALOG_MIN_WIDTH = 980.dp
 private val DIALOG_MAX_WIDTH = 980.dp
@@ -132,10 +137,19 @@ fun VisualProblemDialog(
             dismissOnBackPress = false
         )
     ) {
-        Surface(
-            shape = RoundedCornerShape(12.dp),
-            tonalElevation = 6.dp
+        var dialogOffset by remember { mutableStateOf(Offset.Zero) }
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .wrapContentSize(Alignment.Center)
         ) {
+            Surface(
+                modifier = Modifier.offset {
+                    IntOffset(dialogOffset.x.roundToInt(), dialogOffset.y.roundToInt())
+                },
+                shape = RoundedCornerShape(12.dp),
+                tonalElevation = 6.dp
+            ) {
             val scrollState = rememberScrollState()
             val infoRowScroll = rememberScrollState()
             var saveAttempted by rememberSaveable { mutableStateOf(false) }
@@ -157,6 +171,12 @@ fun VisualProblemDialog(
             ) {
                 Box(
                     modifier = Modifier
+                        .pointerInput(Unit) {
+                            detectDragGestures { change, dragAmount ->
+                                change.consume()
+                                dialogOffset += Offset(dragAmount.x, dragAmount.y)
+                            }
+                        }
                         .fillMaxWidth()
                         .background(DIALOG_HEADER_TURQUOISE, RoundedCornerShape(6.dp))
                         .padding(horizontal = 10.dp, vertical = 6.dp)
@@ -369,6 +389,7 @@ fun VisualProblemDialog(
                 }
                 }
             }
+        }
         }
     }
 }
