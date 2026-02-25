@@ -114,11 +114,6 @@ fun ElectricProblemDialog(
     phaseOptions: List<Pair<String, String>>,
     environmentOptions: List<Pair<String, String>>,
     manufacturerOptions: List<Pair<String, String>>,
-    onAddFailure: () -> Unit = {},
-    onAddComponentPhase: () -> Unit = {},
-    onAddReferencePhase: () -> Unit = {},
-    onAddAdditionalInfo: () -> Unit = {},
-    onAddManufacturer: () -> Unit = {},
     thermalImageName: String,
     digitalImageName: String,
     onThermalImageChange: (String) -> Unit,
@@ -188,15 +183,35 @@ fun ElectricProblemDialog(
                 val infoRowScrollState = rememberScrollState()
 
                 var failureId by rememberSaveable { mutableStateOf(initial.failureId) }
+                var failureInput by rememberSaveable {
+                    mutableStateOf(
+                        failureOptions.firstOrNull { it.first == initial.failureId }?.second.orEmpty()
+                    )
+                }
                 var componentTemperature by rememberSaveable { mutableStateOf(initial.componentTemperature) }
                 var componentPhaseId by rememberSaveable { mutableStateOf(initial.componentPhaseId) }
+                var componentPhaseInput by rememberSaveable {
+                    mutableStateOf(
+                        phaseOptions.firstOrNull { it.first == initial.componentPhaseId }?.second.orEmpty()
+                    )
+                }
                 var componentRms by rememberSaveable { mutableStateOf(initial.componentRms) }
 
                 var referenceTemperature by rememberSaveable { mutableStateOf(initial.referenceTemperature) }
                 var referencePhaseId by rememberSaveable { mutableStateOf(initial.referencePhaseId) }
+                var referencePhaseInput by rememberSaveable {
+                    mutableStateOf(
+                        phaseOptions.firstOrNull { it.first == initial.referencePhaseId }?.second.orEmpty()
+                    )
+                }
                 var referenceRms by rememberSaveable { mutableStateOf(initial.referenceRms) }
 
                 var additionalInfoId by rememberSaveable { mutableStateOf(initial.additionalInfoId) }
+                var additionalInfoInput by rememberSaveable {
+                    mutableStateOf(
+                        phaseOptions.firstOrNull { it.first == initial.additionalInfoId }?.second.orEmpty()
+                    )
+                }
                 var additionalRms by rememberSaveable { mutableStateOf(initial.additionalRms) }
 
                 var emissivityChecked by rememberSaveable { mutableStateOf(initial.emissivityChecked) }
@@ -215,6 +230,11 @@ fun ElectricProblemDialog(
                 var windSpeed by rememberSaveable { mutableStateOf(initial.windSpeed) }
 
                 var manufacturerId by rememberSaveable { mutableStateOf(initial.manufacturerId) }
+                var manufacturerInput by rememberSaveable {
+                    mutableStateOf(
+                        manufacturerOptions.firstOrNull { it.first == initial.manufacturerId }?.second.orEmpty()
+                    )
+                }
 
                 var ratedLoad by rememberSaveable { mutableStateOf(initial.ratedLoad) }
                 var circuitVoltage by rememberSaveable { mutableStateOf(initial.circuitVoltage) }
@@ -231,11 +251,11 @@ fun ElectricProblemDialog(
             val failureLabel = failureOptions.firstOrNull { it.first == failureId }?.second?.takeIf { it.isNotBlank() }
             val phaseLabel = phaseOptions.firstOrNull { it.first == componentPhaseId }?.second?.takeIf { it.isNotBlank() }
             val requiredFieldsFilled = listOf(
-                failureId?.isNotBlank() == true,
+                failureId?.isNotBlank() == true || failureInput.trim().isNotBlank(),
                 componentTemperature.trim().isNotBlank(),
-                componentPhaseId?.isNotBlank() == true,
+                componentPhaseId?.isNotBlank() == true || componentPhaseInput.trim().isNotBlank(),
                 referenceTemperature.trim().isNotBlank(),
-                referencePhaseId?.isNotBlank() == true
+                referencePhaseId?.isNotBlank() == true || referencePhaseInput.trim().isNotBlank()
             ).all { it }
 
             val autoCommentText = buildList {
@@ -293,13 +313,17 @@ fun ElectricProblemDialog(
             fun buildFormData(): ElectricProblemFormData =
                 ElectricProblemFormData(
                     failureId = failureId?.takeIf { it.isNotBlank() },
+                    failureText = failureInput.trim(),
                     componentTemperature = componentTemperature,
                     componentPhaseId = componentPhaseId,
+                    componentPhaseText = componentPhaseInput.trim(),
                     componentRms = componentRms,
                     referenceTemperature = referenceTemperature,
                     referencePhaseId = referencePhaseId,
+                    referencePhaseText = referencePhaseInput.trim(),
                     referenceRms = referenceRms,
                     additionalInfoId = additionalInfoId,
+                    additionalInfoText = additionalInfoInput.trim(),
                     additionalRms = additionalRms,
                     emissivityChecked = emissivityChecked,
                     emissivity = emissivity,
@@ -311,6 +335,7 @@ fun ElectricProblemDialog(
                     windSpeedChecked = windSpeedChecked,
                     windSpeed = windSpeed,
                     manufacturerId = manufacturerId,
+                    manufacturerText = manufacturerInput.trim(),
                     ratedLoad = ratedLoad,
                     circuitVoltage = circuitVoltage,
                     comments = comments,
@@ -540,8 +565,9 @@ fun ElectricProblemDialog(
                                         FilterableSelectorNoLabel(
                                             options = phaseOptions,
                                             selectedId = componentPhaseId,
+                                            selectedText = componentPhaseInput,
                                             onSelected = { componentPhaseId = it },
-                                            onAddClick = onAddComponentPhase
+                                            onTextChanged = { text -> componentPhaseInput = text }
                                         )
                                     }
 
@@ -576,8 +602,9 @@ fun ElectricProblemDialog(
                                         FilterableSelectorNoLabel(
                                             options = phaseOptions,
                                             selectedId = referencePhaseId,
+                                            selectedText = referencePhaseInput,
                                             onSelected = { referencePhaseId = it },
-                                            onAddClick = onAddReferencePhase
+                                            onTextChanged = { text -> referencePhaseInput = text }
                                         )
                                     }
                                     Column(Modifier.weight(0.1f)) {
@@ -604,8 +631,9 @@ fun ElectricProblemDialog(
                                         FilterableSelectorNoLabel(
                                             options = phaseOptions,
                                             selectedId = additionalInfoId,
+                                            selectedText = additionalInfoInput,
                                             onSelected = { additionalInfoId = it },
-                                            onAddClick = onAddAdditionalInfo
+                                            onTextChanged = { text -> additionalInfoInput = text }
                                         )
                                     }
                                     Column(Modifier.weight(0.1f)) {
@@ -717,8 +745,9 @@ fun ElectricProblemDialog(
                                         label = "Fabricante",
                                         options = manufacturerOptions,
                                         selectedId = manufacturerId,
+                                        selectedText = manufacturerInput,
                                         onSelected = { manufacturerId = it },
-                                        onAddClick = onAddManufacturer
+                                        onTextChanged = { text -> manufacturerInput = text }
                                     )
                                 }
 
@@ -754,8 +783,9 @@ fun ElectricProblemDialog(
                                     FilterableSelectorNoLabel(
                                         options = failureOptions,
                                         selectedId = failureId,
+                                        selectedText = failureInput,
                                         onSelected = { failureId = it },
-                                        onAddClick = onAddFailure,
+                                        onTextChanged = { text -> failureInput = text },
                                         ancho = 180.dp
                                     )
                                 }
@@ -842,13 +872,17 @@ fun ElectricProblemDialog(
 
 data class ElectricProblemFormData(
     val failureId: String? = null,
+    val failureText: String = "",
     val componentTemperature: String = "",
     val componentPhaseId: String? = null,
+    val componentPhaseText: String = "",
     val componentRms: String = "",
     val referenceTemperature: String = "",
     val referencePhaseId: String? = null,
+    val referencePhaseText: String = "",
     val referenceRms: String = "",
     val additionalInfoId: String? = null,
+    val additionalInfoText: String = "",
     val additionalRms: String = "",
     val emissivityChecked: Boolean = false,
     val emissivity: String = "",
@@ -860,6 +894,7 @@ data class ElectricProblemFormData(
     val windSpeedChecked: Boolean = false,
     val windSpeed: String = "",
     val manufacturerId: String? = null,
+    val manufacturerText: String = "",
     val ratedLoad: String = "",
     val circuitVoltage: String = "",
     val comments: String = "",
@@ -1122,41 +1157,22 @@ private fun DropdownSelector(
 }
 
 @Composable
-private fun AddInlineButton(
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Box(
-        modifier = modifier
-            .size(FIELD_HEIGHT)
-            .border(
-                FIELD_BORDER,
-                MaterialTheme.colorScheme.outline,
-                RoundedCornerShape(FIELD_RADIUS)
-            )
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = "+",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.primary
-        )
-    }
-}
-
-@Composable
 private fun FilterableSelectorNoLabel(
     options: List<Pair<String, String>>,
     selectedId: String?,
-    onSelected: (String) -> Unit,
-    onAddClick: () -> Unit,
+    selectedText: String,
+    onSelected: (String?) -> Unit,
+    onTextChanged: (String) -> Unit,
     ancho: Dp? = null,
     modifier: Modifier = Modifier
 ) {
     var expanded by remember { mutableStateOf(false) }
-    var query by remember(selectedId, options) {
-        mutableStateOf(options.firstOrNull { it.first == selectedId }?.second.orEmpty())
+    var query by remember(selectedId, selectedText, options) {
+        mutableStateOf(
+            selectedText.ifBlank {
+                options.firstOrNull { it.first == selectedId }?.second.orEmpty()
+            }
+        )
     }
 
     val normalizedQuery = query.trim()
@@ -1185,6 +1201,12 @@ private fun FilterableSelectorNoLabel(
                     value = query,
                     onValueChange = {
                         query = it
+                        onTextChanged(it)
+                        val exact = options.firstOrNull { option ->
+                            option.first.equals(it.trim(), ignoreCase = true) ||
+                                option.second.equals(it.trim(), ignoreCase = true)
+                        }
+                        onSelected(exact?.first)
                         expanded = true
                     },
                     singleLine = true,
@@ -1213,6 +1235,7 @@ private fun FilterableSelectorNoLabel(
                         },
                         onClick = {
                             query = text.ifBlank { id }
+                            onTextChanged(query)
                             expanded = false
                             onSelected(id)
                         }
@@ -1220,8 +1243,6 @@ private fun FilterableSelectorNoLabel(
                 }
             }
         }
-
-        AddInlineButton(onClick = onAddClick)
     }
 }
 
@@ -1230,16 +1251,18 @@ private fun FilterableSelector(
     label: String,
     options: List<Pair<String, String>>,
     selectedId: String?,
-    onSelected: (String) -> Unit,
-    onAddClick: () -> Unit
+    selectedText: String,
+    onSelected: (String?) -> Unit,
+    onTextChanged: (String) -> Unit
 ) {
     Column(Modifier.fillMaxWidth()) {
         Text(text = label, style = MaterialTheme.typography.labelSmall)
         FilterableSelectorNoLabel(
             options = options,
             selectedId = selectedId,
+            selectedText = selectedText,
             onSelected = onSelected,
-            onAddClick = onAddClick
+            onTextChanged = onTextChanged
         )
     }
 }

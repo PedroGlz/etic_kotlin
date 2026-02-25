@@ -36,6 +36,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Divider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -49,6 +50,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
@@ -110,8 +112,6 @@ fun VisualProblemDialog(
     onDigitalCamera: () -> Unit,
     onHazardSelected: (String) -> Unit,
     onSeveritySelected: (String) -> Unit,
-    onAddHazardIssue: () -> Unit = {},
-    onAddSeverity: () -> Unit = {},
     onCronicoClick: (() -> Unit)? = null,
     cronicoEnabled: Boolean = false,
     cronicoChecked: Boolean = false,
@@ -289,18 +289,17 @@ fun VisualProblemDialog(
                                     options = hazardIssues,
                                     selectedId = selectedHazardIssue,
                                     onSelected = onHazardSelected,
+                                    onTextChanged = onHazardSelected,
                                     modifier = Modifier.fillMaxWidth(),
-                                    isError = hazardError,
-                                    onAddClick = onAddHazardIssue
+                                    isError = hazardError
                                 )
-                                DropdownSelector(
+                                SimpleDropdownSelector(
                                     label = "Severidad *",
                                     options = severities,
                                     selectedId = selectedSeverity,
                                     onSelected = onSeveritySelected,
                                     modifier = Modifier.fillMaxWidth(),
-                                    isError = severityError,
-                                    onAddClick = onAddSeverity
+                                    isError = severityError
                                 )
                             }
 
@@ -437,9 +436,9 @@ private fun DropdownSelector(
     options: List<Pair<String, String>>,
     selectedId: String?,
     onSelected: (String) -> Unit,
+    onTextChanged: (String) -> Unit,
     modifier: Modifier = Modifier,
-    isError: Boolean = false,
-    onAddClick: () -> Unit = {}
+    isError: Boolean = false
 ) {
     Column(modifier) {
         Text(text = label, style = MaterialTheme.typography.labelSmall)
@@ -448,31 +447,7 @@ private fun DropdownSelector(
             selectedId = selectedId,
             onSelected = onSelected,
             isError = isError,
-            onAddClick = onAddClick
-        )
-    }
-}
-
-@Composable
-private fun AddInlineButton(
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Box(
-        modifier = modifier
-            .size(FIELD_HEIGHT)
-            .border(
-                FIELD_BORDER,
-                MaterialTheme.colorScheme.outline,
-                RoundedCornerShape(FIELD_RADIUS)
-            )
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = "+",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.primary
+            onTextChanged = onTextChanged
         )
     }
 }
@@ -484,11 +459,17 @@ private fun FilterableSelectorNoLabel(
     onSelected: (String) -> Unit,
     modifier: Modifier = Modifier,
     isError: Boolean = false,
-    onAddClick: () -> Unit = {}
+    onTextChanged: (String) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
-    var query by remember(selectedId, options) {
-        mutableStateOf(options.firstOrNull { it.first == selectedId }?.second.orEmpty())
+    var isFocused by remember { mutableStateOf(false) }
+    var query by remember {
+        mutableStateOf(options.firstOrNull { it.first == selectedId }?.second ?: selectedId.orEmpty())
+    }
+    LaunchedEffect(selectedId, options, isFocused, expanded) {
+        if (!isFocused && !expanded) {
+            query = options.firstOrNull { it.first == selectedId }?.second ?: selectedId.orEmpty()
+        }
     }
     val filtered = remember(query, options) {
         val q = query.trim()
@@ -518,11 +499,14 @@ private fun FilterableSelectorNoLabel(
                         value = query,
                         onValueChange = {
                             query = it
+                            onTextChanged(it)
                             expanded = true
                         },
                         singleLine = true,
                         textStyle = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurface),
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier
+                            .weight(1f)
+                            .onFocusChanged { isFocused = it.isFocused }
                     )
                     Text(
                         text = "▼",
@@ -543,13 +527,72 @@ private fun FilterableSelectorNoLabel(
                         onClick = {
                             expanded = false
                             query = text.ifBlank { id }
+                            onTextChanged(query)
                             onSelected(id)
                         }
                     )
                 }
             }
         }
-        AddInlineButton(onClick = onAddClick)
+    }
+}
+
+@Composable
+private fun SimpleDropdownSelector(
+    label: String,
+    options: List<Pair<String, String>>,
+    selectedId: String?,
+    onSelected: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    isError: Boolean = false
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val outlineColor = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.outline
+    val selectedLabel = options.firstOrNull {
+        it.first.equals(selectedId.orEmpty(), ignoreCase = true) ||
+            it.second.equals(selectedId.orEmpty(), ignoreCase = true)
+    }?.second.orEmpty()
+
+    Column(modifier) {
+        Text(text = label, style = MaterialTheme.typography.labelSmall)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(FIELD_HEIGHT)
+                .border(FIELD_BORDER, outlineColor, RoundedCornerShape(FIELD_RADIUS))
+                .padding(FIELD_PADDING)
+                .clickable(enabled = options.isNotEmpty()) { expanded = true },
+            contentAlignment = Alignment.CenterStart
+        ) {
+            Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = selectedLabel.ifBlank { "Seleccionar" },
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.weight(1f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = "▼",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false }
+        ) {
+            options.forEach { (id, text) ->
+                DropdownMenuItem(
+                    text = { Text(text.ifBlank { id }) },
+                    onClick = {
+                        expanded = false
+                        onSelected(id)
+                    }
+                )
+            }
+        }
     }
 }
 

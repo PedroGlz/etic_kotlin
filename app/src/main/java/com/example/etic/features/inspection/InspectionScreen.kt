@@ -343,6 +343,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
     val fabricanteDao = remember { com.example.etic.data.local.DbProvider.get(ctx).fabricanteDao() }
     val faseDao = remember { com.example.etic.data.local.DbProvider.get(ctx).faseDao() }
     val tipoAmbienteDao = remember { com.example.etic.data.local.DbProvider.get(ctx).tipoAmbienteDao() }
+    val tipoFallaDao = remember { com.example.etic.data.local.DbProvider.get(ctx).tipoFallaDao() }
     val currentInspection = LocalCurrentInspection.current
     val inspectionNumero = currentInspection?.noInspeccion?.toString()
     val rootTitle = currentInspection?.nombreSitio ?: "Sitio"
@@ -1123,11 +1124,11 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
 
             fun validateElectricForNavigation(formData: ElectricProblemFormData): Boolean {
                 val missing = buildList {
-                    if (formData.failureId.isNullOrBlank()) add("Falla")
+                    if (formData.failureId.isNullOrBlank() && formData.failureText.isBlank()) add("Falla")
                     if (formData.componentTemperature.isBlank()) add("Temp. componente")
-                    if (formData.componentPhaseId.isNullOrBlank()) add("Fase componente")
+                    if (formData.componentPhaseId.isNullOrBlank() && formData.componentPhaseText.isBlank()) add("Fase componente")
                     if (formData.referenceTemperature.isBlank()) add("Temp. referencia")
-                    if (formData.referencePhaseId.isNullOrBlank()) add("Fase referencia")
+                    if (formData.referencePhaseId.isNullOrBlank() && formData.referencePhaseText.isBlank()) add("Fase referencia")
                     if (pendingThermalImage.isBlank()) add("Imagen térmica")
                     if (pendingDigitalImage.isBlank()) add("Imagen digital")
                 }
@@ -1144,7 +1145,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
 
             fun validateMechanicalForNavigation(formData: MechanicalProblemFormData): Boolean {
                 val missing = buildList {
-                    if (formData.failureId.isNullOrBlank()) add("Falla")
+                    if (formData.failureId.isNullOrBlank() && formData.failureText.isBlank()) add("Falla")
                     if (formData.componentTemperature.isBlank()) add("Temp. componente")
                     if (formData.referenceTemperature.isBlank()) add("Temp. referencia")
                     if (pendingThermalImage.isBlank()) add("Imagen térmica")
@@ -1163,7 +1164,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
 
             fun validateAislamientoTermicoForNavigation(formData: AislamientoTermicoProblemFormData): Boolean {
                 val missing = buildList {
-                    if (formData.failureId.isNullOrBlank()) add("Falla")
+                    if (formData.failureId.isNullOrBlank() && formData.failureText.isBlank()) add("Falla")
                     if (formData.componentTemperature.isBlank()) add("Temp. componente")
                     if (formData.referenceTemperature.isBlank()) add("Temp. referencia")
                     if (pendingThermalImage.isBlank()) add("Imagen térmica")
@@ -2048,6 +2049,115 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     }
                 }
             }
+
+            suspend fun ensureFabricanteId(
+                existingId: String?,
+                inputText: String,
+                tipoInspeccionId: String?
+            ): String? = withContext(Dispatchers.IO) {
+                existingId?.takeIf { it.isNotBlank() }?.let { return@withContext it }
+                val name = inputText.trim().uppercase(Locale.getDefault())
+                if (name.isBlank()) return@withContext null
+
+                val existing = runCatching { fabricanteDao.findByName(name) }.getOrNull()
+                if (existing != null) return@withContext existing.idFabricante
+
+                val nowTs = java.time.LocalDateTime.now()
+                    .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+                val created = com.example.etic.data.local.entities.Fabricante(
+                    idFabricante = java.util.UUID.randomUUID().toString().uppercase(),
+                    idTipoInspeccion = tipoInspeccionId,
+                    fabricante = name,
+                    estatus = "Activo",
+                    creadoPor = currentUser?.idUsuario,
+                    fechaCreacion = nowTs,
+                    idInspeccion = currentInspection?.idInspeccion,
+                    idSitio = currentInspection?.idSitio
+                )
+                runCatching { fabricanteDao.insert(created) }
+                created.idFabricante
+            }
+
+            suspend fun ensureFaseId(existingId: String?, inputText: String): String? =
+                withContext(Dispatchers.IO) {
+                    existingId?.takeIf { it.isNotBlank() }?.let { return@withContext it }
+                    val name = inputText.trim().uppercase(Locale.getDefault())
+                    if (name.isBlank()) return@withContext null
+
+                    val existing = runCatching { faseDao.findByName(name) }.getOrNull()
+                    if (existing != null) return@withContext existing.idFase
+
+                    val nowTs = java.time.LocalDateTime.now()
+                        .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+                    val created = com.example.etic.data.local.entities.Fase(
+                        idFase = java.util.UUID.randomUUID().toString().uppercase(),
+                        nombreFase = name,
+                        estatus = "Activo",
+                        creadoPor = currentUser?.idUsuario,
+                        fechaCreacion = nowTs,
+                        idInspeccion = currentInspection?.idInspeccion,
+                        idSitio = currentInspection?.idSitio
+                    )
+                    runCatching { faseDao.insert(created) }
+                    created.idFase
+                }
+
+            suspend fun ensureFallaId(
+                existingId: String?,
+                inputText: String,
+                tipoInspeccionId: String?
+            ): String? = withContext(Dispatchers.IO) {
+                existingId?.takeIf { it.isNotBlank() }?.let { return@withContext it }
+                val name = inputText.trim().uppercase(Locale.getDefault())
+                if (name.isBlank()) return@withContext null
+
+                val existing = runCatching {
+                    fallaDao.findByNameAndTipoInspeccion(name, tipoInspeccionId)
+                }.getOrNull()
+                if (existing != null) return@withContext existing.idFalla
+
+                var tipoFallaId: String? = null
+                if (!tipoInspeccionId.isNullOrBlank()) {
+                    tipoFallaId = runCatching {
+                        tipoFallaDao.findFirstByTipoInspeccion(tipoInspeccionId)?.idTipoFalla
+                    }.getOrNull()
+                    if (tipoFallaId.isNullOrBlank()) {
+                        val nowTs = java.time.LocalDateTime.now()
+                            .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+                        val newTipoFalla =
+                            com.example.etic.data.local.entities.TipoFalla(
+                                idTipoFalla = java.util.UUID.randomUUID().toString().uppercase(),
+                                idTipoInspeccion = tipoInspeccionId,
+                                tipoFalla = "GENERAL",
+                                descTipoFalla = "GENERADO AUTOMATICAMENTE",
+                                estatus = "Activo",
+                                creadoPor = currentUser?.idUsuario,
+                                fechaCreacion = nowTs,
+                                idInspeccion = currentInspection?.idInspeccion,
+                                idSitio = currentInspection?.idSitio
+                            )
+                        runCatching { tipoFallaDao.insert(newTipoFalla) }
+                        tipoFallaId = newTipoFalla.idTipoFalla
+                    }
+                }
+
+                val nowTs = java.time.LocalDateTime.now()
+                    .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+                val created = com.example.etic.data.local.entities.Falla(
+                    idFalla = java.util.UUID.randomUUID().toString().uppercase(),
+                    idTipoFalla = tipoFallaId,
+                    idTipoInspeccion = tipoInspeccionId,
+                    falla = name,
+                    estatus = "Activo",
+                    creadoPor = currentUser?.idUsuario,
+                    fechaCreacion = nowTs,
+                    idInspeccion = currentInspection?.idInspeccion,
+                    idSitio = currentInspection?.idSitio
+                )
+                runCatching { fallaDao.insert(created) }
+                created.idFalla
+            }
+
             fun saveElectricProblem(formData: ElectricProblemFormData) {
                 val inspection = currentInspection
                 if (inspection == null) {
@@ -2063,6 +2173,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     Toast.makeText(ctx, "Carga las imágenes térmica y digital para guardar el problema.", Toast.LENGTH_SHORT).show()
                     return
                 }
+                val typeId = ELECTRIC_PROBLEM_TYPE_ID ?: "0D32B331-76C3-11D3-82BF-00104BC75DC2"
                 val navigationSave = editingElectricProblemId != null && problemNavList.isNotEmpty()
                 if (navigationSave) {
                     if (!validateElectricForNavigation(formData)) return
@@ -2071,8 +2182,32 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                         if (isSavingElectricProblem) return@launch
                         isSavingElectricProblem = true
                         try {
+                            val resolvedFormData = formData.copy(
+                                failureId = ensureFallaId(
+                                    existingId = formData.failureId,
+                                    inputText = formData.failureText,
+                                    tipoInspeccionId = typeId
+                                ),
+                                componentPhaseId = ensureFaseId(
+                                    existingId = formData.componentPhaseId,
+                                    inputText = formData.componentPhaseText
+                                ),
+                                referencePhaseId = ensureFaseId(
+                                    existingId = formData.referencePhaseId,
+                                    inputText = formData.referencePhaseText
+                                ),
+                                additionalInfoId = ensureFaseId(
+                                    existingId = formData.additionalInfoId,
+                                    inputText = formData.additionalInfoText
+                                ),
+                                manufacturerId = ensureFabricanteId(
+                                    existingId = formData.manufacturerId,
+                                    inputText = formData.manufacturerText,
+                                    tipoInspeccionId = typeId
+                                )
+                            )
                             val draft = ProblemDraft.ElectricDraft(
-                                formData = formData,
+                                formData = resolvedFormData,
                                 thermalImage = pendingThermalImage,
                                 digitalImage = pendingDigitalImage,
                                 closed = electricProblemClosed
@@ -2088,24 +2223,46 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     }
                     return
                 }
-                val typeId = ELECTRIC_PROBLEM_TYPE_ID ?: "0D32B331-76C3-11D3-82BF-00104BC75DC2"
                 val numero = pendingProblemNumber.toIntOrNull() ?: 1
                 scope.launch {
                     if (isSavingElectricProblem) return@launch
                     isSavingElectricProblem = true
                     try {
+                        val resolvedFailureId = ensureFallaId(
+                            existingId = formData.failureId,
+                            inputText = formData.failureText,
+                            tipoInspeccionId = typeId
+                        )
+                        val resolvedComponentPhaseId = ensureFaseId(
+                            existingId = formData.componentPhaseId,
+                            inputText = formData.componentPhaseText
+                        )
+                        val resolvedReferencePhaseId = ensureFaseId(
+                            existingId = formData.referencePhaseId,
+                            inputText = formData.referencePhaseText
+                        )
+                        val resolvedAdditionalInfoId = ensureFaseId(
+                            existingId = formData.additionalInfoId,
+                            inputText = formData.additionalInfoText
+                        )
+                        val resolvedManufacturerId = ensureFabricanteId(
+                            existingId = formData.manufacturerId,
+                            inputText = formData.manufacturerText,
+                            tipoInspeccionId = typeId
+                        )
+
                         val componentTemp = formData.componentTemperature.toDoubleOrNull()
                         val referenceTemp = formData.referenceTemperature.toDoubleOrNull()
                         val difference = componentTemp?.let { comp ->
                             referenceTemp?.let { ref -> comp - ref }
                         }
                         val severityId = calculateSeverityId(difference)
-                        val failureLabel = formData.failureId?.let { id ->
+                        val failureLabel = resolvedFailureId?.let { id ->
                             electricHazardOptions.firstOrNull { it.first == id }?.second
-                        }
-                        val phaseLabel = formData.componentPhaseId?.let { id ->
+                        } ?: formData.failureText.takeIf { it.isNotBlank() }
+                        val phaseLabel = resolvedComponentPhaseId?.let { id ->
                             electricPhaseOptions.firstOrNull { it.first == id }?.second
-                        }
+                        } ?: formData.componentPhaseText.takeIf { it.isNotBlank() }
                         val emissivityInput = formData.emissivity.trim()
                         val emissivityValue = emissivityInput.replace(',', '.').toDoubleOrNull()
                         if (formData.emissivityChecked) {
@@ -2139,11 +2296,11 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                             editingElectricProblem!!.copy(
                                 problemTemperature = componentTemp,
                                 referenceTemperature = referenceTemp,
-                                problemPhase = formData.componentPhaseId,
-                                referencePhase = formData.referencePhaseId,
+                                problemPhase = resolvedComponentPhaseId,
+                                referencePhase = resolvedReferencePhaseId,
                                 problemRms = formData.componentRms.toDoubleOrNull(),
                                 referenceRms = formData.referenceRms.toDoubleOrNull(),
-                                additionalInfo = formData.additionalInfoId,
+                                additionalInfo = resolvedAdditionalInfoId,
                                 additionalRms = formData.additionalRms.toDoubleOrNull(),
                                 emissivityCheck = if (formData.emissivityChecked) "on" else "off",
                                 emissivity = emissivityValue,
@@ -2154,10 +2311,10 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                 environment = formData.environmentId,
                                 windSpeedCheck = if (formData.windSpeedChecked) "on" else "off",
                                 windSpeed = formData.windSpeed.toDoubleOrNull(),
-                                idFabricante = formData.manufacturerId,
+                                idFabricante = resolvedManufacturerId,
                                 ratedLoad = formData.ratedLoad.takeIf { it.isNotBlank() },
                                 circuitVoltage = formData.circuitVoltage.takeIf { it.isNotBlank() },
-                                idFalla = formData.failureId,
+                                idFalla = resolvedFailureId,
                                 componentComment = finalComment,
                                 estatusProblema = if (electricProblemClosed) "Cerrado" else "Abierto",
                                 cerradoEnInspeccion = if (electricProblemClosed) inspection.idInspeccion else editingElectricProblem.cerradoEnInspeccion,
@@ -2180,11 +2337,11 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                 idUbicacion = locationId,
                                 problemTemperature = componentTemp,
                                 referenceTemperature = referenceTemp,
-                                problemPhase = formData.componentPhaseId,
-                                referencePhase = formData.referencePhaseId,
+                                problemPhase = resolvedComponentPhaseId,
+                                referencePhase = resolvedReferencePhaseId,
                                 problemRms = formData.componentRms.toDoubleOrNull(),
                                 referenceRms = formData.referenceRms.toDoubleOrNull(),
-                                additionalInfo = formData.additionalInfoId,
+                                additionalInfo = resolvedAdditionalInfoId,
                                 additionalRms = formData.additionalRms.toDoubleOrNull(),
                                 emissivityCheck = if (formData.emissivityChecked) "on" else "off",
                                 emissivity = emissivityValue,
@@ -2195,12 +2352,12 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                 environment = formData.environmentId,
                                 windSpeedCheck = if (formData.windSpeedChecked) "on" else "off",
                                 windSpeed = formData.windSpeed.toDoubleOrNull(),
-                                idFabricante = formData.manufacturerId,
+                                idFabricante = resolvedManufacturerId,
                                 ratedLoadCheck = "off",
                                 ratedLoad = formData.ratedLoad.takeIf { it.isNotBlank() },
                                 circuitVoltageCheck = "off",
                                 circuitVoltage = formData.circuitVoltage.takeIf { it.isNotBlank() },
-                                idFalla = formData.failureId,
+                                idFalla = resolvedFailureId,
                                 componentComment = finalComment,
                                 estatusProblema = "Abierto",
                                 aumentoTemperatura = difference,
@@ -2220,6 +2377,26 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                             else runCatching { problemaDao.insert(problema) }
                         }
                         if (result.isSuccess) {
+                            val refreshedFabricantes = withContext(Dispatchers.IO) {
+                                runCatching { fabricanteDao.getAllActivos() }.getOrElse { emptyList() }
+                                    .sortedBy { it.fabricante?.lowercase(Locale.getDefault()) ?: "" }
+                            }
+                            fabricanteOptionsCache = refreshedFabricantes
+                            val refreshedFases = withContext(Dispatchers.IO) {
+                                runCatching { faseDao.getAllActivos() }.getOrElse { emptyList() }
+                                    .sortedBy { it.nombreFase?.lowercase(Locale.getDefault()) ?: "" }
+                                    .map { it.idFase to (it.nombreFase ?: it.idFase) }
+                            }
+                            electricPhaseOptionsCache = refreshedFases
+                            val refreshedFallas = withContext(Dispatchers.IO) {
+                                runCatching { fallaDao.getByTipoInspeccion(typeId) }.getOrElse { emptyList() }
+                                    .map { it.idFalla to (it.falla ?: it.idFalla) }
+                                    .sortedBy { it.second.lowercase(Locale.getDefault()) }
+                            }
+                            hazardOptionsByType = hazardOptionsByType.toMutableMap().apply {
+                                this[typeId] = refreshedFallas
+                            }
+
                             if (detRow != null) {
                                 val updatedDet = detRow.copy(
                                     idStatusInspeccionDet = "568798D2-76BB-11D3-82BF-00104BC75DC2",
@@ -2272,6 +2449,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     Toast.makeText(ctx, "Carga las imágenes térmica y digital para guardar el problema.", Toast.LENGTH_SHORT).show()
                     return
                 }
+                val typeId = MECHANICAL_PROBLEM_TYPE_ID ?: "0D32B334-76C3-11D3-82BF-00104BC75DC2"
                 val navigationSave = editingMechanicalProblemId != null && problemNavList.isNotEmpty()
                 if (navigationSave) {
                     if (!validateMechanicalForNavigation(formData)) return
@@ -2280,8 +2458,20 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                         if (isSavingMechanicalProblem) return@launch
                         isSavingMechanicalProblem = true
                         try {
+                            val resolvedFormData = formData.copy(
+                                failureId = ensureFallaId(
+                                    existingId = formData.failureId,
+                                    inputText = formData.failureText,
+                                    tipoInspeccionId = typeId
+                                ),
+                                manufacturerId = ensureFabricanteId(
+                                    existingId = formData.manufacturerId,
+                                    inputText = formData.manufacturerText,
+                                    tipoInspeccionId = typeId
+                                )
+                            )
                             val draft = ProblemDraft.MechanicalDraft(
-                                formData = formData,
+                                formData = resolvedFormData,
                                 thermalImage = pendingThermalImage,
                                 digitalImage = pendingDigitalImage,
                                 closed = mechanicalProblemClosed
@@ -2297,21 +2487,31 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     }
                     return
                 }
-                val typeId = MECHANICAL_PROBLEM_TYPE_ID ?: "0D32B334-76C3-11D3-82BF-00104BC75DC2"
                 val numero = pendingProblemNumber.toIntOrNull() ?: 1
                 scope.launch {
                     if (isSavingMechanicalProblem) return@launch
                     isSavingMechanicalProblem = true
                     try {
+                        val resolvedFailureId = ensureFallaId(
+                            existingId = formData.failureId,
+                            inputText = formData.failureText,
+                            tipoInspeccionId = typeId
+                        )
+                        val resolvedManufacturerId = ensureFabricanteId(
+                            existingId = formData.manufacturerId,
+                            inputText = formData.manufacturerText,
+                            tipoInspeccionId = typeId
+                        )
+
                         val componentTemp = formData.componentTemperature.toDoubleOrNull()
                         val referenceTemp = formData.referenceTemperature.toDoubleOrNull()
                         val difference = componentTemp?.let { comp ->
                             referenceTemp?.let { ref -> comp - ref }
                         }
                         val severityId = calculateSeverityId(difference)
-                        val failureLabel = formData.failureId?.let { id ->
+                        val failureLabel = resolvedFailureId?.let { id ->
                             electricHazardOptions.firstOrNull { it.first == id }?.second
-                        }
+                        } ?: formData.failureText.takeIf { it.isNotBlank() }
                         val emissivityInput = formData.emissivity.trim()
                         val emissivityValue = emissivityInput.replace(',', '.').toDoubleOrNull()
                         if (formData.emissivityChecked) {
@@ -2363,12 +2563,12 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                 environment = formData.environmentId,
                                 windSpeedCheck = "off",
                                 windSpeed = null,
-                                idFabricante = formData.manufacturerId,
+                                idFabricante = resolvedManufacturerId,
                                 ratedLoadCheck = "off",
                                 ratedLoad = formData.ratedLoad.takeIf { it.isNotBlank() },
                                 circuitVoltageCheck = "off",
                                 circuitVoltage = formData.circuitVoltage.takeIf { it.isNotBlank() },
-                                idFalla = formData.failureId,
+                                idFalla = resolvedFailureId,
                                 componentComment = finalComment,
                                 estatusProblema = if (mechanicalProblemClosed) "Cerrado" else "Abierto",
                                 cerradoEnInspeccion = if (mechanicalProblemClosed) inspection.idInspeccion else editingProblem.cerradoEnInspeccion,
@@ -2410,12 +2610,12 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                 environment = formData.environmentId,
                                 windSpeedCheck = "off",
                                 windSpeed = null,
-                                idFabricante = formData.manufacturerId,
+                                idFabricante = resolvedManufacturerId,
                                 ratedLoadCheck = "off",
                                 ratedLoad = formData.ratedLoad.takeIf { it.isNotBlank() },
                                 circuitVoltageCheck = "off",
                                 circuitVoltage = formData.circuitVoltage.takeIf { it.isNotBlank() },
-                                idFalla = formData.failureId,
+                                idFalla = resolvedFailureId,
                                 componentComment = finalComment,
                                 estatusProblema = "Abierto",
                                 aumentoTemperatura = difference,
@@ -2436,6 +2636,20 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                             else runCatching { problemaDao.insert(problema) }
                         }
                         if (result.isSuccess) {
+                            val refreshedFabricantes = withContext(Dispatchers.IO) {
+                                runCatching { fabricanteDao.getAllActivos() }.getOrElse { emptyList() }
+                                    .sortedBy { it.fabricante?.lowercase(Locale.getDefault()) ?: "" }
+                            }
+                            fabricanteOptionsCache = refreshedFabricantes
+                            val refreshedFallas = withContext(Dispatchers.IO) {
+                                runCatching { fallaDao.getByTipoInspeccion(typeId) }.getOrElse { emptyList() }
+                                    .map { it.idFalla to (it.falla ?: it.idFalla) }
+                                    .sortedBy { it.second.lowercase(Locale.getDefault()) }
+                            }
+                            hazardOptionsByType = hazardOptionsByType.toMutableMap().apply {
+                                this[typeId] = refreshedFallas
+                            }
+
                             if (detRow != null) {
                                 val updatedDet = detRow.copy(
                                     idStatusInspeccionDet = "568798D2-76BB-11D3-82BF-00104BC75DC2",
@@ -2488,6 +2702,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     Toast.makeText(ctx, "Carga las imágenes térmica y digital para guardar el problema.", Toast.LENGTH_SHORT).show()
                     return
                 }
+                val typeId = AISLAMIENTO_TERMICO_PROBLEM_TYPE_ID ?: "0D32B335-76C3-11D3-82BF-00104BC75DC2"
                 val navigationSave = editingAislamientoTermicoProblemId != null && problemNavList.isNotEmpty()
                 if (navigationSave) {
                     if (!validateAislamientoTermicoForNavigation(formData)) return
@@ -2496,8 +2711,20 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                         if (isSavingAislamientoTermicoProblem) return@launch
                         isSavingAislamientoTermicoProblem = true
                         try {
+                            val resolvedFormData = formData.copy(
+                                failureId = ensureFallaId(
+                                    existingId = formData.failureId,
+                                    inputText = formData.failureText,
+                                    tipoInspeccionId = typeId
+                                ),
+                                manufacturerId = ensureFabricanteId(
+                                    existingId = formData.manufacturerId,
+                                    inputText = formData.manufacturerText,
+                                    tipoInspeccionId = typeId
+                                )
+                            )
                             val draft = ProblemDraft.AislamientoTermicoDraft(
-                                formData = formData,
+                                formData = resolvedFormData,
                                 thermalImage = pendingThermalImage,
                                 digitalImage = pendingDigitalImage,
                                 closed = aislamientoTermicoProblemClosed
@@ -2513,21 +2740,31 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     }
                     return
                 }
-                val typeId = AISLAMIENTO_TERMICO_PROBLEM_TYPE_ID ?: "0D32B335-76C3-11D3-82BF-00104BC75DC2"
                 val numero = pendingProblemNumber.toIntOrNull() ?: 1
                 scope.launch {
                     if (isSavingAislamientoTermicoProblem) return@launch
                     isSavingAislamientoTermicoProblem = true
                     try {
+                        val resolvedFailureId = ensureFallaId(
+                            existingId = formData.failureId,
+                            inputText = formData.failureText,
+                            tipoInspeccionId = typeId
+                        )
+                        val resolvedManufacturerId = ensureFabricanteId(
+                            existingId = formData.manufacturerId,
+                            inputText = formData.manufacturerText,
+                            tipoInspeccionId = typeId
+                        )
+
                         val componentTemp = formData.componentTemperature.toDoubleOrNull()
                         val referenceTemp = formData.referenceTemperature.toDoubleOrNull()
                         val difference = componentTemp?.let { comp ->
                             referenceTemp?.let { ref -> comp - ref }
                         }
                         val severityId = calculateSeverityId(difference)
-                        val failureLabel = formData.failureId?.let { id ->
+                        val failureLabel = resolvedFailureId?.let { id ->
                             electricHazardOptions.firstOrNull { it.first == id }?.second
-                        }
+                        } ?: formData.failureText.takeIf { it.isNotBlank() }
                         val emissivityInput = formData.emissivity.trim()
                         val emissivityValue = emissivityInput.replace(',', '.').toDoubleOrNull()
                         if (formData.emissivityChecked) {
@@ -2579,12 +2816,12 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                 environment = formData.environmentId,
                                 windSpeedCheck = "off",
                                 windSpeed = null,
-                                idFabricante = formData.manufacturerId,
+                                idFabricante = resolvedManufacturerId,
                                 ratedLoadCheck = "off",
                                 ratedLoad = formData.ratedLoad.takeIf { it.isNotBlank() },
                                 circuitVoltageCheck = "off",
                                 circuitVoltage = formData.circuitVoltage.takeIf { it.isNotBlank() },
-                                idFalla = formData.failureId,
+                                idFalla = resolvedFailureId,
                                 componentComment = finalComment,
                                 estatusProblema = if (aislamientoTermicoProblemClosed) "Cerrado" else "Abierto",
                                 cerradoEnInspeccion = if (aislamientoTermicoProblemClosed) inspection.idInspeccion else editingProblem.cerradoEnInspeccion,
@@ -2626,12 +2863,12 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                 environment = formData.environmentId,
                                 windSpeedCheck = "off",
                                 windSpeed = null,
-                                idFabricante = formData.manufacturerId,
+                                idFabricante = resolvedManufacturerId,
                                 ratedLoadCheck = "off",
                                 ratedLoad = formData.ratedLoad.takeIf { it.isNotBlank() },
                                 circuitVoltageCheck = "off",
                                 circuitVoltage = formData.circuitVoltage.takeIf { it.isNotBlank() },
-                                idFalla = formData.failureId,
+                                idFalla = resolvedFailureId,
                                 componentComment = finalComment,
                                 estatusProblema = "Abierto",
                                 aumentoTemperatura = difference,
@@ -2652,6 +2889,20 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                             else runCatching { problemaDao.insert(problema) }
                         }
                         if (result.isSuccess) {
+                            val refreshedFabricantes = withContext(Dispatchers.IO) {
+                                runCatching { fabricanteDao.getAllActivos() }.getOrElse { emptyList() }
+                                    .sortedBy { it.fabricante?.lowercase(Locale.getDefault()) ?: "" }
+                            }
+                            fabricanteOptionsCache = refreshedFabricantes
+                            val refreshedFallas = withContext(Dispatchers.IO) {
+                                runCatching { fallaDao.getByTipoInspeccion(typeId) }.getOrElse { emptyList() }
+                                    .map { it.idFalla to (it.falla ?: it.idFalla) }
+                                    .sortedBy { it.second.lowercase(Locale.getDefault()) }
+                            }
+                            hazardOptionsByType = hazardOptionsByType.toMutableMap().apply {
+                                this[typeId] = refreshedFallas
+                            }
+
                             if (detRow != null) {
                                 val updatedDet = detRow.copy(
                                     idStatusInspeccionDet = "568798D2-76BB-11D3-82BF-00104BC75DC2",
@@ -3185,12 +3436,19 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     canNavigatePrevious = canNavigatePrevious,
                     canNavigateNext = canNavigateNext,
                     onHazardSelected = { selected ->
-                        val normalized = selected.takeIf { it.isNotBlank() }
-                        pendingHazardId = normalized
-                        pendingHazardLabel = visualHazardOptionsForDialog.firstOrNull {
-                            it.first.equals(normalized, ignoreCase = true)
-                        }?.second
-                        pendingObservation = buildVisualObservation(normalized, pendingProblemEquipmentName)
+                        val normalized = selected.trim().takeIf { it.isNotBlank() }
+                        val match = normalized?.let { value ->
+                            visualHazardOptionsForDialog.firstOrNull {
+                                it.first.equals(value, ignoreCase = true) ||
+                                    it.second.equals(value, ignoreCase = true)
+                            }
+                        }
+                        pendingHazardId = match?.first
+                        pendingHazardLabel = match?.second ?: normalized
+                        pendingObservation = buildVisualObservation(
+                            pendingHazardId ?: pendingHazardLabel,
+                            pendingProblemEquipmentName
+                        )
                     },
                     onSeveritySelected = { selected ->
                         val normalized = selected.takeIf { it.isNotBlank() }
@@ -3258,7 +3516,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                             return@VisualProblemDialog
                         }
                         val missing = buildList {
-                            if (hazardId.isNullOrBlank()) add("Problema")
+                            if (hazardId.isNullOrBlank() && pendingHazardLabel.isNullOrBlank()) add("Problema")
                             if (severityId.isNullOrBlank()) add("Severidad")
                             if (thermal.isBlank()) add("Imagen térmica")
                             if (digital.isBlank()) add("Imagen digital")
@@ -3275,9 +3533,20 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                 val resolvedRoute = pendingProblemRoute
                                     ?: ubicacionId?.let { titlePathForId(nodes, it).joinToString(" / ") }
                                     ?: "-"
-                                val hazardLabel = visualHazardOptionsFixed.firstOrNull { it.first == hazardId }?.second
+                                val resolvedHazardId = ensureFallaId(
+                                    existingId = hazardId,
+                                    inputText = pendingHazardLabel ?: hazardId.orEmpty(),
+                                    tipoInspeccionId = typeId
+                                )
+                                if (resolvedHazardId.isNullOrBlank()) {
+                                    Toast.makeText(ctx, "Debe capturar una falla válida.", Toast.LENGTH_SHORT).show()
+                                    return@launch
+                                }
+                                val hazardLabel = visualHazardOptionsFixed.firstOrNull {
+                                    it.first.equals(resolvedHazardId, ignoreCase = true)
+                                }?.second ?: pendingHazardLabel
                                 val comment = pendingObservation.ifBlank {
-                                    buildVisualObservation(hazardId, pendingProblemEquipmentName)
+                                    buildVisualObservation(resolvedHazardId, pendingProblemEquipmentName)
                                 }
                                 val nowTs = java.time.LocalDateTime.now()
                                     .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
@@ -3300,8 +3569,8 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                         idInspeccion = inspection.idInspeccion,
                                         idInspeccionDet = detId,
                                         idUbicacion = ubicacionId,
-                                        hazardIssue = hazardId,
-                                        idFalla = hazardId,
+                                        hazardIssue = resolvedHazardId,
+                                        idFalla = resolvedHazardId,
                                         idSeveridad = severityId,
                                         componentComment = comment,
                                         ruta = resolvedRoute,
@@ -3328,8 +3597,8 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                         val updated = base.copy(
                                             idInspeccionDet = detId,
                                             idUbicacion = ubicacionId,
-                                            hazardIssue = hazardId,
-                                            idFalla = hazardId,
+                                            hazardIssue = resolvedHazardId,
+                                            idFalla = resolvedHazardId,
                                             idSeveridad = severityId,
                                             componentComment = comment,
                                             ruta = resolvedRoute,
@@ -3346,6 +3615,15 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                     }
                                 } ?: return@launch
                                 if (operationResult.isSuccess) {
+                                    val refreshedFallas = withContext(Dispatchers.IO) {
+                                        runCatching { fallaDao.getByTipoInspeccion(typeId) }.getOrElse { emptyList() }
+                                            .map { it.idFalla to (it.falla ?: it.idFalla) }
+                                            .sortedBy { it.second.lowercase(Locale.getDefault()) }
+                                    }
+                                    hazardOptionsByType = hazardOptionsByType.toMutableMap().apply {
+                                        this[typeId] = refreshedFallas
+                                    }
+
                                     if (detRow != null) {
                                         val updatedDet = detRow.copy(
                                             idStatusInspeccionDet = "568798D2-76BB-11D3-82BF-00104BC75DC2",
@@ -3777,6 +4055,11 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                             val nowTs = java.time.LocalDateTime.now()
                                 .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
                             val existing = if (isEdit) runCatching { ubicacionDao.getById(id) }.getOrNull() else null
+                            val resolvedFabricanteId = ensureFabricanteId(
+                                existingId = locationForm.fabricanteId,
+                                inputText = locationForm.fabricanteLabel,
+                                tipoInspeccionId = null
+                            )
 
                             val nueva = com.example.etic.data.local.entities.Ubicacion(
                                 idUbicacion = id,
@@ -3787,7 +4070,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                 descripcion = locationForm.description.trim().ifBlank { null },
                                 esEquipo = if (locationForm.isEquipment) "SI" else "NO",
                                 codigoBarras = locationForm.barcode.trim().ifBlank { null },
-                                fabricante = locationForm.fabricanteId,
+                                fabricante = resolvedFabricanteId,
                                 ruta = ruta,
                                 estatus = "Activo",
                                 creadoPor = existing?.creadoPor ?: currentUserId,
@@ -3815,6 +4098,10 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                 )
                             }.getOrDefault(false)
                             if (okUb) {
+                                fabricanteOptionsCache = withContext(Dispatchers.IO) {
+                                    runCatching { fabricanteDao.getAllActivos() }.getOrElse { emptyList() }
+                                        .sortedBy { it.fabricante?.lowercase(Locale.getDefault()) ?: "" }
+                                }
                                 val parentToExpand = when (parentForCalc) {
                                     null, "0" -> rootId
                                     else -> parentForCalc
@@ -4002,7 +4289,17 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                                 locationForm.fabricanteId = id
                                                 locationForm.fabricanteExpanded = false
                                             },
-                                            onAddClick = {}
+                                            onTextChanged = { text ->
+                                                locationForm.fabricanteLabel = text
+                                                val exact = fabricanteOptions.firstOrNull { option ->
+                                                    option.idFabricante.equals(text.trim(), ignoreCase = true) ||
+                                                        (option.fabricante ?: option.idFabricante).equals(
+                                                            text.trim(),
+                                                            ignoreCase = true
+                                                        )
+                                                }
+                                                locationForm.fabricanteId = exact?.idFabricante
+                                            }
                                         )
 
                                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -4074,6 +4371,11 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                                             val nowTs = java.time.LocalDateTime.now()
                                                                 .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
                                                             val existing = runCatching { ubicacionDao.getById(id) }.getOrNull()
+                                                            val resolvedFabricanteId = ensureFabricanteId(
+                                                                existingId = locationForm.fabricanteId,
+                                                                inputText = locationForm.fabricanteLabel,
+                                                                tipoInspeccionId = null
+                                                            )
                                                             val nueva = com.example.etic.data.local.entities.Ubicacion(
                                                                 idUbicacion = id,
                                                                 idUbicacionPadre = parentForCalc,
@@ -4083,7 +4385,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                                                 descripcion = locationForm.description.trim().ifBlank { null },
                                                                 esEquipo = if (locationForm.isEquipment) "SI" else "NO",
                                                                 codigoBarras = locationForm.barcode.trim().ifBlank { null },
-                                                                fabricante = locationForm.fabricanteId,
+                                                                fabricante = resolvedFabricanteId,
                                                                 ruta = ruta,
                                                                 estatus = "Activo",
                                                                 creadoPor = existing?.creadoPor ?: currentUserId,
@@ -4110,6 +4412,10 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                                                 )
                                                             }.getOrDefault(false)
                                                             if (okUb) {
+                                                                fabricanteOptionsCache = withContext(Dispatchers.IO) {
+                                                                    runCatching { fabricanteDao.getAllActivos() }.getOrElse { emptyList() }
+                                                                        .sortedBy { it.fabricante?.lowercase(Locale.getDefault()) ?: "" }
+                                                                }
                                                                 val parentToExpand = when (editingParentId) {
                                                                     null, "0" -> rootId
                                                                     else -> editingParentId

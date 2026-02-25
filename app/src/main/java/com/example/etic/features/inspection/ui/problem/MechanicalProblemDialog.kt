@@ -114,8 +114,6 @@ fun MechanicalProblemDialog(
     phaseOptions: List<Pair<String, String>>,
     environmentOptions: List<Pair<String, String>>,
     manufacturerOptions: List<Pair<String, String>>,
-    onAddFailure: () -> Unit = {},
-    onAddManufacturer: () -> Unit = {},
     thermalImageName: String,
     digitalImageName: String,
     onThermalImageChange: (String) -> Unit,
@@ -186,6 +184,11 @@ fun MechanicalProblemDialog(
                 val infoRowScrollState = rememberScrollState()
 
                 var failureId by rememberSaveable { mutableStateOf(initial.failureId) }
+                var failureInput by rememberSaveable {
+                    mutableStateOf(
+                        failureOptions.firstOrNull { it.first == initial.failureId }?.second.orEmpty()
+                    )
+                }
                 var componentTemperature by rememberSaveable { mutableStateOf(initial.componentTemperature) }
                 var componentPhaseId by rememberSaveable { mutableStateOf(initial.componentPhaseId) }
                 var componentRms by rememberSaveable { mutableStateOf(initial.componentRms) }
@@ -213,6 +216,11 @@ fun MechanicalProblemDialog(
                 var windSpeed by rememberSaveable { mutableStateOf(initial.windSpeed) }
 
                 var manufacturerId by rememberSaveable { mutableStateOf(initial.manufacturerId) }
+                var manufacturerInput by rememberSaveable {
+                    mutableStateOf(
+                        manufacturerOptions.firstOrNull { it.first == initial.manufacturerId }?.second.orEmpty()
+                    )
+                }
 
                 var ratedLoad by rememberSaveable { mutableStateOf(initial.ratedLoad) }
                 var circuitVoltage by rememberSaveable { mutableStateOf(initial.circuitVoltage) }
@@ -234,7 +242,7 @@ fun MechanicalProblemDialog(
                     phaseOptions.firstOrNull { it.first == componentPhaseId }?.second?.takeIf { it.isNotBlank() }
 
                 val requiredFieldsFilled = listOf(
-                    failureId?.isNotBlank() == true,
+                    failureId?.isNotBlank() == true || failureInput.trim().isNotBlank(),
                     componentTemperature.trim().isNotBlank(),
                     referenceTemperature.trim().isNotBlank()
                 ).all { it }
@@ -295,6 +303,7 @@ fun MechanicalProblemDialog(
                 fun buildFormData(): MechanicalProblemFormData =
                     MechanicalProblemFormData(
                         failureId = failureId?.takeIf { it.isNotBlank() },
+                        failureText = failureInput.trim(),
                         componentTemperature = componentTemperature,
                         componentPhaseId = null,
                         componentRms = componentRms,
@@ -313,6 +322,7 @@ fun MechanicalProblemDialog(
                         windSpeedChecked = false,
                         windSpeed = "",
                         manufacturerId = manufacturerId,
+                        manufacturerText = manufacturerInput.trim(),
                         ratedLoad = ratedLoad,
                         circuitVoltage = circuitVoltage,
                         comments = comments,
@@ -609,8 +619,9 @@ fun MechanicalProblemDialog(
                                         label = "Fabricante",
                                         options = manufacturerOptions,
                                         selectedId = manufacturerId,
+                                        selectedText = manufacturerInput,
                                         onSelected = { manufacturerId = it },
-                                        onAddClick = onAddManufacturer
+                                        onTextChanged = { text -> manufacturerInput = text }
                                     )
                                 }
 
@@ -646,8 +657,9 @@ fun MechanicalProblemDialog(
                                         FilterableSelectorNoLabel(
                                             options = failureOptions,
                                             selectedId = failureId,
+                                            selectedText = failureInput,
                                             onSelected = { failureId = it },
-                                            onAddClick = onAddFailure,
+                                            onTextChanged = { text -> failureInput = text },
                                             ancho = 180.dp
                                         )
                                     }
@@ -736,6 +748,7 @@ fun MechanicalProblemDialog(
 
 data class MechanicalProblemFormData(
     val failureId: String? = null,
+    val failureText: String = "",
     val componentTemperature: String = "",
     val componentPhaseId: String? = null,
     val componentRms: String = "",
@@ -754,6 +767,7 @@ data class MechanicalProblemFormData(
     val windSpeedChecked: Boolean = false,
     val windSpeed: String = "",
     val manufacturerId: String? = null,
+    val manufacturerText: String = "",
     val ratedLoad: String = "",
     val circuitVoltage: String = "",
     val comments: String = "",
@@ -911,41 +925,22 @@ private fun ValueFieldNoLabel(
 /* ------------------------- Dropdowns ------------------------- */
 
 @Composable
-private fun AddInlineButton(
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Box(
-        modifier = modifier
-            .size(FIELD_HEIGHT)
-            .border(
-                FIELD_BORDER,
-                MaterialTheme.colorScheme.outline,
-                RoundedCornerShape(FIELD_RADIUS)
-            )
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = "+",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.primary
-        )
-    }
-}
-
-@Composable
 private fun FilterableSelectorNoLabel(
     options: List<Pair<String, String>>,
     selectedId: String?,
-    onSelected: (String) -> Unit,
-    onAddClick: () -> Unit = {},
+    selectedText: String,
+    onSelected: (String?) -> Unit,
+    onTextChanged: (String) -> Unit,
     ancho: Dp? = null,
     modifier: Modifier = Modifier
 ) {
     var expanded by remember { mutableStateOf(false) }
-    var query by remember(selectedId, options) {
-        mutableStateOf(options.firstOrNull { it.first == selectedId }?.second.orEmpty())
+    var query by remember(selectedId, selectedText, options) {
+        mutableStateOf(
+            selectedText.ifBlank {
+                options.firstOrNull { it.first == selectedId }?.second.orEmpty()
+            }
+        )
     }
     val normalizedQuery = query.trim()
     val filtered = remember(normalizedQuery, options) {
@@ -977,6 +972,12 @@ private fun FilterableSelectorNoLabel(
                     value = query,
                     onValueChange = {
                         query = it
+                        onTextChanged(it)
+                        val exact = options.firstOrNull { option ->
+                            option.first.equals(it.trim(), ignoreCase = true) ||
+                                option.second.equals(it.trim(), ignoreCase = true)
+                        }
+                        onSelected(exact?.first)
                         expanded = true
                     },
                     singleLine = true,
@@ -1006,13 +1007,13 @@ private fun FilterableSelectorNoLabel(
                         onClick = {
                             expanded = false
                             query = text.ifBlank { id }
+                            onTextChanged(query)
                             onSelected(id)
                         }
                     )
                 }
             }
         }
-        AddInlineButton(onClick = onAddClick)
     }
 }
 
@@ -1021,16 +1022,18 @@ private fun DropdownSelector(
     label: String,
     options: List<Pair<String, String>>,
     selectedId: String?,
-    onSelected: (String) -> Unit,
-    onAddClick: () -> Unit = {}
+    selectedText: String,
+    onSelected: (String?) -> Unit,
+    onTextChanged: (String) -> Unit
 ) {
     Column(Modifier.fillMaxWidth()) {
         Text(text = label, style = MaterialTheme.typography.labelSmall)
         FilterableSelectorNoLabel(
             options = options,
             selectedId = selectedId,
+            selectedText = selectedText,
             onSelected = onSelected,
-            onAddClick = onAddClick
+            onTextChanged = onTextChanged
         )
     }
 }

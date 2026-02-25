@@ -66,8 +66,7 @@ fun NewLocationDialog(
     previewRoute: String,
     isSaving: Boolean,
     onDismiss: () -> Unit,
-    onConfirm: () -> Unit,
-    onAddManufacturer: () -> Unit = {}
+    onConfirm: () -> Unit
 ) {
     if (!show) return
 
@@ -173,7 +172,14 @@ fun NewLocationDialog(
                             formState.fabricanteLabel = label
                             formState.fabricanteExpanded = false
                         },
-                        onAddClick = onAddManufacturer
+                        onTextChanged = { text ->
+                            formState.fabricanteLabel = text
+                            val exact = fabricanteOptions.firstOrNull { option ->
+                                option.idFabricante.equals(text.trim(), ignoreCase = true) ||
+                                    (option.fabricante ?: option.idFabricante).equals(text.trim(), ignoreCase = true)
+                            }
+                            formState.fabricanteId = exact?.idFabricante
+                        }
                     )
 
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -364,7 +370,7 @@ internal fun FilterableSelector(
     expanded: Boolean,
     onExpandedChange: (Boolean) -> Unit,
     onSelected: (String, String) -> Unit,
-    onAddClick: () -> Unit
+    onTextChanged: (String) -> Unit = {}
 ) {
     var query by remember(selectedId, options, selectedLabelOverride) {
         mutableStateOf(
@@ -404,6 +410,7 @@ internal fun FilterableSelector(
                             value = query,
                             onValueChange = {
                                 query = it
+                                onTextChanged(it)
                                 onExpandedChange(true)
                             },
                             singleLine = true,
@@ -437,6 +444,7 @@ internal fun FilterableSelector(
                             text = { Text(text = text.ifBlank { id }) },
                             onClick = {
                                 query = text.ifBlank { id }
+                                onTextChanged(query)
                                 onExpandedChange(false)
                                 onSelected(id, text.ifBlank { id })
                             }
@@ -444,31 +452,6 @@ internal fun FilterableSelector(
                     }
                 }
             }
-            AddInlineButton(onClick = onAddClick)
         }
-    }
-}
-
-@Composable
-private fun AddInlineButton(
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Box(
-        modifier = modifier
-            .size(FIELD_HEIGHT)
-            .border(
-                FIELD_BORDER,
-                MaterialTheme.colorScheme.outline,
-                RoundedCornerShape(FIELD_RADIUS)
-            )
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = "+",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.primary
-        )
     }
 }

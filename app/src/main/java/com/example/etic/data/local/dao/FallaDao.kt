@@ -1,6 +1,8 @@
 package com.example.etic.data.local.dao
 
 import androidx.room.Dao
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.example.etic.data.local.entities.Falla
 
@@ -32,6 +34,21 @@ interface FallaDao {
         """
     )
     suspend fun getByTipoInspeccion(tipoInspeccion: String): List<FallaWithTipoInspeccion>
+
+    @Query(
+        """
+        SELECT f.*
+        FROM fallas f
+        LEFT JOIN tipo_fallas tf ON tf.Id_Tipo_Falla = f.Id_Tipo_Falla
+        WHERE lower(trim(f.Falla)) = lower(trim(:name))
+        AND (:tipoInspeccion IS NULL OR tf.Id_Tipo_Inspeccion = :tipoInspeccion)
+        LIMIT 1
+        """
+    )
+    suspend fun findByNameAndTipoInspeccion(name: String, tipoInspeccion: String?): Falla?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insert(item: Falla)
 }
 
 data class FallaWithTipoInspeccion(
