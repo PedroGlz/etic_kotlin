@@ -4315,11 +4315,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                                                 horizontalArrangement = Arrangement.SpaceBetween,
                                                                 verticalAlignment = Alignment.CenterVertically
                                                             ) {
-                                                                Text(
-                                                                    "Baseline actual",
-                                                                    style = MaterialTheme.typography.titleMedium
-                                                                )
-                                                                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                                                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                                                     TextButton(
                                                                         onClick = {
                                                                             baselineToEdit = baselineItem
@@ -4712,116 +4708,66 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                                         )
                                                     }
 
-                                                    AlertDialog(
+                                                    var baselineDialogOffset by remember { mutableStateOf(Offset.Zero) }
+                                                    Dialog(
                                                         onDismissRequest = { },
                                                         properties = DialogProperties(
+                                                            usePlatformDefaultWidth = true,
                                                             dismissOnClickOutside = false,
                                                             dismissOnBackPress = false
-                                                        ),
-                                                        confirmButton = {
-                                                            Button(
-                                                                enabled = isBaselineValid && !isSavingBaseline,
-                                                                onClick = {
-                                                                    if (isSavingBaseline) return@Button
-                                                                    val idUb = ubId
-                                                                    val idInsp = inspId
-                                                                    if (idUb.isNullOrBlank() || idInsp.isNullOrBlank()) {
-                                                                        return@Button
-                                                                    }
-                                                                    scope.launch {
-                                                                        if (isSavingBaseline) return@launch
-                                                                        isSavingBaseline = true
-                                                                        try {
-                                                                            val nowTs = java.time.LocalDateTime.now()
-                                                                                .format(
-                                                                                    java.time.format.DateTimeFormatter.ofPattern(
-                                                                                        "yyyy-MM-dd HH:mm:ss"
-                                                                                    )
-                                                                                )
-                                                                            val detRow = try {
-                                                                                inspeccionDetDao.getByUbicacion(idUb)
-                                                                                    .firstOrNull { it.idInspeccion == idInsp }
-                                                                            } catch (_: Exception) {
-                                                                                null
+                                                        )
+                                                    ) {
+                                                        Box(
+                                                            modifier = Modifier
+                                                                .fillMaxSize()
+                                                                .wrapContentSize(Alignment.Center)
+                                                        ) {
+                                                            Surface(
+                                                                modifier = Modifier.offset {
+                                                                    IntOffset(
+                                                                        baselineDialogOffset.x.roundToInt(),
+                                                                        baselineDialogOffset.y.roundToInt()
+                                                                    )
+                                                                },
+                                                                shape = RoundedCornerShape(12.dp),
+                                                                tonalElevation = 6.dp
+                                                            ) {
+                                                                Column(
+                                                                    modifier = Modifier
+                                                                        .fillMaxWidth()
+                                                                        .verticalScroll(rememberScrollState())
+                                                                        .padding(top = 0.dp, bottom = 0.dp)
+                                                                ) {
+                                                                    Box(
+                                                                        modifier = Modifier
+                                                                            .fillMaxWidth()
+                                                                            .background(DIALOG_HEADER_TURQUOISE)
+                                                                            .padding(start = 17.dp, end = 17.dp)
+                                                                            .pointerInput(Unit) {
+                                                                                detectDragGestures { change, dragAmount ->
+                                                                                    change.consume()
+                                                                                    baselineDialogOffset += Offset(dragAmount.x, dragAmount.y)
+                                                                                }
                                                                             }
-                                                                            val detId = detRow?.idInspeccionDet
-                                                                            val item = com.example.etic.data.local.entities.LineaBase(
-                                                                                idLineaBase = baselineToEdit?.id ?: java.util.UUID.randomUUID().toString()
-                                                                                    .uppercase(),
-                                                                                idSitio = currentInspection?.idSitio,
-                                                                                idUbicacion = idUb,
-                                                                                idInspeccion = idInsp,
-                                                                                idInspeccionDet = detId,
-                                                                                mta = mta.toDoubleOrNull(),
-                                                                                tempMax = tempMax.toDoubleOrNull(),
-                                                                                tempAmb = tempAmb.toDoubleOrNull(),
-                                                                                notas = notas.ifBlank { null },
-                                                                                archivoIr = imgIr.ifBlank { null },
-                                                                                archivoId = imgId.ifBlank { null },
-                                                                                ruta = null,
-                                                                                estatus = "Activo",
-                                                                                creadoPor = currentUserId,
-                                                                                fechaCreacion = nowTs,
-                                                                                modificadoPor = null,
-                                                                                fechaMod = null
+                                                                    ) {
+                                                                        Box(
+                                                                            modifier = Modifier
+                                                                                .fillMaxWidth()
+                                                                                .background(DIALOG_HEADER_TURQUOISE, RoundedCornerShape(6.dp))
+                                                                                .padding(start = 10.dp, end = 10.dp, top = 12.dp, bottom = 4.dp)
+                                                                        ) {
+                                                                            Text(
+                                                                                if (baselineToEdit == null) "Nuevo Baseline" else "Editar Baseline",
+                                                                                color = Color.White,
+                                                                                style = MaterialTheme.typography.titleMedium
                                                                             )
-                                                                            val ok = if (baselineToEdit == null) {
-                                                                                val exists = runCatching {
-                                                                                    lineaBaseDao.existsActiveByUbicacionOrDet(idUb, detId)
-                                                                                }.getOrDefault(false)
-                                                                                if (exists) {
-                                                                                    isSavingBaseline = false
-                                                                                    return@launch
-                                                                                }
-                                                                                runCatching { lineaBaseDao.insert(item) }.isSuccess
-                                                                            } else {
-                                                                                runCatching { lineaBaseDao.update(item) }.isSuccess
-                                                                            }
-                                                                            if (ok) {
-                                                                                if (detRow != null) {
-                                                                                    val updatedDet = detRow.copy(
-                                                                                        idStatusInspeccionDet = "568798D2-76BB-11D3-82BF-00104BC75DC2",
-                                                                                        idEstatusColorText = 3,
-                                                                                        modificadoPor = currentUserId,
-                                                                                        fechaMod = nowTs
-                                                                                    )
-                                                                                    runCatching { inspeccionDetDao.update(updatedDet) }
-                                                                                    updateParentStatusesAfterManualChange(
-                                                                                        inspectionId = idInsp,
-                                                                                        startUbicacionId = idUb,
-                                                                                        nowTs = nowTs
-                                                                                    )
-                                                                                }
-                                                                                delay(3000)
-                                                                                showNewBaseline = false
-                                                                                baselineToEdit = null
-                                                                                baselineRefreshTick++
-                                                                                isSavingBaseline = false
-                                                                            } else {
-                                                                                isSavingBaseline = false
-                                                                            }
-                                                                        } catch (_: Exception) {
-                                                                            isSavingBaseline = false
                                                                         }
                                                                     }
-                                                                }
-                                                            ) { Text("Guardar") }
-                                                        },
-                                                        dismissButton = {
-                                                            Button(
-                                                                onClick = {
-                                                                    if (!isSavingBaseline) showNewBaseline = false
-                                                                },
-                                                                enabled = !isSavingBaseline
-                                                            ) { Text("Cancelar") }
-                                                        },
-                                                        text = {
-                                                            Column(Modifier.fillMaxWidth()) {
-                                                                Text(
-                                                                    if (baselineToEdit == null) "Nuevo Baseline" else "Editar Baseline",
-                                                                    style = MaterialTheme.typography.titleMedium
-                                                                )
-                                                                Spacer(Modifier.height(8.dp))
+                                                                    Spacer(Modifier.height(6.dp))
+
+                                                                    Column(
+                                                                        modifier = Modifier.padding(start = 17.dp, end = 17.dp, bottom = 4.dp)
+                                                                    ) {
 
                                                                 Row(
                                                                     Modifier.fillMaxWidth(),
@@ -4981,9 +4927,111 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                                                     readOnly = true,
                                                                     modifier = Modifier.fillMaxWidth()
                                                                 )
+
+                                                                Spacer(Modifier.height(12.dp))
+                                                                Row(
+                                                                    modifier = Modifier.fillMaxWidth(),
+                                                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                                                    verticalAlignment = Alignment.CenterVertically
+                                                                ) {
+                                                                    Button(
+                                                                        onClick = {
+                                                                            if (!isSavingBaseline) showNewBaseline = false
+                                                                        },
+                                                                        enabled = !isSavingBaseline
+                                                                    ) { Text("Cancelar") }
+                                                                    Button(
+                                                                        enabled = isBaselineValid && !isSavingBaseline,
+                                                                        onClick = {
+                                                                            if (isSavingBaseline) return@Button
+                                                                            val idUb = ubId
+                                                                            val idInsp = inspId
+                                                                            if (idUb.isNullOrBlank() || idInsp.isNullOrBlank()) {
+                                                                                return@Button
+                                                                            }
+                                                                            scope.launch {
+                                                                                if (isSavingBaseline) return@launch
+                                                                                isSavingBaseline = true
+                                                                                try {
+                                                                                    val nowTs = java.time.LocalDateTime.now()
+                                                                                        .format(
+                                                                                            java.time.format.DateTimeFormatter.ofPattern(
+                                                                                                "yyyy-MM-dd HH:mm:ss"
+                                                                                            )
+                                                                                        )
+                                                                                    val detRow = try {
+                                                                                        inspeccionDetDao.getByUbicacion(idUb)
+                                                                                            .firstOrNull { it.idInspeccion == idInsp }
+                                                                                    } catch (_: Exception) {
+                                                                                        null
+                                                                                    }
+                                                                                    val detId = detRow?.idInspeccionDet
+                                                                                    val item = com.example.etic.data.local.entities.LineaBase(
+                                                                                        idLineaBase = baselineToEdit?.id ?: java.util.UUID.randomUUID().toString()
+                                                                                            .uppercase(),
+                                                                                        idSitio = currentInspection?.idSitio,
+                                                                                        idUbicacion = idUb,
+                                                                                        idInspeccion = idInsp,
+                                                                                        idInspeccionDet = detId,
+                                                                                        mta = mta.toDoubleOrNull(),
+                                                                                        tempMax = tempMax.toDoubleOrNull(),
+                                                                                        tempAmb = tempAmb.toDoubleOrNull(),
+                                                                                        notas = notas.ifBlank { null },
+                                                                                        archivoIr = imgIr.ifBlank { null },
+                                                                                        archivoId = imgId.ifBlank { null },
+                                                                                        ruta = null,
+                                                                                        estatus = "Activo",
+                                                                                        creadoPor = currentUserId,
+                                                                                        fechaCreacion = nowTs,
+                                                                                        modificadoPor = null,
+                                                                                        fechaMod = null
+                                                                                    )
+                                                                                    val ok = if (baselineToEdit == null) {
+                                                                                        val exists = runCatching {
+                                                                                            lineaBaseDao.existsActiveByUbicacionOrDet(idUb, detId)
+                                                                                        }.getOrDefault(false)
+                                                                                        if (exists) {
+                                                                                            isSavingBaseline = false
+                                                                                            return@launch
+                                                                                        }
+                                                                                        runCatching { lineaBaseDao.insert(item) }.isSuccess
+                                                                                    } else {
+                                                                                        runCatching { lineaBaseDao.update(item) }.isSuccess
+                                                                                    }
+                                                                                    if (ok) {
+                                                                                        if (detRow != null) {
+                                                                                            val updatedDet = detRow.copy(
+                                                                                                idStatusInspeccionDet = "568798D2-76BB-11D3-82BF-00104BC75DC2",
+                                                                                                idEstatusColorText = 3,
+                                                                                                modificadoPor = currentUserId,
+                                                                                                fechaMod = nowTs
+                                                                                            )
+                                                                                            runCatching { inspeccionDetDao.update(updatedDet) }
+                                                                                            updateParentStatusesAfterManualChange(
+                                                                                                inspectionId = idInsp,
+                                                                                                startUbicacionId = idUb,
+                                                                                                nowTs = nowTs
+                                                                                            )
+                                                                                        }
+                                                                                        delay(3000)
+                                                                                        showNewBaseline = false
+                                                                                        baselineToEdit = null
+                                                                                        baselineRefreshTick++
+                                                                                        isSavingBaseline = false
+                                                                                    } else {
+                                                                                        isSavingBaseline = false
+                                                                                    }
+                                                                                } catch (_: Exception) {
+                                                                                    isSavingBaseline = false
+                                                                                }
+                                                                            }
+                                                                        }
+                                                                    ) { Text("Guardar") }
+                                                                }
                                                             }
                                                         }
-                                                    )
+                                                    }
+                                                    }
                                                 }
                                             }
 
@@ -4991,6 +5039,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                             // -----------------------------------------------------------
                                             // TAB 1 → HISTÓRICO
                                             // -----------------------------------------------------------
+                                            }
                                             1 -> {
                                                 val ubId = editingUbId
                                                 var histSortColumn by rememberSaveable { mutableStateOf("INSPECCION") }

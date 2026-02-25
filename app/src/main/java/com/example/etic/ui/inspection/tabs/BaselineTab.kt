@@ -33,8 +33,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.window.Dialog
@@ -47,12 +49,14 @@ import com.example.etic.core.current.LocalCurrentUser
 import com.example.etic.features.inspection.ui.home.BaselineTable
 import com.example.etic.features.inspection.ui.home.STATUS_POR_VERIFICAR
 import com.example.etic.features.inspection.tree.Baseline
+import com.example.etic.features.inspection.ui.problem.ProblemDialogDraggableHeader
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.example.etic.core.saf.EticImageStore
 import com.example.etic.core.settings.EticPrefs
 import com.example.etic.core.settings.settingsDataStore
+import kotlin.math.roundToInt
 
 @Composable
 fun BaselineTableFromDatabase(
@@ -295,6 +299,7 @@ fun BaselineTableFromDatabase(
 
         if (baselineToDelete != null) {
             val baseline = baselineToDelete!!
+            var deleteDialogOffset by remember { mutableStateOf(Offset.Zero) }
             Dialog(
                 onDismissRequest = { baselineToDelete = null },
                 properties = DialogProperties(
@@ -303,51 +308,76 @@ fun BaselineTableFromDatabase(
                     dismissOnBackPress = true
                 )
             ) {
-                Surface(
-                    modifier = Modifier.fillMaxWidth(0.92f),
-                    shape = RoundedCornerShape(12.dp),
-                    tonalElevation = 6.dp
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .wrapContentSize(Alignment.Center)
                 ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth(0.92f)
+                            .offset {
+                                IntOffset(
+                                    deleteDialogOffset.x.roundToInt(),
+                                    deleteDialogOffset.y.roundToInt()
+                                )
+                            },
+                        shape = RoundedCornerShape(12.dp),
+                        tonalElevation = 6.dp
                     ) {
-                        Text("Eliminar baseline seleccionado?")
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.End
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 0.dp, bottom = 0.dp)
                         ) {
-                            TextButton(onClick = { baselineToDelete = null }) { Text("Cancelar") }
-                            Spacer(Modifier.width(8.dp))
-                            Button(onClick = {
-                                scope.launch {
-                                    val nowTs = java.time.LocalDateTime.now()
-                                        .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
-                                    val ok = repo.deleteBaselineAndRevertStatus(
-                                        baselineId = baseline.id,
-                                        currentUserId = currentUser?.idUsuario,
-                                        nowTs = nowTs,
-                                        statusPorVerificarId = STATUS_POR_VERIFICAR
-                                    )
-                                    if (ok) {
-                                        baselinesCache = baselinesCache.filter { it.id != baseline.id }
-                                        baselineToDelete = null
-                                        onBaselineChanged()
-                                    }
+                            ProblemDialogDraggableHeader(
+                                title = "Eliminar Baseline",
+                                onDrag = { drag -> deleteDialogOffset += drag }
+                            )
+                            Spacer(Modifier.height(6.dp))
+                            Column(
+                                modifier = Modifier.padding(start = 17.dp, end = 17.dp, bottom = 12.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Text("Eliminar baseline seleccionado?")
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.End
+                                ) {
+                                    TextButton(onClick = { baselineToDelete = null }) { Text("Cancelar") }
+                                    Spacer(Modifier.width(8.dp))
+                                    Button(onClick = {
+                                        scope.launch {
+                                            val nowTs = java.time.LocalDateTime.now()
+                                                .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+                                            val ok = repo.deleteBaselineAndRevertStatus(
+                                                baselineId = baseline.id,
+                                                currentUserId = currentUser?.idUsuario,
+                                                nowTs = nowTs,
+                                                statusPorVerificarId = STATUS_POR_VERIFICAR
+                                            )
+                                            if (ok) {
+                                                baselinesCache = baselinesCache.filter { it.id != baseline.id }
+                                                baselineToDelete = null
+                                                onBaselineChanged()
+                                            }
+                                        }
+                                    }) { Text("Eliminar") }
                                 }
-                            }) { Text("Eliminar") }
+                            }
                         }
                     }
                 }
             }
         }
-
+ 
         if (showBaselineDialog && baselineToEdit != null) {
+            var baselineDialogOffset by remember { mutableStateOf(Offset.Zero) }
             val navigationActive = baselineNavList.isNotEmpty()
             val canNavigatePrevious = baselineNavList.isNotEmpty() && baselineNavIndex > 0
             val canNavigateNext =
                 baselineNavList.isNotEmpty() && baselineNavIndex >= 0 && baselineNavIndex < baselineNavList.lastIndex
-
+ 
             fun navigateBaseline(delta: Int) {
                 if (isSavingBaseline) return
                 if (mta.isBlank() || tempMax.isBlank() || tempAmb.isBlank() || imgIr.isBlank() || imgId.isBlank()) return
@@ -358,7 +388,7 @@ fun BaselineTableFromDatabase(
                 baselineNavIndex = nextIndex
                 baselineToEdit = baselineNavList[nextIndex]
             }
-
+ 
             val isBaselineValid by remember(mta, tempMax, tempAmb, imgIr, imgId) {
                 mutableStateOf(
                     mta.isNotBlank() &&
@@ -368,7 +398,7 @@ fun BaselineTableFromDatabase(
                         imgId.isNotBlank()
                 )
             }
-
+ 
             val irCameraLauncher = rememberLauncherForActivityResult(
                 ActivityResultContracts.TakePicturePreview()
             ) { bmp ->
@@ -429,22 +459,42 @@ fun BaselineTableFromDatabase(
                     dismissOnBackPress = false
                 )
             ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .wrapContentSize(Alignment.Center)
+                ) {
                 Surface(
+                    modifier = Modifier
+                        .offset {
+                            IntOffset(
+                                baselineDialogOffset.x.roundToInt(),
+                                baselineDialogOffset.y.roundToInt()
+                            )
+                        },
                     shape = RoundedCornerShape(12.dp),
                     tonalElevation = 6.dp
                 ) {
                     Column(
                         Modifier
                             .fillMaxWidth()
-                            .padding(16.dp)
                             .verticalScroll(rememberScrollState())
+                            .padding(top = 0.dp, bottom = 0.dp)
                     ) {
+                        ProblemDialogDraggableHeader(
+                            title = "Editar Baseline",
+                            onDrag = { drag -> baselineDialogOffset += drag }
+                        )
+                        Spacer(Modifier.height(6.dp))
+
+                        Column(
+                            modifier = Modifier.padding(start = 17.dp, end = 17.dp, bottom = 4.dp)
+                        ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
+                            horizontalArrangement = Arrangement.End,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text("Editar Baseline", style = MaterialTheme.typography.titleMedium)
                             if (navigationActive) {
                                 Row {
                                     IconButton(
@@ -657,6 +707,8 @@ fun BaselineTableFromDatabase(
                             ) { Text("Guardar") }
                         }
                     }
+                    }
+                }
                 }
             }
         }
