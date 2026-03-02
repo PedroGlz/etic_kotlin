@@ -82,7 +82,7 @@ import com.example.etic.data.local.entities.EstatusColorText
         TipoAmbiente::class,
         TipoFalla::class,
     ],
-    version = 13,
+    version = 14,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

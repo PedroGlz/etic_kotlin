@@ -1012,3 +1012,10 @@ val MIGRATION_12_13 = object : Migration(12, 13) {
         )
     }
 }
+
+val MIGRATION_13_14 = object : Migration(13, 14) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE problemas ADD COLUMN Id_Recomendacion TEXT")
+        db.execSQL("ALTER TABLE problemas ADD COLUMN Id_Causa_Raiz TEXT")
+    }
+}

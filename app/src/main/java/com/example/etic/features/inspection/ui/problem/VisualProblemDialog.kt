@@ -89,8 +89,12 @@ fun VisualProblemDialog(
     equipmentName: String,
     equipmentRoute: String,
     hazardIssues: List<Pair<String, String>>,
+    causeOptions: List<Pair<String, String>>,
+    recommendationOptions: List<Pair<String, String>>,
     severities: List<Pair<String, String>>,
     selectedHazardIssue: String?,
+    selectedCause: String?,
+    selectedRecommendation: String?,
     selectedSeverity: String?,
     observations: String,
     onObservationsChange: (String) -> Unit,
@@ -111,6 +115,8 @@ fun VisualProblemDialog(
     onThermalCamera: () -> Unit,
     onDigitalCamera: () -> Unit,
     onHazardSelected: (String) -> Unit,
+    onCauseSelected: (String) -> Unit,
+    onRecommendationSelected: (String) -> Unit,
     onSeveritySelected: (String) -> Unit,
     onCronicoClick: (() -> Unit)? = null,
     cronicoEnabled: Boolean = false,
@@ -292,6 +298,22 @@ fun VisualProblemDialog(
                                     onTextChanged = onHazardSelected,
                                     modifier = Modifier.fillMaxWidth(),
                                     isError = hazardError
+                                )
+                                DropdownSelector(
+                                    label = "Causa principal",
+                                    options = causeOptions,
+                                    selectedId = selectedCause,
+                                    onSelected = onCauseSelected,
+                                    onTextChanged = onCauseSelected,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                                DropdownSelector(
+                                    label = "Recomendacion",
+                                    options = recommendationOptions,
+                                    selectedId = selectedRecommendation,
+                                    onSelected = onRecommendationSelected,
+                                    onTextChanged = onRecommendationSelected,
+                                    modifier = Modifier.fillMaxWidth()
                                 )
                                 SimpleDropdownSelector(
                                     label = "Severidad *",

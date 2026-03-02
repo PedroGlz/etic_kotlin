@@ -111,6 +111,7 @@ fun ElectricProblemDialog(
     equipmentName: String,
     equipmentRoute: String,
     failureOptions: List<Pair<String, String>>,
+    causeOptions: List<Pair<String, String>>,
     phaseOptions: List<Pair<String, String>>,
     environmentOptions: List<Pair<String, String>>,
     manufacturerOptions: List<Pair<String, String>>,
@@ -186,6 +187,12 @@ fun ElectricProblemDialog(
                 var failureInput by rememberSaveable {
                     mutableStateOf(
                         failureOptions.firstOrNull { it.first == initial.failureId }?.second.orEmpty()
+                    )
+                }
+                var causeId by rememberSaveable { mutableStateOf(initial.causeId) }
+                var causeInput by rememberSaveable {
+                    mutableStateOf(
+                        causeOptions.firstOrNull { it.first == initial.causeId }?.second.orEmpty()
                     )
                 }
                 var componentTemperature by rememberSaveable { mutableStateOf(initial.componentTemperature) }
@@ -314,6 +321,8 @@ fun ElectricProblemDialog(
                 ElectricProblemFormData(
                     failureId = failureId?.takeIf { it.isNotBlank() },
                     failureText = failureInput.trim(),
+                    causeId = causeId?.takeIf { it.isNotBlank() },
+                    causeText = causeInput.trim(),
                     componentTemperature = componentTemperature,
                     componentPhaseId = componentPhaseId,
                     componentPhaseText = componentPhaseInput.trim(),
@@ -777,8 +786,10 @@ fun ElectricProblemDialog(
 
                             Divider(Modifier.padding(top = 6.dp, bottom = 6.dp))
 
-                            Row(){
-                                Column() {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ){
+                                Column(modifier = Modifier.weight(1f)) {
                                     Text(text = "*Falla", style = MaterialTheme.typography.labelSmall)
                                     FilterableSelectorNoLabel(
                                         options = failureOptions,
@@ -786,7 +797,18 @@ fun ElectricProblemDialog(
                                         selectedText = failureInput,
                                         onSelected = { failureId = it },
                                         onTextChanged = { text -> failureInput = text },
-                                        ancho = 180.dp
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(text = "Causa principal", style = MaterialTheme.typography.labelSmall)
+                                    FilterableSelectorNoLabel(
+                                        options = causeOptions,
+                                        selectedId = causeId,
+                                        selectedText = causeInput,
+                                        onSelected = { causeId = it },
+                                        onTextChanged = { text -> causeInput = text },
+                                        modifier = Modifier.fillMaxWidth()
                                     )
                                 }
                             }
@@ -873,6 +895,8 @@ fun ElectricProblemDialog(
 data class ElectricProblemFormData(
     val failureId: String? = null,
     val failureText: String = "",
+    val causeId: String? = null,
+    val causeText: String = "",
     val componentTemperature: String = "",
     val componentPhaseId: String? = null,
     val componentPhaseText: String = "",

@@ -184,6 +184,10 @@ private sealed class ProblemDraft {
     data class VisualDraft(
         val hazardId: String?,
         val hazardLabel: String?,
+        val causeId: String?,
+        val causeLabel: String?,
+        val recommendationId: String?,
+        val recommendationLabel: String?,
         val severityId: String?,
         val severityLabel: String?,
         val observation: String,
@@ -342,6 +346,8 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
     val prioridadDao = remember { com.example.etic.data.local.DbProvider.get(ctx).tipoPrioridadDao() }
     val fabricanteDao = remember { com.example.etic.data.local.DbProvider.get(ctx).fabricanteDao() }
     val faseDao = remember { com.example.etic.data.local.DbProvider.get(ctx).faseDao() }
+    val causaPrincipalDao = remember { com.example.etic.data.local.DbProvider.get(ctx).causaPrincipalDao() }
+    val recomendacionDao = remember { com.example.etic.data.local.DbProvider.get(ctx).recomendacionDao() }
     val tipoAmbienteDao = remember { com.example.etic.data.local.DbProvider.get(ctx).tipoAmbienteDao() }
     val tipoFallaDao = remember { com.example.etic.data.local.DbProvider.get(ctx).tipoFallaDao() }
     val currentInspection = LocalCurrentInspection.current
@@ -358,6 +364,12 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
     var hasSignaledReady by rememberSaveable { mutableStateOf(false) }
     var severityCatalog by remember { mutableStateOf<List<Severidad>>(emptyList()) }
     var hazardOptionsByType by remember {
+        mutableStateOf<Map<String, List<Pair<String, String>>>>(emptyMap())
+    }
+    var causeOptionsByType by remember {
+        mutableStateOf<Map<String, List<Pair<String, String>>>>(emptyMap())
+    }
+    var recommendationOptionsByType by remember {
         mutableStateOf<Map<String, List<Pair<String, String>>>>(emptyMap())
     }
     var statusOptionsCache by remember { mutableStateOf<List<EstatusInspeccionDet>>(emptyList()) }
@@ -398,6 +410,32 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                 }
                 hazardsByType
             }
+            val causesDeferred = async(Dispatchers.IO) {
+                val causesByType = mutableMapOf<String, List<Pair<String, String>>>()
+                typesToLoad.forEach { typeId ->
+                    val options = runCatching { causaPrincipalDao.getByTipoInspeccion(typeId) }
+                        .getOrElse { emptyList() }
+                        .asSequence()
+                        .map { it.idCausaRaiz to (it.causaRaiz ?: it.idCausaRaiz) }
+                        .sortedBy { it.second.lowercase() }
+                        .toList()
+                    causesByType[typeId] = options
+                }
+                causesByType
+            }
+            val recommendationsDeferred = async(Dispatchers.IO) {
+                val recommendationsByType = mutableMapOf<String, List<Pair<String, String>>>()
+                typesToLoad.forEach { typeId ->
+                    val options = runCatching { recomendacionDao.getByTipoInspeccion(typeId) }
+                        .getOrElse { emptyList() }
+                        .asSequence()
+                        .map { it.idRecomendacion to (it.recomendacion ?: it.idRecomendacion) }
+                        .sortedBy { it.second.lowercase() }
+                        .toList()
+                    recommendationsByType[typeId] = options
+                }
+                recommendationsByType
+            }
             val statusDeferred = async { runCatching { estatusDao.getAll() }.getOrElse { emptyList() } }
             val prioridadDeferred = async { runCatching { prioridadDao.getAllActivas() }.getOrElse { emptyList() } }
             val fabricanteDeferred = async {
@@ -420,6 +458,8 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
 
             val hazardsByType = hazardsDeferred.await()
             hazardOptionsByType = hazardsByType
+            causeOptionsByType = causesDeferred.await()
+            recommendationOptionsByType = recommendationsDeferred.await()
             statusOptionsCache = statusDeferred.await()
             prioridadOptionsCache = prioridadDeferred.await()
             fabricanteOptionsCache = fabricanteDeferred.await()
@@ -540,6 +580,10 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             var pendingInspectionNumber by rememberSaveable { mutableStateOf("-") }
             var pendingHazardId by rememberSaveable { mutableStateOf<String?>(null) }
             var pendingHazardLabel by rememberSaveable { mutableStateOf<String?>(null) }
+            var pendingCauseId by rememberSaveable { mutableStateOf<String?>(null) }
+            var pendingCauseLabel by rememberSaveable { mutableStateOf<String?>(null) }
+            var pendingRecommendationId by rememberSaveable { mutableStateOf<String?>(null) }
+            var pendingRecommendationLabel by rememberSaveable { mutableStateOf<String?>(null) }
             var pendingSeverityId by rememberSaveable { mutableStateOf<String?>(null) }
             var pendingSeverityLabel by rememberSaveable { mutableStateOf<String?>(null) }
             var pendingProblemUbicacionId by rememberSaveable { mutableStateOf<String?>(null) }
@@ -569,6 +613,10 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                 pendingProblemType = problemTypeLabelForId(VISUAL_PROBLEM_TYPE_ID)
                 pendingHazardId = null
                 pendingHazardLabel = null
+                pendingCauseId = null
+                pendingCauseLabel = null
+                pendingRecommendationId = null
+                pendingRecommendationLabel = null
                 pendingSeverityId = null
                 pendingSeverityLabel = null
                 pendingObservation = ""
@@ -677,6 +725,22 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     hazardOptionsByType[visualTypeId].orEmpty()
                 }
             }
+            val visualCauseOptionsFixed = remember(causeOptionsByType) {
+                val visualTypeId = VISUAL_PROBLEM_TYPE_ID
+                if (visualTypeId.isNullOrBlank()) {
+                    emptyList()
+                } else {
+                    causeOptionsByType[visualTypeId].orEmpty()
+                }
+            }
+            val visualRecommendationOptionsFixed = remember(recommendationOptionsByType) {
+                val visualTypeId = VISUAL_PROBLEM_TYPE_ID
+                if (visualTypeId.isNullOrBlank()) {
+                    emptyList()
+                } else {
+                    recommendationOptionsByType[visualTypeId].orEmpty()
+                }
+            }
 
             fun buildVisualObservation(hazardId: String?, equipmentName: String?): String {
                 val hazardText = hazardId?.let { id ->
@@ -712,6 +776,17 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                 if (allowObservationUpdate) {
                     pendingObservation = buildVisualObservation(pendingHazardId, pendingProblemEquipmentName)
                 }
+            }
+            fun withPendingOption(
+                options: List<Pair<String, String>>,
+                pendingId: String?,
+                pendingLabel: String?
+            ): List<Pair<String, String>> {
+                if (pendingId.isNullOrBlank()) return options
+                val exists = options.any { it.first.equals(pendingId, ignoreCase = true) }
+                if (exists) return options
+                val label = pendingLabel?.takeIf { it.isNotBlank() } ?: pendingId
+                return options + (pendingId to label)
             }
             LaunchedEffect(visualHazardOptionsFixed, visualSeverityOptions, editingProblemId) {
                 ensureVisualDefaults(
@@ -845,6 +920,10 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                 val draft = problemDrafts[problemId] as? ProblemDraft.VisualDraft ?: return
                 pendingHazardId = draft.hazardId
                 pendingHazardLabel = draft.hazardLabel
+                pendingCauseId = draft.causeId
+                pendingCauseLabel = draft.causeLabel
+                pendingRecommendationId = draft.recommendationId
+                pendingRecommendationLabel = draft.recommendationLabel
                 pendingSeverityId = draft.severityId
                 pendingSeverityLabel = draft.severityLabel
                 pendingObservation = draft.observation
@@ -883,6 +962,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             fun toElectricFormData(entity: Problema): ElectricProblemFormData =
                 ElectricProblemFormData(
                     failureId = entity.idFalla,
+                    causeId = entity.idCausaRaiz,
                     componentTemperature = entity.problemTemperature?.toString() ?: "",
                     componentPhaseId = entity.problemPhase,
                     componentRms = entity.problemRms?.toString() ?: "",
@@ -910,6 +990,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             fun toMechanicalFormData(entity: Problema): MechanicalProblemFormData =
                 MechanicalProblemFormData(
                     failureId = entity.idFalla,
+                    causeId = entity.idCausaRaiz,
                     componentTemperature = entity.problemTemperature?.toString() ?: "",
                     componentPhaseId = null,
                     componentRms = entity.problemRms?.toString() ?: "",
@@ -938,6 +1019,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             fun toAislamientoFormData(entity: Problema): AislamientoTermicoProblemFormData =
                 AislamientoTermicoProblemFormData(
                     failureId = entity.idFalla,
+                    causeId = entity.idCausaRaiz,
                     componentTemperature = entity.problemTemperature?.toString() ?: "",
                     componentPhaseId = null,
                     componentRms = entity.problemRms?.toString() ?: "",
@@ -1238,6 +1320,14 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     }
                     pendingHazardLabel = hazardCatalogLabel
                         ?: entity.hazardIssue?.takeIf { it.isNotBlank() }
+                    pendingCauseId = entity.idCausaRaiz
+                    pendingCauseLabel = visualCauseOptionsFixed.firstOrNull {
+                        it.first.equals(entity.idCausaRaiz, ignoreCase = true)
+                    }?.second
+                    pendingRecommendationId = entity.idRecomendacion
+                    pendingRecommendationLabel = visualRecommendationOptionsFixed.firstOrNull {
+                        it.first.equals(entity.idRecomendacion, ignoreCase = true)
+                    }?.second
                     pendingSeverityId = entity.idSeveridad
                     pendingSeverityLabel = severityCatalog.firstOrNull {
                         it.idSeveridad.equals(entity.idSeveridad, ignoreCase = true)
@@ -1430,6 +1520,10 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                 val draft = ProblemDraft.VisualDraft(
                     hazardId = pendingHazardId,
                     hazardLabel = pendingHazardLabel,
+                    causeId = pendingCauseId,
+                    causeLabel = pendingCauseLabel,
+                    recommendationId = pendingRecommendationId,
+                    recommendationLabel = pendingRecommendationLabel,
                     severityId = pendingSeverityId,
                     severityLabel = pendingSeverityLabel,
                     observation = pendingObservation,
@@ -1729,9 +1823,128 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                         }
                         val updated = when (draft) {
                             is ProblemDraft.VisualDraft -> {
+                                val resolvedHazardId = run {
+                                    val existingId = draft.hazardId?.takeIf { it.isNotBlank() }
+                                    if (existingId != null) {
+                                        existingId
+                                    } else {
+                                        val name = (draft.hazardLabel ?: draft.hazardId.orEmpty())
+                                            .trim()
+                                            .uppercase(Locale.getDefault())
+                                        if (name.isBlank()) {
+                                            null
+                                        } else {
+                                            val existing = runCatching {
+                                                fallaDao.findByNameAndTipoInspeccion(name, base.idTipoInspeccion)
+                                            }.getOrNull()
+                                            existing?.idFalla ?: run {
+                                                var tipoFallaId: String? = null
+                                                if (!base.idTipoInspeccion.isNullOrBlank()) {
+                                                    tipoFallaId = runCatching {
+                                                        tipoFallaDao.findFirstByTipoInspeccion(base.idTipoInspeccion)?.idTipoFalla
+                                                    }.getOrNull()
+                                                    if (tipoFallaId.isNullOrBlank()) {
+                                                        val newTipoFalla = com.example.etic.data.local.entities.TipoFalla(
+                                                            idTipoFalla = java.util.UUID.randomUUID().toString().uppercase(),
+                                                            idTipoInspeccion = base.idTipoInspeccion,
+                                                            tipoFalla = "GENERAL",
+                                                            descTipoFalla = "GENERADO AUTOMATICAMENTE",
+                                                            estatus = "Activo",
+                                                            creadoPor = currentUserId,
+                                                            fechaCreacion = nowTs,
+                                                            idInspeccion = currentInspection?.idInspeccion,
+                                                            idSitio = currentInspection?.idSitio
+                                                        )
+                                                        runCatching { tipoFallaDao.insert(newTipoFalla) }
+                                                        tipoFallaId = newTipoFalla.idTipoFalla
+                                                    }
+                                                }
+                                                val created = com.example.etic.data.local.entities.Falla(
+                                                    idFalla = java.util.UUID.randomUUID().toString().uppercase(),
+                                                    idTipoFalla = tipoFallaId,
+                                                    idTipoInspeccion = base.idTipoInspeccion,
+                                                    falla = name,
+                                                    estatus = "Activo",
+                                                    creadoPor = currentUserId,
+                                                    fechaCreacion = nowTs,
+                                                    idInspeccion = currentInspection?.idInspeccion,
+                                                    idSitio = currentInspection?.idSitio
+                                                )
+                                                runCatching { fallaDao.insert(created) }
+                                                created.idFalla
+                                            }
+                                        }
+                                    }
+                                }
+                                val resolvedCauseId = run {
+                                    val existingId = draft.causeId?.takeIf { it.isNotBlank() }
+                                    if (existingId != null) {
+                                        existingId
+                                    } else {
+                                        val name = (draft.causeLabel ?: draft.causeId.orEmpty())
+                                            .trim()
+                                            .uppercase(Locale.getDefault())
+                                        if (name.isBlank()) {
+                                            null
+                                        } else {
+                                            val existing = runCatching {
+                                                causaPrincipalDao.findByNameAndTipoInspeccion(name, base.idTipoInspeccion)
+                                            }.getOrNull()
+                                            existing?.idCausaRaiz ?: run {
+                                                val created = com.example.etic.data.local.entities.CausaPrincipal(
+                                                    idCausaRaiz = java.util.UUID.randomUUID().toString().uppercase(),
+                                                    idTipoInspeccion = base.idTipoInspeccion,
+                                                    idFalla = resolvedHazardId,
+                                                    causaRaiz = name,
+                                                    estatus = "Activo",
+                                                    creadoPor = currentUserId,
+                                                    fechaCreacion = nowTs,
+                                                    idInspeccion = currentInspection?.idInspeccion,
+                                                    idSitio = currentInspection?.idSitio
+                                                )
+                                                runCatching { causaPrincipalDao.insert(created) }
+                                                created.idCausaRaiz
+                                            }
+                                        }
+                                    }
+                                }
+                                val resolvedRecommendationId = run {
+                                    val existingId = draft.recommendationId?.takeIf { it.isNotBlank() }
+                                    if (existingId != null) {
+                                        existingId
+                                    } else {
+                                        val name = (draft.recommendationLabel ?: draft.recommendationId.orEmpty())
+                                            .trim()
+                                            .uppercase(Locale.getDefault())
+                                        if (name.isBlank()) {
+                                            null
+                                        } else {
+                                            val existing = runCatching {
+                                                recomendacionDao.findByNameAndTipoInspeccion(name, base.idTipoInspeccion)
+                                            }.getOrNull()
+                                            existing?.idRecomendacion ?: run {
+                                                val created = com.example.etic.data.local.entities.Recomendacion(
+                                                    idRecomendacion = java.util.UUID.randomUUID().toString().uppercase(),
+                                                    idTipoInspeccion = base.idTipoInspeccion,
+                                                    idCausaRaiz = resolvedCauseId,
+                                                    recomendacion = name,
+                                                    estatus = "Activo",
+                                                    creadoPor = currentUserId,
+                                                    fechaCreacion = nowTs,
+                                                    idInspeccion = currentInspection?.idInspeccion,
+                                                    idSitio = currentInspection?.idSitio
+                                                )
+                                                runCatching { recomendacionDao.insert(created) }
+                                                created.idRecomendacion
+                                            }
+                                        }
+                                    }
+                                }
                                 base.copy(
-                                    hazardIssue = draft.hazardId,
-                                    idFalla = draft.hazardId,
+                                    hazardIssue = resolvedHazardId,
+                                    idFalla = resolvedHazardId,
+                                    idCausaRaiz = resolvedCauseId,
+                                    idRecomendacion = resolvedRecommendationId,
                                     idSeveridad = draft.severityId,
                                     componentComment = draft.observation.ifBlank {
                                         base.componentComment.orEmpty()
@@ -1779,6 +1992,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                     ratedLoad = formData.ratedLoad.takeIf { it.isNotBlank() },
                                     circuitVoltage = formData.circuitVoltage.takeIf { it.isNotBlank() },
                                     idFalla = formData.failureId,
+                                    idCausaRaiz = formData.causeId,
                                     componentComment = finalComment,
                                     estatusProblema = if (draft.closed) "Cerrado" else "Abierto",
                                     cerradoEnInspeccion = if (draft.closed) inspection.idInspeccion
@@ -1827,6 +2041,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                     circuitVoltageCheck = "off",
                                     circuitVoltage = formData.circuitVoltage.takeIf { it.isNotBlank() },
                                     idFalla = formData.failureId,
+                                    idCausaRaiz = formData.causeId,
                                     componentComment = finalComment,
                                     estatusProblema = if (draft.closed) "Cerrado" else "Abierto",
                                     cerradoEnInspeccion = if (draft.closed) inspection.idInspeccion
@@ -1877,6 +2092,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                     circuitVoltageCheck = "off",
                                     circuitVoltage = formData.circuitVoltage.takeIf { it.isNotBlank() },
                                     idFalla = formData.failureId,
+                                    idCausaRaiz = formData.causeId,
                                     componentComment = finalComment,
                                     estatusProblema = if (draft.closed) "Cerrado" else "Abierto",
                                     cerradoEnInspeccion = if (draft.closed) inspection.idInspeccion
@@ -2158,6 +2374,70 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                 created.idFalla
             }
 
+            suspend fun ensureCausaPrincipalId(
+                existingId: String?,
+                inputText: String,
+                tipoInspeccionId: String?,
+                fallaId: String?
+            ): String? = withContext(Dispatchers.IO) {
+                existingId?.takeIf { it.isNotBlank() }?.let { return@withContext it }
+                val name = inputText.trim().uppercase(Locale.getDefault())
+                if (name.isBlank()) return@withContext null
+
+                val existing = runCatching {
+                    causaPrincipalDao.findByNameAndTipoInspeccion(name, tipoInspeccionId)
+                }.getOrNull()
+                if (existing != null) return@withContext existing.idCausaRaiz
+
+                val nowTs = java.time.LocalDateTime.now()
+                    .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+                val created = com.example.etic.data.local.entities.CausaPrincipal(
+                    idCausaRaiz = java.util.UUID.randomUUID().toString().uppercase(),
+                    idTipoInspeccion = tipoInspeccionId,
+                    idFalla = fallaId,
+                    causaRaiz = name,
+                    estatus = "Activo",
+                    creadoPor = currentUser?.idUsuario,
+                    fechaCreacion = nowTs,
+                    idInspeccion = currentInspection?.idInspeccion,
+                    idSitio = currentInspection?.idSitio
+                )
+                runCatching { causaPrincipalDao.insert(created) }
+                created.idCausaRaiz
+            }
+
+            suspend fun ensureRecomendacionId(
+                existingId: String?,
+                inputText: String,
+                tipoInspeccionId: String?,
+                causaRaizId: String?
+            ): String? = withContext(Dispatchers.IO) {
+                existingId?.takeIf { it.isNotBlank() }?.let { return@withContext it }
+                val name = inputText.trim().uppercase(Locale.getDefault())
+                if (name.isBlank()) return@withContext null
+
+                val existing = runCatching {
+                    recomendacionDao.findByNameAndTipoInspeccion(name, tipoInspeccionId)
+                }.getOrNull()
+                if (existing != null) return@withContext existing.idRecomendacion
+
+                val nowTs = java.time.LocalDateTime.now()
+                    .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+                val created = com.example.etic.data.local.entities.Recomendacion(
+                    idRecomendacion = java.util.UUID.randomUUID().toString().uppercase(),
+                    idTipoInspeccion = tipoInspeccionId,
+                    idCausaRaiz = causaRaizId,
+                    recomendacion = name,
+                    estatus = "Activo",
+                    creadoPor = currentUser?.idUsuario,
+                    fechaCreacion = nowTs,
+                    idInspeccion = currentInspection?.idInspeccion,
+                    idSitio = currentInspection?.idSitio
+                )
+                runCatching { recomendacionDao.insert(created) }
+                created.idRecomendacion
+            }
+
             fun saveElectricProblem(formData: ElectricProblemFormData) {
                 val inspection = currentInspection
                 if (inspection == null) {
@@ -2182,11 +2462,18 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                         if (isSavingElectricProblem) return@launch
                         isSavingElectricProblem = true
                         try {
+                            val resolvedFailureId = ensureFallaId(
+                                existingId = formData.failureId,
+                                inputText = formData.failureText,
+                                tipoInspeccionId = typeId
+                            )
                             val resolvedFormData = formData.copy(
-                                failureId = ensureFallaId(
-                                    existingId = formData.failureId,
-                                    inputText = formData.failureText,
-                                    tipoInspeccionId = typeId
+                                failureId = resolvedFailureId,
+                                causeId = ensureCausaPrincipalId(
+                                    existingId = formData.causeId,
+                                    inputText = formData.causeText,
+                                    tipoInspeccionId = typeId,
+                                    fallaId = resolvedFailureId
                                 ),
                                 componentPhaseId = ensureFaseId(
                                     existingId = formData.componentPhaseId,
@@ -2233,6 +2520,12 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                             inputText = formData.failureText,
                             tipoInspeccionId = typeId
                         )
+                        val resolvedCauseId = ensureCausaPrincipalId(
+                            existingId = formData.causeId,
+                            inputText = formData.causeText,
+                            tipoInspeccionId = typeId,
+                            fallaId = resolvedFailureId
+                        )
                         val resolvedComponentPhaseId = ensureFaseId(
                             existingId = formData.componentPhaseId,
                             inputText = formData.componentPhaseText
@@ -2258,7 +2551,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                         }
                         val severityId = calculateSeverityId(difference)
                         val failureLabel = resolvedFailureId?.let { id ->
-                            electricHazardOptions.firstOrNull { it.first == id }?.second
+                            hazardOptionsByType[typeId].orEmpty().firstOrNull { it.first == id }?.second
                         } ?: formData.failureText.takeIf { it.isNotBlank() }
                         val phaseLabel = resolvedComponentPhaseId?.let { id ->
                             electricPhaseOptions.firstOrNull { it.first == id }?.second
@@ -2358,6 +2651,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                 circuitVoltageCheck = "off",
                                 circuitVoltage = formData.circuitVoltage.takeIf { it.isNotBlank() },
                                 idFalla = resolvedFailureId,
+                                idCausaRaiz = resolvedCauseId,
                                 componentComment = finalComment,
                                 estatusProblema = "Abierto",
                                 aumentoTemperatura = difference,
@@ -2458,11 +2752,18 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                         if (isSavingMechanicalProblem) return@launch
                         isSavingMechanicalProblem = true
                         try {
+                            val resolvedFailureId = ensureFallaId(
+                                existingId = formData.failureId,
+                                inputText = formData.failureText,
+                                tipoInspeccionId = typeId
+                            )
                             val resolvedFormData = formData.copy(
-                                failureId = ensureFallaId(
-                                    existingId = formData.failureId,
-                                    inputText = formData.failureText,
-                                    tipoInspeccionId = typeId
+                                failureId = resolvedFailureId,
+                                causeId = ensureCausaPrincipalId(
+                                    existingId = formData.causeId,
+                                    inputText = formData.causeText,
+                                    tipoInspeccionId = typeId,
+                                    fallaId = resolvedFailureId
                                 ),
                                 manufacturerId = ensureFabricanteId(
                                     existingId = formData.manufacturerId,
@@ -2497,6 +2798,12 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                             inputText = formData.failureText,
                             tipoInspeccionId = typeId
                         )
+                        val resolvedCauseId = ensureCausaPrincipalId(
+                            existingId = formData.causeId,
+                            inputText = formData.causeText,
+                            tipoInspeccionId = typeId,
+                            fallaId = resolvedFailureId
+                        )
                         val resolvedManufacturerId = ensureFabricanteId(
                             existingId = formData.manufacturerId,
                             inputText = formData.manufacturerText,
@@ -2510,7 +2817,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                         }
                         val severityId = calculateSeverityId(difference)
                         val failureLabel = resolvedFailureId?.let { id ->
-                            electricHazardOptions.firstOrNull { it.first == id }?.second
+                            hazardOptionsByType[typeId].orEmpty().firstOrNull { it.first == id }?.second
                         } ?: formData.failureText.takeIf { it.isNotBlank() }
                         val emissivityInput = formData.emissivity.trim()
                         val emissivityValue = emissivityInput.replace(',', '.').toDoubleOrNull()
@@ -2569,6 +2876,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                 circuitVoltageCheck = "off",
                                 circuitVoltage = formData.circuitVoltage.takeIf { it.isNotBlank() },
                                 idFalla = resolvedFailureId,
+                                idCausaRaiz = resolvedCauseId,
                                 componentComment = finalComment,
                                 estatusProblema = if (mechanicalProblemClosed) "Cerrado" else "Abierto",
                                 cerradoEnInspeccion = if (mechanicalProblemClosed) inspection.idInspeccion else editingProblem.cerradoEnInspeccion,
@@ -2616,6 +2924,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                 circuitVoltageCheck = "off",
                                 circuitVoltage = formData.circuitVoltage.takeIf { it.isNotBlank() },
                                 idFalla = resolvedFailureId,
+                                idCausaRaiz = resolvedCauseId,
                                 componentComment = finalComment,
                                 estatusProblema = "Abierto",
                                 aumentoTemperatura = difference,
@@ -2646,8 +2955,16 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                     .map { it.idFalla to (it.falla ?: it.idFalla) }
                                     .sortedBy { it.second.lowercase(Locale.getDefault()) }
                             }
+                            val refreshedCauses = withContext(Dispatchers.IO) {
+                                runCatching { causaPrincipalDao.getByTipoInspeccion(typeId) }.getOrElse { emptyList() }
+                                    .map { it.idCausaRaiz to (it.causaRaiz ?: it.idCausaRaiz) }
+                                    .sortedBy { it.second.lowercase(Locale.getDefault()) }
+                            }
                             hazardOptionsByType = hazardOptionsByType.toMutableMap().apply {
                                 this[typeId] = refreshedFallas
+                            }
+                            causeOptionsByType = causeOptionsByType.toMutableMap().apply {
+                                this[typeId] = refreshedCauses
                             }
 
                             if (detRow != null) {
@@ -2711,11 +3028,18 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                         if (isSavingAislamientoTermicoProblem) return@launch
                         isSavingAislamientoTermicoProblem = true
                         try {
+                            val resolvedFailureId = ensureFallaId(
+                                existingId = formData.failureId,
+                                inputText = formData.failureText,
+                                tipoInspeccionId = typeId
+                            )
                             val resolvedFormData = formData.copy(
-                                failureId = ensureFallaId(
-                                    existingId = formData.failureId,
-                                    inputText = formData.failureText,
-                                    tipoInspeccionId = typeId
+                                failureId = resolvedFailureId,
+                                causeId = ensureCausaPrincipalId(
+                                    existingId = formData.causeId,
+                                    inputText = formData.causeText,
+                                    tipoInspeccionId = typeId,
+                                    fallaId = resolvedFailureId
                                 ),
                                 manufacturerId = ensureFabricanteId(
                                     existingId = formData.manufacturerId,
@@ -2750,6 +3074,12 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                             inputText = formData.failureText,
                             tipoInspeccionId = typeId
                         )
+                        val resolvedCauseId = ensureCausaPrincipalId(
+                            existingId = formData.causeId,
+                            inputText = formData.causeText,
+                            tipoInspeccionId = typeId,
+                            fallaId = resolvedFailureId
+                        )
                         val resolvedManufacturerId = ensureFabricanteId(
                             existingId = formData.manufacturerId,
                             inputText = formData.manufacturerText,
@@ -2763,7 +3093,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                         }
                         val severityId = calculateSeverityId(difference)
                         val failureLabel = resolvedFailureId?.let { id ->
-                            electricHazardOptions.firstOrNull { it.first == id }?.second
+                            hazardOptionsByType[typeId].orEmpty().firstOrNull { it.first == id }?.second
                         } ?: formData.failureText.takeIf { it.isNotBlank() }
                         val emissivityInput = formData.emissivity.trim()
                         val emissivityValue = emissivityInput.replace(',', '.').toDoubleOrNull()
@@ -2822,6 +3152,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                 circuitVoltageCheck = "off",
                                 circuitVoltage = formData.circuitVoltage.takeIf { it.isNotBlank() },
                                 idFalla = resolvedFailureId,
+                                idCausaRaiz = resolvedCauseId,
                                 componentComment = finalComment,
                                 estatusProblema = if (aislamientoTermicoProblemClosed) "Cerrado" else "Abierto",
                                 cerradoEnInspeccion = if (aislamientoTermicoProblemClosed) inspection.idInspeccion else editingProblem.cerradoEnInspeccion,
@@ -2869,6 +3200,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                 circuitVoltageCheck = "off",
                                 circuitVoltage = formData.circuitVoltage.takeIf { it.isNotBlank() },
                                 idFalla = resolvedFailureId,
+                                idCausaRaiz = resolvedCauseId,
                                 componentComment = finalComment,
                                 estatusProblema = "Abierto",
                                 aumentoTemperatura = difference,
@@ -2899,8 +3231,16 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                     .map { it.idFalla to (it.falla ?: it.idFalla) }
                                     .sortedBy { it.second.lowercase(Locale.getDefault()) }
                             }
+                            val refreshedCauses = withContext(Dispatchers.IO) {
+                                runCatching { causaPrincipalDao.getByTipoInspeccion(typeId) }.getOrElse { emptyList() }
+                                    .map { it.idCausaRaiz to (it.causaRaiz ?: it.idCausaRaiz) }
+                                    .sortedBy { it.second.lowercase(Locale.getDefault()) }
+                            }
                             hazardOptionsByType = hazardOptionsByType.toMutableMap().apply {
                                 this[typeId] = refreshedFallas
+                            }
+                            causeOptionsByType = causeOptionsByType.toMutableMap().apply {
+                                this[typeId] = refreshedCauses
                             }
 
                             if (detRow != null) {
@@ -3380,6 +3720,28 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                         }
                     }
                 }
+                val visualCauseOptionsForDialog = remember(
+                    visualCauseOptionsFixed,
+                    pendingCauseId,
+                    pendingCauseLabel
+                ) {
+                    withPendingOption(
+                        options = visualCauseOptionsFixed,
+                        pendingId = pendingCauseId,
+                        pendingLabel = pendingCauseLabel
+                    )
+                }
+                val visualRecommendationOptionsForDialog = remember(
+                    visualRecommendationOptionsFixed,
+                    pendingRecommendationId,
+                    pendingRecommendationLabel
+                ) {
+                    withPendingOption(
+                        options = visualRecommendationOptionsFixed,
+                        pendingId = pendingRecommendationId,
+                        pendingLabel = pendingRecommendationLabel
+                    )
+                }
                 VisualProblemDialog(
                     inspectionNumber = pendingInspectionNumber,
                     problemNumber = pendingProblemNumber,
@@ -3387,8 +3749,12 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     equipmentName = pendingProblemEquipmentName ?: "-",
                     equipmentRoute = pendingProblemRoute ?: "-",
                     hazardIssues = visualHazardOptionsForDialog,
+                    causeOptions = visualCauseOptionsForDialog,
+                    recommendationOptions = visualRecommendationOptionsForDialog,
                     severities = visualSeverityOptionsForDialog,
                     selectedHazardIssue = pendingHazardId ?: pendingHazardLabel,
+                    selectedCause = pendingCauseId ?: pendingCauseLabel,
+                    selectedRecommendation = pendingRecommendationId ?: pendingRecommendationLabel,
                     selectedSeverity = pendingSeverityId ?: pendingSeverityLabel,
                     observations = pendingObservation,
                     onObservationsChange = { pendingObservation = it },
@@ -3458,6 +3824,28 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                 it.second.equals(normalized, ignoreCase = true)
                         }?.second
                     },
+                    onCauseSelected = { selected ->
+                        val normalized = selected.trim().takeIf { it.isNotBlank() }
+                        val match = normalized?.let { value ->
+                            visualCauseOptionsForDialog.firstOrNull {
+                                it.first.equals(value, ignoreCase = true) ||
+                                    it.second.equals(value, ignoreCase = true)
+                            }
+                        }
+                        pendingCauseId = match?.first
+                        pendingCauseLabel = match?.second ?: normalized
+                    },
+                    onRecommendationSelected = { selected ->
+                        val normalized = selected.trim().takeIf { it.isNotBlank() }
+                        val match = normalized?.let { value ->
+                            visualRecommendationOptionsForDialog.firstOrNull {
+                                it.first.equals(value, ignoreCase = true) ||
+                                    it.second.equals(value, ignoreCase = true)
+                            }
+                        }
+                        pendingRecommendationId = match?.first
+                        pendingRecommendationLabel = match?.second ?: normalized
+                    },
                     showEditControls = editingProblemId != null,
                     selectedTabIndex = problemDialogTab,
                     onSelectedTabChange = { problemDialogTab = it },
@@ -3481,6 +3869,10 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                     val draft = ProblemDraft.VisualDraft(
                                         hazardId = pendingHazardId,
                                         hazardLabel = pendingHazardLabel,
+                                        causeId = pendingCauseId,
+                                        causeLabel = pendingCauseLabel,
+                                        recommendationId = pendingRecommendationId,
+                                        recommendationLabel = pendingRecommendationLabel,
                                         severityId = pendingSeverityId,
                                         severityLabel = pendingSeverityLabel,
                                         observation = pendingObservation,
@@ -3542,6 +3934,18 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                     Toast.makeText(ctx, "Debe capturar una falla válida.", Toast.LENGTH_SHORT).show()
                                     return@launch
                                 }
+                                val resolvedCauseId = ensureCausaPrincipalId(
+                                    existingId = pendingCauseId,
+                                    inputText = pendingCauseLabel ?: pendingCauseId.orEmpty(),
+                                    tipoInspeccionId = typeId,
+                                    fallaId = resolvedHazardId
+                                )
+                                val resolvedRecommendationId = ensureRecomendacionId(
+                                    existingId = pendingRecommendationId,
+                                    inputText = pendingRecommendationLabel ?: pendingRecommendationId.orEmpty(),
+                                    tipoInspeccionId = typeId,
+                                    causaRaizId = resolvedCauseId
+                                )
                                 val hazardLabel = visualHazardOptionsFixed.firstOrNull {
                                     it.first.equals(resolvedHazardId, ignoreCase = true)
                                 }?.second ?: pendingHazardLabel
@@ -3571,6 +3975,8 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                         idUbicacion = ubicacionId,
                                         hazardIssue = resolvedHazardId,
                                         idFalla = resolvedHazardId,
+                                        idCausaRaiz = resolvedCauseId,
+                                        idRecomendacion = resolvedRecommendationId,
                                         idSeveridad = severityId,
                                         componentComment = comment,
                                         ruta = resolvedRoute,
@@ -3599,6 +4005,8 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                             idUbicacion = ubicacionId,
                                             hazardIssue = resolvedHazardId,
                                             idFalla = resolvedHazardId,
+                                            idCausaRaiz = resolvedCauseId,
+                                            idRecomendacion = resolvedRecommendationId,
                                             idSeveridad = severityId,
                                             componentComment = comment,
                                             ruta = resolvedRoute,
@@ -3620,8 +4028,24 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                             .map { it.idFalla to (it.falla ?: it.idFalla) }
                                             .sortedBy { it.second.lowercase(Locale.getDefault()) }
                                     }
+                                    val refreshedCauses = withContext(Dispatchers.IO) {
+                                        runCatching { causaPrincipalDao.getByTipoInspeccion(typeId) }.getOrElse { emptyList() }
+                                            .map { it.idCausaRaiz to (it.causaRaiz ?: it.idCausaRaiz) }
+                                            .sortedBy { it.second.lowercase(Locale.getDefault()) }
+                                    }
+                                    val refreshedRecommendations = withContext(Dispatchers.IO) {
+                                        runCatching { recomendacionDao.getByTipoInspeccion(typeId) }.getOrElse { emptyList() }
+                                            .map { it.idRecomendacion to (it.recomendacion ?: it.idRecomendacion) }
+                                            .sortedBy { it.second.lowercase(Locale.getDefault()) }
+                                    }
                                     hazardOptionsByType = hazardOptionsByType.toMutableMap().apply {
                                         this[typeId] = refreshedFallas
+                                    }
+                                    causeOptionsByType = causeOptionsByType.toMutableMap().apply {
+                                        this[typeId] = refreshedCauses
+                                    }
+                                    recommendationOptionsByType = recommendationOptionsByType.toMutableMap().apply {
+                                        this[typeId] = refreshedRecommendations
                                     }
 
                                     if (detRow != null) {
@@ -3677,6 +4101,11 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             val manufacturerOptionsPairs = fabricanteOptions
                 .sortedBy { it.fabricante?.lowercase(Locale.getDefault()) ?: "" }
                 .map { it.idFabricante to (it.fabricante ?: it.idFabricante) }
+            val electricCauseOptions = ELECTRIC_PROBLEM_TYPE_ID?.let { causeOptionsByType[it].orEmpty() }.orEmpty()
+            val mechanicalHazardOptions = MECHANICAL_PROBLEM_TYPE_ID?.let { hazardOptionsByType[it].orEmpty() }.orEmpty()
+            val mechanicalCauseOptions = MECHANICAL_PROBLEM_TYPE_ID?.let { causeOptionsByType[it].orEmpty() }.orEmpty()
+            val aislamientoHazardOptions = AISLAMIENTO_TERMICO_PROBLEM_TYPE_ID?.let { hazardOptionsByType[it].orEmpty() }.orEmpty()
+            val aislamientoCauseOptions = AISLAMIENTO_TERMICO_PROBLEM_TYPE_ID?.let { causeOptionsByType[it].orEmpty() }.orEmpty()
             if (showElectricProblemDialog && pendingProblemEquipmentName != null) {
                 ElectricProblemDialog(
                     inspectionNumber = pendingInspectionNumber,
@@ -3685,6 +4114,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     equipmentName = pendingProblemEquipmentName ?: "-",
                     equipmentRoute = pendingProblemRoute ?: "-",
                     failureOptions = electricHazardOptions,
+                    causeOptions = electricCauseOptions,
                     phaseOptions = electricPhaseOptions,
                     environmentOptions = electricEnvironmentOptions,
                     manufacturerOptions = manufacturerOptionsPairs,
@@ -3752,7 +4182,8 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     problemType = pendingProblemType,
                     equipmentName = pendingProblemEquipmentName ?: "-",
                     equipmentRoute = pendingProblemRoute ?: "-",
-                    failureOptions = electricHazardOptions,
+                    failureOptions = mechanicalHazardOptions,
+                    causeOptions = mechanicalCauseOptions,
                     phaseOptions = electricPhaseOptions,
                     environmentOptions = electricEnvironmentOptions,
                     manufacturerOptions = manufacturerOptionsPairs,
@@ -3820,7 +4251,8 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     problemType = pendingProblemType,
                     equipmentName = pendingProblemEquipmentName ?: "-",
                     equipmentRoute = pendingProblemRoute ?: "-",
-                    failureOptions = electricHazardOptions,
+                    failureOptions = aislamientoHazardOptions,
+                    causeOptions = aislamientoCauseOptions,
                     phaseOptions = electricPhaseOptions,
                     environmentOptions = electricEnvironmentOptions,
                     manufacturerOptions = manufacturerOptionsPairs,

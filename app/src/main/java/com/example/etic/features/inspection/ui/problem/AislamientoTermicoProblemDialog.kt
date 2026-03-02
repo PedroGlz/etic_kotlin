@@ -111,6 +111,7 @@ fun AislamientoTermicoProblemDialog(
     equipmentName: String,
     equipmentRoute: String,
     failureOptions: List<Pair<String, String>>,
+    causeOptions: List<Pair<String, String>>,
     phaseOptions: List<Pair<String, String>>,
     environmentOptions: List<Pair<String, String>>,
     manufacturerOptions: List<Pair<String, String>>,
@@ -187,6 +188,12 @@ fun AislamientoTermicoProblemDialog(
                 var failureInput by rememberSaveable {
                     mutableStateOf(
                         failureOptions.firstOrNull { it.first == initial.failureId }?.second.orEmpty()
+                    )
+                }
+                var causeId by rememberSaveable { mutableStateOf(initial.causeId) }
+                var causeInput by rememberSaveable {
+                    mutableStateOf(
+                        causeOptions.firstOrNull { it.first == initial.causeId }?.second.orEmpty()
                     )
                 }
                 var componentTemperature by rememberSaveable { mutableStateOf(initial.componentTemperature) }
@@ -304,6 +311,8 @@ fun AislamientoTermicoProblemDialog(
                     AislamientoTermicoProblemFormData(
                         failureId = failureId?.takeIf { it.isNotBlank() },
                         failureText = failureInput.trim(),
+                        causeId = causeId?.takeIf { it.isNotBlank() },
+                        causeText = causeInput.trim(),
                         componentTemperature = componentTemperature,
                         componentPhaseId = null,
                         componentRms = componentRms,
@@ -651,8 +660,10 @@ fun AislamientoTermicoProblemDialog(
 
                             Divider(Modifier.padding(top = 6.dp, bottom = 6.dp))
 
-                                Row {
-                                    Column {
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
                                         Text(text = "*Falla", style = MaterialTheme.typography.labelSmall)
                                         FilterableSelectorNoLabel(
                                             options = failureOptions,
@@ -660,7 +671,18 @@ fun AislamientoTermicoProblemDialog(
                                             selectedText = failureInput,
                                             onSelected = { failureId = it },
                                             onTextChanged = { text -> failureInput = text },
-                                            ancho = 180.dp
+                                            modifier = Modifier.fillMaxWidth()
+                                        )
+                                    }
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(text = "Causa principal", style = MaterialTheme.typography.labelSmall)
+                                        FilterableSelectorNoLabel(
+                                            options = causeOptions,
+                                            selectedId = causeId,
+                                            selectedText = causeInput,
+                                            onSelected = { causeId = it },
+                                            onTextChanged = { text -> causeInput = text },
+                                            modifier = Modifier.fillMaxWidth()
                                         )
                                     }
                                 }
@@ -749,6 +771,8 @@ fun AislamientoTermicoProblemDialog(
 data class AislamientoTermicoProblemFormData(
     val failureId: String? = null,
     val failureText: String = "",
+    val causeId: String? = null,
+    val causeText: String = "",
     val componentTemperature: String = "",
     val componentPhaseId: String? = null,
     val componentRms: String = "",
@@ -985,7 +1009,7 @@ private fun FilterableSelectorNoLabel(
                     modifier = Modifier.weight(1f)
                 )
                 Text(
-                    text = "Ã¢â€“Â¼",
+                    text = "▼",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

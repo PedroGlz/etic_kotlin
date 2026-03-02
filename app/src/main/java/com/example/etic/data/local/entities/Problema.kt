@@ -118,6 +118,12 @@ data class Problema(
     @ColumnInfo(name = "Id_Equipo")
     val idEquipo: String? = null,
 
+    @ColumnInfo(name = "Id_Recomendacion")
+    val idRecomendacion: String? = null,
+
+    @ColumnInfo(name = "Id_Causa_Raiz")
+    val idCausaRaiz: String? = null,
+
     @ColumnInfo(name = "Component_Comment")
     val componentComment: String? = null,
 
@@ -172,4 +178,3 @@ data class Problema(
     @ColumnInfo(name = "Fecha_Mod")
     val fechaMod: String? = null
 )
-
