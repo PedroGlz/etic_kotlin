@@ -35,7 +35,7 @@ class GenerateProblemListPdfUseCase(
             val severidadDao = db.severidadDao()
 
             val inspeccion = inspeccionDao.getById(inspeccionId)
-                ?: return@withContext Result.failure(IllegalStateException("Inspeccion no encontrada."))
+                ?: return@withContext Result.failure(IllegalStateException("Inspección no encontrada."))
 
             val siteId = inspeccion.idSitio.orEmpty()
             val all = problemaDao.getAllActivos().filter { it.idSitio == siteId }
@@ -57,7 +57,11 @@ class GenerateProblemListPdfUseCase(
             val inspeccionesById = inspeccionDao.getAll().associateBy { it.idInspeccion }
             val usuarioActual = if (!currentUserId.isNullOrBlank()) {
                 usuarioDao.getById(currentUserId)
-            } else null ?: if (!currentUserName.isNullOrBlank()) usuarioDao.getByUsuario(currentUserName) else null
+            } else null ?: if (!currentUserName.isNullOrBlank()) {
+                usuarioDao.getByUsuario(currentUserName)
+            } else {
+                null
+            }
 
             fun formatDate(raw: String?): String {
                 val r = raw?.take(10).orEmpty()
@@ -67,13 +71,20 @@ class GenerateProblemListPdfUseCase(
                 }.getOrDefault(r)
             }
 
-            fun formatTemp(v: Double?): String = if (v == null) "" else "${"%.1f".format(v)}°C"
+            fun formatTemp(v: Double?): String = if (v == null) "" else "${"%.1f".format(v)}\u00b0C"
+
             fun typeAndNo(p: Problema): String {
                 val t = p.idTipoInspeccion?.let { tipoById[it]?.tipoInspeccion }
                     ?: typeLabelForId(p.idTipoInspeccion)
                     ?: ""
                 val n = p.numeroProblema?.toString().orEmpty()
-                return "$t $n".trim()
+                val prefix = when {
+                    t.equals("Aislamiento Térmico", ignoreCase = true) -> "Ais. Térm."
+                    t.equals("Aisl. Térm.", ignoreCase = true) -> "Ais. Térm."
+                    t.equals("Aisl. Térmico", ignoreCase = true) -> "Ais. Térm."
+                    else -> t
+                }
+                return "$prefix $n".trim()
             }
 
             val now = LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
@@ -115,7 +126,9 @@ class GenerateProblemListPdfUseCase(
             }
 
             val folder = folderProvider.getReportesFolder(noInspeccion)
-                ?: return@withContext Result.failure(IllegalStateException("No hay acceso a carpeta Reportes (SAF)."))
+                ?: return@withContext Result.failure(
+                    IllegalStateException("No hay acceso a carpeta Reportes (SAF).")
+                )
             val name = when (listType) {
                 ProblemListType.ABIERTOS -> "ETIC_LISTA_PROBLEMAS_ABIERTOS_INSPECCION_$noInspeccion.pdf"
                 ProblemListType.CERRADOS -> "ETIC_LISTA_PROBLEMAS_CERRADOS_INSPECCION_$noInspeccion.pdf"
@@ -132,7 +145,7 @@ class GenerateProblemListPdfUseCase(
 
             val title = when (listType) {
                 ProblemListType.ABIERTOS -> "Lista De Todos Los Problemas Abiertos"
-                ProblemListType.CERRADOS -> "Lista De Problemas Cerrados En La Inspeccion Actual"
+                ProblemListType.CERRADOS -> "Lista De Problemas Cerrados En La Inspección Actual"
             }
             context.contentResolver.openOutputStream(file.uri)?.use { out ->
                 pdfGenerator.generate(out, header, title, rows, logoBmp)
@@ -152,8 +165,7 @@ private fun typeLabelForId(typeId: String?): String? {
         typeId.equals("0D32B332-76C3-11D3-82BF-00104BC75DC2", ignoreCase = true) -> "Eléctrico"
         typeId.equals("0D32B333-76C3-11D3-82BF-00104BC75DC2", ignoreCase = true) -> "Visual"
         typeId.equals("0D32B334-76C3-11D3-82BF-00104BC75DC2", ignoreCase = true) -> "Mecánico"
-        typeId.equals("0D32B335-76C3-11D3-82BF-00104BC75DC2", ignoreCase = true) -> "Aisl. Térmico"
+        typeId.equals("0D32B335-76C3-11D3-82BF-00104BC75DC2", ignoreCase = true) -> "Aislamiento Térmico"
         else -> null
     }
 }
-

@@ -51,10 +51,14 @@ class AnomaliasChartPdfGenerator {
             strokeWidth = 1f
             color = android.graphics.Color.rgb(171, 171, 171)
         }
-        val barLabelPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+        val barValuePaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
             textSize = pt(12f)
             typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
             color = android.graphics.Color.rgb(0, 22, 102)
+            textAlign = Paint.Align.CENTER
+        }
+        val centeredTextPaint = TextPaint(textPaint).apply {
+            textAlign = Paint.Align.CENTER
         }
 
         val page = doc.startPage(PdfDocument.PageInfo.Builder(pageWidth, pageHeight, 1).create())
@@ -71,34 +75,51 @@ class AnomaliasChartPdfGenerator {
                     max(1, (logo.height * scale).toInt()),
                     true
                 )
-            } else logo
+            } else {
+                logo
+            }
             c.drawBitmap(bmp, mm(11f), mm(10f), null)
         }
 
+        fun drawRightText(text: String, rightX: Float, y: Float, paint: TextPaint) {
+            c.drawText(text, rightX - paint.measureText(text), y, paint)
+        }
+
         drawLogo()
+        val centeredTitlePaint = TextPaint(titlePaint).apply {
+            textAlign = Paint.Align.CENTER
+        }
+        val titleCenterX = mm(150f)
         c.drawText(
-            "Grafica de anomalias/hallazgos detectadas durante la auditoria-inspeccion termografica.",
-            mm(40f),
-            mm(16f),
-            titlePaint
+            "Gráfica de anomalías/hallazgos detectadas",
+            titleCenterX,
+            mm(14f),
+            centeredTitlePaint
+        )
+        c.drawText(
+            "durante la auditoría-inspección termográfica.",
+            titleCenterX,
+            mm(19f),
+            centeredTitlePaint
         )
 
         var y = mm(31f)
         c.drawText(header.cliente, mm(10f), y, boldPaint); y += mm(4f)
         c.drawText(header.sitio, mm(10f), y, textPaint); y += mm(4f)
-        c.drawText("Analista Termografo: ${header.analista}", mm(10f), y, textPaint); y += mm(4f)
-        c.drawText("Nivel Certificacion: ${header.nivel}", mm(10f), y, textPaint)
+        c.drawText("Analista Termógrafo: ${header.analista}", mm(10f), y, textPaint); y += mm(4f)
+        c.drawText("Nivel Certificación: ${header.nivel}", mm(10f), y, textPaint)
 
-        c.drawText("Fecha Reporte: ${header.fechaReporte}", mm(243f), mm(31f), textPaint)
-        c.drawText(
-            "No. Inspeccion Anterior: ${header.inspeccionAnterior}  Fecha: ${header.fechaAnterior}",
-            mm(218f),
+        val rightX = mm(287f)
+        drawRightText("Fecha Reporte: ${header.fechaReporte}", rightX, mm(31f), textPaint)
+        drawRightText(
+            "No. Inspección Anterior: ${header.inspeccionAnterior}  Fecha: ${header.fechaAnterior}",
+            rightX,
             mm(35f),
             textPaint
         )
-        c.drawText(
-            "No. Inspeccion Actual: ${header.inspeccionActual}  Fecha: ${header.fechaActual}",
-            mm(218f),
+        drawRightText(
+            "No. Inspección Actual: ${header.inspeccionActual}  Fecha: ${header.fechaActual}",
+            rightX,
             mm(39f),
             textPaint
         )
@@ -118,31 +139,35 @@ class AnomaliasChartPdfGenerator {
         c.drawLine(chartBoxX, chartBoxY, chartBoxX, chartBoxY + chartBoxH, axisPaint)
         c.drawLine(chartBoxX - mm(2f), chartBoxY + chartBoxH, chartBoxX + chartBoxW, chartBoxY + chartBoxH, axisPaint)
 
-        val dataMax = max(1, bars.maxOfOrNull { it.value } ?: 1)
-        val yUnits = chartBoxH / dataMax
-        for (i in 0..dataMax step 10) {
-            val yPos = chartBoxY + yUnits * i
-            c.drawLine(chartBoxX - mm(2f), yPos, mm(282f), yPos, axisPaint)
-            c.drawText((dataMax - i).toString(), chartBoxX - mm(7f), yPos + mm(1f), textPaint)
+        val roundedMax = max(10, ((bars.maxOfOrNull { it.value } ?: 1) + 9) / 10 * 10)
+        val gridSteps = roundedMax / 10
+        for (step in 0..gridSteps) {
+            val value = roundedMax - (step * 10)
+            val ratio = value.toFloat() / roundedMax.toFloat()
+            val yPos = chartBoxY + chartBoxH - (chartBoxH * ratio)
+            c.drawLine(chartBoxX - mm(2f), yPos, chartBoxX + chartBoxW, yPos, axisPaint)
+            c.drawText(value.toString(), chartBoxX - mm(7f), yPos + mm(1f), textPaint)
         }
 
         val xLabelW = chartBoxW / max(1, bars.size)
-        val barW = mm(20f)
-        bars.forEachIndexed { i, b ->
-            val barH = yUnits * b.value
-            val barX = chartBoxX + (xLabelW / 2f) + (xLabelW * i) - (barW / 2f)
+        val barW = min(mm(22f), xLabelW * 0.55f)
+        bars.forEachIndexed { index, bar ->
+            val barCenterX = chartBoxX + (xLabelW * index) + (xLabelW / 2f)
+            val barH = if (roundedMax == 0) 0f else chartBoxH * (bar.value.toFloat() / roundedMax.toFloat())
+            val barX = barCenterX - (barW / 2f)
             val barY = chartBoxY + chartBoxH - barH
             val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply {
                 style = Paint.Style.FILL_AND_STROKE
-                color = b.color
+                color = bar.color
             }
             c.drawRect(RectF(barX, barY, barX + barW, barY + barH), fill)
-            c.drawText(b.value.toString(), barX + mm(6f), barY - mm(1f), barLabelPaint)
-            val labelLines = b.label.split(" ")
-            var ly = chartBoxY + chartBoxH + mm(5f)
-            labelLines.forEach {
-                c.drawText(it, barX - mm(6f), ly, textPaint)
-                ly += mm(4f)
+            c.drawText(bar.value.toString(), barCenterX, barY - mm(1f), barValuePaint)
+
+            val labelLines = bar.label.split(" ")
+            var labelY = chartBoxY + chartBoxH + mm(5f)
+            labelLines.forEach { line ->
+                c.drawText(line, barCenterX, labelY, centeredTextPaint)
+                labelY += mm(4f)
             }
         }
 
@@ -157,11 +182,10 @@ class AnomaliasChartPdfGenerator {
             typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
             color = android.graphics.Color.WHITE
         }
-        c.drawText("Anomalias / Hallazgos Cronicos: $cronicos", mm(223f), mm(52f), chronicPaint)
+        c.drawText("Anomalías / Hallazgos Crónicos: $cronicos", mm(223f), mm(52f), chronicPaint)
 
         doc.finishPage(page)
         doc.writeTo(output)
         doc.close()
     }
 }
-

@@ -9,9 +9,9 @@ import android.graphics.pdf.PdfDocument
 import android.text.TextPaint
 import com.example.etic.reports.ProblemListRow
 import com.example.etic.reports.ReportHeaderData
+import java.io.OutputStream
 import kotlin.math.max
 import kotlin.math.min
-import java.io.OutputStream
 
 class ProblemListPdfGenerator {
 
@@ -45,6 +45,11 @@ class ProblemListPdfGenerator {
             typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
             color = android.graphics.Color.BLACK
         }
+        val redPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+            textSize = pt(8f)
+            typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
+            color = android.graphics.Color.rgb(245, 0, 0)
+        }
         val linePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             style = Paint.Style.STROKE
             strokeWidth = 1f
@@ -60,9 +65,9 @@ class ProblemListPdfGenerator {
             "Equipo / Comentarios",
             "Fecha",
             "No Insp",
-            "Tipo No",
+            "# Problema",
             "Estatus",
-            "Cronico",
+            "Crónico",
             "Temp",
             "DeltaT",
             "Severidad"
@@ -71,22 +76,30 @@ class ProblemListPdfGenerator {
         val lineH = mm(4f)
         val tableTop = mm(57f)
         val tableBottom = mm(191f)
+        val headerRightX = mm(287f)
 
         fun wrap(text: String, paint: TextPaint, maxWidth: Float): List<String> {
             if (text.isBlank()) return listOf("")
-            val words = text.split(" ")
             val out = mutableListOf<String>()
-            var cur = ""
-            for (w in words) {
-                val c = if (cur.isBlank()) w else "$cur $w"
-                if (paint.measureText(c) <= maxWidth) {
-                    cur = c
+            val paragraphs = text.replace("\r", "").split("\n")
+            paragraphs.forEach { paragraph ->
+                if (paragraph.isBlank()) {
+                    out += ""
                 } else {
+                    val words = paragraph.split(" ")
+                    var cur = ""
+                    for (word in words) {
+                        val candidate = if (cur.isBlank()) word else "$cur $word"
+                        if (paint.measureText(candidate) <= maxWidth) {
+                            cur = candidate
+                        } else {
+                            if (cur.isNotBlank()) out += cur
+                            cur = word
+                        }
+                    }
                     if (cur.isNotBlank()) out += cur
-                    cur = w
                 }
             }
-            if (cur.isNotBlank()) out += cur
             return out.ifEmpty { listOf("") }
         }
 
@@ -101,29 +114,40 @@ class ProblemListPdfGenerator {
                     max(1, (logo.height * scale).toInt()),
                     true
                 )
-            } else logo
+            } else {
+                logo
+            }
             c.drawBitmap(bmp, mm(11f), mm(10f), null)
+        }
+
+        fun drawRightText(c: Canvas, text: String, rightX: Float, y: Float, paint: TextPaint) {
+            c.drawText(text, rightX - paint.measureText(text), y, paint)
         }
 
         fun drawHeader(c: Canvas) {
             drawLogo(c)
-            c.drawText(title, mm(86f), mm(16f), titlePaint)
+            val titleX = mm(86f)
+            val titleW = mm(125f)
+            val centeredTitleX = titleX + (titleW - titlePaint.measureText(title)) / 2f
+            c.drawText(title, centeredTitleX, mm(16f), titlePaint)
             var y = mm(31f)
             c.drawText(header.cliente, mm(10f), y, boldPaint); y += lineH
             c.drawText(header.sitio, mm(10f), y, textPaint); y += lineH
-            c.drawText("Analista Termografo: ${header.analista}", mm(10f), y, textPaint); y += lineH
-            c.drawText("Nivel Certificacion: ${header.nivel}", mm(10f), y, textPaint)
+            c.drawText("Analista Termógrafo: ${header.analista}", mm(10f), y, textPaint); y += lineH
+            c.drawText("Nivel Certificación: ${header.nivel}", mm(10f), y, textPaint)
 
-            c.drawText("Fecha Reporte: ${header.fechaReporte}", mm(243f), mm(31f), textPaint)
-            c.drawText(
-                "No. Inspeccion Anterior: ${header.inspeccionAnterior}  Fecha: ${header.fechaAnterior}",
-                mm(218f),
+            drawRightText(c, "Fecha Reporte: ${header.fechaReporte}", headerRightX, mm(31f), textPaint)
+            drawRightText(
+                c,
+                "No. Inspección Anterior: ${header.inspeccionAnterior}  Fecha: ${header.fechaAnterior}",
+                headerRightX,
                 mm(35f),
                 textPaint
             )
-            c.drawText(
-                "No. Inspeccion Actual: ${header.inspeccionActual}  Fecha: ${header.fechaActual}",
-                mm(218f),
+            drawRightText(
+                c,
+                "No. Inspección Actual: ${header.inspeccionActual}  Fecha: ${header.fechaActual}",
+                headerRightX,
                 mm(39f),
                 textPaint
             )
@@ -179,11 +203,12 @@ class ProblemListPdfGenerator {
             vals.forEachIndexed { col, value ->
                 if (col == 0) {
                     val lines = wrap(value, textPaint, widths[col] - mm(1f))
-                    lines.forEachIndexed { i, l ->
-                        canvas.drawText(l, x + mm(0.7f), y + lineH * (i + 1) - mm(0.7f), textPaint)
+                    lines.forEachIndexed { i, line ->
+                        canvas.drawText(line, x + mm(0.7f), y + lineH * (i + 1) - mm(0.7f), textPaint)
                     }
                 } else {
-                    canvas.drawText(value, x + mm(0.7f), y + lineH - mm(0.7f), textPaint)
+                    val paint = if (col == 5 && value.equals("SI", ignoreCase = true)) redPaint else textPaint
+                    canvas.drawText(value, x + mm(0.7f), y + lineH - mm(0.7f), paint)
                 }
                 x += widths[col]
             }
@@ -196,4 +221,3 @@ class ProblemListPdfGenerator {
         doc.close()
     }
 }
-
