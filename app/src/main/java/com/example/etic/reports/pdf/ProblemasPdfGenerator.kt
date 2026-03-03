@@ -53,6 +53,9 @@ class ProblemasPdfGenerator {
             strokeWidth = 1f
             color = android.graphics.Color.BLACK
         }
+        val redPaint = TextPaint(valueBluePaint).apply {
+            color = android.graphics.Color.rgb(245, 0, 0)
+        }
 
         fun wrap(text: String, paint: TextPaint, maxWidth: Float): List<String> {
             if (text.isBlank()) return listOf("")
@@ -100,7 +103,9 @@ class ProblemasPdfGenerator {
                     max(1, (logo.height * scale).toInt()),
                     true
                 )
-            } else logo
+            } else {
+                logo
+            }
             canvas.drawBitmap(bmp, mm(11f), mm(10f), null)
         }
 
@@ -130,12 +135,12 @@ class ProblemasPdfGenerator {
             val leftX = mm(10f)
             canvas.drawText(header.cliente, leftX, y, boldPaint); y += mm(4f)
             canvas.drawText(header.sitio, leftX, y, textPaint); y += mm(4f)
-            canvas.drawText("Analista Termografo: ${header.analista}", leftX, y, textPaint); y += mm(4f)
-            canvas.drawText("Nivel De Certificacion: ${header.nivel}", leftX, y, textPaint); y += mm(4f)
+            canvas.drawText("Analista Termógrafo: ${header.analista}", leftX, y, textPaint); y += mm(4f)
+            canvas.drawText("Nivel De Certificación: ${header.nivel}", leftX, y, textPaint); y += mm(4f)
             canvas.drawText("Fecha De Reporte: ${pageData.fechaReporte}", leftX, y, textPaint); y += mm(4f)
-            canvas.drawText("No. Inspeccion Anterior: ${header.inspeccionAnterior}", leftX, y, textPaint); y += mm(4f)
+            canvas.drawText("No. Inspección Anterior: ${header.inspeccionAnterior}", leftX, y, textPaint); y += mm(4f)
             canvas.drawText("Fecha: ${header.fechaAnterior}", leftX, y, textPaint); y += mm(4f)
-            canvas.drawText("No. Inspeccion Actual: ${header.inspeccionActual}", leftX, y, textPaint); y += mm(4f)
+            canvas.drawText("No. Inspección Actual: ${header.inspeccionActual}", leftX, y, textPaint); y += mm(4f)
             canvas.drawText("Fecha: ${header.fechaActual}", leftX, y, textPaint)
         }
 
@@ -159,6 +164,19 @@ class ProblemasPdfGenerator {
             canvas.drawText(value, valueX, y, valuePaint)
         }
 
+        fun drawInlineLabelValue(
+            canvas: Canvas,
+            x: Float,
+            y: Float,
+            label: String,
+            value: String,
+            labelPaint: TextPaint = textPaint,
+            valuePaint: TextPaint = boldPaint
+        ) {
+            canvas.drawText(label, x, y, labelPaint)
+            canvas.drawText(value, x + labelPaint.measureText(label), y, valuePaint)
+        }
+
         fun drawProblemDataBlock(canvas: Canvas, pageData: ProblemReportPageData, visual: Boolean) {
             val x = if (visual) mm(195f) else mm(185f)
             val y = mm(23f)
@@ -175,36 +193,58 @@ class ProblemasPdfGenerator {
                 boldPaint
             )
             ly += mm(4f)
-            canvas.drawText("Es Cronico: ${pageData.esCronico}", x + mm(2f), ly, textPaint)
+            drawInlineLabelValue(canvas, x + mm(2f), ly, "Es Crónico: ", pageData.esCronico)
             ly += mm(4f)
-            canvas.drawText("Prioridad Operacion: ${pageData.prioridadOperacion}", x + mm(2f), ly, textPaint)
+            drawInlineLabelValue(
+                canvas,
+                x + mm(2f),
+                ly,
+                "Prioridad Operación: ",
+                pageData.prioridadOperacion
+            )
             ly += mm(4f)
-            canvas.drawText("Prioridad De Reparacion: ${pageData.prioridadReparacion}", x + mm(2f), ly, textPaint)
+            drawInlineLabelValue(
+                canvas,
+                x + mm(2f),
+                ly,
+                "Prioridad De Reparación: ",
+                pageData.prioridadReparacion
+            )
 
             if (!visual) {
+                val elementoAnomalia = pageData.faseProblema.ifBlank { pageData.componente }
+                val elementoReferencia = pageData.faseReferencia.ifBlank { pageData.componente }
                 ly += mm(4f)
-                canvas.drawText(
-                    "Temperatura De Anomalia: ${pageData.temperaturaAnomalia}",
+                drawLabeledValue(
+                    canvas,
                     x + mm(2f),
                     ly,
-                    textPaint
+                    w - mm(4f),
+                    "Temperatura De Anomalía en $elementoAnomalia:",
+                    pageData.temperaturaAnomalia,
+                    valuePaint = boldPaint
                 )
                 ly += mm(4f)
-                canvas.drawText(
-                    "Temperatura De Referencia: ${pageData.temperaturaReferencia}",
+                drawLabeledValue(
+                    canvas,
                     x + mm(2f),
                     ly,
-                    valueBluePaint
+                    w - mm(4f),
+                    "Temperatura De Referencia en $elementoReferencia:",
+                    pageData.temperaturaReferencia,
+                    labelPaint = valueBluePaint,
+                    valuePaint = valueBluePaint
                 )
                 ly += mm(4f)
-                val redPaint = TextPaint(valueBluePaint).apply {
-                    color = android.graphics.Color.rgb(245, 0, 0)
-                }
-                canvas.drawText(
-                    "Diferencial De Temperatura: ${pageData.diferencialTemperatura}",
+                drawLabeledValue(
+                    canvas,
                     x + mm(2f),
                     ly,
-                    redPaint
+                    w - mm(4f),
+                    "Diferencial De Temperatura:",
+                    pageData.diferencialTemperatura,
+                    labelPaint = redPaint,
+                    valuePaint = redPaint
                 )
             }
         }
@@ -217,7 +257,7 @@ class ProblemasPdfGenerator {
                 val h = mm(30f)
                 val lineH = mm(4f)
                 canvas.drawRect(RectF(x, y, x + w, y + h), linePaint)
-                canvas.drawText("Ubicacion Del Equipo", x + mm(1.2f), y + lineH - mm(0.8f), boldPaint)
+                canvas.drawText("Ubicación Del Equipo", x + mm(1.2f), y + lineH - mm(0.8f), boldPaint)
                 canvas.drawLine(x, y + lineH, x + w, y + lineH, linePaint)
                 drawMultiline(
                     canvas,
@@ -248,7 +288,7 @@ class ProblemasPdfGenerator {
             val h = mm(48f)
             val lineH = mm(4f)
             canvas.drawRect(RectF(x, y, x + w, y + h), linePaint)
-            canvas.drawText("Informacion Del Equipo", x + mm(1.2f), y + lineH - mm(0.8f), boldPaint)
+            canvas.drawText("Información Del Equipo", x + mm(1.2f), y + lineH - mm(0.8f), boldPaint)
             canvas.drawLine(x, y + lineH, x + w, y + lineH, linePaint)
             drawMultiline(
                 canvas,
@@ -287,7 +327,7 @@ class ProblemasPdfGenerator {
 
             val tRect = RectF(mm(10f), mm(67f), mm(77f), mm(105f))
             canvas.drawRect(tRect, linePaint)
-            canvas.drawText("Informacion De Temperatura", mm(11f), mm(70f), boldPaint)
+            canvas.drawText("Información De Temperatura", mm(11f), mm(70f), boldPaint)
             canvas.drawLine(tRect.left, mm(71f), tRect.right, mm(71f), linePaint)
             var ly = mm(75f)
             drawLabeledValue(canvas, mm(11f), ly, mm(64f), "Temp. Ambiente:", pageData.temperaturaAmbiente); ly += lineH
@@ -298,10 +338,9 @@ class ProblemasPdfGenerator {
 
             val eRect = RectF(mm(10f), mm(108f), mm(77f), mm(146f))
             canvas.drawRect(eRect, linePaint)
-            canvas.drawText("Informacion Del Equipo", mm(11f), mm(111f), boldPaint)
+            canvas.drawText("Información Del Equipo", mm(11f), mm(111f), boldPaint)
             canvas.drawLine(eRect.left, mm(112f), eRect.right, mm(112f), linePaint)
             ly = mm(116f)
-            //drawLabeledValue(canvas, mm(11f), ly, mm(64f), "Componente:", pageData.componente); ly += lineH
             drawLabeledValue(canvas, mm(11f), ly, mm(64f), "Tipo Falla:", pageData.tipoInspeccion); ly += lineH
             drawLabeledValue(canvas, mm(11f), ly, mm(64f), "Fabricante:", pageData.fabricante); ly += lineH
             drawLabeledValue(canvas, mm(11f), ly, mm(64f), "Circuito Voltage [V]:", pageData.voltajeCircuito); ly += lineH
@@ -312,17 +351,18 @@ class ProblemasPdfGenerator {
                 mm(64f),
                 "Corriente Nominal [A]:",
                 pageData.corrienteNominal,
-                labelPaint = valueBluePaint
+                labelPaint = valueBluePaint,
+                valuePaint = valueBluePaint
             )
 
             val mRect = RectF(mm(10f), mm(149f), mm(77f), mm(187f))
             canvas.drawRect(mRect, linePaint)
-            canvas.drawText("Datos De Medicion De Carga", mm(11f), mm(152f), boldPaint)
+            canvas.drawText("Datos De Medición De Carga", mm(11f), mm(152f), boldPaint)
             canvas.drawLine(mRect.left, mm(153f), mRect.right, mm(153f), linePaint)
             ly = mm(157f)
-            drawLabeledValue(canvas, mm(11f), ly, mm(64f), "${pageData.faseProblema}:", pageData.rmsProblema, valueBluePaint); ly += lineH
-            drawLabeledValue(canvas, mm(11f), ly, mm(64f), "${pageData.faseReferencia}:", pageData.rmsReferencia, valueBluePaint); ly += lineH
-            drawLabeledValue(canvas, mm(11f), ly, mm(64f), "${pageData.faseAdicional}:", pageData.rmsAdicional, valueBluePaint); ly += lineH
+            drawLabeledValue(canvas, mm(11f), ly, mm(64f), "${pageData.faseProblema}:", pageData.rmsProblema, valuePaint = valueBluePaint); ly += lineH
+            drawLabeledValue(canvas, mm(11f), ly, mm(64f), "${pageData.faseReferencia}:", pageData.rmsReferencia, valuePaint = valueBluePaint); ly += lineH
+            drawLabeledValue(canvas, mm(11f), ly, mm(64f), "${pageData.faseAdicional}:", pageData.rmsAdicional, valuePaint = valueBluePaint); ly += lineH
             drawLabeledValue(canvas, mm(11f), ly, mm(64f), "Emisividad:", pageData.emisividad)
         }
 
@@ -356,8 +396,6 @@ class ProblemasPdfGenerator {
                 color = android.graphics.Color.rgb(243, 255, 0)
             }
 
-            // Replica de docs/Inventarios.php:
-            // SetXY(75,33) + LineGraph(105,69,...)
             val baseX = mm(75f)
             val baseY = mm(33f)
             val fullW = mm(105f)
@@ -376,13 +414,11 @@ class ProblemasPdfGenerator {
             val maxVal = max(1.0, kotlin.math.ceil(values.maxOrNull() ?: 1.0))
             val yDivs = 10
 
-            // Borde de gráfica (equivalente a opción dB).
             canvas.drawRect(
                 RectF(graphX, graphY, graphX + graphW, graphY + graphH),
                 borderColor
             )
 
-            // Etiqueta °C arriba-izquierda (como kB en PHP).
             canvas.drawText("°C", graphX - mm(8f), baseY - mm(1f), textSmall)
 
             for (i in 0..yDivs) {
@@ -405,7 +441,7 @@ class ProblemasPdfGenerator {
                 return graphY + graphH - (p * graphH).toFloat()
             }
 
-            fun drawSeries(series: List<Double?>, linePaint: Paint) {
+            fun drawSeries(series: List<Double?>, seriesPaint: Paint) {
                 if (series.isEmpty()) return
                 var prevX = graphX
                 var prevY = yFor(series.firstOrNull())
@@ -413,9 +449,9 @@ class ProblemasPdfGenerator {
                     val xx = graphX + xStep * idx
                     val yy = yFor(value)
                     if (idx > 0) {
-                        canvas.drawLine(prevX, prevY, xx, yy, linePaint)
+                        canvas.drawLine(prevX, prevY, xx, yy, seriesPaint)
                     }
-                    canvas.drawCircle(xx, yy, mm(1f), linePaint)
+                    canvas.drawCircle(xx, yy, mm(1f), seriesPaint)
                     canvas.drawCircle(xx, yy, mm(0.6f), pointFill)
                     prevX = xx
                     prevY = yy
@@ -504,17 +540,18 @@ class ProblemasPdfGenerator {
                     null
                 )
             }
-            val infoY = y + h + mm(4f)
-            drawMultiline(
-                canvas,
-                "Archivo: $fileName    Fecha: $date    Hora: $time",
-                x + mm(1f),
-                infoY - mm(4f),
-                w - mm(2f),
-                textPaint,
-                mm(4f),
-                maxLines = 2
-            )
+            val infoY = y + h + mm(6f)
+            val safeDate = date.ifBlank { "--/--/----" }
+            val safeTime = time.ifBlank { "--:-- --" }
+            val lineH = mm(4f)
+            val fileW = w * (41f / 102f)
+            val dateW = w * (33f / 102f)
+            canvas.drawRect(RectF(x, infoY, x + fileW, infoY + lineH), linePaint)
+            canvas.drawRect(RectF(x + fileW, infoY, x + fileW + dateW, infoY + lineH), linePaint)
+            canvas.drawRect(RectF(x + fileW + dateW, infoY, x + w, infoY + lineH), linePaint)
+            canvas.drawText("Archivo: $fileName", x + mm(1f), infoY + lineH - mm(0.8f), textPaint)
+            canvas.drawText("Fecha: $safeDate", x + fileW + mm(1f), infoY + lineH - mm(0.8f), textPaint)
+            canvas.drawText("Hora: $safeTime", x + fileW + dateW + mm(1f), infoY + lineH - mm(0.8f), textPaint)
         }
 
         pages.forEachIndexed { index, pageData ->

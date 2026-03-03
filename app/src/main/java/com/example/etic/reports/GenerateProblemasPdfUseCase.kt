@@ -220,7 +220,10 @@ class GenerateProblemasPdfUseCase(
                 val equipo = problem.idEquipo?.let { equipoById[it] }
                 val tipo = problem.idTipoInspeccion?.let { tipoInspeccionById[it]?.tipoInspeccion }.orEmpty()
                 val prioridadOperacion = ubicacion?.idTipoPrioridad
-                    ?.let { prioridadById[it]?.tipoPrioridad }
+                    ?.let { prioridadId ->
+                        prioridadById[prioridadId]?.descPrioridad?.takeIf { it.isNotBlank() }
+                            ?: prioridadById[prioridadId]?.tipoPrioridad
+                    }
                     .orEmpty()
                 val prioridadReparacion = problem.idSeveridad
                     ?.let { severidadById[it]?.severidad }
@@ -336,7 +339,7 @@ class GenerateProblemasPdfUseCase(
                     rmsProblema = fmt(problem.problemRms, ""),
                     rmsReferencia = fmt(problem.referenceRms, ""),
                     rmsAdicional = fmt(problem.additionalRms, ""),
-                    emisividad = fmt(problem.emissivity, ""),
+                    emisividad = fmt(problem.emissivity, "", decimals = 2),
                     codigoBarras = ubicacion?.codigoBarras.orEmpty(),
                     ruta = problem.ruta ?: ubicacion?.ruta.orEmpty(),
                     irFileName = problem.irFile.orEmpty(),
