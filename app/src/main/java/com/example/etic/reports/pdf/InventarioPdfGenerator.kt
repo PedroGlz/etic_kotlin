@@ -222,7 +222,7 @@ class InventarioPdfGenerator {
         }
 
         fun drawFooter(c: Canvas) {
-            val line1 = "ETIC SA DE CV"
+            val line1 = "ETIC PdM System V01-2026"
             val line2Text = "Copyright \u00A9 $currentYear Todos los derechos reservados."
             val w1 = footerPaint.measureText(line1)
             val w2 = footerPaint.measureText(line2Text)

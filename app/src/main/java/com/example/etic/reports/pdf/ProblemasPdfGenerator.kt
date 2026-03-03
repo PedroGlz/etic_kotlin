@@ -177,7 +177,7 @@ class ProblemasPdfGenerator {
 
         fun drawProblemDataBlock(canvas: Canvas, pageData: ProblemReportPageData, visual: Boolean) {
             val x = if (visual) mm(195f) else mm(185f)
-            val y = mm(23f)
+            val y = if (visual) mm(23f) else mm(23f)
             val w = if (visual) mm(92f) else mm(102f)
             val h = if (visual) mm(34f) else mm(31f)
 
@@ -222,7 +222,24 @@ class ProblemasPdfGenerator {
                 pageData.prioridadReparacion
             )
 
-            if (!visual) {
+            if (visual) {
+                ly += rowH
+                canvas.drawText("Fecha De Reporte: ${pageData.fechaReporte}", x + mm(2f), ly, textPaint)
+                ly += rowH
+                canvas.drawText(
+                    "No. Inspecci\u00f3n Anterior: ${header.inspeccionAnterior} Fecha: ${header.fechaAnterior}",
+                    x + mm(2f),
+                    ly,
+                    textPaint
+                )
+                ly += rowH
+                canvas.drawText(
+                    "No. Inspecci\u00f3n Actual: ${header.inspeccionActual} Fecha: ${header.fechaActual}",
+                    x + mm(2f),
+                    ly,
+                    textPaint
+                )
+            } else {
                 val elementoAnomalia = pageData.faseProblema.ifBlank { pageData.componente }
                 val elementoReferencia = pageData.faseReferencia.ifBlank { pageData.componente }
                 ly += rowH
@@ -493,7 +510,7 @@ class ProblemasPdfGenerator {
 
         fun drawVisualNarrative(canvas: Canvas, pageData: ProblemReportPageData) {
             val lineH = mm(4f)
-            var y = mm(69f)
+            var y = mm(77f)
             canvas.drawText("Hallazgo Visual:", mm(10f), y, boldPaint)
             drawMultiline(
                 canvas,
@@ -505,7 +522,7 @@ class ProblemasPdfGenerator {
                 lineH,
                 maxLines = 2
             )
-            y += mm(8f)
+            y += mm(4f)
             canvas.drawText("Observaciones:", mm(10f), y, boldPaint)
             drawMultiline(
                 canvas,

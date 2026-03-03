@@ -100,7 +100,9 @@ class BaselinePdfGenerator {
                     max(1, (logo.height * scale).toInt()),
                     true
                 )
-            } else logo
+            } else {
+                logo
+            }
             c.drawBitmap(bmp, mm(11f), mm(10f), null)
         }
 
@@ -175,7 +177,6 @@ class BaselinePdfGenerator {
                 }
             }
 
-            // Replica el mapeo del PHP
             val tempAmbSeries = selected.map { it.tempAmb }
             val mtaSeries = selected.map { it.tempMax }
             val tempMaxSeries = selected.map { it.mta }
@@ -194,7 +195,7 @@ class BaselinePdfGenerator {
                 c.drawLine(x, legendY, x + mm(6f), legendY, p)
                 c.drawText(name, x + mm(7f), legendY + mm(1f), smallPaint)
             }
-            c.drawText("°C", graphX - mm(8f), legendY + mm(1f), smallPaint)
+            c.drawText("\u00b0C", graphX - mm(8f), legendY + mm(1f), smallPaint)
             legend(graphX + mm(2f), "Temp Amb", android.graphics.Color.rgb(23, 49, 182))
             legend(graphX + mm(28f), "MTA", android.graphics.Color.rgb(245, 0, 0))
             legend(graphX + mm(44f), "Temp Max", android.graphics.Color.rgb(15, 142, 149))
@@ -219,16 +220,11 @@ class BaselinePdfGenerator {
             val c = page.canvas
 
             drawLogo(c)
-            drawMultiline(
-                c,
-                "Baseline Equipo En Monitoreo\nInforme de Tendencias",
-                mm(86f),
-                mm(10f),
-                mm(125f),
-                titlePaint,
-                mm(6f),
-                maxLines = 2
-            )
+            val title = "Baseline - Equipo en Monitoreo"
+            val titleX = mm(86f)
+            val titleW = mm(125f)
+            val centeredTitleX = titleX + (titleW - titlePaint.measureText(title)) / 2f
+            c.drawText(title, centeredTitleX, mm(16f) - mm(0.8f), titlePaint)
 
             var y = mm(31f)
             c.drawText(header.cliente, mm(10f), y, boldPaint); y += mm(4f)
@@ -242,19 +238,12 @@ class BaselinePdfGenerator {
             c.drawText("No. Inspeccion Actual: ${header.inspeccionActual}", mm(95f), mm(39f), textPaint)
             c.drawText("Fecha: ${header.fechaActual}", mm(95f), mm(43f), textPaint)
 
-            c.drawRect(RectF(mm(175f), mm(27f), mm(238f), mm(43f)), linePaint)
+            c.drawRect(RectF(mm(175f), mm(27f), mm(247f), mm(43f)), linePaint)
             c.drawText("Informacion Del Equipo", mm(176f), mm(30f), boldPaint)
-            c.drawLine(mm(175f), mm(31f), mm(238f), mm(31f), linePaint)
-            c.drawText("Código De Barras: ${pageData.codigoBarras}", mm(176f), mm(35f), textPaint)
+            c.drawLine(mm(175f), mm(31f), mm(247f), mm(31f), linePaint)
+            c.drawText("Codigo De Barras: ${pageData.codigoBarras}", mm(176f), mm(35f), textPaint)
             c.drawText("Fabricante: ${pageData.fabricante}", mm(176f), mm(39f), textPaint)
             c.drawText("Prioridad Operacion: ${pageData.prioridadOperacion}", mm(176f), mm(43f), textPaint)
-
-            c.drawRect(RectF(mm(247f), mm(27f), mm(287f), mm(43f)), linePaint)
-            c.drawText("Prioridad Operativa", mm(248f), mm(30f), boldPaint)
-            c.drawLine(mm(247f), mm(31f), mm(287f), mm(31f), linePaint)
-            c.drawText("CTO = Critico", mm(248f), mm(35f), textPaint)
-            c.drawText("ETO = Esencial", mm(248f), mm(39f), textPaint)
-            c.drawText("UN = No clasificado", mm(248f), mm(43f), textPaint)
 
             c.drawText("RUTA: ${pageData.ruta}", mm(10f), mm(60f), boldPaint)
             c.drawLine(mm(10f), mm(61f), mm(287f), mm(61f), linePaint)
@@ -310,8 +299,8 @@ class BaselinePdfGenerator {
             val tableX = mm(10f)
             var ty = mm(150f)
             var x = tableX
-            headers.forEachIndexed { idx, h ->
-                c.drawText(h, x + mm(0.6f), ty + mm(3f), boldPaint)
+            headers.forEachIndexed { idx, headerText ->
+                c.drawText(headerText, x + mm(0.6f), ty + mm(3f), boldPaint)
                 x += cols[idx]
             }
             c.drawLine(tableX, ty + mm(4f), tableX + cols.sum(), ty + mm(4f), linePaint)
