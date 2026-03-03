@@ -48,11 +48,17 @@ class BaselinePdfGenerator {
             textSize = pt(7f)
             typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL)
         }
+        val footerPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+            textSize = pt(7f)
+            typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL)
+        }
         val linePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             style = Paint.Style.STROKE
             strokeWidth = 1f
             color = android.graphics.Color.BLACK
         }
+        val currentYear = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
+        val footerBottomMargin = mm(8f)
 
         fun wrapText(text: String, paint: TextPaint, maxWidth: Float): List<String> {
             if (text.isBlank()) return listOf("")
@@ -104,6 +110,17 @@ class BaselinePdfGenerator {
                 logo
             }
             c.drawBitmap(bmp, mm(11f), mm(10f), null)
+        }
+
+        fun drawFooter(c: Canvas) {
+            val line1 = "ETIC PdM System V01-2026"
+            val line2 = "Copyright \u00a9 $currentYear Todos los derechos reservados."
+            val w1 = footerPaint.measureText(line1)
+            val w2 = footerPaint.measureText(line2)
+            val line2Y = pageHeight - footerBottomMargin
+            val line1Y = line2Y - mm(4f)
+            c.drawText(line1, (pageWidth - w1) / 2f, line1Y, footerPaint)
+            c.drawText(line2, (pageWidth - w2) / 2f, line2Y, footerPaint)
         }
 
         fun drawGraph(c: Canvas, points: List<BaselineGraphPoint>) {
@@ -336,6 +353,7 @@ class BaselinePdfGenerator {
                 ty += rowH
             }
 
+            drawFooter(c)
             doc.finishPage(page)
         }
 

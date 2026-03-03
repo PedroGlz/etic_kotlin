@@ -56,6 +56,12 @@ class ProblemasPdfGenerator {
         val redPaint = TextPaint(valueBluePaint).apply {
             color = android.graphics.Color.rgb(245, 0, 0)
         }
+        val footerPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+            textSize = pt(7f)
+            typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL)
+        }
+        val currentYear = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
+        val footerBottomMargin = mm(8f)
 
         fun wrap(text: String, paint: TextPaint, maxWidth: Float): List<String> {
             if (text.isBlank()) return listOf("")
@@ -90,6 +96,17 @@ class ProblemasPdfGenerator {
                 canvas.drawText(line, x, y + lineH * (idx + 1) - mm(0.8f), paint)
             }
             return lines.size
+        }
+
+        fun drawFooter(canvas: Canvas) {
+            val line1 = "ETIC PdM System V01-2026"
+            val line2 = "Copyright \u00a9 $currentYear Todos los derechos reservados."
+            val w1 = footerPaint.measureText(line1)
+            val w2 = footerPaint.measureText(line2)
+            val line2Y = pageHeight - footerBottomMargin
+            val line1Y = line2Y - mm(4f)
+            canvas.drawText(line1, (pageWidth - w1) / 2f, line1Y, footerPaint)
+            canvas.drawText(line2, (pageWidth - w2) / 2f, line2Y, footerPaint)
         }
 
         fun drawLogo(canvas: Canvas) {
@@ -659,6 +676,7 @@ class ProblemasPdfGenerator {
                 )
             }
 
+            drawFooter(canvas)
             document.finishPage(page)
         }
 

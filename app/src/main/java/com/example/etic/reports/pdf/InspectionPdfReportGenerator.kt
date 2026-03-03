@@ -30,6 +30,8 @@ class InspectionPdfReportGenerator {
         val margin = 24f
         val lineGap = 14f
         val footerGap = 24f
+        val pxPerMm = 72f / 25.4f
+        fun mm(v: Float) = v * pxPerMm
 
         val titlePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             textSize = 18f
@@ -47,13 +49,29 @@ class InspectionPdfReportGenerator {
             textSize = 12f
             typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
         }
+        val footerPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            textSize = 7f
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
+        }
+        val currentYear = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
+        val footerBottomMargin = mm(8f)
 
         var pageNumber = 0
         var page = doc.startPage(PdfDocument.PageInfo.Builder(pageWidth, pageHeight, ++pageNumber).create())
         var canvas = page.canvas
         var y = margin
 
+        fun drawFooter() {
+            val line1 = "ETIC PdM System V01-2026"
+            val line2 = "Copyright \u00a9 $currentYear Todos los derechos reservados."
+            val line2Y = pageHeight - footerBottomMargin
+            val line1Y = line2Y - mm(4f)
+            canvas.drawText(line1, (pageWidth - footerPaint.measureText(line1)) / 2f, line1Y, footerPaint)
+            canvas.drawText(line2, (pageWidth - footerPaint.measureText(line2)) / 2f, line2Y, footerPaint)
+        }
+
         fun newPage() {
+            drawFooter()
             doc.finishPage(page)
             page = doc.startPage(PdfDocument.PageInfo.Builder(pageWidth, pageHeight, ++pageNumber).create())
             canvas = page.canvas
@@ -197,6 +215,7 @@ class InspectionPdfReportGenerator {
             )
         }
 
+        drawFooter()
         doc.finishPage(page)
         FileOutputStream(outputFile).use { out ->
             doc.writeTo(out)

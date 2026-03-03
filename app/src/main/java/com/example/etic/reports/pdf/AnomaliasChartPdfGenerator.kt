@@ -60,6 +60,12 @@ class AnomaliasChartPdfGenerator {
         val centeredTextPaint = TextPaint(textPaint).apply {
             textAlign = Paint.Align.CENTER
         }
+        val footerPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+            textSize = pt(7f)
+            typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL)
+        }
+        val currentYear = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
+        val footerBottomMargin = mm(8f)
 
         val page = doc.startPage(PdfDocument.PageInfo.Builder(pageWidth, pageHeight, 1).create())
         val c = page.canvas
@@ -83,6 +89,17 @@ class AnomaliasChartPdfGenerator {
 
         fun drawRightText(text: String, rightX: Float, y: Float, paint: TextPaint) {
             c.drawText(text, rightX - paint.measureText(text), y, paint)
+        }
+
+        fun drawFooter() {
+            val line1 = "ETIC PdM System V01-2026"
+            val line2 = "Copyright \u00a9 $currentYear Todos los derechos reservados."
+            val w1 = footerPaint.measureText(line1)
+            val w2 = footerPaint.measureText(line2)
+            val line2Y = pageHeight - footerBottomMargin
+            val line1Y = line2Y - mm(4f)
+            c.drawText(line1, (pageWidth - w1) / 2f, line1Y, footerPaint)
+            c.drawText(line2, (pageWidth - w2) / 2f, line2Y, footerPaint)
         }
 
         drawLogo()
@@ -184,6 +201,7 @@ class AnomaliasChartPdfGenerator {
         }
         c.drawText("Anomalías / Hallazgos Crónicos: $cronicos", mm(223f), mm(52f), chronicPaint)
 
+        drawFooter()
         doc.finishPage(page)
         doc.writeTo(output)
         doc.close()

@@ -64,33 +64,33 @@ class GenerateProblemListPdfUseCase(
             }
 
             fun formatDate(raw: String?): String {
-                val r = raw?.take(10).orEmpty()
-                if (r.isBlank()) return ""
+                val value = raw?.take(10).orEmpty()
+                if (value.isBlank()) return ""
                 return runCatching {
-                    LocalDate.parse(r).format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
-                }.getOrDefault(r)
+                    LocalDate.parse(value).format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+                }.getOrDefault(value)
             }
 
             fun formatTemp(v: Double?): String = if (v == null) "" else "${"%.1f".format(v)}\u00b0C"
 
             fun typeAndNo(p: Problema): String {
-                val t = p.idTipoInspeccion?.let { tipoById[it]?.tipoInspeccion }
+                val type = p.idTipoInspeccion?.let { tipoById[it]?.tipoInspeccion }
                     ?: typeLabelForId(p.idTipoInspeccion)
                     ?: ""
-                val n = p.numeroProblema?.toString().orEmpty()
+                val number = p.numeroProblema?.toString().orEmpty()
                 val prefix = when {
-                    t.equals("Aislamiento Térmico", ignoreCase = true) -> "Ais. Térm."
-                    t.equals("Aisl. Térm.", ignoreCase = true) -> "Ais. Térm."
-                    t.equals("Aisl. Térmico", ignoreCase = true) -> "Ais. Térm."
-                    else -> t
+                    type.equals("Aislamiento Térmico", ignoreCase = true) -> "Ais. Térm."
+                    type.equals("Aisl. Térm.", ignoreCase = true) -> "Ais. Térm."
+                    type.equals("Aisl. Térmico", ignoreCase = true) -> "Ais. Térm."
+                    else -> type
                 }
-                return "$prefix $n".trim()
+                return "$prefix $number".trim()
             }
 
             val now = LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
             val prevDate = runCatching {
-                val noPrev = inspeccion.noInspeccionAnt ?: return@runCatching null
-                inspeccionDao.getAll().firstOrNull { it.noInspeccion == noPrev }?.fechaInicio
+                val previousInspectionNo = inspeccion.noInspeccionAnt ?: return@runCatching null
+                inspeccionDao.getAll().firstOrNull { it.noInspeccion == previousInspectionNo }?.fechaInicio
             }.getOrNull()
 
             val header = ReportHeaderData(
@@ -111,17 +111,17 @@ class GenerateProblemListPdfUseCase(
                 compareByDescending<Problema> { inspeccionesById[it.idInspeccion]?.noInspeccion ?: -1 }
                     .thenBy { it.idTipoInspeccion ?: "" }
                     .thenBy { it.numeroProblema ?: Int.MAX_VALUE }
-            ).map { p ->
+            ).map { problema ->
                 ProblemListRow(
-                    equipoComentarios = "Equipo: ${(p.ruta ?: "").ifBlank { "-" }}\nComentarios: ${p.componentComment.orEmpty()}",
-                    fechaCreacion = formatDate(p.fechaCreacion),
-                    noInspeccion = inspeccionesById[p.idInspeccion]?.noInspeccion?.toString().orEmpty(),
-                    tipoNumero = typeAndNo(p),
-                    estatusProblema = p.estatusProblema.orEmpty(),
-                    esCronico = p.esCronico.orEmpty(),
-                    temperaturaProblema = formatTemp(p.problemTemperature),
-                    deltaT = formatTemp(p.aumentoTemperatura),
-                    severidad = p.idSeveridad?.let { sevById[it]?.severidad }.orEmpty()
+                    equipoComentarios = "Equipo: ${(problema.ruta ?: "").ifBlank { "-" }}\nComentarios: ${problema.componentComment.orEmpty()}",
+                    fechaCreacion = formatDate(problema.fechaCreacion),
+                    noInspeccion = inspeccionesById[problema.idInspeccion]?.noInspeccion?.toString().orEmpty(),
+                    tipoNumero = typeAndNo(problema),
+                    estatusProblema = problema.estatusProblema.orEmpty(),
+                    esCronico = problema.esCronico.orEmpty(),
+                    temperaturaProblema = formatTemp(problema.problemTemperature),
+                    deltaT = formatTemp(problema.aumentoTemperatura),
+                    severidad = problema.idSeveridad?.let { sevById[it]?.severidad }.orEmpty()
                 )
             }
 
@@ -129,11 +129,11 @@ class GenerateProblemListPdfUseCase(
                 ?: return@withContext Result.failure(
                     IllegalStateException("No hay acceso a carpeta Reportes (SAF).")
                 )
-            val name = when (listType) {
+            val fileName = when (listType) {
                 ProblemListType.ABIERTOS -> "ETIC_LISTA_PROBLEMAS_ABIERTOS_INSPECCION_$noInspeccion.pdf"
                 ProblemListType.CERRADOS -> "ETIC_LISTA_PROBLEMAS_CERRADOS_INSPECCION_$noInspeccion.pdf"
             }
-            val file = folderProvider.createPdfFile(folder, name)
+            val file = folderProvider.createPdfFile(folder, fileName)
                 ?: return@withContext Result.failure(IllegalStateException("No se pudo crear el PDF."))
 
             val res = context.resources

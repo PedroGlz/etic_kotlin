@@ -3,7 +3,6 @@ package com.example.etic.reports.pdf
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
-import android.graphics.RectF
 import android.graphics.Typeface
 import android.graphics.pdf.PdfDocument
 import android.text.TextPaint
@@ -34,21 +33,33 @@ class ProblemListPdfGenerator {
         val titlePaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
             textSize = pt(13f)
             typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
+            textAlign = Paint.Align.CENTER
         }
         val textPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
             textSize = pt(8f)
             typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL)
             color = android.graphics.Color.BLACK
         }
+        val centerPaint = TextPaint(textPaint).apply {
+            textAlign = Paint.Align.CENTER
+        }
         val boldPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
             textSize = pt(8f)
             typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
             color = android.graphics.Color.BLACK
         }
-        val redPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+        val boldCenterPaint = TextPaint(boldPaint).apply {
+            textAlign = Paint.Align.CENTER
+        }
+        val redCenterPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
             textSize = pt(8f)
             typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
             color = android.graphics.Color.rgb(245, 0, 0)
+            textAlign = Paint.Align.CENTER
+        }
+        val footerPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+            textSize = pt(7f)
+            typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL)
         }
         val linePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             style = Paint.Style.STROKE
@@ -74,9 +85,14 @@ class ProblemListPdfGenerator {
         )
         val tableX = mm(10f)
         val lineH = mm(4f)
-        val tableTop = mm(57f)
-        val tableBottom = mm(191f)
+        val tableTop = mm(55f)
+        val tableBottom = mm(188f)
         val headerRightX = mm(287f)
+        val titleLeftX = mm(55f)
+        val titleRightX = mm(287f)
+        val cellPadding = mm(1.2f)
+        val currentYear = java.util.Calendar.getInstance().get(java.util.Calendar.YEAR)
+        val footerBottomMargin = mm(8f)
 
         fun wrap(text: String, paint: TextPaint, maxWidth: Float): List<String> {
             if (text.isBlank()) return listOf("")
@@ -87,20 +103,30 @@ class ProblemListPdfGenerator {
                     out += ""
                 } else {
                     val words = paragraph.split(" ")
-                    var cur = ""
+                    var current = ""
                     for (word in words) {
-                        val candidate = if (cur.isBlank()) word else "$cur $word"
+                        val candidate = if (current.isBlank()) word else "$current $word"
                         if (paint.measureText(candidate) <= maxWidth) {
-                            cur = candidate
+                            current = candidate
                         } else {
-                            if (cur.isNotBlank()) out += cur
-                            cur = word
+                            if (current.isNotBlank()) out += current
+                            current = word
                         }
                     }
-                    if (cur.isNotBlank()) out += cur
+                    if (current.isNotBlank()) out += current
                 }
             }
             return out.ifEmpty { listOf("") }
+        }
+
+        fun fitText(text: String, paint: TextPaint, maxWidth: Float): String {
+            if (paint.measureText(text) <= maxWidth) return text
+            val ellipsis = "..."
+            var result = text
+            while (result.isNotEmpty() && paint.measureText(result + ellipsis) > maxWidth) {
+                result = result.dropLast(1)
+            }
+            return if (result.isBlank()) ellipsis else result.trimEnd() + ellipsis
         }
 
         fun drawLogo(c: Canvas) {
@@ -126,10 +152,7 @@ class ProblemListPdfGenerator {
 
         fun drawHeader(c: Canvas) {
             drawLogo(c)
-            val titleX = mm(86f)
-            val titleW = mm(125f)
-            val centeredTitleX = titleX + (titleW - titlePaint.measureText(title)) / 2f
-            c.drawText(title, centeredTitleX, mm(16f), titlePaint)
+            c.drawText(title, (titleLeftX + titleRightX) / 2f, mm(16f), titlePaint)
             var y = mm(31f)
             c.drawText(header.cliente, mm(10f), y, boldPaint); y += lineH
             c.drawText(header.sitio, mm(10f), y, textPaint); y += lineH
@@ -153,11 +176,27 @@ class ProblemListPdfGenerator {
             )
         }
 
+        fun drawFooter(c: Canvas) {
+            val line1 = "ETIC PdM System V01-2026"
+            val line2 = "Copyright \u00a9 $currentYear Todos los derechos reservados."
+            val w1 = footerPaint.measureText(line1)
+            val w2 = footerPaint.measureText(line2)
+            val line2Y = pageHeight - footerBottomMargin
+            val line1Y = line2Y - lineH
+            c.drawText(line1, (pageWidth - w1) / 2f, line1Y, footerPaint)
+            c.drawText(line2, (pageWidth - w2) / 2f, line2Y, footerPaint)
+        }
+
         fun drawTableHeader(c: Canvas, y: Float) {
             var x = tableX
-            headers.forEachIndexed { idx, h ->
-                c.drawText(h, x + mm(0.7f), y + lineH - mm(0.7f), boldPaint)
-                x += widths[idx]
+            headers.forEachIndexed { idx, headerText ->
+                val width = widths[idx]
+                val safeText = fitText(headerText, boldCenterPaint, width - (cellPadding * 2f))
+                val centerX = x + (width / 2f)
+                val paint = if (idx == 0) boldPaint else boldCenterPaint
+                val drawX = if (idx == 0) x + cellPadding else centerX
+                c.drawText(safeText, drawX, y + lineH - mm(0.7f), paint)
+                x += width
             }
             c.drawLine(tableX, y + lineH, tableX + widths.sum(), y + lineH, linePaint)
         }
@@ -170,6 +209,7 @@ class ProblemListPdfGenerator {
         var y = tableTop + lineH
 
         fun newPage() {
+            drawFooter(canvas)
             doc.finishPage(page)
             pageNo += 1
             page = doc.startPage(PdfDocument.PageInfo.Builder(pageWidth, pageHeight, pageNo).create())
@@ -180,15 +220,15 @@ class ProblemListPdfGenerator {
         }
 
         rows.forEachIndexed { idx, row ->
-            val c1Lines = wrap(row.equipoComentarios, textPaint, widths[0] - mm(1f))
-            val rowH = max(lineH, c1Lines.size * lineH)
+            val firstColLines = wrap(row.equipoComentarios, textPaint, widths[0] - (cellPadding * 2f))
+            val rowH = max(lineH, firstColLines.size * lineH)
             if (y + rowH > tableBottom) newPage()
 
             if (idx % 2 == 0) {
-                canvas.drawRect(RectF(tableX, y, tableX + widths.sum(), y + rowH), altPaint)
+                canvas.drawRect(tableX, y, tableX + widths.sum(), y + rowH, altPaint)
             }
 
-            val vals = listOf(
+            val values = listOf(
                 row.equipoComentarios,
                 row.fechaCreacion,
                 row.noInspeccion,
@@ -199,23 +239,38 @@ class ProblemListPdfGenerator {
                 row.deltaT,
                 row.severidad
             )
+
             var x = tableX
-            vals.forEachIndexed { col, value ->
+            values.forEachIndexed { col, value ->
+                val width = widths[col]
                 if (col == 0) {
-                    val lines = wrap(value, textPaint, widths[col] - mm(1f))
-                    lines.forEachIndexed { i, line ->
-                        canvas.drawText(line, x + mm(0.7f), y + lineH * (i + 1) - mm(0.7f), textPaint)
+                    val lines = wrap(value, textPaint, width - (cellPadding * 2f))
+                    lines.forEachIndexed { lineIndex, line ->
+                        canvas.drawText(
+                            line,
+                            x + cellPadding,
+                            y + lineH * (lineIndex + 1) - mm(0.7f),
+                            textPaint
+                        )
                     }
                 } else {
-                    val paint = if (col == 5 && value.equals("SI", ignoreCase = true)) redPaint else textPaint
-                    canvas.drawText(value, x + mm(0.7f), y + lineH - mm(0.7f), paint)
+                    val centerX = x + (width / 2f)
+                    val safeText = fitText(value, centerPaint, width - (cellPadding * 2f))
+                    val paint = if (col == 5 && value.equals("SI", ignoreCase = true)) {
+                        redCenterPaint
+                    } else {
+                        centerPaint
+                    }
+                    canvas.drawText(safeText, centerX, y + lineH - mm(0.7f), paint)
                 }
-                x += widths[col]
+                x += width
             }
+
             y += rowH
         }
 
         canvas.drawLine(tableX, y, tableX + widths.sum(), y, linePaint)
+        drawFooter(canvas)
         doc.finishPage(page)
         doc.writeTo(output)
         doc.close()
