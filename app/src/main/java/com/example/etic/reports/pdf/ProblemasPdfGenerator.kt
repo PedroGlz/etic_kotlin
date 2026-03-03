@@ -112,13 +112,13 @@ class ProblemasPdfGenerator {
         fun drawGeneralHeader(canvas: Canvas, pageData: ProblemReportPageData) {
             val title = when (pageData.tipoInspeccionId) {
                 ProblemTypeIds.ELECTRICO, ProblemTypeIds.ELECTRICO_2 ->
-                    "El\u00e9ctrico - Documentaci\u00f3n de\nAnomal\u00edas T\u00e9rmicas"
+                    "El\u00e9ctrico - Documentaci\u00f3n de\nAnomalías T\u00e9rmicas"
                 ProblemTypeIds.AISLAMIENTO_TERMICO ->
-                    "Aislamiento T\u00e9rmico -\nDocumentaci\u00f3n de Anomal\u00edas T\u00e9rmicas"
+                    "Aislamiento T\u00e9rmico -\nDocumentaci\u00f3n de Anomalías T\u00e9rmicas"
                 ProblemTypeIds.VISUAL ->
                     "Visual - Documentaci\u00f3n de\nHallazgos"
                 else ->
-                    "Mec\u00e1nico - Documentaci\u00f3n de\nAnomal\u00edas T\u00e9rmicas"
+                    "Mec\u00e1nico - Documentaci\u00f3n de\nAnomalías T\u00e9rmicas"
             }
             val titleX = mm(86f)
             val titleY = mm(10f)
@@ -242,13 +242,26 @@ class ProblemasPdfGenerator {
             } else {
                 val elementoAnomalia = pageData.faseProblema.ifBlank { pageData.componente }
                 val elementoReferencia = pageData.faseReferencia.ifBlank { pageData.componente }
+                val includeElementoEnTemperaturas =
+                    pageData.tipoInspeccionId == ProblemTypeIds.ELECTRICO ||
+                        pageData.tipoInspeccionId == ProblemTypeIds.ELECTRICO_2
+                val temperaturaAnomaliaLabel = if (includeElementoEnTemperaturas) {
+                    "Temperatura De Anomalía en $elementoAnomalia:"
+                } else {
+                    "Temperatura De Anomalía:"
+                }
+                val temperaturaReferenciaLabel = if (includeElementoEnTemperaturas) {
+                    "Temperatura De Referencia en $elementoReferencia:"
+                } else {
+                    "Temperatura De Referencia:"
+                }
                 ly += rowH
                 drawLabeledValue(
                     canvas,
                     x + mm(2f),
                     ly,
                     w - mm(4f),
-                    "Temperatura De Anomal\u00eda en $elementoAnomalia:",
+                    temperaturaAnomaliaLabel,
                     pageData.temperaturaAnomalia,
                     valuePaint = boldPaint
                 )
@@ -258,7 +271,7 @@ class ProblemasPdfGenerator {
                     x + mm(2f),
                     ly,
                     w - mm(4f),
-                    "Temperatura De Referencia en $elementoReferencia:",
+                    temperaturaReferenciaLabel,
                     pageData.temperaturaReferencia,
                     labelPaint = valueBluePaint,
                     valuePaint = valueBluePaint

@@ -238,7 +238,7 @@ class BaselinePdfGenerator {
             c.drawText("No. Inspeccion Actual: ${header.inspeccionActual}", mm(95f), mm(39f), textPaint)
             c.drawText("Fecha: ${header.fechaActual}", mm(95f), mm(43f), textPaint)
 
-            c.drawRect(RectF(mm(175f), mm(27f), mm(247f), mm(43f)), linePaint)
+            c.drawRect(RectF(mm(175f), mm(27f), mm(247f), mm(45f)), linePaint)
             c.drawText("Informacion Del Equipo", mm(176f), mm(30f), boldPaint)
             c.drawLine(mm(175f), mm(31f), mm(247f), mm(31f), linePaint)
             c.drawText("Codigo De Barras: ${pageData.codigoBarras}", mm(176f), mm(35f), textPaint)
@@ -281,18 +281,33 @@ class BaselinePdfGenerator {
 
             drawGraph(c, pageData.graphPoints)
 
-            c.drawText(
-                "Archivo: ${pageData.archivoIr}   Fecha: ${pageData.irFecha}   Hora: ${pageData.irHora}",
-                mm(10f),
-                mm(137f),
-                textPaint
-            )
-            c.drawText(
-                "Archivo: ${pageData.archivoId}   Fecha: ${pageData.idFecha}   Hora: ${pageData.idHora}",
-                mm(104f),
-                mm(137f),
-                textPaint
-            )
+            fun drawImageInfoRow(
+                xMm: Float,
+                yMm: Float,
+                wMm: Float,
+                fileName: String,
+                date: String,
+                time: String
+            ) {
+                val x = mm(xMm)
+                val y = mm(yMm)
+                val w = mm(wMm)
+                val rowH = mm(4f)
+                val safeDate = date.ifBlank { "--/--/----" }
+                val safeTime = time.ifBlank { "--:-- --" }
+                val safeFileName = fileName.ifBlank { "-" }
+                val fileW = w * (41f / 90f)
+                val dateW = w * (27f / 90f)
+                c.drawRect(RectF(x, y, x + fileW, y + rowH), linePaint)
+                c.drawRect(RectF(x + fileW, y, x + fileW + dateW, y + rowH), linePaint)
+                c.drawRect(RectF(x + fileW + dateW, y, x + w, y + rowH), linePaint)
+                c.drawText("Archivo: $safeFileName", x + mm(1f), y + rowH - mm(0.8f), textPaint)
+                c.drawText("Fecha: $safeDate", x + fileW + mm(1f), y + rowH - mm(0.8f), textPaint)
+                c.drawText("Hora: $safeTime", x + fileW + dateW + mm(1f), y + rowH - mm(0.8f), textPaint)
+            }
+
+            drawImageInfoRow(10f, 133f, 90f, pageData.archivoIr, pageData.irFecha, pageData.irHora)
+            drawImageInfoRow(104f, 133f, 90f, pageData.archivoId, pageData.idFecha, pageData.idHora)
 
             val cols = listOf(24f, 27f, 18f, 12f, 11f, 12f, 173f).map { mm(it) }
             val headers = listOf("No. Inspeccion", "Fecha Inspeccion", "Estatus", "T° max", "MTA", "T° amb", "Notas")

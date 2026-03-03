@@ -153,7 +153,8 @@ class GenerateBaselinePdfUseCase(
                 val ubId = row.idUbicacion
                 val ubic = ubId?.let { ubicacionesById[it] }
                 val tipoPrioridad = ubic?.idTipoPrioridad
-                    ?.let { prioridadById[it]?.tipoPrioridad }
+                    ?.let { prioridadById[it]?.descPrioridad?.takeIf { desc -> desc.isNotBlank() }
+                        ?: prioridadById[it]?.tipoPrioridad }
                     .orEmpty()
                 val fabricante = ubic?.fabricante.orEmpty()
                 val ruta = row.ruta ?: ubic?.ruta.orEmpty()

@@ -81,16 +81,6 @@ fun ReportsMenuSection(
                 }
                 TextButton(
                     enabled = enabled,
-                    onClick = { onReport(ReportAction.AislamientoTermicoPdf) },
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.Outlined.WarningAmber, contentDescription = null)
-                    Spacer(Modifier.width(10.dp))
-                    Text("Reporte de Aislamiento Térmico", modifier = Modifier.weight(1f))
-                }
-                TextButton(
-                    enabled = enabled,
                     onClick = { onReport(ReportAction.BaselinePdf) },
                     contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
                     modifier = Modifier.fillMaxWidth()

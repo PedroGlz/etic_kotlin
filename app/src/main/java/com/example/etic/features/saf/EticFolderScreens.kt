@@ -89,7 +89,7 @@ fun FolderPickerScreen(
     ) {
         Text("Seleccionar carpeta ETIC", style = MaterialTheme.typography.titleMedium)
         Text(
-            "Selecciona una carpeta ra\u00edz para crear ETIC/Inspecciones y mantener la estructura SAF.",
+            "Selecciona una carpeta raíz para crear ETIC/Inspecciones y mantener la estructura SAF.",
             style = MaterialTheme.typography.bodyMedium
         )
         Button(onClick = { launcher.launch(null) }) {
