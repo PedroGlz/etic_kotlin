@@ -34,6 +34,7 @@ data class ProblemReportPageData(
     val velocidadViento: String,
     val ajusteViento: String,
     val ajusteCarga: String,
+    val componente: String,
     val fabricante: String,
     val voltajeCircuito: String,
     val corrienteNominal: String,

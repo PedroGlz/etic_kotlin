@@ -105,7 +105,16 @@ class ProblemasPdfGenerator {
         }
 
         fun drawGeneralHeader(canvas: Canvas, pageData: ProblemReportPageData) {
-            val title = "${pageData.tipoInspeccion}\nDocumentacion Del Problema"
+            val title = when (pageData.tipoInspeccionId) {
+                ProblemTypeIds.ELECTRICO, ProblemTypeIds.ELECTRICO_2 ->
+                    "Eléctrico - Documentación de\nAnomalías Térmicas"
+                ProblemTypeIds.AISLAMIENTO_TERMICO ->
+                    "Aislamiento Térmico -\nDocumentación de Anomalías Térmicas"
+                ProblemTypeIds.VISUAL ->
+                    "Visual - Documentación de\nHallazgos"
+                else ->
+                    "Mecánico - Documentación de\nAnomalías Térmicas"
+            }
             drawMultiline(
                 canvas = canvas,
                 text = title,
@@ -137,10 +146,11 @@ class ProblemasPdfGenerator {
             w: Float,
             label: String,
             value: String,
+            labelPaint: TextPaint = textPaint,
             valuePaint: TextPaint = boldPaint,
             valueRight: Boolean = true
         ) {
-            canvas.drawText(label, x, y, textPaint)
+            canvas.drawText(label, x, y, labelPaint)
             val valueX = if (valueRight) {
                 x + w - valuePaint.measureText(value)
             } else {
@@ -291,10 +301,19 @@ class ProblemasPdfGenerator {
             canvas.drawText("Informacion Del Equipo", mm(11f), mm(111f), boldPaint)
             canvas.drawLine(eRect.left, mm(112f), eRect.right, mm(112f), linePaint)
             ly = mm(116f)
+            //drawLabeledValue(canvas, mm(11f), ly, mm(64f), "Componente:", pageData.componente); ly += lineH
             drawLabeledValue(canvas, mm(11f), ly, mm(64f), "Tipo Falla:", pageData.tipoInspeccion); ly += lineH
             drawLabeledValue(canvas, mm(11f), ly, mm(64f), "Fabricante:", pageData.fabricante); ly += lineH
             drawLabeledValue(canvas, mm(11f), ly, mm(64f), "Circuito Voltage [V]:", pageData.voltajeCircuito); ly += lineH
-            drawLabeledValue(canvas, mm(11f), ly, mm(64f), "Corriente Nominal [A]:", pageData.corrienteNominal)
+            drawLabeledValue(
+                canvas,
+                mm(11f),
+                ly,
+                mm(64f),
+                "Corriente Nominal [A]:",
+                pageData.corrienteNominal,
+                labelPaint = valueBluePaint
+            )
 
             val mRect = RectF(mm(10f), mm(149f), mm(77f), mm(187f))
             canvas.drawRect(mRect, linePaint)

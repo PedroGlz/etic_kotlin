@@ -39,6 +39,7 @@ class GenerateProblemasPdfUseCase(
             val usuarioDao = db.usuarioDao()
             val tipoInspeccionDao = db.tipoInspeccionDao()
             val ubicacionDao = db.ubicacionDao()
+            val equipoDao = db.equipoDao()
             val tipoPrioridadDao = db.tipoPrioridadDao()
             val severidadDao = db.severidadDao()
             val faseDao = db.faseDao()
@@ -73,6 +74,7 @@ class GenerateProblemasPdfUseCase(
 
             val tipoInspeccionById = tipoInspeccionDao.getAll().associateBy { it.idTipoInspeccion }
             val ubicacionById = ubicacionDao.getAllActivas().associateBy { it.idUbicacion }
+            val equipoById = equipoDao.getAllActivos().associateBy { it.idEquipo }
             val prioridadById = tipoPrioridadDao.getAll().associateBy { it.idTipoPrioridad }
             val severidadById = severidadDao.getAll().associateBy { it.idSeveridad }
             val faseById = faseDao.getAllActivos().associateBy { it.idFase }
@@ -162,7 +164,7 @@ class GenerateProblemasPdfUseCase(
             fun calcAjusteViento(problemTemp: Double?, ambientTemp: Double?, windSpeed: Double?): Int? {
                 val tempProb = problemTemp ?: return null
                 val tempAmb = ambientTemp ?: return null
-                val vel = windSpeed ?: return tempProb.roundToInt()
+                val vel = windSpeed ?: return null
                 val fcv = when (vel.roundToInt()) {
                     1 -> 1.15
                     2 -> 1.36
@@ -210,8 +212,12 @@ class GenerateProblemasPdfUseCase(
                 return if (suffix.isBlank()) txt else "$txt $suffix"
             }
 
+            fun fmtOrDash(value: Double?, suffix: String = "", decimals: Int = 1): String =
+                fmt(value, suffix, decimals).ifBlank { "-" }
+
             val pages = problemas.map { problem ->
                 val ubicacion = problem.idUbicacion?.let { ubicacionById[it] }
+                val equipo = problem.idEquipo?.let { equipoById[it] }
                 val tipo = problem.idTipoInspeccion?.let { tipoInspeccionById[it]?.tipoInspeccion }.orEmpty()
                 val prioridadOperacion = ubicacion?.idTipoPrioridad
                     ?.let { prioridadById[it]?.tipoPrioridad }
@@ -315,9 +321,12 @@ class GenerateProblemasPdfUseCase(
                     diferencialTemperatura = fmt(problem.aumentoTemperatura, "C"),
                     temperaturaAmbiente = fmt(problem.tempAmbient, "C"),
                     tipoAmbiente = tipoAmbiente,
-                    velocidadViento = fmt(problem.windSpeed, "m/s"),
-                    ajusteViento = ajusteViento?.let { "$it C" }.orEmpty(),
-                    ajusteCarga = ajusteCarga?.let { "$it C" }.orEmpty(),
+                    velocidadViento = fmtOrDash(problem.windSpeed, "m/s"),
+                    ajusteViento = ajusteViento?.let { "$it C" } ?: "-",
+                    ajusteCarga = ajusteCarga?.let { "$it C" } ?: "-",
+                    componente = equipo?.equipo?.takeIf { it.isNotBlank() }
+                        ?: equipo?.descrEquipo?.takeIf { it.isNotBlank() }
+                        ?: "-",
                     fabricante = fabricante,
                     voltajeCircuito = problem.circuitVoltage?.takeIf { it.isNotBlank() }?.let { "$it V" }.orEmpty(),
                     corrienteNominal = problem.ratedLoad?.takeIf { it.isNotBlank() }?.let { "$it A" }.orEmpty(),
