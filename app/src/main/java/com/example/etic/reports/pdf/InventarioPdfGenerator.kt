@@ -56,7 +56,7 @@ class InventarioPdfGenerator {
         val headerBlockY = mm(27f)
         val tableTopY = mm(60f)
         val lineHeight = mm(4f)
-        val footerY = mm(195f)
+        val footerBottomMargin = mm(8f)
 
         val colW = listOf(20f, 16f, 21f, 119f, 29f, 72f).map { mm(it) }
         val tableX = mm(10f)
@@ -224,11 +224,12 @@ class InventarioPdfGenerator {
         fun drawFooter(c: Canvas) {
             val line1 = "ETIC SA DE CV"
             val line2Text = "Copyright \u00A9 $currentYear Todos los derechos reservados."
-            val line2 = "Copyright © 2023 NefWorks Todos los derechos reservados."
             val w1 = footerPaint.measureText(line1)
             val w2 = footerPaint.measureText(line2Text)
-            c.drawText(line1, (pageWidth - w1) / 2f, footerY, footerPaint)
-            c.drawText(line2Text, (pageWidth - w2) / 2f, footerY + lineHeight, footerPaint)
+            val line2Y = pageHeight - footerBottomMargin
+            val line1Y = line2Y - lineHeight
+            c.drawText(line1, (pageWidth - w1) / 2f, line1Y, footerPaint)
+            c.drawText(line2Text, (pageWidth - w2) / 2f, line2Y, footerPaint)
         }
 
         fun startPage() {
@@ -257,7 +258,7 @@ class InventarioPdfGenerator {
             val notesLines = max(1, measureLines(row.notas, textPaint, colW[5]))
             val rowHeight = max(lineHeight, notesLines * lineHeight)
 
-            if (y + rowHeight + mm(10f) > pageHeight) {
+            if (y + rowHeight + (lineHeight * 2f) + footerBottomMargin > pageHeight) {
                 newPage()
             }
 
