@@ -5,11 +5,11 @@ import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Typeface
 import android.graphics.pdf.PdfDocument
+import android.text.StaticLayout
 import android.text.TextPaint
 import com.example.etic.reports.InventoryHeaderData
 import com.example.etic.reports.InventoryReportRow
 import java.io.OutputStream
-import kotlin.math.ceil
 import kotlin.math.max
 import kotlin.math.min
 
@@ -29,7 +29,6 @@ class InventarioPdfGenerator {
 
         fun mm(v: Float) = v * pxPerMm
         fun pt(v: Float) = v * (dpi / 72f)
-        fun mmToPt(v: Float) = v * 2.83465f
 
         val titlePaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
             textSize = pt(13f)
@@ -87,23 +86,10 @@ class InventarioPdfGenerator {
         }
 
         fun measureLines(text: String, paint: TextPaint, maxWidth: Float): Int =
-            wrapText(text, paint, maxWidth).size
-
-        fun drawMultiCell(
-            c: Canvas,
-            text: String,
-            x: Float,
-            y: Float,
-            maxWidth: Float,
-            paint: TextPaint,
-            lineH: Float
-        ): Int {
-            val lines = wrapText(text, paint, maxWidth)
-            lines.forEachIndexed { idx, line ->
-                c.drawText(line, x, y + lineH * (idx + 1) - mm(1f), paint)
-            }
-            return lines.size
-        }
+            StaticLayout.Builder.obtain(text.ifBlank { " " }, 0, text.ifBlank { " " }.length, paint, maxWidth.toInt())
+                .setLineSpacing(0f, 1f)
+                .build()
+                .lineCount
 
         fun drawLogo(c: Canvas) {
             if (logo == null) return
@@ -267,7 +253,6 @@ class InventarioPdfGenerator {
         rows.forEach { row ->
             val indentMm = if (row.level <= 1) 1f else row.level * 2f
             val indentPx = mm(indentMm)
-            val ubicWidth = colW[3] - indentPx
 
             val notesLines = max(1, measureLines(row.notas, textPaint, colW[5]))
             val rowHeight = max(lineHeight, notesLines * lineHeight)
@@ -286,7 +271,19 @@ class InventarioPdfGenerator {
             canvas.drawText(row.elemento, x + indentPx, baseline, ubPaint); x += colW[3]
             canvas.drawText(row.codigoBarras, x, baseline, textPaint); x += colW[4]
 
-            drawMultiCell(canvas, row.notas, x, y, colW[5], textPaint, lineHeight)
+            canvas.save()
+            canvas.translate(x, y)
+            StaticLayout.Builder.obtain(
+                row.notas.ifBlank { " " },
+                0,
+                row.notas.ifBlank { " " }.length,
+                textPaint,
+                colW[5].toInt()
+            )
+                .setLineSpacing(0f, 1f)
+                .build()
+                .draw(canvas)
+            canvas.restore()
 
             y += rowHeight
         }
