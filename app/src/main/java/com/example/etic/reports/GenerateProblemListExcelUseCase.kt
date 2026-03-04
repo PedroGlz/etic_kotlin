@@ -14,7 +14,9 @@ class GenerateProblemListExcelUseCase(
 ) {
     suspend fun run(
         noInspeccion: String,
-        inspeccionId: String
+        inspeccionId: String,
+        reportStartDate: String? = null,
+        reportEndDate: String? = null
     ): Result<String> = withContext(Dispatchers.IO) {
         try {
             val db = DbProvider.get(context)
@@ -79,7 +81,10 @@ class GenerateProblemListExcelUseCase(
                 }
             }
 
-            val fechaServicio = formatFechaServicio(inspeccion.fechaInicio, inspeccion.fechaFin)
+            val fechaServicio = formatFechaServicio(
+                reportStartDate ?: inspeccion.fechaInicio,
+                reportEndDate ?: inspeccion.fechaFin
+            )
 
             val sitioFilePart = sitioNombre
                 .replace(Regex("[^A-Za-z0-9_-]"), "_")

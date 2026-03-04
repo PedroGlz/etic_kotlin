@@ -100,13 +100,21 @@ import com.example.etic.reports.GenerateInventarioPdfUseCase
 import com.example.etic.reports.GenerateProblemListExcelUseCase
 import com.example.etic.reports.GenerateProblemListPdfUseCase
 import com.example.etic.reports.GenerateProblemasPdfUseCase
+import com.example.etic.reports.GenerateResultadosAnalisisUseCase
+import com.example.etic.reports.LoadResultadosAnalisisDraftUseCase
 import com.example.etic.reports.ReportesFolderProvider
 import com.example.etic.reports.ProblemTypeIds
+import com.example.etic.reports.ResultadosAnalisisContacto
+import com.example.etic.reports.ResultadosAnalisisDraft
+import com.example.etic.reports.ResultadosAnalisisProblemOption
+import com.example.etic.reports.ResultadosAnalisisRecomendacion
+import com.example.etic.reports.SaveResultadosAnalisisDraftUseCase
 import com.example.etic.data.local.queries.CurrentInspectionInfo
 import com.example.etic.ui.theme.FontSizeOption
 import android.net.Uri
 import kotlin.math.max
 import com.example.etic.core.saf.EticImageStore
+import com.example.etic.ui.inspection.ResultsAnalysisDialog
 
 private enum class HomeSection { Inspection, Reports, FolderImages, FolderReports }
 
@@ -124,6 +132,8 @@ fun MainScreen(
     val scope = rememberCoroutineScope()
     val appContext = LocalContext.current
     val inspeccionDao = remember { DbProvider.get(appContext).inspeccionDao() }
+    val sitioDao = remember { DbProvider.get(appContext).sitioDao() }
+    val problemaDao = remember { DbProvider.get(appContext).problemaDao() }
     val eticPrefs = remember { EticPrefs(appContext.settingsDataStore) }
     val safManager = remember { SafEticManager() }
     val inspectionRepo = remember {
@@ -146,6 +156,12 @@ fun MainScreen(
     var isLoadingInventoryOptions by rememberSaveable { mutableStateOf(false) }
     var inventoryOptions by remember { mutableStateOf<List<TreeNode>>(emptyList()) }
     var inventorySelection by remember { mutableStateOf<Map<String, Boolean>>(emptyMap()) }
+    var showResultsAnalysisDialog by rememberSaveable { mutableStateOf(false) }
+    var isLoadingResultsAnalysisDialog by rememberSaveable { mutableStateOf(false) }
+    var resultsAnalysisDraft by remember { mutableStateOf<ResultadosAnalisisDraft?>(null) }
+    var resultsLocationOptions by remember { mutableStateOf<List<TreeNode>>(emptyList()) }
+    var resultsProblemOptions by remember { mutableStateOf<List<ResultadosAnalisisProblemOption>>(emptyList()) }
+    var resultsAvailableImages by remember { mutableStateOf<List<String>>(emptyList()) }
     val imageExtensionRegex = remember { Regex("\\.(jpg|jpeg|png|bmp|gif)$", RegexOption.IGNORE_CASE) }
     val rootTreeUriStr by eticPrefs.rootTreeUriFlow.collectAsState(initial = null)
     val rootTreeUri = remember(rootTreeUriStr) { rootTreeUriStr?.let { Uri.parse(it) } }
@@ -155,6 +171,181 @@ fun MainScreen(
     fun collectNodeIds(node: TreeNode, out: MutableList<String>) {
         out.add(node.id)
         node.children.forEach { collectNodeIds(it, out) }
+    }
+
+    fun problemTypeLabel(typeId: String?): String =
+        when (typeId?.uppercase()) {
+            ProblemTypeIds.ELECTRICO, ProblemTypeIds.ELECTRICO_2 -> "Electrico"
+            ProblemTypeIds.VISUAL -> "Visual"
+            ProblemTypeIds.AISLAMIENTO_TERMICO -> "Aislamiento termico"
+            "0D32B334-76C3-11D3-82BF-00104BC75DC2" -> "Mecanico"
+            else -> "Problema"
+        }
+
+    suspend fun buildDefaultResultsContacts(siteId: String?): List<ResultadosAnalisisContacto> {
+        val site = siteId?.let { sitioDao.getByIdActivo(it) }
+        return listOf(
+            ResultadosAnalisisContacto(site?.contacto1.orEmpty(), site?.puestoContacto1.orEmpty()),
+            ResultadosAnalisisContacto(site?.contacto2.orEmpty(), site?.puestoContacto2.orEmpty()),
+            ResultadosAnalisisContacto(site?.contacto3.orEmpty(), site?.puestoContacto3.orEmpty()),
+            ResultadosAnalisisContacto()
+        )
+    }
+
+    fun buildFolderProvider(): ReportesFolderProvider {
+        return ReportesFolderProvider(appContext) { inspectionNumber ->
+            val currentRootUri = rootTreeUri ?: return@ReportesFolderProvider null
+            safManager.getReportsDir(appContext, currentRootUri, inspectionNumber)?.uri
+        }
+    }
+
+    fun buildImagesProvider(): (String) -> Uri? = { inspectionNumber ->
+        val currentRootUri = rootTreeUri
+        if (currentRootUri == null) null
+        else safManager.getImagesDir(appContext, currentRootUri, inspectionNumber)?.uri
+    }
+
+    fun openResultsAnalysisDialog(insp: CurrentInspectionInfo) {
+        if (isGeneratingReport || isLoadingResultsAnalysisDialog) return
+        val noInspeccion = insp.noInspeccion?.toString()
+        if (noInspeccion.isNullOrBlank()) {
+            Toast.makeText(appContext, "No hay inspeccion activa.", Toast.LENGTH_SHORT).show()
+            return
+        }
+        scope.launch {
+            isLoadingResultsAnalysisDialog = true
+            try {
+                val rootId = insp.idSitio?.let { "root:$it" } ?: "root:site"
+                val rootTitle = insp.nombreSitio ?: "Sitio"
+                val roots = inspectionRepo.loadTree(rootId, rootTitle)
+                val locationRoots = roots.firstOrNull()?.children.orEmpty()
+                resultsLocationOptions = locationRoots
+
+                val activeProblems = problemaDao.getByInspeccionActivos(insp.idInspeccion)
+                    .sortedWith(
+                        compareBy(
+                            { it.idTipoInspeccion ?: "ZZZ" },
+                            { it.numeroProblema ?: Int.MAX_VALUE }
+                        )
+                    )
+                val problemOptions = activeProblems.map { problem ->
+                    ResultadosAnalisisProblemOption(
+                        id = problem.idProblema,
+                        label = "${problemTypeLabel(problem.idTipoInspeccion)} ${problem.numeroProblema ?: ""} - ${problem.ruta.orEmpty()}".trim()
+                    )
+                }
+                resultsProblemOptions = problemOptions
+
+                val defaultContacts = withContext(Dispatchers.IO) {
+                    buildDefaultResultsContacts(insp.idSitio)
+                }
+                val defaultDraft = ResultadosAnalisisDraft(
+                    inspectionId = insp.idInspeccion,
+                    siteId = insp.idSitio,
+                    contactos = defaultContacts,
+                    fechaInicio = "",
+                    fechaFin = "",
+                    descripciones = listOf(""),
+                    areasInspeccionadas = listOf(""),
+                    recomendaciones = listOf(ResultadosAnalisisRecomendacion()),
+                    referencias = listOf(""),
+                    selectedInventoryIds = locationRoots.map { it.id },
+                    selectedProblemIds = problemOptions.map { it.id }
+                )
+
+                val loadedDraft = LoadResultadosAnalisisDraftUseCase(appContext).run(
+                    inspectionId = insp.idInspeccion,
+                    siteId = insp.idSitio,
+                    defaultDraft = defaultDraft
+                ).getOrElse { defaultDraft }
+
+                resultsAnalysisDraft = loadedDraft.copy(
+                    fechaInicio = loadedDraft.fechaInicio,
+                    fechaFin = loadedDraft.fechaFin.ifBlank { loadedDraft.fechaInicio },
+                    selectedInventoryIds = loadedDraft.selectedInventoryIds.ifEmpty { locationRoots.map { it.id } },
+                    selectedProblemIds = loadedDraft.selectedProblemIds.ifEmpty { problemOptions.map { it.id } }
+                )
+
+                resultsAvailableImages = withContext(Dispatchers.IO) {
+                    val currentRootUri = rootTreeUri ?: return@withContext emptyList()
+                    val dir = safManager.getImagesDir(appContext, currentRootUri, noInspeccion)
+                    safManager.listFiles(dir)
+                        .mapNotNull { it.name }
+                        .filter { imageExtensionRegex.containsMatchIn(it) }
+                        .sorted()
+                }
+
+                if (resultsAnalysisDraft?.fechaInicio.isNullOrBlank()) {
+                    val start = inspeccionDao.getById(insp.idInspeccion)?.fechaInicio?.take(10).orEmpty()
+                    val end = inspeccionDao.getById(insp.idInspeccion)?.fechaFin?.take(10).orEmpty()
+                    resultsAnalysisDraft = resultsAnalysisDraft?.copy(
+                        fechaInicio = start,
+                        fechaFin = end.ifBlank { start }
+                    )
+                }
+
+                showResultsAnalysisDialog = true
+            } finally {
+                isLoadingResultsAnalysisDialog = false
+            }
+        }
+    }
+
+    fun saveResultsAnalysisDraft(draft: ResultadosAnalisisDraft, silent: Boolean = true) {
+        scope.launch {
+            val result = SaveResultadosAnalisisDraftUseCase(appContext).run(draft)
+            if (!silent && result.isFailure) {
+                Toast.makeText(appContext, "No se pudo guardar el borrador.", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
+
+    fun generateResultadosAnalisis(
+        insp: CurrentInspectionInfo,
+        draft: ResultadosAnalisisDraft,
+        selectedInventoryIds: List<String>
+    ) {
+        if (isGeneratingReport) return
+        val noInspeccion = insp.noInspeccion?.toString()
+        if (noInspeccion.isNullOrBlank()) {
+            Toast.makeText(appContext, "No hay inspeccion activa.", Toast.LENGTH_SHORT).show()
+            return
+        }
+        scope.launch {
+            isGeneratingReport = true
+            drawerState.close()
+            showResultsAnalysisDialog = false
+            try {
+                SaveResultadosAnalisisDraftUseCase(appContext).run(draft).getOrElse { throw it }
+                val useCase = GenerateResultadosAnalisisUseCase(
+                    context = appContext,
+                    folderProvider = buildFolderProvider(),
+                    getInspeccionImagenesTreeUri = buildImagesProvider()
+                )
+                val result = useCase.run(
+                    noInspeccion = noInspeccion,
+                    inspeccionId = insp.idInspeccion,
+                    draft = draft,
+                    selectedInventoryIds = selectedInventoryIds,
+                    currentUserId = currentUserSnapshot?.idUsuario,
+                    currentUserName = currentUserSnapshot?.nombre ?: currentUserSnapshot?.usuario
+                )
+                result.fold(
+                    onSuccess = { uriString ->
+                        Toast.makeText(appContext, "Reporte generado: $uriString", Toast.LENGTH_LONG).show()
+                    },
+                    onFailure = { e ->
+                        Toast.makeText(
+                            appContext,
+                            "Error al generar resultado de analisis: ${e.message ?: "desconocido"}",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                )
+            } finally {
+                isGeneratingReport = false
+            }
+        }
     }
 
     fun generateInventarioPdf(insp: CurrentInspectionInfo, selectedUbicacionIds: List<String>) {
@@ -566,6 +757,14 @@ fun MainScreen(
                     Toast.makeText(appContext, "No hay inspeccion activa.", Toast.LENGTH_SHORT).show()
                 } else {
                     generateListaProblemasExcel(insp)
+                }
+            }
+            ReportAction.ResultadosAnalisis -> {
+                val insp = currentInspectionSnapshot
+                if (insp == null) {
+                    Toast.makeText(appContext, "No hay inspeccion activa.", Toast.LENGTH_SHORT).show()
+                } else {
+                    openResultsAnalysisDialog(insp)
                 }
             }
         }
@@ -1184,6 +1383,40 @@ fun MainScreen(
                                     generateInventarioPdf(insp, selectedIds)
                                 }
                             ) { Text("Generar PDF") }
+                        }
+                    )
+                }
+
+                if (showResultsAnalysisDialog && resultsAnalysisDraft != null) {
+                    ResultsAnalysisDialog(
+                        initialDraft = resultsAnalysisDraft!!,
+                        locationOptions = resultsLocationOptions,
+                        problemOptions = resultsProblemOptions,
+                        availableImages = resultsAvailableImages,
+                        isBusy = isGeneratingReport,
+                        onDismiss = { draft ->
+                            resultsAnalysisDraft = draft
+                            showResultsAnalysisDialog = false
+                            saveResultsAnalysisDraft(draft)
+                        },
+                        onConfirm = { draft, selectedInventoryIds ->
+                            resultsAnalysisDraft = draft
+                            val insp = currentInspectionSnapshot
+                            if (insp == null) {
+                                Toast.makeText(appContext, "No hay inspeccion activa.", Toast.LENGTH_SHORT).show()
+                            } else {
+                                val expandedIds = mutableListOf<String>()
+                                resultsLocationOptions.forEach { node ->
+                                    if (selectedInventoryIds.contains(node.id)) {
+                                        collectNodeIds(node, expandedIds)
+                                    }
+                                }
+                                generateResultadosAnalisis(
+                                    insp = insp,
+                                    draft = draft,
+                                    selectedInventoryIds = expandedIds.distinct()
+                                )
+                            }
                         }
                     )
                 }
