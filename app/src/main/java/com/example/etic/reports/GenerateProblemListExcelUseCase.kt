@@ -1,11 +1,10 @@
 package com.example.etic.reports
 
 import android.content.Context
-import androidx.documentfile.provider.DocumentFile
 import com.example.etic.data.local.DbProvider
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.apache.poi.xssf.usermodel.XSSFWorkbook
+import org.apache.poi.ss.usermodel.WorkbookFactory
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -46,7 +45,6 @@ class GenerateProblemListExcelUseCase(
             val clienteNombre = inspeccion.idCliente?.let { clienteDao.getByIdActivo(it)?.razonSocial }.orEmpty()
             val tipoById = tipoInspeccionDao.getAll().associateBy { it.idTipoInspeccion }
             val sevById = severidadDao.getAll().associateBy { it.idSeveridad }
-            val inspeccionesById = inspeccionDao.getAll().associateBy { it.idInspeccion }
 
             fun formatDate(raw: String?): String {
                 val value = raw?.take(10).orEmpty()
@@ -81,69 +79,7 @@ class GenerateProblemListExcelUseCase(
                 }
             }
 
-            val workbook = XSSFWorkbook()
-            val sheet = workbook.createSheet("LISTA_PROBLEMAS")
-
-            // Encabezado tipo plantilla PHP
-            sheet.createRow(3).createCell(11).setCellValue("Cliente: $clienteNombre / $sitioNombre")
             val fechaServicio = formatFechaServicio(inspeccion.fechaInicio, inspeccion.fechaFin)
-            sheet.createRow(4).createCell(11).setCellValue("Fecha Servicio: $fechaServicio")
-
-            val header = listOf(
-                "No Inspeccion",
-                "No Problema",
-                "Sitio",
-                "Tipo Inspeccion",
-                "Ruta",
-                "Severidad",
-                "Temp Problema",
-                "Temp Referencia",
-                "Estatus Problema",
-                "Es Cronico",
-                "Fecha Creacion",
-                "Comentario"
-            )
-            val headerRow = sheet.createRow(7)
-            header.forEachIndexed { i, title -> headerRow.createCell(i).setCellValue(title) }
-
-            var rowNum = 8
-            problemas.forEach { p ->
-                val row = sheet.createRow(rowNum++)
-                row.createCell(0).setCellValue(
-                    inspeccionesById[p.idInspeccion]?.noInspeccion?.toString().orEmpty()
-                )
-                row.createCell(1).setCellValue(p.numeroProblema?.toString().orEmpty())
-                row.createCell(2).setCellValue(sitioNombre)
-                row.createCell(3).setCellValue(
-                    p.idTipoInspeccion?.let { tipoById[it]?.tipoInspeccion }.orEmpty()
-                )
-                row.createCell(4).setCellValue(p.ruta.orEmpty())
-                row.createCell(5).setCellValue(p.idSeveridad?.let { sevById[it]?.severidad }.orEmpty())
-                row.createCell(6).setCellValue(p.problemTemperature?.toString().orEmpty())
-                row.createCell(7).setCellValue(p.referenceTemperature?.toString().orEmpty())
-                row.createCell(8).setCellValue(p.estatusProblema.orEmpty())
-                row.createCell(9).setCellValue(p.esCronico.orEmpty())
-                row.createCell(10).setCellValue(formatDate(p.fechaCreacion))
-                row.createCell(11).setCellValue(p.componentComment.orEmpty())
-            }
-
-            // En Android, autoSizeColumn puede lanzar NoClassDefFoundError (AWT no disponible).
-            // Definimos anchos fijos similares a la plantilla para evitar cierres inesperados.
-            val widths = intArrayOf(
-                12 * 256, // A
-                10 * 256, // B
-                18 * 256, // C
-                16 * 256, // D
-                45 * 256, // E
-                14 * 256, // F
-                14 * 256, // G
-                16 * 256, // H
-                16 * 256, // I
-                12 * 256, // J
-                14 * 256, // K
-                50 * 256  // L
-            )
-            widths.forEachIndexed { idx, w -> sheet.setColumnWidth(idx, w) }
 
             val sitioFilePart = sitioNombre
                 .replace(Regex("[^A-Za-z0-9_-]"), "_")
@@ -154,11 +90,51 @@ class GenerateProblemListExcelUseCase(
                 "ETIC_LISTADO_DE_PROBLEMAS_${sitioFilePart}_INSPECCION_$noInspeccion.xlsx"
             ) ?: return@withContext Result.failure(IllegalStateException("No se pudo crear el archivo Excel."))
 
-            context.contentResolver.openOutputStream(file.uri)?.use { out ->
-                workbook.use { wb -> wb.write(out) }
-            } ?: return@withContext Result.failure(
-                IllegalStateException("No se pudo abrir OutputStream del SAF.")
-            )
+            context.assets.open("plantillas_reportes/LISTA_PROBLEMAS.xlsx").use { templateStream ->
+                WorkbookFactory.create(templateStream).use { workbook ->
+                    val sheet = workbook.getSheetAt(0)
+
+                    fun setCellValue(rowIndex: Int, colIndex: Int, value: String) {
+                        val row = sheet.getRow(rowIndex) ?: sheet.createRow(rowIndex)
+                        val cell = row.getCell(colIndex) ?: row.createCell(colIndex)
+                        cell.setCellValue(value)
+                    }
+
+                    setCellValue(3, 11, "Cliente: $clienteNombre / $sitioNombre")
+                    setCellValue(4, 11, "Fecha Servicio: $fechaServicio")
+
+                    var rowNum = 8
+                    problemas.forEach { p ->
+                        setCellValue(rowNum, 0, noInspeccion)
+                        setCellValue(rowNum, 1, p.numeroProblema?.toString().orEmpty())
+                        setCellValue(rowNum, 2, sitioNombre)
+                        setCellValue(
+                            rowNum,
+                            3,
+                            p.idTipoInspeccion?.let { tipoById[it]?.tipoInspeccion }.orEmpty()
+                        )
+                        setCellValue(rowNum, 4, p.ruta.orEmpty())
+                        setCellValue(
+                            rowNum,
+                            5,
+                            p.idSeveridad?.let { sevById[it]?.severidad }.orEmpty()
+                        )
+                        setCellValue(rowNum, 6, p.problemTemperature?.toString().orEmpty())
+                        setCellValue(rowNum, 7, p.referenceTemperature?.toString().orEmpty())
+                        setCellValue(rowNum, 8, p.estatusProblema.orEmpty())
+                        setCellValue(rowNum, 9, p.esCronico.orEmpty())
+                        setCellValue(rowNum, 10, formatDate(p.fechaCreacion))
+                        setCellValue(rowNum, 11, p.componentComment.orEmpty())
+                        rowNum++
+                    }
+
+                    context.contentResolver.openOutputStream(file.uri)?.use { out ->
+                        workbook.write(out)
+                    } ?: return@withContext Result.failure(
+                        IllegalStateException("No se pudo abrir OutputStream del SAF.")
+                    )
+                }
+            }
 
             Result.success(file.uri.toString())
         } catch (e: Throwable) {
