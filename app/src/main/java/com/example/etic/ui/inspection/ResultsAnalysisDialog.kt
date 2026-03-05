@@ -312,8 +312,9 @@ fun ResultsAnalysisDialog(
                         ) {
                             Column(
                                 modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(14.dp),
+                                    .fillMaxWidth()
+                                    .padding(14.dp)
+                                    .verticalScroll(rememberScrollState()),
                                 verticalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
                                 when (currentStep) {
