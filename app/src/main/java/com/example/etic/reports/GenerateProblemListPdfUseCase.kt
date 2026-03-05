@@ -46,12 +46,6 @@ class GenerateProblemListPdfUseCase(
                 }
             }
 
-            if (filtered.isEmpty()) {
-                return@withContext Result.failure(
-                    IllegalStateException("No hay datos para el reporte solicitado.")
-                )
-            }
-
             val tipoById = tipoInspeccionDao.getAll().associateBy { it.idTipoInspeccion }
             val sevById = severidadDao.getAll().associateBy { it.idSeveridad }
             val inspeccionesById = inspeccionDao.getAll().associateBy { it.idInspeccion }

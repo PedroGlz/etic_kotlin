@@ -66,12 +66,6 @@ class GenerateProblemasPdfUseCase(
                 )
                 .toList()
 
-            if (problemas.isEmpty()) {
-                return@withContext Result.failure(
-                    IllegalStateException("No hay problemas abiertos para generar el reporte.")
-                )
-            }
-
             val tipoInspeccionById = tipoInspeccionDao.getAll().associateBy { it.idTipoInspeccion }
             val ubicacionById = ubicacionDao.getAllActivas().associateBy { it.idUbicacion }
             val equipoById = equipoDao.getAllActivos().associateBy { it.idEquipo }
@@ -215,143 +209,191 @@ class GenerateProblemasPdfUseCase(
             fun fmtOrDash(value: Double?, suffix: String = "", decimals: Int = 1): String =
                 fmt(value, suffix, decimals).ifBlank { "-" }
 
-            val pages = problemas.map { problem ->
-                val ubicacion = problem.idUbicacion?.let { ubicacionById[it] }
-                val equipo = problem.idEquipo?.let { equipoById[it] }
-                val tipo = problem.idTipoInspeccion?.let { tipoInspeccionById[it]?.tipoInspeccion }.orEmpty()
-                val prioridadOperacion = ubicacion?.idTipoPrioridad
-                    ?.let { prioridadId ->
-                        prioridadById[prioridadId]?.descPrioridad?.takeIf { it.isNotBlank() }
-                            ?: prioridadById[prioridadId]?.tipoPrioridad
-                    }
-                    .orEmpty()
-                val prioridadReparacion = problem.idSeveridad
-                    ?.let { severidadById[it]?.severidad }
-                    .orEmpty()
-                val faseProblema = problem.problemPhase?.let { faseById[it]?.nombreFase }.orEmpty()
-                val faseRef = problem.referencePhase?.let { faseById[it]?.nombreFase }.orEmpty()
-                val faseAdicional = problem.additionalInfo?.let { faseById[it]?.nombreFase }.orEmpty()
-                val tipoAmbiente = problem.environment?.let { ambienteById[it]?.nombre }.orEmpty()
-                val fabricante = problem.idFabricante?.let { fabricanteById[it]?.fabricante }.orEmpty()
-                val hallazgoVisual = sequenceOf(
-                    problem.hazardIssue?.let { fallaById[it]?.falla },
-                    problem.hazardGroup?.let { fallaById[it]?.falla },
-                    problem.hazardClassification?.let { fallaById[it]?.falla },
-                    problem.hazardType?.let { fallaById[it]?.falla }
-                ).firstOrNull { !it.isNullOrBlank() }.orEmpty()
+            val pages = if (problemas.isEmpty()) {
+                listOf(
+                    ProblemReportPageData(
+                        idProblema = "",
+                        tipoInspeccionId = ProblemTypeIds.VISUAL,
+                        tipoInspeccion = "Visual",
+                        numeroProblema = null,
+                        tipoProblemaTag = "S/P",
+                        esCronico = "No",
+                        prioridadOperacion = "-",
+                        prioridadReparacion = "-",
+                        fechaReporte = now,
+                        hallazgoVisual = "Sin problemas para este reporte.",
+                        observaciones = "No hay hallazgos registrados.",
+                        temperaturaAnomalia = "-",
+                        temperaturaReferencia = "-",
+                        diferencialTemperatura = "-",
+                        temperaturaAmbiente = "-",
+                        tipoAmbiente = "-",
+                        velocidadViento = "-",
+                        ajusteViento = "-",
+                        ajusteCarga = "-",
+                        componente = "-",
+                        fabricante = "-",
+                        voltajeCircuito = "-",
+                        corrienteNominal = "-",
+                        faseProblema = "-",
+                        faseReferencia = "-",
+                        faseAdicional = "-",
+                        rmsProblema = "-",
+                        rmsReferencia = "-",
+                        rmsAdicional = "-",
+                        emisividad = "-",
+                        codigoBarras = "-",
+                        ruta = "-",
+                        irFileName = "",
+                        irFileDate = "",
+                        irFileTime = "",
+                        photoFileName = "",
+                        photoFileDate = "",
+                        photoFileTime = "",
+                        irBitmap = null,
+                        photoBitmap = null,
+                        graphPoints = emptyList()
+                    )
+                )
+            } else {
+                problemas.map { problem ->
+                    val ubicacion = problem.idUbicacion?.let { ubicacionById[it] }
+                    val equipo = problem.idEquipo?.let { equipoById[it] }
+                    val tipo = problem.idTipoInspeccion?.let { tipoInspeccionById[it]?.tipoInspeccion }.orEmpty()
+                    val prioridadOperacion = ubicacion?.idTipoPrioridad
+                        ?.let { prioridadId ->
+                            prioridadById[prioridadId]?.descPrioridad?.takeIf { it.isNotBlank() }
+                                ?: prioridadById[prioridadId]?.tipoPrioridad
+                        }
+                        .orEmpty()
+                    val prioridadReparacion = problem.idSeveridad
+                        ?.let { severidadById[it]?.severidad }
+                        .orEmpty()
+                    val faseProblema = problem.problemPhase?.let { faseById[it]?.nombreFase }.orEmpty()
+                    val faseRef = problem.referencePhase?.let { faseById[it]?.nombreFase }.orEmpty()
+                    val faseAdicional = problem.additionalInfo?.let { faseById[it]?.nombreFase }.orEmpty()
+                    val tipoAmbiente = problem.environment?.let { ambienteById[it]?.nombre }.orEmpty()
+                    val fabricante = problem.idFabricante?.let { fabricanteById[it]?.fabricante }.orEmpty()
+                    val hallazgoVisual = sequenceOf(
+                        problem.hazardIssue?.let { fallaById[it]?.falla },
+                        problem.hazardGroup?.let { fallaById[it]?.falla },
+                        problem.hazardClassification?.let { fallaById[it]?.falla },
+                        problem.hazardType?.let { fallaById[it]?.falla }
+                    ).firstOrNull { !it.isNullOrBlank() }.orEmpty()
 
-                val graphPoints = runCatching {
-                    val ubId = problem.idUbicacion
-                    val tipoId = problem.idTipoInspeccion
-                    if (ubId.isNullOrBlank() || tipoId.isNullOrBlank()) {
-                        emptyList()
-                    } else {
-                        val historial = problemaDao
-                            .getGraphHistoryFor(ubId, tipoId)
-                            .sortedBy { it.noInspeccion ?: Int.MIN_VALUE }
+                    val graphPoints = runCatching {
+                        val ubId = problem.idUbicacion
+                        val tipoId = problem.idTipoInspeccion
+                        if (ubId.isNullOrBlank() || tipoId.isNullOrBlank()) {
+                            emptyList()
+                        } else {
+                            val historial = problemaDao
+                                .getGraphHistoryFor(ubId, tipoId)
+                                .sortedBy { it.noInspeccion ?: Int.MIN_VALUE }
 
-                        val map = linkedMapOf<String, Pair<Double?, Double?>>()
-                        historial.forEach { row ->
-                            val label = graphDateLabel(row.fechaCreacion)
-                            if (label.isNotBlank()) {
-                                map[label] = row.problemTemperature to row.referenceTemperature
+                            val map = linkedMapOf<String, Pair<Double?, Double?>>()
+                            historial.forEach { row ->
+                                val label = graphDateLabel(row.fechaCreacion)
+                                if (label.isNotBlank()) {
+                                    map[label] = row.problemTemperature to row.referenceTemperature
+                                }
+                            }
+                            val currentLabel = graphDateLabel(problem.fechaCreacion).ifBlank { now }
+                            if (currentLabel.isNotBlank()) {
+                                map[currentLabel] = problem.problemTemperature to problem.referenceTemperature
+                            }
+
+                            val built = map.entries.map { (label, values) ->
+                                ProblemGraphPoint(
+                                    label = label,
+                                    problemTemp = values.first,
+                                    referenceTemp = values.second
+                                )
+                            }
+
+                            if (built.isNotEmpty()) {
+                                built
+                            } else if (problem.problemTemperature != null || problem.referenceTemperature != null) {
+                                listOf(
+                                    ProblemGraphPoint(
+                                        label = if (now.isNotBlank()) now else "Actual",
+                                        problemTemp = problem.problemTemperature,
+                                        referenceTemp = problem.referenceTemperature
+                                    )
+                                )
+                            } else {
+                                emptyList()
                             }
                         }
-                        val currentLabel = graphDateLabel(problem.fechaCreacion).ifBlank { now }
-                        if (currentLabel.isNotBlank()) {
-                            map[currentLabel] = problem.problemTemperature to problem.referenceTemperature
-                        }
+                    }.getOrDefault(emptyList())
 
-                        val built = map.entries.map { (label, values) ->
-                            ProblemGraphPoint(
-                                label = label,
-                                problemTemp = values.first,
-                                referenceTemp = values.second
-                            )
-                        }
+                    val ajusteViento = calcAjusteViento(
+                        problemTemp = problem.problemTemperature,
+                        ambientTemp = problem.tempAmbient,
+                        windSpeed = problem.windSpeed
+                    )
+                    val ajusteCarga = calcAjusteCarga(
+                        ajusteViento = ajusteViento,
+                        ambientTemp = problem.tempAmbient,
+                        problemRms = problem.problemRms,
+                        referenceRms = problem.referenceRms,
+                        additionalRms = problem.additionalRms,
+                        ratedLoad = problem.ratedLoad
+                    )
 
-                        if (built.isNotEmpty()) {
-                            built
-                        } else if (problem.problemTemperature != null || problem.referenceTemperature != null) {
-                            listOf(
-                                ProblemGraphPoint(
-                                    label = if (now.isNotBlank()) now else "Actual",
-                                    problemTemp = problem.problemTemperature,
-                                    referenceTemp = problem.referenceTemperature
-                                )
-                            )
-                        } else {
-                            emptyList()
-                        }
+                    val typeTag = when (problem.idTipoInspeccion) {
+                        ProblemTypeIds.ELECTRICO, ProblemTypeIds.ELECTRICO_2 -> "E"
+                        ProblemTypeIds.VISUAL -> "V"
+                        ProblemTypeIds.AISLAMIENTO_TERMICO -> "AT"
+                        else -> "M"
                     }
-                }.getOrDefault(emptyList())
 
-                val ajusteViento = calcAjusteViento(
-                    problemTemp = problem.problemTemperature,
-                    ambientTemp = problem.tempAmbient,
-                    windSpeed = problem.windSpeed
-                )
-                val ajusteCarga = calcAjusteCarga(
-                    ajusteViento = ajusteViento,
-                    ambientTemp = problem.tempAmbient,
-                    problemRms = problem.problemRms,
-                    referenceRms = problem.referenceRms,
-                    additionalRms = problem.additionalRms,
-                    ratedLoad = problem.ratedLoad
-                )
-
-                val typeTag = when (problem.idTipoInspeccion) {
-                    ProblemTypeIds.ELECTRICO, ProblemTypeIds.ELECTRICO_2 -> "E"
-                    ProblemTypeIds.VISUAL -> "V"
-                    ProblemTypeIds.AISLAMIENTO_TERMICO -> "AT"
-                    else -> "M"
+                    ProblemReportPageData(
+                        idProblema = problem.idProblema,
+                        tipoInspeccionId = problem.idTipoInspeccion,
+                        tipoInspeccion = tipo,
+                        numeroProblema = problem.numeroProblema,
+                        tipoProblemaTag = typeTag,
+                        esCronico = problem.esCronico.orEmpty(),
+                        prioridadOperacion = prioridadOperacion,
+                        prioridadReparacion = prioridadReparacion,
+                        fechaReporte = now,
+                        hallazgoVisual = hallazgoVisual,
+                        observaciones = problem.componentComment.orEmpty(),
+                        temperaturaAnomalia = fmt(problem.problemTemperature, "\u00b0C"),
+                        temperaturaReferencia = fmt(problem.referenceTemperature, "\u00b0C"),
+                        diferencialTemperatura = fmt(problem.aumentoTemperatura, "\u00b0C"),
+                        temperaturaAmbiente = fmt(problem.tempAmbient, "\u00b0C"),
+                        tipoAmbiente = tipoAmbiente,
+                        velocidadViento = fmtOrDash(problem.windSpeed, "m/s"),
+                        ajusteViento = ajusteViento?.let { "$it \u00b0C" } ?: "-",
+                        ajusteCarga = ajusteCarga?.let { "$it \u00b0C" } ?: "-",
+                        componente = equipo?.equipo?.takeIf { it.isNotBlank() }
+                            ?: equipo?.descrEquipo?.takeIf { it.isNotBlank() }
+                            ?: "-",
+                        fabricante = fabricante,
+                        voltajeCircuito = problem.circuitVoltage?.takeIf { it.isNotBlank() }?.let { "$it V" }.orEmpty(),
+                        corrienteNominal = problem.ratedLoad?.takeIf { it.isNotBlank() }?.let { "$it A" }.orEmpty(),
+                        faseProblema = faseProblema,
+                        faseReferencia = faseRef,
+                        faseAdicional = faseAdicional,
+                        rmsProblema = fmt(problem.problemRms, ""),
+                        rmsReferencia = fmt(problem.referenceRms, ""),
+                        rmsAdicional = fmt(problem.additionalRms, ""),
+                        emisividad = fmt(problem.emissivity, "", decimals = 2),
+                        codigoBarras = ubicacion?.codigoBarras.orEmpty(),
+                        ruta = problem.ruta ?: ubicacion?.ruta.orEmpty(),
+                        irFileName = problem.irFile.orEmpty(),
+                        irFileDate = problem.irFileDate.orEmpty(),
+                        irFileTime = problem.irFileTime.orEmpty(),
+                        photoFileName = problem.photoFile.orEmpty(),
+                        photoFileDate = problem.photoFileDate.orEmpty(),
+                        photoFileTime = problem.photoFileTime.orEmpty(),
+                        irBitmap = findImage(imageFolder, problem.irFile),
+                        photoBitmap = findImage(imageFolder, problem.photoFile),
+                        graphPoints = graphPoints
+                    )
                 }
-
-                ProblemReportPageData(
-                    idProblema = problem.idProblema,
-                    tipoInspeccionId = problem.idTipoInspeccion,
-                    tipoInspeccion = tipo,
-                    numeroProblema = problem.numeroProblema,
-                    tipoProblemaTag = typeTag,
-                    esCronico = problem.esCronico.orEmpty(),
-                    prioridadOperacion = prioridadOperacion,
-                    prioridadReparacion = prioridadReparacion,
-                    fechaReporte = now,
-                    hallazgoVisual = hallazgoVisual,
-                    observaciones = problem.componentComment.orEmpty(),
-                    temperaturaAnomalia = fmt(problem.problemTemperature, "\u00b0C"),
-                    temperaturaReferencia = fmt(problem.referenceTemperature, "\u00b0C"),
-                    diferencialTemperatura = fmt(problem.aumentoTemperatura, "\u00b0C"),
-                    temperaturaAmbiente = fmt(problem.tempAmbient, "\u00b0C"),
-                    tipoAmbiente = tipoAmbiente,
-                    velocidadViento = fmtOrDash(problem.windSpeed, "m/s"),
-                    ajusteViento = ajusteViento?.let { "$it \u00b0C" } ?: "-",
-                    ajusteCarga = ajusteCarga?.let { "$it \u00b0C" } ?: "-",
-                    componente = equipo?.equipo?.takeIf { it.isNotBlank() }
-                        ?: equipo?.descrEquipo?.takeIf { it.isNotBlank() }
-                        ?: "-",
-                    fabricante = fabricante,
-                    voltajeCircuito = problem.circuitVoltage?.takeIf { it.isNotBlank() }?.let { "$it V" }.orEmpty(),
-                    corrienteNominal = problem.ratedLoad?.takeIf { it.isNotBlank() }?.let { "$it A" }.orEmpty(),
-                    faseProblema = faseProblema,
-                    faseReferencia = faseRef,
-                    faseAdicional = faseAdicional,
-                    rmsProblema = fmt(problem.problemRms, ""),
-                    rmsReferencia = fmt(problem.referenceRms, ""),
-                    rmsAdicional = fmt(problem.additionalRms, ""),
-                    emisividad = fmt(problem.emissivity, "", decimals = 2),
-                    codigoBarras = ubicacion?.codigoBarras.orEmpty(),
-                    ruta = problem.ruta ?: ubicacion?.ruta.orEmpty(),
-                    irFileName = problem.irFile.orEmpty(),
-                    irFileDate = problem.irFileDate.orEmpty(),
-                    irFileTime = problem.irFileTime.orEmpty(),
-                    photoFileName = problem.photoFile.orEmpty(),
-                    photoFileDate = problem.photoFileDate.orEmpty(),
-                    photoFileTime = problem.photoFileTime.orEmpty(),
-                    irBitmap = findImage(imageFolder, problem.irFile),
-                    photoBitmap = findImage(imageFolder, problem.photoFile),
-                    graphPoints = graphPoints
-                )
             }
 
             val res = context.resources

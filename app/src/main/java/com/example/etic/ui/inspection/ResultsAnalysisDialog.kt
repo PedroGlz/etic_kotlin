@@ -15,14 +15,17 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.ArrowBack
@@ -36,7 +39,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -52,6 +54,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -70,6 +73,11 @@ private data class WizardStep(
     val title: String,
     val subtitle: String
 )
+
+private val FIELD_PADDING = PaddingValues(horizontal = 4.dp, vertical = 2.dp)
+private val INPUT_FIELD_RADIUS = 4.dp
+private val FIELD_HEIGHT = 25.dp
+private val FIELD_BORDER = 1.dp
 
 @Composable
 fun ResultsAnalysisDialog(
@@ -159,47 +167,7 @@ fun ResultsAnalysisDialog(
 
     fun validateStep(step: Int, draft: ResultadosAnalisisDraft): String? {
         return when (step) {
-            0 -> when {
-                draft.fechaInicio.isBlank() || draft.fechaFin.isBlank() -> "Selecciona las fechas del reporte."
-                draft.nombreImgPortada.isBlank() -> "Selecciona una imagen de portada."
-                else -> null
-            }
-
-            1 -> when {
-                draft.areasInspeccionadas.isEmpty() -> "Agrega al menos un área inspeccionada."
-                else -> null
-            }
-
-            2 -> when {
-                draft.recomendaciones.isEmpty() -> "Agrega al menos una recomendación."
-                else -> null
-            }
-
-            3 -> when {
-                draft.referencias.isEmpty() -> "Agrega al menos una referencia."
-                else -> null
-            }
-
-            4 -> when {
-                draft.selectedInventoryIds.isEmpty() -> "Selecciona al menos una ubicación para inventario."
-                else -> null
-            }
-
-            5 -> when {
-                draft.selectedProblemIds.isEmpty() -> "Selecciona al menos un problema."
-                else -> null
-            }
-
-            6 -> when {
-                validateStep(0, draft) != null -> "Corrige el paso 1 antes de generar."
-                validateStep(1, draft) != null -> "Corrige el paso 2 antes de generar."
-                validateStep(2, draft) != null -> "Corrige el paso 3 antes de generar."
-                validateStep(3, draft) != null -> "Corrige el paso 4 antes de generar."
-                validateStep(4, draft) != null -> "Corrige el paso 5 antes de generar."
-                validateStep(5, draft) != null -> "Corrige el paso 6 antes de generar."
-                else -> null
-            }
-
+            0, 1, 2, 3, 4, 5, 6 -> null
             else -> null
         }
     }
@@ -299,8 +267,8 @@ fun ResultsAnalysisDialog(
                     Column(
                         modifier = Modifier
                             .weight(1f)
-                            .padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                            .padding(5.dp),
+                        verticalArrangement = Arrangement.spacedBy(5.dp)
                     ) {
                         Card(
                             modifier = Modifier
@@ -313,15 +281,15 @@ fun ResultsAnalysisDialog(
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(14.dp)
+                                    .padding(5.dp)
                                     .verticalScroll(rememberScrollState()),
-                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                                verticalArrangement = Arrangement.spacedBy(5.dp)
                             ) {
                                 when (currentStep) {
                                     0 -> {
-                                        Text("Paso 1: Portada", style = MaterialTheme.typography.titleLarge)
+                                        Text("Paso 1: Portada", style = MaterialTheme.typography.titleMedium)
                                         ContactosEditor(contactos = contactos)
-                                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                        Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                                             DateField(
                                                 modifier = Modifier.weight(1f),
                                                 label = "Fecha de inicio",
@@ -349,16 +317,15 @@ fun ResultsAnalysisDialog(
                                                 }
                                             }
                                         )
-                                        OutlinedTextField(
+                                        MultilineField(
                                             value = detalleUbicacion,
                                             onValueChange = { detalleUbicacion = it },
                                             modifier = Modifier.fillMaxWidth(),
-                                            label = { Text("Detalle ubicación") },
-                                            minLines = 2
+                                            label = "Detalle ubicación"
                                         )
                                     }
                                     1 -> {
-                                        Text("Paso 2: Descripción", style = MaterialTheme.typography.titleLarge)
+                                        Text("Paso 2: Descripción", style = MaterialTheme.typography.titleMedium)
                                         EditableStringList(
                                             title = "Descripciones",
                                             values = descripciones,
@@ -371,7 +338,7 @@ fun ResultsAnalysisDialog(
                                         )
                                     }
                                     2 -> {
-                                        Text("Paso 3: Recomendaciones", style = MaterialTheme.typography.titleLarge)
+                                        Text("Paso 3: Recomendaciones", style = MaterialTheme.typography.titleMedium)
                                         recomendaciones.forEachIndexed { index, rec ->
                                             Card(
                                                 colors = CardDefaults.cardColors(
@@ -379,8 +346,8 @@ fun ResultsAnalysisDialog(
                                                 )
                                             ) {
                                                 Column(
-                                                    modifier = Modifier.padding(12.dp),
-                                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                                    modifier = Modifier.padding(5.dp),
+                                                    verticalArrangement = Arrangement.spacedBy(5.dp)
                                                 ) {
                                                     Row(
                                                         modifier = Modifier.fillMaxWidth(),
@@ -398,12 +365,11 @@ fun ResultsAnalysisDialog(
                                                             Icon(Icons.Outlined.Delete, contentDescription = "Eliminar")
                                                         }
                                                     }
-                                                    OutlinedTextField(
+                                                    MultilineField(
                                                         value = rec.texto,
                                                         onValueChange = { recomendaciones[index] = rec.copy(texto = it) },
                                                         modifier = Modifier.fillMaxWidth(),
-                                                        label = { Text("Texto") },
-                                                        minLines = 2
+                                                        label = "Texto"
                                                     )
                                                     ImageInputButtonGroup(
                                                         label = "Imagen 1",
@@ -468,7 +434,7 @@ fun ResultsAnalysisDialog(
                                         }
                                     }
                                     3 -> {
-                                        Text("Paso 4: Referencias", style = MaterialTheme.typography.titleLarge)
+                                        Text("Paso 4: Referencias", style = MaterialTheme.typography.titleMedium)
                                         EditableStringList(
                                             title = "Referencias",
                                             values = referencias,
@@ -476,7 +442,7 @@ fun ResultsAnalysisDialog(
                                         )
                                     }
                                     4 -> {
-                                        Text("Paso 5: Inventario", style = MaterialTheme.typography.titleLarge)
+                                        Text("Paso 5: Inventario", style = MaterialTheme.typography.titleMedium)
                                         SelectionList(
                                             title = "Elementos para inventario",
                                             selectedIds = selectedLocationIds,
@@ -485,7 +451,7 @@ fun ResultsAnalysisDialog(
                                         )
                                     }
                                     5 -> {
-                                        Text("Paso 6: Problemas", style = MaterialTheme.typography.titleLarge)
+                                        Text("Paso 6: Problemas", style = MaterialTheme.typography.titleMedium)
                                         SelectionList(
                                             title = "Problemas para reporte",
                                             selectedIds = selectedProblemIds,
@@ -497,7 +463,7 @@ fun ResultsAnalysisDialog(
                                         val draft = buildDraft()
                                         val locationLookup = locationOptions.associate { it.id to it.title }
                                         val problemLookup = problemOptions.associate { it.id to it.label }
-                                        Text("Paso 7: Resumen", style = MaterialTheme.typography.titleLarge)
+                                        Text("Paso 7: Resumen", style = MaterialTheme.typography.titleMedium)
                                         Text(
                                             "Revisa esta sección y usa Atrás para corregir cualquier sección.",
                                             style = MaterialTheme.typography.bodyMedium,
@@ -555,7 +521,7 @@ fun ResultsAnalysisDialog(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(16.dp),
+                            .padding(5.dp),
                         horizontalArrangement = Arrangement.End,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -603,7 +569,7 @@ private fun StepNavigationBar(
     maxReachedStep: Int,
     onStepSelected: (Int) -> Unit
 ) {
-    Column(modifier = Modifier.fillMaxWidth().padding(14.dp)) {
+    Column(modifier = Modifier.fillMaxWidth().padding(5.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
@@ -673,8 +639,8 @@ private fun SectionCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+                .padding(5.dp),
+            verticalArrangement = Arrangement.spacedBy(5.dp),
             content = {
                 Text(title, style = MaterialTheme.typography.titleSmall)
                 content()
@@ -707,18 +673,18 @@ private fun SummaryList(label: String, items: List<String>, fallback: String) {
 private fun ContactosEditor(contactos: androidx.compose.runtime.snapshots.SnapshotStateList<ResultadosAnalisisContacto>) {
     Text("Contactos", style = MaterialTheme.typography.titleSmall)
     contactos.forEachIndexed { index, contacto ->
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            OutlinedTextField(
+            Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+            InfoField(
                 value = contacto.nombre,
                 onValueChange = { contactos[index] = contacto.copy(nombre = it) },
                 modifier = Modifier.weight(1f),
-                label = { Text("Nombre ${index + 1}") }
+                label = "Nombre ${index + 1}"
             )
-            OutlinedTextField(
+            InfoField(
                 value = contacto.puesto,
                 onValueChange = { contactos[index] = contacto.copy(puesto = it) },
                 modifier = Modifier.weight(1f),
-                label = { Text("Puesto ${index + 1}") }
+                label = "Puesto ${index + 1}"
             )
         }
     }
@@ -731,11 +697,11 @@ private fun DateField(
     value: String,
     onClick: () -> Unit
 ) {
-    OutlinedTextField(
+    InfoField(
         value = value,
         onValueChange = {},
         modifier = modifier.clickable(onClick = onClick),
-        label = { Text(label) },
+        label = label,
         readOnly = true,
         enabled = true
     )
@@ -750,12 +716,13 @@ private fun EditableStringList(
     Text(title, style = MaterialTheme.typography.titleSmall)
     values.forEachIndexed { index, value ->
         Row(verticalAlignment = Alignment.Top) {
-            OutlinedTextField(
+            MultilineField(
                 value = value,
                 onValueChange = { values[index] = it },
                 modifier = Modifier.weight(1f),
+                label = "${title.dropLastWhile { it == 's' }} ${index + 1}",
                 minLines = 2,
-                label = { Text("${title.dropLastWhile { it == 's' }} ${index + 1}") }
+                maxLines = 8
             )
             IconButton(
                 enabled = values.size > minRows,
@@ -813,7 +780,7 @@ private fun SelectionList(
                     .clickable(enabled = enabled) {
                         if (checked) selectedIds.remove(id) else selectedIds.add(id)
                     }
-                    .padding(vertical = 4.dp),
+                    .padding(vertical = 5.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Checkbox(
@@ -834,3 +801,76 @@ private fun SelectionList(
         }
     }
 }
+
+@Composable
+private fun OutlinedFieldBox(
+    modifier: Modifier = Modifier,
+    height: Dp = FIELD_HEIGHT,
+    content: @Composable RowScope.() -> Unit
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(height)
+            .border(FIELD_BORDER, MaterialTheme.colorScheme.outline, RoundedCornerShape(INPUT_FIELD_RADIUS))
+            .padding(FIELD_PADDING),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        content = content
+    )
+}
+
+@Composable
+private fun InfoField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    label: String,
+    readOnly: Boolean = false,
+    enabled: Boolean = true
+) {
+    Column(modifier = modifier) {
+        Text(text = label, style = MaterialTheme.typography.labelSmall)
+        OutlinedFieldBox(modifier = Modifier) {
+            BasicTextField(
+                value = value,
+                onValueChange = onValueChange,
+                singleLine = true,
+                enabled = enabled,
+                readOnly = readOnly,
+                textStyle = MaterialTheme.typography.bodySmall.copy(
+                    color = MaterialTheme.colorScheme.onSurface
+                ),
+                modifier = Modifier.weight(1f)
+            )
+        }
+    }
+}
+
+@Composable
+private fun MultilineField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    label: String,
+    minLines: Int = 2,
+    maxLines: Int = 6
+) {
+    Column(modifier = modifier) {
+        Text(text = label, style = MaterialTheme.typography.labelSmall)
+        OutlinedFieldBox(
+            height = 48.dp
+        ) {
+            BasicTextField(
+                value = value,
+                onValueChange = onValueChange,
+                singleLine = false,
+                textStyle = MaterialTheme.typography.bodySmall.copy(
+                    color = MaterialTheme.colorScheme.onSurface
+                ),
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
+    }
+}
+
