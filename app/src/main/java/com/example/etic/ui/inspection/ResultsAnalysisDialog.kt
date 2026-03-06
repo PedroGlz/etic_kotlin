@@ -78,6 +78,8 @@ private val FIELD_PADDING = PaddingValues(horizontal = 4.dp, vertical = 2.dp)
 private val INPUT_FIELD_RADIUS = 4.dp
 private val FIELD_HEIGHT = 25.dp
 private val FIELD_BORDER = 1.dp
+private val DIALOG_SIDE_PADDING = 12.dp
+private val IMAGE_SEQUENCE_REGEX = Regex("""^(.*?)(\d+)(\.[^.]*)?$""")
 
 @Composable
 fun ResultsAnalysisDialog(
@@ -199,11 +201,44 @@ fun ResultsAnalysisDialog(
 
     fun nextImage(current: String, forward: Boolean): String {
         if (availableImages.isEmpty()) return current
-        val currentIndex = availableImages.indexOfFirst { it.equals(current, true) }
-        return when {
-            currentIndex == -1 -> if (forward) availableImages.first() else availableImages.last()
-            forward -> availableImages[(currentIndex + 1) % availableImages.size]
-            else -> availableImages[(currentIndex - 1 + availableImages.size) % availableImages.size]
+
+        val normalizedCurrent = current.trim()
+        if (normalizedCurrent.isBlank()) return if (forward) availableImages.first() else availableImages.last()
+
+        val currentIndex = availableImages.indexOfFirst { it.equals(normalizedCurrent, true) }
+        if (currentIndex >= 0) {
+            return when {
+                forward -> availableImages[(currentIndex + 1) % availableImages.size]
+                else -> availableImages[(currentIndex - 1 + availableImages.size) % availableImages.size]
+            }
+        }
+
+        val match = IMAGE_SEQUENCE_REGEX.find(normalizedCurrent)
+            ?: return if (forward) availableImages.first() else availableImages.last()
+        val prefix = match.groupValues[1]
+        val suffix = match.groupValues[3]
+        val currentNumber = match.groupValues[2].toIntOrNull()
+            ?: return if (forward) availableImages.first() else availableImages.last()
+
+        val sequenceCandidates = availableImages.mapNotNull { image ->
+            val parsed = IMAGE_SEQUENCE_REGEX.find(image.trim()) ?: return@mapNotNull null
+            if (!parsed.groupValues[1].equals(prefix, true) || !parsed.groupValues[3].equals(suffix, true)) {
+                return@mapNotNull null
+            }
+            val number = parsed.groupValues[2].toIntOrNull() ?: return@mapNotNull null
+            image to number
+        }.sortedBy { it.second }
+
+        if (sequenceCandidates.isEmpty()) {
+            return if (forward) availableImages.first() else availableImages.last()
+        }
+
+        return if (forward) {
+            sequenceCandidates.firstOrNull { (_, imageNumber) -> imageNumber > currentNumber }?.first
+                ?: sequenceCandidates.last().first
+        } else {
+            sequenceCandidates.lastOrNull { (_, imageNumber) -> imageNumber < currentNumber }?.first
+                ?: sequenceCandidates.first().first
         }
     }
 
@@ -231,7 +266,7 @@ fun ResultsAnalysisDialog(
         ) {
             Card(
                 modifier = Modifier
-                    .fillMaxWidth(0.92f)
+                    .fillMaxWidth(0.84f)
                     .fillMaxHeight(0.9f)
                     .align(Alignment.Center)
                     .offset { IntOffset(offset.value.x.roundToInt(), offset.value.y.roundToInt()) },
@@ -267,7 +302,7 @@ fun ResultsAnalysisDialog(
                     Column(
                         modifier = Modifier
                             .weight(1f)
-                            .padding(5.dp),
+                            .padding(horizontal = DIALOG_SIDE_PADDING, vertical = 5.dp),
                         verticalArrangement = Arrangement.spacedBy(5.dp)
                     ) {
                         Card(
@@ -281,7 +316,7 @@ fun ResultsAnalysisDialog(
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(5.dp)
+                                    .padding(horizontal = DIALOG_SIDE_PADDING, vertical = 5.dp)
                                     .verticalScroll(rememberScrollState()),
                                 verticalArrangement = Arrangement.spacedBy(5.dp)
                             ) {
@@ -371,56 +406,61 @@ fun ResultsAnalysisDialog(
                                                         modifier = Modifier.fillMaxWidth(),
                                                         label = "Texto"
                                                     )
-                                                    ImageInputButtonGroup(
-                                                        label = "Imagen 1",
-                                                        value = rec.imagen1,
-                                                        onValueChange = {
-                                                            recomendaciones[index] = recomendaciones[index].copy(imagen1 = it)
-                                                        },
+                                                    Row(
                                                         modifier = Modifier.fillMaxWidth(),
-                                                        onMoveUp = {
-                                                            recomendaciones[index] = recomendaciones[index].copy(
-                                                                imagen1 = nextImage(recomendaciones[index].imagen1, true)
-                                                            )
-                                                        },
-                                                        onMoveDown = {
-                                                            recomendaciones[index] = recomendaciones[index].copy(
-                                                                imagen1 = nextImage(recomendaciones[index].imagen1, false)
-                                                            )
-                                                        },
-                                                        onDotsClick = {
-                                                            if (availableImages.isNotEmpty()) {
+                                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                                    ) {
+                                                        ImageInputButtonGroup(
+                                                            label = "Imagen 1",
+                                                            value = rec.imagen1,
+                                                            onValueChange = {
+                                                                recomendaciones[index] = recomendaciones[index].copy(imagen1 = it)
+                                                            },
+                                                            modifier = Modifier.weight(1f),
+                                                            onMoveUp = {
                                                                 recomendaciones[index] = recomendaciones[index].copy(
-                                                                    imagen1 = availableImages.last()
+                                                                    imagen1 = nextImage(recomendaciones[index].imagen1, true)
                                                                 )
-                                                            }
-                                                        }
-                                                    )
-                                                    ImageInputButtonGroup(
-                                                        label = "Imagen 2",
-                                                        value = rec.imagen2,
-                                                        onValueChange = {
-                                                            recomendaciones[index] = recomendaciones[index].copy(imagen2 = it)
-                                                        },
-                                                        modifier = Modifier.fillMaxWidth(),
-                                                        onMoveUp = {
-                                                            recomendaciones[index] = recomendaciones[index].copy(
-                                                                imagen2 = nextImage(recomendaciones[index].imagen2, true)
-                                                            )
-                                                        },
-                                                        onMoveDown = {
-                                                            recomendaciones[index] = recomendaciones[index].copy(
-                                                                imagen2 = nextImage(recomendaciones[index].imagen2, false)
-                                                            )
-                                                        },
-                                                        onDotsClick = {
-                                                            if (availableImages.isNotEmpty()) {
+                                                            },
+                                                            onMoveDown = {
                                                                 recomendaciones[index] = recomendaciones[index].copy(
-                                                                    imagen2 = availableImages.last()
+                                                                    imagen1 = nextImage(recomendaciones[index].imagen1, false)
                                                                 )
+                                                            },
+                                                            onDotsClick = {
+                                                                if (availableImages.isNotEmpty()) {
+                                                                    recomendaciones[index] = recomendaciones[index].copy(
+                                                                        imagen1 = availableImages.last()
+                                                                    )
+                                                                }
                                                             }
-                                                        }
-                                                    )
+                                                        )
+                                                        ImageInputButtonGroup(
+                                                            label = "Imagen 2",
+                                                            value = rec.imagen2,
+                                                            onValueChange = {
+                                                                recomendaciones[index] = recomendaciones[index].copy(imagen2 = it)
+                                                            },
+                                                            modifier = Modifier.weight(1f),
+                                                            onMoveUp = {
+                                                                recomendaciones[index] = recomendaciones[index].copy(
+                                                                    imagen2 = nextImage(recomendaciones[index].imagen2, true)
+                                                                )
+                                                            },
+                                                            onMoveDown = {
+                                                                recomendaciones[index] = recomendaciones[index].copy(
+                                                                    imagen2 = nextImage(recomendaciones[index].imagen2, false)
+                                                                )
+                                                            },
+                                                            onDotsClick = {
+                                                                if (availableImages.isNotEmpty()) {
+                                                                    recomendaciones[index] = recomendaciones[index].copy(
+                                                                        imagen2 = availableImages.last()
+                                                                    )
+                                                                }
+                                                            }
+                                                        )
+                                                    }
                                                 }
                                             }
                                         }
@@ -521,7 +561,7 @@ fun ResultsAnalysisDialog(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(5.dp),
+                            .padding(horizontal = DIALOG_SIDE_PADDING, vertical = 5.dp),
                         horizontalArrangement = Arrangement.End,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -569,7 +609,7 @@ private fun StepNavigationBar(
     maxReachedStep: Int,
     onStepSelected: (Int) -> Unit
 ) {
-    Column(modifier = Modifier.fillMaxWidth().padding(5.dp)) {
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = DIALOG_SIDE_PADDING, vertical = 5.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
