@@ -45,6 +45,7 @@ import androidx.compose.material3.ModalDrawerSheet
 import androidx.compose.material3.ModalNavigationDrawer
 import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.NavigationDrawerItemDefaults
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -74,14 +75,19 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.etic.R
+import com.example.etic.core.current.CurrentInspectionProvider
 import com.example.etic.core.current.LocalCurrentInspection
 import com.example.etic.core.current.LocalCurrentUser
 import com.example.etic.core.current.ProvideCurrentInspection
 import com.example.etic.core.current.ProvideCurrentUser
+import com.example.etic.core.inspection.INSPECTION_STATUS_CERRADA
+import com.example.etic.core.inspection.importInspectionDatabase
+import com.example.etic.core.inspection.changeInspectionStatus
 import com.example.etic.core.saf.SafEticManager
 import com.example.etic.core.settings.EticPrefs
 import com.example.etic.core.settings.settingsDataStore
 import com.example.etic.data.local.DbProvider
+import com.example.etic.data.local.entities.EstatusInspeccion
 import com.example.etic.features.components.ImageInputButtonGroup
 import com.example.etic.features.inspection.data.InspectionRepository
 import com.example.etic.features.inspection.ui.home.InspectionScreen
@@ -148,10 +154,15 @@ fun MainScreen(
     var isLoading by rememberSaveable { mutableStateOf(true) }
     var fontsExpanded by rememberSaveable { mutableStateOf(false) }
     var showInitImagesDialog by rememberSaveable { mutableStateOf(false) }
+    var showInspectionStatusDialog by rememberSaveable { mutableStateOf(false) }
     var initThermalPath by rememberSaveable { mutableStateOf("") }
     var initDigitalPath by rememberSaveable { mutableStateOf("") }
     var isSavingInitImages by rememberSaveable { mutableStateOf(false) }
+    var isSavingInspectionStatus by rememberSaveable { mutableStateOf(false) }
+    var isImportingInspection by rememberSaveable { mutableStateOf(false) }
     var isGeneratingReport by rememberSaveable { mutableStateOf(false) }
+    var inspectionStatusMessage by rememberSaveable { mutableStateOf("Procesando...") }
+    var inspectionImportMessage by rememberSaveable { mutableStateOf("Importando inspeccion...") }
     var showInventoryReportDialog by rememberSaveable { mutableStateOf(false) }
     var isLoadingInventoryOptions by rememberSaveable { mutableStateOf(false) }
     var inventoryOptions by remember { mutableStateOf<List<TreeNode>>(emptyList()) }
@@ -167,6 +178,8 @@ fun MainScreen(
     val rootTreeUri = remember(rootTreeUriStr) { rootTreeUriStr?.let { Uri.parse(it) } }
     var currentInspectionSnapshot by remember { mutableStateOf<CurrentInspectionInfo?>(null) }
     var currentUserSnapshot by remember { mutableStateOf<com.example.etic.core.current.CurrentUserInfo?>(null) }
+    var inspectionStatusOptions by remember { mutableStateOf<List<EstatusInspeccion>>(emptyList()) }
+    var selectedInspectionStatusId by rememberSaveable { mutableStateOf<String?>(null) }
 
     fun collectNodeIds(node: TreeNode, out: MutableList<String>) {
         out.add(node.id)
@@ -777,6 +790,23 @@ fun MainScreen(
         selectedIconColor = Color.White,
         unselectedIconColor = Color.White
     )
+    val importInspectionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        scope.launch {
+            isImportingInspection = true
+            inspectionImportMessage = "Importando inspeccion..."
+            val result = importInspectionDatabase(appContext, uri)
+            CurrentInspectionProvider.invalidate()
+            currentInspectionSnapshot = CurrentInspectionProvider.get(appContext)
+            isImportingInspection = false
+            if (result.success) {
+                section = HomeSection.Inspection
+            }
+            Toast.makeText(appContext, result.message, Toast.LENGTH_LONG).show()
+        }
+    }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -810,6 +840,49 @@ fun MainScreen(
                     )
 
                     Spacer(Modifier.height(4.dp))
+                    NavigationDrawerItem(
+                        label = { Text("Estatus de inspeccion") },
+                        selected = false,
+                        onClick = {
+                            val insp = currentInspectionSnapshot
+                            if (insp == null) {
+                                Toast.makeText(appContext, "No hay inspeccion activa.", Toast.LENGTH_SHORT).show()
+                            } else {
+                                scope.launch {
+                                    val options = withContext(Dispatchers.IO) {
+                                        runCatching {
+                                            DbProvider.get(appContext).estatusInspeccionDao().getAllActivos()
+                                        }.getOrElse { emptyList() }
+                                    }
+                                    inspectionStatusOptions = options
+                                    selectedInspectionStatusId = insp.idStatusInspeccion
+                                    showInspectionStatusDialog = true
+                                    fontsExpanded = false
+                                    drawerState.close()
+                                }
+                            }
+                        },
+                        icon = { Icon(Icons.Filled.Check, contentDescription = null) },
+                        colors = drawerItemColors
+                    )
+                    NavigationDrawerItem(
+                        label = { Text("Importar inspeccion") },
+                        selected = false,
+                        onClick = {
+                            fontsExpanded = false
+                            scope.launch { drawerState.close() }
+                            importInspectionLauncher.launch(
+                                arrayOf(
+                                    "application/octet-stream",
+                                    "application/x-sqlite3",
+                                    "*/*"
+                                )
+                            )
+                        },
+                        icon = { Icon(Icons.Filled.ChecklistRtl, contentDescription = null) },
+                        colors = drawerItemColors
+                    )
+
                     HorizontalDivider(
                         modifier = Modifier.padding(bottom = 4.dp),
                         thickness = androidx.compose.material3.DividerDefaults.Thickness,
@@ -1148,6 +1221,12 @@ fun MainScreen(
                         if (isGeneratingReport) {
                             LoadingOverlay("Generando reporte…")
                         }
+                        if (isImportingInspection) {
+                            LoadingOverlay(inspectionImportMessage)
+                        }
+                        if (isSavingInspectionStatus) {
+                            LoadingOverlay(inspectionStatusMessage)
+                        }
                     }
                 }
 
@@ -1277,6 +1356,97 @@ fun MainScreen(
                             }
                         }
                     }
+                }
+
+                if (showInspectionStatusDialog) {
+                    AlertDialog(
+                        onDismissRequest = {
+                            if (!isSavingInspectionStatus) {
+                                showInspectionStatusDialog = false
+                            }
+                        },
+                        title = { Text("Estatus de inspeccion") },
+                        text = {
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                if (inspectionStatusOptions.isEmpty()) {
+                                    Text("No hay estatus disponibles.")
+                                } else {
+                                    inspectionStatusOptions.forEach { option ->
+                                        val optionId = option.idStatusInspeccion
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clickable(enabled = !isSavingInspectionStatus) {
+                                                    selectedInspectionStatusId = optionId
+                                                }
+                                                .padding(vertical = 4.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            RadioButton(
+                                                selected = selectedInspectionStatusId == optionId,
+                                                onClick = { selectedInspectionStatusId = optionId },
+                                                enabled = !isSavingInspectionStatus
+                                            )
+                                            Spacer(Modifier.width(8.dp))
+                                            Column {
+                                                Text(option.statusInspeccion.orEmpty().ifBlank { optionId })
+                                                option.descStatus?.takeIf { it.isNotBlank() }?.let {
+                                                    Text(it, style = MaterialTheme.typography.bodySmall)
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        },
+                        dismissButton = {
+                            TextButton(
+                                enabled = !isSavingInspectionStatus,
+                                onClick = { showInspectionStatusDialog = false }
+                            ) {
+                                Text("Cancelar")
+                            }
+                        },
+                        confirmButton = {
+                            TextButton(
+                                enabled = !isSavingInspectionStatus &&
+                                    !selectedInspectionStatusId.isNullOrBlank() &&
+                                    currentInspectionSnapshot != null,
+                                onClick = {
+                                    val inspection = currentInspectionSnapshot
+                                    val statusId = selectedInspectionStatusId
+                                    if (inspection == null || statusId.isNullOrBlank()) {
+                                        Toast.makeText(appContext, "No hay inspeccion activa.", Toast.LENGTH_SHORT).show()
+                                        return@TextButton
+                                    }
+                                    scope.launch {
+                                        isSavingInspectionStatus = true
+                                        inspectionStatusMessage =
+                                            if (statusId == INSPECTION_STATUS_CERRADA) {
+                                                "Cerrando y generando archivo de la inspeccion..."
+                                            } else {
+                                                "Actualizando estatus..."
+                                            }
+                                        val result = changeInspectionStatus(
+                                            context = appContext,
+                                            inspectionId = inspection.idInspeccion,
+                                            statusId = statusId,
+                                            currentUserId = currentUserSnapshot?.idUsuario
+                                        )
+                                        CurrentInspectionProvider.invalidate()
+                                        currentInspectionSnapshot = CurrentInspectionProvider.get(appContext)
+                                        isSavingInspectionStatus = false
+                                        if (result.success) {
+                                            showInspectionStatusDialog = false
+                                        }
+                                        Toast.makeText(appContext, result.message, Toast.LENGTH_LONG).show()
+                                    }
+                                }
+                            ) {
+                                Text("Guardar")
+                            }
+                        }
+                    )
                 }
 
                 if (showInventoryReportDialog) {
