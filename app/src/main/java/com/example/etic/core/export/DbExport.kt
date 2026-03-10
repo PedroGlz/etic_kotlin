@@ -2,115 +2,199 @@ package com.example.etic.core.export
 
 import android.content.ContentValues
 import android.content.Context
+import android.database.sqlite.SQLiteDatabase
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
 import com.example.etic.data.local.DbProvider
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
 
 data class ExportResult(val success: Boolean, val message: String)
 
-fun exportRoomDbToDownloads(context: Context, dbName: String = "etic.db"): ExportResult {
-    return try {
-        // Fuerza checkpoint del WAL para que los últimos cambios estén en el archivo principal
+private object DbExportCoordinator {
+    val mutex = Mutex()
+}
+
+suspend fun exportRoomDbToDownloads(
+    context: Context,
+    dbName: String = "etic.db"
+): ExportResult = withContext(Dispatchers.IO) {
+    DbExportCoordinator.mutex.withLock {
+        val tempExport = File(context.cacheDir, "${dbName.substringBeforeLast('.')}_export_snapshot.db")
         try {
-            val db = DbProvider.get(context).openHelper.writableDatabase
-            db.query("PRAGMA wal_checkpoint(FULL)").use { /* cierra cursor */ }
-        } catch (_: Exception) {
-            // Si no se puede, seguiremos y copiaremos -wal/-shm si existen
+            if (tempExport.exists()) {
+                tempExport.delete()
+            }
+
+            val roomDb = DbProvider.get(context)
+            val sqliteDb = roomDb.openHelper.writableDatabase
+            val journalMode = sqliteDb.stringPragma("journal_mode").orEmpty().lowercase()
+
+            // Asegura que los cambios confirmados previos al inicio de la exportacion
+            // ya sean visibles para el snapshot.
+            sqliteDb.stringPragma("busy_timeout", "5000")
+            if (journalMode == "wal") {
+                sqliteDb.checkpointWal("FULL")
+            }
+
+            val snapshotResult = createSnapshotWithVacuumInto(sqliteDb, tempExport)
+                ?: createSnapshotWithFileCopy(context, dbName, sqliteDb, journalMode, tempExport)
+
+            if (snapshotResult != null) {
+                return@withLock snapshotResult
+            }
+
+            validateSnapshot(tempExport)
+
+            val finalFileName = "${dbName.substringBeforeLast('.')}_export_${System.currentTimeMillis()}.db"
+            val destinationMessage = saveSnapshotToDownloads(context, tempExport, finalFileName)
+
+            ExportResult(
+                success = true,
+                message = "$destinationMessage | journal_mode=${journalMode.ifBlank { "desconocido" }}"
+            )
+        } catch (e: SecurityException) {
+            ExportResult(false, "Permiso denegado: ${e.message}")
+        } catch (e: Exception) {
+            ExportResult(false, "Error al exportar: ${e.message}")
+        } finally {
+            if (tempExport.exists()) {
+                tempExport.delete()
+            }
         }
-        // Asegurar consolidación del WAL y liberar lectores antes de copiar
-        try {
-            val room = DbProvider.get(context)
-            val db2 = room.openHelper.writableDatabase
-            db2.query("PRAGMA wal_checkpoint(TRUNCATE)").use { /* close cursor */ }
-            DbProvider.closeAndReset()
-        } catch (_: Exception) {
-            // Continuar en fallback si falla
-        }
-        val src = context.getDatabasePath(dbName)
-        if (src == null || !src.exists()) {
-            return ExportResult(false, "No se encontró la base de datos: $dbName")
-        }
-        val fileName = "${dbName.substringBeforeLast('.')}_export_${System.currentTimeMillis()}.db"
-        val walFile = File(src.parentFile, src.name + "-wal")
-        val shmFile = File(src.parentFile, src.name + "-shm")
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            val values = ContentValues().apply {
-                put(MediaStore.Downloads.DISPLAY_NAME, fileName)
-                put(MediaStore.Downloads.MIME_TYPE, "application/octet-stream")
-                put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
-            }
-            val resolver = context.contentResolver
-            val uri: Uri? = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
-            if (uri == null) return ExportResult(false, "No se pudo crear archivo en Descargas")
-            resolver.openOutputStream(uri).use { out ->
-                FileInputStream(src).use { input ->
-                    input.copyTo(out!!, bufferSize = 8 * 1024)
-                }
-            }
-            // Copiar -wal y -shm si tienen datos pendientes
-            var extras = ""
-            if (walFile.exists() && walFile.length() > 0) {
-                val walValues = ContentValues().apply {
-                    put(MediaStore.Downloads.DISPLAY_NAME, fileName + "-wal")
-                    put(MediaStore.Downloads.MIME_TYPE, "application/octet-stream")
-                    put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
-                }
-                context.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, walValues)?.let { walUri ->
-                    context.contentResolver.openOutputStream(walUri).use { outWal ->
-                        FileInputStream(walFile).use { it.copyTo(outWal!!, 8 * 1024) }
-                    }
-                    extras += ", $fileName-wal"
-                }
-            }
-            if (shmFile.exists() && shmFile.length() > 0) {
-                val shmValues = ContentValues().apply {
-                    put(MediaStore.Downloads.DISPLAY_NAME, fileName + "-shm")
-                    put(MediaStore.Downloads.MIME_TYPE, "application/octet-stream")
-                    put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
-                }
-                context.contentResolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, shmValues)?.let { shmUri ->
-                    context.contentResolver.openOutputStream(shmUri).use { outShm ->
-                        FileInputStream(shmFile).use { it.copyTo(outShm!!, 8 * 1024) }
-                    }
-                    extras += ", $fileName-shm"
-                }
-            }
-            ExportResult(true, "Guardado en Descargas como $fileName" + if (extras.isNotEmpty()) " (incluye$extras)" else " (consolidado sin WAL)")
-        } else {
-            val dir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-            if (!dir.exists()) dir.mkdirs()
-            val dest = File(dir, fileName)
-            FileInputStream(src).use { input ->
-                FileOutputStream(dest).use { output ->
-                    input.copyTo(output, bufferSize = 8 * 1024)
-                }
-            }
-            // Copiar -wal y -shm si tienen datos pendientes
-            var extras = ""
-            if (walFile.exists() && walFile.length() > 0) {
-                val walDest = File(dir, fileName + "-wal")
-                FileInputStream(walFile).use { input ->
-                    FileOutputStream(walDest).use { output -> input.copyTo(output, 8 * 1024) }
-                }
-                extras += ", ${walDest.name}"
-            }
-            if (shmFile.exists() && shmFile.length() > 0) {
-                val shmDest = File(dir, fileName + "-shm")
-                FileInputStream(shmFile).use { input ->
-                    FileOutputStream(shmDest).use { output -> input.copyTo(output, 8 * 1024) }
-                }
-                extras += ", ${shmDest.name}"
-            }
-            ExportResult(true, "Guardado en ${dest.absolutePath}" + if (extras.isNotEmpty()) " (incluye$extras)" else " (consolidado sin WAL)")
-        }
-    } catch (e: SecurityException) {
-        ExportResult(false, "Permiso denegado: ${e.message}")
-    } catch (e: Exception) {
-        ExportResult(false, "Error al exportar: ${e.message}")
     }
+}
+
+private fun createSnapshotWithVacuumInto(
+    sqliteDb: androidx.sqlite.db.SupportSQLiteDatabase,
+    outputFile: File
+): ExportResult? {
+    return try {
+        val escapedPath = outputFile.absolutePath.replace("'", "''")
+        sqliteDb.execSQL("VACUUM INTO '$escapedPath'")
+        null
+    } catch (_: Exception) {
+        null
+    }
+}
+
+private fun createSnapshotWithFileCopy(
+    context: Context,
+    dbName: String,
+    sqliteDb: androidx.sqlite.db.SupportSQLiteDatabase,
+    journalMode: String,
+    outputFile: File
+): ExportResult? {
+    return try {
+        if (journalMode == "wal") {
+            sqliteDb.checkpointWal("TRUNCATE")
+        }
+        val sourceDb = context.getDatabasePath(dbName)
+        if (sourceDb == null || !sourceDb.exists()) {
+            return ExportResult(false, "No se encontro la base de datos local.")
+        }
+        FileInputStream(sourceDb).use { input ->
+            FileOutputStream(outputFile).use { output ->
+                input.copyTo(output, 8 * 1024)
+                output.fd.sync()
+            }
+        }
+        null
+    } catch (e: Exception) {
+        ExportResult(false, "No se pudo generar el respaldo: ${e.message}")
+    }
+}
+
+private fun validateSnapshot(snapshot: File) {
+    require(snapshot.exists()) { "No se genero el archivo de respaldo." }
+    require(snapshot.length() > 0L) { "El respaldo generado esta vacio." }
+
+    val exportedDb = SQLiteDatabase.openDatabase(
+        snapshot.absolutePath,
+        null,
+        SQLiteDatabase.OPEN_READONLY
+    )
+    try {
+        val integrity = exportedDb.rawQuery("PRAGMA integrity_check(1)", null).use { cursor ->
+            if (cursor.moveToFirst()) cursor.getString(0) else null
+        }
+        require(integrity.equals("ok", ignoreCase = true)) {
+            "La copia exportada no paso integrity_check: ${integrity ?: "sin resultado"}"
+        }
+
+        val objectCount = exportedDb.rawQuery(
+            "SELECT COUNT(*) FROM sqlite_master WHERE type IN ('table','view')",
+            null
+        ).use { cursor ->
+            if (cursor.moveToFirst()) cursor.getInt(0) else 0
+        }
+        require(objectCount > 0) { "La copia exportada no contiene objetos SQLite validos." }
+    } finally {
+        exportedDb.close()
+    }
+}
+
+private fun saveSnapshotToDownloads(
+    context: Context,
+    snapshot: File,
+    fileName: String
+): String {
+    return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+        val values = ContentValues().apply {
+            put(MediaStore.Downloads.DISPLAY_NAME, fileName)
+            put(MediaStore.Downloads.MIME_TYPE, "application/octet-stream")
+            put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS)
+        }
+        val resolver = context.contentResolver
+        val uri: Uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+            ?: error("No se pudo crear el archivo de exportacion en Descargas.")
+        resolver.openOutputStream(uri)?.use { out ->
+            FileInputStream(snapshot).use { input ->
+                input.copyTo(out, 8 * 1024)
+            }
+        } ?: error("No se pudo abrir el OutputStream de exportacion.")
+        "Guardado en Descargas como $fileName"
+    } else {
+        val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+        if (!downloadsDir.exists()) {
+            downloadsDir.mkdirs()
+        }
+        val output = File(downloadsDir, fileName)
+        FileInputStream(snapshot).use { input ->
+            FileOutputStream(output).use { out ->
+                input.copyTo(out, 8 * 1024)
+                out.fd.sync()
+            }
+        }
+        "Guardado en ${output.absolutePath}"
+    }
+}
+
+private fun androidx.sqlite.db.SupportSQLiteDatabase.stringPragma(
+    pragma: String,
+    value: String? = null
+): String? {
+    val sql = if (value == null) {
+        "PRAGMA $pragma"
+    } else {
+        "PRAGMA $pragma = $value"
+    }
+    return query(sql).use { cursor ->
+        if (cursor.moveToFirst() && cursor.columnCount > 0) {
+            cursor.getString(0)
+        } else {
+            null
+        }
+    }
+}
+
+private fun androidx.sqlite.db.SupportSQLiteDatabase.checkpointWal(mode: String) {
+    query("PRAGMA wal_checkpoint($mode)").use { /* cierre explicito del cursor */ }
 }

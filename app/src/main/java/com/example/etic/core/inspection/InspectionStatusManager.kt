@@ -130,9 +130,7 @@ suspend fun changeInspectionStatus(
     if (!updateResult.success) return updateResult
     if (statusId != INSPECTION_STATUS_CERRADA) return updateResult
 
-    val exportResult = withContext(Dispatchers.IO) {
-        exportRoomDbToDownloads(context)
-    }
+    val exportResult = exportRoomDbToDownloads(context)
     if (!exportResult.success) {
         return InspectionStatusChangeResult(
             success = false,
