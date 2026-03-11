@@ -22,6 +22,18 @@ import kotlin.math.min
 class ResultadosAnalisisPdfGenerator {
 
     fun generate(output: OutputStream, data: ResultadosAnalisisPdfData) {
+        data class StyledSegment(
+            val text: String,
+            val color: Int,
+            val bold: Boolean = false,
+            val underline: Boolean = false
+        )
+
+        data class StyledWord(
+            val text: String,
+            val paint: TextPaint
+        )
+
         val doc = PdfDocument()
         val dpi = 150f
         val pageWidth = ((220f / 25.4f) * dpi).toInt()
@@ -251,12 +263,86 @@ class ResultadosAnalisisPdfGenerator {
             return currentLineY
         }
 
+        fun buildPaintForSegment(segment: StyledSegment): TextPaint =
+            TextPaint(bodyPaint).apply {
+                color = segment.color
+                typeface = Typeface.create(
+                    Typeface.SANS_SERIF,
+                    if (segment.bold) Typeface.BOLD else Typeface.NORMAL
+                )
+                isUnderlineText = segment.underline
+            }
+
+        fun drawJustifiedStyledTextBlock(
+            segments: List<StyledSegment>,
+            xMm: Float,
+            yMm: Float,
+            widthMm: Float,
+            lineHeightMm: Float = 5f
+        ): Float {
+            val words = mutableListOf<StyledWord>()
+            segments.forEach { segment ->
+                val paint = buildPaintForSegment(segment)
+                segment.text.trim().split(Regex("\\s+"))
+                    .filter { it.isNotBlank() }
+                    .forEach { word -> words += StyledWord(word, paint) }
+            }
+            if (words.isEmpty()) return yMm
+
+            val maxWidthPx = mm(widthMm)
+            val lines = mutableListOf<List<StyledWord>>()
+            var currentLine = mutableListOf<StyledWord>()
+            var currentWidth = 0f
+            val minSpace = bodyPaint.measureText(" ")
+
+            words.forEach { word ->
+                val wordWidth = word.paint.measureText(word.text)
+                val candidateWidth = if (currentLine.isEmpty()) wordWidth else currentWidth + minSpace + wordWidth
+                if (candidateWidth <= maxWidthPx || currentLine.isEmpty()) {
+                    if (currentLine.isNotEmpty()) currentWidth += minSpace
+                    currentLine += word
+                    currentWidth += wordWidth
+                } else {
+                    lines += currentLine.toList()
+                    currentLine = mutableListOf(word)
+                    currentWidth = wordWidth
+                }
+            }
+            if (currentLine.isNotEmpty()) lines += currentLine.toList()
+
+            var currentLineY = yMm
+            lines.forEachIndexed { index, line ->
+                val isLastLine = index == lines.lastIndex
+                if (isLastLine || line.size <= 1) {
+                    var drawX = mm(xMm)
+                    line.forEachIndexed { wordIndex, word ->
+                        canvas.drawText(word.text, drawX, mm(currentLineY + 4.2f), word.paint)
+                        drawX += word.paint.measureText(word.text)
+                        if (wordIndex < line.lastIndex) drawX += minSpace
+                    }
+                } else {
+                    val wordsWidth = line.sumOf { it.paint.measureText(it.text).toDouble() }.toFloat()
+                    val extraSpace = ((maxWidthPx - wordsWidth) / (line.size - 1)).coerceAtLeast(minSpace)
+                    var drawX = mm(xMm)
+                    line.forEachIndexed { wordIndex, word ->
+                        canvas.drawText(word.text, drawX, mm(currentLineY + 4.2f), word.paint)
+                        drawX += word.paint.measureText(word.text)
+                        if (wordIndex < line.lastIndex) drawX += extraSpace
+                    }
+                }
+                currentLineY += lineHeightMm
+            }
+            return currentLineY
+        }
+
         fun drawSingleLine(text: String, xMm: Float, yMm: Float, paint: TextPaint, align: Paint.Align = Paint.Align.LEFT) {
             val previous = paint.textAlign
             paint.textAlign = align
             canvas.drawText(text, mm(xMm), mm(yMm), paint)
             paint.textAlign = previous
         }
+
+        val bulletBaselineOffsetMm = 4.2f
 
         fun ensureSpace(heightMm: Float) {
             if ((currentY * 25.4f / dpi) + heightMm > pageBreakMm) {
@@ -283,11 +369,35 @@ class ResultadosAnalisisPdfGenerator {
             ensureSpace(10f)
             val yMm = currentY * 25.4f / dpi
             if (bulletLabel != null) {
-                drawSingleLine(bulletLabel, xMm - 7f, yMm + 4.4f, bodyPaint)
+                drawSingleLine(bulletLabel, xMm - 7f, yMm + bulletBaselineOffsetMm, bodyPaint)
             } else {
-                drawSingleLine("\u2022", xMm - 3f, yMm + 4.4f, bodyPaint)
+                drawSingleLine("\u2022", xMm - 3f, yMm + bulletBaselineOffsetMm, bodyPaint)
             }
             val endY = drawTextBlock(text, xMm, yMm, widthMm, bodyPaint, Layout.Alignment.ALIGN_NORMAL)
+            currentY = mm(endY + gapAfterMm)
+        }
+
+        fun drawBulletJustified(text: String, bulletLabel: String? = null, xMm: Float = 37f, widthMm: Float = 153f, gapAfterMm: Float = 1f) {
+            ensureSpace(10f)
+            val yMm = currentY * 25.4f / dpi
+            if (bulletLabel != null) {
+                drawSingleLine(bulletLabel, xMm - 7f, yMm + bulletBaselineOffsetMm, bodyPaint)
+            } else {
+                drawSingleLine("\u2022", xMm - 3f, yMm + bulletBaselineOffsetMm, bodyPaint)
+            }
+            val endY = drawJustifiedTextBlock(text, xMm, yMm, widthMm, bodyPaint)
+            currentY = mm(endY + gapAfterMm)
+        }
+
+        fun drawBulletJustifiedSegments(segments: List<StyledSegment>, bulletLabel: String? = null, xMm: Float = 37f, widthMm: Float = 153f, gapAfterMm: Float = 1f) {
+            ensureSpace(10f)
+            val yMm = currentY * 25.4f / dpi
+            if (bulletLabel != null) {
+                drawSingleLine(bulletLabel, xMm - 7f, yMm + bulletBaselineOffsetMm, bodyPaint)
+            } else {
+                drawSingleLine("\u2022", xMm - 3f, yMm + bulletBaselineOffsetMm, bodyPaint)
+            }
+            val endY = drawJustifiedStyledTextBlock(segments, xMm, yMm, widthMm)
             currentY = mm(endY + gapAfterMm)
         }
 
@@ -311,10 +421,9 @@ class ResultadosAnalisisPdfGenerator {
             canvas.drawRect(left, top, right, bottom, linePaint)
             val prevColor = paint.color
             paint.color = textColor
-            val textHeightMm = drawTextBlock(text, xMm + 1f, yMm + ((hMm - 4f) / 2f), wMm - 2f, paint, align)
-            if (textHeightMm > yMm + hMm) {
-                drawTextBlock(text, xMm + 1f, yMm + 1f, wMm - 2f, paint, align)
-            }
+            val layoutHeightMm = measureTextHeight(text, paint, wMm - 2f) * 25.4f / dpi
+            val textY = yMm + ((hMm - layoutHeightMm) / 2f).coerceAtLeast(0.8f)
+            drawTextBlock(text, xMm + 1f, textY, wMm - 2f, paint, align)
             paint.color = prevColor
         }
 
@@ -435,44 +544,44 @@ class ResultadosAnalisisPdfGenerator {
         )
         drawSingleLine("1. Descripcion del reporte:", 30f, currentY * 25.4f / dpi, sectionBluePaint)
         currentY += mm(10f)
-        drawBullet(
-            richText(
-                "Se genero el inventario de todos los equipos criticos en nuestra base de datos ETIC System, " to Color.BLACK,
-                "(Inventario De Equipo). " to Color.rgb(79, 129, 189),
-                "Se coloco un codigo de barras que ayudara a tener un control de rapida identificacion para futuras inspecciones." to Color.BLACK
+        drawBulletJustifiedSegments(
+            listOf(
+                StyledSegment("Se genero el inventario de todos los equipos criticos en nuestra base de datos ETIC System,", Color.BLACK),
+                StyledSegment("(Inventario De Equipo).", Color.rgb(79, 129, 189)),
+                StyledSegment("Se coloco un codigo de barras que ayudara a tener un control de rapida identificacion para futuras inspecciones.", Color.BLACK)
             ),
             bulletLabel = "a."
         )
-        drawBullet(
-            richText(
-                "Se tomaron termogramas como referencia del comportamiento actual de los equipos esenciales para la operacion definidos en la reunion inicial, se documentan en la seccion de baseline " to Color.BLACK,
-                "(Baseline Equipo En Monitoreo Informe de Tendencias) " to Color.rgb(79, 129, 189),
-                "con objeto de conocer la tendencia del comportamiento de temperatura de estos equipos." to Color.BLACK
+        drawBulletJustifiedSegments(
+            listOf(
+                StyledSegment("Se tomaron termogramas como referencia del comportamiento actual de los equipos esenciales para la operacion definidos en la reunion inicial, se documentan en la seccion de baseline", Color.BLACK),
+                StyledSegment("(Baseline Equipo En Monitoreo Informe de Tendencias)", Color.rgb(79, 129, 189)),
+                StyledSegment("con objeto de conocer la tendencia del comportamiento de temperatura de estos equipos.", Color.BLACK)
             ),
             bulletLabel = "b."
         )
-        drawBullet(
-            richText(
-                "Los problemas identificados en esta inspeccion, han sido documentados en las secciones electrica, mecanica y anomalias visuales; segun aplique, " to Color.BLACK,
-                "(Electrico, Mecanico, Visual)." to Color.rgb(79, 129, 189)
+        drawBulletJustifiedSegments(
+            listOf(
+                StyledSegment("Los problemas identificados en esta inspeccion, han sido documentados en las secciones electrica, mecanica y anomalias visuales; segun aplique,", Color.BLACK),
+                StyledSegment("(Electrico, Mecanico, Visual).", Color.rgb(79, 129, 189))
             ),
             bulletLabel = "c."
         )
-        drawBullet(
+        drawBulletJustified(
             "El total de problemas y anomalias documentados se enlistan en la ultima seccion agrupandolos de acuerdo al siguiente criterio:",
             bulletLabel = "e."
         )
-        drawBullet("Lista de todos los problemas abiertos.")
-        drawBullet("Lista de todos los problemas cerrados.")
-        data.descripciones.filter { it.isNotBlank() }.forEach { drawBullet(it) }
+        drawBulletJustified("Lista de todos los problemas abiertos.")
+        drawBulletJustified("Lista de todos los problemas cerrados.")
+        data.descripciones.filter { it.isNotBlank() }.forEach { drawBulletJustified(it) }
 
         startPage()
         currentY = mm(35f)
-        currentY = mm(drawTextBlock("Durante esta inspeccion, se tuvo como objeto principal, la revision de las instalaciones electricas criticas en la continuidad de su operacion para identificar anomalias termicas y/o anomalias visuales en los componentes y/o conexiones", 30f, 35f, 160f, bodyPaint) + 5f)
+        currentY = mm(drawJustifiedTextBlock("Durante esta inspeccion, se tuvo como objeto principal, la revision de las instalaciones electricas criticas en la continuidad de su operacion para identificar anomalias termicas y/o anomalias visuales en los componentes y/o conexiones", 30f, 35f, 160f, bodyPaint) + 5f)
         drawTextBlock("Las areas/equipos inspeccionados durante el estudio de termografia infrarroja son las siguientes:", 37f, currentY * 25.4f / dpi, 153f, sectionBluePaint)
         currentY += mm(10f)
         data.areasInspeccionadas.filter { it.isNotBlank() }.forEach {
-            drawBullet(it, xMm = 37f, widthMm = 153f, gapAfterMm = 2f)
+            drawBulletJustified(it, xMm = 37f, widthMm = 153f, gapAfterMm = 2f)
         }
         currentY += mm(8f)
 
@@ -604,8 +713,17 @@ class ResultadosAnalisisPdfGenerator {
         data.recomendaciones.forEach { recomendacion ->
             if (recomendacion.texto.isBlank() && recomendacion.imagen1 == null && recomendacion.imagen2 == null) return@forEach
             ensureSpace(65f)
-            drawSingleLine("\u2022", 30f, currentY * 25.4f / dpi + mm(4f), bodyPaint)
-            currentY = mm(drawTextBlock(recomendacion.texto.ifBlank { " " }, 33f, currentY * 25.4f / dpi, 157f, bodyPaint) + 1f)
+            val startYmm = currentY * 25.4f / dpi
+            drawSingleLine("\u2022", 30f, startYmm + bulletBaselineOffsetMm, bodyPaint)
+            currentY = mm(
+                drawJustifiedTextBlock(
+                    recomendacion.texto.ifBlank { " " },
+                    33f,
+                    startYmm,
+                    157f,
+                    bodyPaint
+                ) + 1f
+            )
             when {
                 recomendacion.imagen1 != null && recomendacion.imagen2 != null -> {
                     drawBitmapInBox(recomendacion.imagen1, 28f, currentY * 25.4f / dpi, 60f, 50f)
@@ -629,8 +747,9 @@ class ResultadosAnalisisPdfGenerator {
         currentY = mm(50f)
         data.referencias.filter { it.isNotBlank() }.forEach {
             ensureSpace(8f)
-            drawSingleLine("\u2022", 30f, currentY * 25.4f / dpi + mm(4f), bodyPaint)
-            currentY = mm(drawTextBlock(it, 33f, currentY * 25.4f / dpi, 157f, bodyPaint) + 2f)
+            val startYmm = currentY * 25.4f / dpi
+            drawSingleLine("\u2022", 30f, startYmm + bulletBaselineOffsetMm, bodyPaint)
+            currentY = mm(drawJustifiedTextBlock(it, 33f, startYmm, 157f, bodyPaint) + 2f)
         }
 
         finishCurrentPage()
