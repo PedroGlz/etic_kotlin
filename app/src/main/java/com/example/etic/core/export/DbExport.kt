@@ -15,6 +15,7 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.FileInputStream
 import java.io.FileOutputStream
+import java.text.Normalizer
 
 data class ExportResult(val success: Boolean, val message: String)
 
@@ -24,7 +25,8 @@ private object DbExportCoordinator {
 
 suspend fun exportRoomDbToDownloads(
     context: Context,
-    dbName: String = "etic.db"
+    dbName: String = "etic.db",
+    exportFileName: String? = null
 ): ExportResult = withContext(Dispatchers.IO) {
     DbExportCoordinator.mutex.withLock {
         val tempExport = File(context.cacheDir, "${dbName.substringBeforeLast('.')}_export_snapshot.db")
@@ -53,7 +55,8 @@ suspend fun exportRoomDbToDownloads(
 
             validateSnapshot(tempExport)
 
-            val finalFileName = "${dbName.substringBeforeLast('.')}_export_${System.currentTimeMillis()}.db"
+            val finalFileName = exportFileName?.takeIf { it.isNotBlank() }
+                ?: "${dbName.substringBeforeLast('.')}_export_${System.currentTimeMillis()}.db"
             val destinationMessage = saveSnapshotToDownloads(context, tempExport, finalFileName)
 
             ExportResult(
@@ -70,6 +73,27 @@ suspend fun exportRoomDbToDownloads(
             }
         }
     }
+}
+
+fun buildInspectionExportFileName(
+    inspectionNumber: String?,
+    siteName: String?
+): String {
+    val safeInspection = inspectionNumber?.trim().takeUnless { it.isNullOrBlank() } ?: "SIN_NUMERO"
+    val normalizedSite = siteName
+        ?.trim()
+        ?.takeIf { it.isNotBlank() }
+        ?.let { raw ->
+            val withoutAccents = Normalizer.normalize(raw, Normalizer.Form.NFD)
+                .replace(Regex("\\p{Mn}+"), "")
+            withoutAccents
+                .uppercase()
+                .replace(Regex("[^A-Z0-9]+"), "_")
+                .trim('_')
+                .ifBlank { "SITIO" }
+        }
+        ?: "SITIO"
+    return "ETIC_${safeInspection}_${normalizedSite}_INSPECCIONADA.db"
 }
 
 private fun createSnapshotWithVacuumInto(

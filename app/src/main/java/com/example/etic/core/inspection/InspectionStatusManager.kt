@@ -87,7 +87,8 @@ suspend fun changeInspectionStatus(
     context: Context,
     inspectionId: String,
     statusId: String,
-    currentUserId: String?
+    currentUserId: String?,
+    exportFileName: String? = null
 ): InspectionStatusChangeResult {
     val updateResult = withContext(Dispatchers.IO) {
         val dao = DbProvider.get(context).inspeccionDao()
@@ -130,7 +131,10 @@ suspend fun changeInspectionStatus(
     if (!updateResult.success) return updateResult
     if (statusId != INSPECTION_STATUS_CERRADA) return updateResult
 
-    val exportResult = exportRoomDbToDownloads(context)
+    val exportResult = exportRoomDbToDownloads(
+        context = context,
+        exportFileName = exportFileName
+    )
     if (!exportResult.success) {
         return InspectionStatusChangeResult(
             success = false,

@@ -1,4 +1,4 @@
-package com.example.etic.features.home
+﻿package com.example.etic.features.home
 
 import android.graphics.Bitmap
 import android.widget.Toast
@@ -80,6 +80,8 @@ import com.example.etic.core.current.LocalCurrentInspection
 import com.example.etic.core.current.LocalCurrentUser
 import com.example.etic.core.current.ProvideCurrentInspection
 import com.example.etic.core.current.ProvideCurrentUser
+import com.example.etic.core.export.buildInspectionExportFileName
+import com.example.etic.core.inspection.INSPECTION_STATUS_EN_PROGRESO
 import com.example.etic.core.inspection.INSPECTION_STATUS_CERRADA
 import com.example.etic.core.inspection.importInspectionDatabase
 import com.example.etic.core.inspection.changeInspectionStatus
@@ -163,6 +165,7 @@ fun MainScreen(
     var isGeneratingReport by rememberSaveable { mutableStateOf(false) }
     var inspectionStatusMessage by rememberSaveable { mutableStateOf("Procesando...") }
     var inspectionImportMessage by rememberSaveable { mutableStateOf("Importando inspección...") }
+    var showCloseInspectionConfirmDialog by rememberSaveable { mutableStateOf(false) }
     var showInventoryReportDialog by rememberSaveable { mutableStateOf(false) }
     var isLoadingInventoryOptions by rememberSaveable { mutableStateOf(false) }
     var inventoryOptions by remember { mutableStateOf<List<TreeNode>>(emptyList()) }
@@ -180,6 +183,50 @@ fun MainScreen(
     var currentUserSnapshot by remember { mutableStateOf<com.example.etic.core.current.CurrentUserInfo?>(null) }
     var inspectionStatusOptions by remember { mutableStateOf<List<EstatusInspeccion>>(emptyList()) }
     var selectedInspectionStatusId by rememberSaveable { mutableStateOf<String?>(null) }
+
+    fun inspectionStatusDescription(statusId: String?): String? =
+        when (statusId) {
+            INSPECTION_STATUS_EN_PROGRESO ->
+                "La inspección actual permanecerá activa para captura y edición."
+            INSPECTION_STATUS_CERRADA ->
+                "La inspección actual se cerrará, se exportará en Descargas y dejará de estar activa."
+            else -> null
+        }
+
+    fun saveInspectionStatus(inspection: CurrentInspectionInfo, statusId: String) {
+        scope.launch {
+            isSavingInspectionStatus = true
+            inspectionStatusMessage =
+                if (statusId == INSPECTION_STATUS_CERRADA) {
+                    "Cerrando y generando archivo de la inspección..."
+                } else {
+                    "Actualizando estatus..."
+                }
+            val exportFileName = if (statusId == INSPECTION_STATUS_CERRADA) {
+                buildInspectionExportFileName(
+                    inspectionNumber = inspection.noInspeccion?.toString(),
+                    siteName = inspection.nombreSitio
+                )
+            } else {
+                null
+            }
+            val result = changeInspectionStatus(
+                context = appContext,
+                inspectionId = inspection.idInspeccion,
+                statusId = statusId,
+                currentUserId = currentUserSnapshot?.idUsuario,
+                exportFileName = exportFileName
+            )
+            CurrentInspectionProvider.invalidate()
+            currentInspectionSnapshot = CurrentInspectionProvider.get(appContext)
+            isSavingInspectionStatus = false
+            if (result.success) {
+                showInspectionStatusDialog = false
+                showCloseInspectionConfirmDialog = false
+            }
+            Toast.makeText(appContext, result.message, Toast.LENGTH_LONG).show()
+        }
+    }
 
     fun collectNodeIds(node: TreeNode, out: MutableList<String>) {
         out.add(node.id)
@@ -1370,7 +1417,7 @@ fun MainScreen(
                                 showInspectionStatusDialog = false
                             }
                         },
-                        title = { Text("Estatus de inspección") },
+                        title = { Text("Estatus de la inspección") },
                         text = {
                             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 if (inspectionStatusOptions.isEmpty()) {
@@ -1395,8 +1442,8 @@ fun MainScreen(
                                             Spacer(Modifier.width(8.dp))
                                             Column {
                                                 Text(option.statusInspeccion.orEmpty().ifBlank { optionId })
-                                                option.descStatus?.takeIf { it.isNotBlank() }?.let {
-                                                    Text(it, style = MaterialTheme.typography.bodySmall)
+                                                inspectionStatusDescription(optionId)?.let { description ->
+                                                    Text(description, style = MaterialTheme.typography.bodySmall)
                                                 }
                                             }
                                         }
@@ -1424,31 +1471,54 @@ fun MainScreen(
                                         Toast.makeText(appContext, "No hay inspección activa.", Toast.LENGTH_SHORT).show()
                                         return@TextButton
                                     }
-                                    scope.launch {
-                                        isSavingInspectionStatus = true
-                                        inspectionStatusMessage =
-                                            if (statusId == INSPECTION_STATUS_CERRADA) {
-                                                "Cerrando y generando archivo de la inspección..."
-                                            } else {
-                                                "Actualizando estatus..."
-                                            }
-                                        val result = changeInspectionStatus(
-                                            context = appContext,
-                                            inspectionId = inspection.idInspeccion,
-                                            statusId = statusId,
-                                            currentUserId = currentUserSnapshot?.idUsuario
-                                        )
-                                        CurrentInspectionProvider.invalidate()
-                                        currentInspectionSnapshot = CurrentInspectionProvider.get(appContext)
-                                        isSavingInspectionStatus = false
-                                        if (result.success) {
-                                            showInspectionStatusDialog = false
-                                        }
-                                        Toast.makeText(appContext, result.message, Toast.LENGTH_LONG).show()
+                                    if (statusId == INSPECTION_STATUS_CERRADA) {
+                                        showCloseInspectionConfirmDialog = true
+                                    } else {
+                                        saveInspectionStatus(inspection, statusId)
                                     }
                                 }
                             ) {
                                 Text("Guardar")
+                            }
+                        }
+                    )
+                }
+
+                if (showCloseInspectionConfirmDialog) {
+                    AlertDialog(
+                        onDismissRequest = {
+                            if (!isSavingInspectionStatus) {
+                                showCloseInspectionConfirmDialog = false
+                            }
+                        },
+                        title = { Text("Confirmar cierre de inspección") },
+                        text = {
+                            Text(
+                                "La inspección actual se cerrará y se exportará en Descargas. ¿Deseas continuar?"
+                            )
+                        },
+                        dismissButton = {
+                            TextButton(
+                                enabled = !isSavingInspectionStatus,
+                                onClick = { showCloseInspectionConfirmDialog = false }
+                            ) {
+                                Text("Cancelar")
+                            }
+                        },
+                        confirmButton = {
+                            TextButton(
+                                enabled = !isSavingInspectionStatus,
+                                onClick = {
+                                    val inspection = currentInspectionSnapshot
+                                    val statusId = selectedInspectionStatusId
+                                    if (inspection == null || statusId.isNullOrBlank()) {
+                                        Toast.makeText(appContext, "No hay inspección activa.", Toast.LENGTH_SHORT).show()
+                                        return@TextButton
+                                    }
+                                    saveInspectionStatus(inspection, statusId)
+                                }
+                            ) {
+                                Text("Continuar")
                             }
                         }
                     )
