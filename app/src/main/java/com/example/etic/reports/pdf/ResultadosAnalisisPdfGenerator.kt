@@ -196,6 +196,61 @@ class ResultadosAnalisisPdfGenerator {
             return yMm + (layout.height * 25.4f / dpi)
         }
 
+        fun wrapPlainText(text: String, paint: TextPaint, maxWidthPx: Float): List<String> {
+            val normalized = text.replace("\r", "")
+            val out = mutableListOf<String>()
+            normalized.split("\n").forEach { paragraph ->
+                if (paragraph.isBlank()) {
+                    out += ""
+                } else {
+                    val words = paragraph.trim().split(Regex("\\s+"))
+                    var current = ""
+                    words.forEach { word ->
+                        val candidate = if (current.isBlank()) word else "$current $word"
+                        if (paint.measureText(candidate) <= maxWidthPx) {
+                            current = candidate
+                        } else {
+                            if (current.isNotBlank()) out += current
+                            current = word
+                        }
+                    }
+                    if (current.isNotBlank()) out += current
+                }
+            }
+            return out.ifEmpty { listOf("") }
+        }
+
+        fun drawJustifiedTextBlock(
+            text: String,
+            xMm: Float,
+            yMm: Float,
+            widthMm: Float,
+            paint: TextPaint,
+            lineHeightMm: Float = 5f
+        ): Float {
+            val lines = wrapPlainText(text, paint, mm(widthMm))
+            var currentLineY = yMm
+            lines.forEachIndexed { index, line ->
+                val isLastLine = index == lines.lastIndex || line.isBlank()
+                val words = line.trim().split(Regex("\\s+")).filter { it.isNotBlank() }
+                if (isLastLine || words.size <= 1) {
+                    canvas.drawText(line, mm(xMm), mm(currentLineY + 4.2f), paint)
+                } else {
+                    val wordsWidth = words.sumOf { paint.measureText(it).toDouble() }.toFloat()
+                    val gapCount = words.size - 1
+                    val extraSpace = ((mm(widthMm) - wordsWidth) / gapCount).coerceAtLeast(paint.measureText(" "))
+                    var drawX = mm(xMm)
+                    words.forEachIndexed { wordIndex, word ->
+                        canvas.drawText(word, drawX, mm(currentLineY + 4.2f), paint)
+                        drawX += paint.measureText(word)
+                        if (wordIndex < words.lastIndex) drawX += extraSpace
+                    }
+                }
+                currentLineY += lineHeightMm
+            }
+            return currentLineY
+        }
+
         fun drawSingleLine(text: String, xMm: Float, yMm: Float, paint: TextPaint, align: Paint.Align = Paint.Align.LEFT) {
             val previous = paint.textAlign
             paint.textAlign = align
@@ -338,17 +393,16 @@ class ResultadosAnalisisPdfGenerator {
         currentY = mm(120f)
         val municipioEstado = listOf(data.header.municipio, data.header.estado).filter { it.isNotBlank() }.joinToString(", ")
         currentY = mm(
-            drawTextBlock(
+            drawJustifiedTextBlock(
                 "Por este medio, hacemos entrega de los resultados finales de la inspeccion por termografia infrarroja realizada en las instalaciones electricas y mecanicas de ${data.header.sitio}, ubicadas en $municipioEstado. Servicio realizado ${data.header.fechaServicioNarrativa}.",
                 30f,
                 120f,
                 160f,
-                bodyPaint,
-                Layout.Alignment.ALIGN_NORMAL
+                bodyPaint
             ) + 5f
         )
-        currentY = mm(drawTextBlock("Agradecemos a ustedes la confianza y facilidades otorgadas durante la ejecucion de nuestro servicio. Asi mismo, expresamos nuestro reconocimiento a su personal tecnico por su colaboracion y profesionalismo.", 30f, currentY * 25.4f / dpi, 160f, bodyPaint) + 5f)
-        currentY = mm(drawTextBlock("Sin mas, quedamos atentos a sus amables comentarios", 30f, currentY * 25.4f / dpi, 160f, bodyPaint) + 5f)
+        currentY = mm(drawJustifiedTextBlock("Agradecemos a ustedes la confianza y facilidades otorgadas durante la ejecucion de nuestro servicio. Asi mismo, expresamos nuestro reconocimiento a su personal tecnico por su colaboracion y profesionalismo.", 30f, currentY * 25.4f / dpi, 160f, bodyPaint) + 5f)
+        currentY = mm(drawJustifiedTextBlock("Sin mas, quedamos atentos a sus amables comentarios", 30f, currentY * 25.4f / dpi, 160f, bodyPaint) + 5f)
         currentY = mm(drawTextBlock("Cordialmente,", 30f, currentY * 25.4f / dpi, 160f, bodyPaint) + 30f)
         drawSingleLine(data.header.analista, 30f, currentY * 25.4f / dpi, bodyPaint)
         currentY += mm(5f)
@@ -371,7 +425,7 @@ class ResultadosAnalisisPdfGenerator {
         drawSingleLine("I. Resumen Ejecutivo", 30f, 39.4f, headingBlueUnderlinePaint)
         currentY = mm(48f)
         currentY = mm(
-            drawTextBlock(
+            drawJustifiedTextBlock(
                 "Personal de ETIC, S.A. de C.V., se presento en las instalaciones de ${data.header.sitio} ubicadas en ${data.header.municipio}, ${data.header.estado}, ${data.header.fechaServicioNarrativa}, con el objeto de realizar la Inspeccion por Termografia Infrarroja en los equipos seleccionados para su estudio definidos en conjunto con responsables de cada area, descargando la informacion recabada durante este servicio en el software ETIC System.",
                 30f,
                 currentY * 25.4f / dpi,
