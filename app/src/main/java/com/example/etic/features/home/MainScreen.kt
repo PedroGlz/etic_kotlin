@@ -825,7 +825,12 @@ fun MainScreen(
                 drawerContainerColor = Color(0xFF202327),
                 drawerContentColor = Color.White
             ) {
-                Column(modifier = Modifier.padding(12.dp)) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(rememberScrollState())
+                        .padding(12.dp)
+                ) {
                     ListItem(
                         headlineContent = { Text("ETIC System", color = Color.White) },
                         supportingContent = { Text(userName, color = Color.LightGray) },
@@ -916,17 +921,7 @@ fun MainScreen(
                         color = Color.White.copy(alpha = 0.15f)
                     )
 
-                    ReportsMenuSection(
-                        onReport = { action -> (onReportAction ?: reportHandler)(action) },
-                        enabled = !isGeneratingReport
-                    )
-
-                    HorizontalDivider(
-                        thickness = androidx.compose.material3.DividerDefaults.Thickness,
-                        color = Color.White.copy(alpha = 0.15f)
-                    )
-
-                    NavigationDrawerItem(
+                                        NavigationDrawerItem(
                         label = { Text("Carpeta Imágenes") },
                         selected = section == HomeSection.FolderImages,
                         onClick = {
@@ -946,6 +941,16 @@ fun MainScreen(
                         },
                         icon = { Icon(Icons.Outlined.Folder, contentDescription = null) },
                         colors = drawerItemColors
+                    )
+
+                    HorizontalDivider(
+                        thickness = androidx.compose.material3.DividerDefaults.Thickness,
+                        color = Color.White.copy(alpha = 0.15f)
+                    )
+
+                    ReportsMenuSection(
+                        onReport = { action -> (onReportAction ?: reportHandler)(action) },
+                        enabled = !isGeneratingReport
                     )
 
                     HorizontalDivider(

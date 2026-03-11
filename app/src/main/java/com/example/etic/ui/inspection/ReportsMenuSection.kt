@@ -61,6 +61,16 @@ fun ReportsMenuSection(
             Column(Modifier.fillMaxWidth().padding(start = 14.dp, bottom = 8.dp)) {
                 TextButton(
                     enabled = enabled,
+                    onClick = { onReport(ReportAction.ResultadosAnalisis) },
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Outlined.Description, contentDescription = null)
+                    Spacer(Modifier.width(10.dp))
+                    Text("Resultados de análisis", modifier = Modifier.weight(1f))
+                }
+                TextButton(
+                    enabled = enabled,
                     onClick = { onReport(ReportAction.InventarioPdf) },
                     contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
                     modifier = Modifier.fillMaxWidth()
@@ -118,16 +128,6 @@ fun ReportsMenuSection(
                     Icon(Icons.Outlined.Insights, contentDescription = null)
                     Spacer(Modifier.width(10.dp))
                     Text("Gráfica de anomalías", modifier = Modifier.weight(1f))
-                }
-                TextButton(
-                    enabled = enabled,
-                    onClick = { onReport(ReportAction.ResultadosAnalisis) },
-                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.Outlined.Description, contentDescription = null)
-                    Spacer(Modifier.width(10.dp))
-                    Text("Resultados de análisis", modifier = Modifier.weight(1f))
                 }
                 TextButton(
                     enabled = enabled,
