@@ -74,6 +74,25 @@ class GenerateResultadosAnalisisPdfUseCase(
                 }
             }
 
+            fun formatFechaServicioNarrativa(startRaw: String?, endRaw: String?): String {
+                val startValue = startRaw?.take(10).orEmpty()
+                val endValue = endRaw?.take(10).orEmpty()
+                val start = runCatching { LocalDate.parse(startValue) }.getOrNull()
+                val end = runCatching { LocalDate.parse(endValue) }.getOrNull() ?: start
+                if (start == null || end == null) return ""
+                return if (start == end) {
+                    "el ${formatDate(start.toString())}"
+                } else {
+                    val startFmt = start.format(
+                        DateTimeFormatter.ofPattern("d 'de' MMMM", Locale("es", "MX"))
+                    )
+                    val endFmt = end.format(
+                        DateTimeFormatter.ofPattern("d 'de' MMMM 'del' yyyy", Locale("es", "MX"))
+                    )
+                    "del $startFmt al $endFmt"
+                }
+            }
+
             val previousInspectionDate = runCatching {
                 val previousNo = inspeccion.noInspeccionAnt ?: return@runCatching null
                 inspeccionDao.getAll().firstOrNull { it.noInspeccion == previousNo }?.fechaInicio
@@ -96,18 +115,74 @@ class GenerateResultadosAnalisisPdfUseCase(
             val aislamiento = selectedProblems.count { it.idTipoInspeccion.equals(ProblemTypeIds.AISLAMIENTO_TERMICO, true) }
             val cronicos = selectedProblems.count { it.esCronico.equals("SI", true) }
             val cerrados = selectedProblems.count { it.estatusProblema.equals("Cerrado", true) }
+            val cronicosElectricos = selectedProblems.count {
+                (it.idTipoInspeccion.equals(ProblemTypeIds.ELECTRICO, true) ||
+                    it.idTipoInspeccion.equals(ProblemTypeIds.ELECTRICO_2, true)) &&
+                    it.esCronico.equals("SI", true)
+            }
+            val electricosCerrados = selectedProblems.count {
+                (it.idTipoInspeccion.equals(ProblemTypeIds.ELECTRICO, true) ||
+                    it.idTipoInspeccion.equals(ProblemTypeIds.ELECTRICO_2, true)) &&
+                    it.estatusProblema.equals("Cerrado", true)
+            }
+            val cronicosVisuales = selectedProblems.count {
+                it.idTipoInspeccion.equals(ProblemTypeIds.VISUAL, true) &&
+                    it.esCronico.equals("SI", true)
+            }
+            val visualesCerrados = selectedProblems.count {
+                it.idTipoInspeccion.equals(ProblemTypeIds.VISUAL, true) &&
+                    it.estatusProblema.equals("Cerrado", true)
+            }
+            val cronicosMecanicos = selectedProblems.count {
+                it.idTipoInspeccion.equals("0D32B334-76C3-11D3-82BF-00104BC75DC2", true) &&
+                    it.esCronico.equals("SI", true)
+            }
+            val mecanicosCerrados = selectedProblems.count {
+                it.idTipoInspeccion.equals("0D32B334-76C3-11D3-82BF-00104BC75DC2", true) &&
+                    it.estatusProblema.equals("Cerrado", true)
+            }
+            val totalCriticos = selectedProblems.count {
+                it.idSeveridad.equals("1D56EDB0-8D6E-11D3-9270-006008A19766", true) &&
+                    (it.idTipoInspeccion.equals(ProblemTypeIds.ELECTRICO, true) ||
+                        it.idTipoInspeccion.equals(ProblemTypeIds.ELECTRICO_2, true))
+            }
+            val totalSerios = selectedProblems.count {
+                it.idSeveridad.equals("1D56EDB1-8D6E-11D3-9270-006008A19766", true) &&
+                    (it.idTipoInspeccion.equals(ProblemTypeIds.ELECTRICO, true) ||
+                        it.idTipoInspeccion.equals(ProblemTypeIds.ELECTRICO_2, true))
+            }
+            val totalImportantes = selectedProblems.count {
+                it.idSeveridad.equals("1D56EDB2-8D6E-11D3-9270-006008A19766", true) &&
+                    (it.idTipoInspeccion.equals(ProblemTypeIds.ELECTRICO, true) ||
+                        it.idTipoInspeccion.equals(ProblemTypeIds.ELECTRICO_2, true))
+            }
+            val totalMenores = selectedProblems.count {
+                it.idSeveridad.equals("1D56EDB3-8D6E-11D3-9270-006008A19766", true) &&
+                    (it.idTipoInspeccion.equals(ProblemTypeIds.ELECTRICO, true) ||
+                        it.idTipoInspeccion.equals(ProblemTypeIds.ELECTRICO_2, true))
+            }
+            val totalNormal = selectedProblems.count {
+                it.idSeveridad.equals("1D56EDB4-8D6E-11D3-9270-006008A19766", true) &&
+                    (it.idTipoInspeccion.equals(ProblemTypeIds.ELECTRICO, true) ||
+                        it.idTipoInspeccion.equals(ProblemTypeIds.ELECTRICO_2, true))
+            }
 
             val imageFolder = getInspeccionImagenesTreeUri(noInspeccion)?.let { treeUri ->
                 DocumentFile.fromTreeUri(context, treeUri) ?: DocumentFile.fromSingleUri(context, treeUri)
             }
-            val portada = draft.nombreImgPortada.takeIf { it.isNotBlank() }?.let { imageName ->
-                val file = imageFolder?.findFile(imageName)
-                    ?: imageFolder?.listFiles()?.firstOrNull { it.name.equals(imageName, true) }
-                runCatching {
+            fun loadImageByName(imageName: String?): android.graphics.Bitmap? {
+                val normalized = imageName?.trim().orEmpty()
+                if (normalized.isBlank()) return null
+                val file = imageFolder?.findFile(normalized)
+                    ?: imageFolder?.listFiles()?.firstOrNull { it.name.equals(normalized, true) }
+                return runCatching {
                     file?.let {
                         context.contentResolver.openInputStream(it.uri)?.use(BitmapFactory::decodeStream)
                     }
                 }.getOrNull()
+            }
+            val portada = draft.nombreImgPortada.takeIf { it.isNotBlank() }?.let { imageName ->
+                loadImageByName(imageName)
             }
 
             val direccion = listOfNotNull(
@@ -122,22 +197,34 @@ class GenerateResultadosAnalisisPdfUseCase(
                 sitio = sitio?.sitio.orEmpty(),
                 grupoSitio = inspeccion.idGrupoSitios?.let { grupoDao.getByIdActivo(it)?.grupo }.orEmpty(),
                 direccionCompleta = direccion,
+                municipio = sitio?.municipio.orEmpty(),
+                estado = sitio?.estado.orEmpty(),
                 fechaServicio = formatFechaServicio(draft.fechaInicio, draft.fechaFin),
+                fechaServicioNarrativa = formatFechaServicioNarrativa(draft.fechaInicio, draft.fechaFin),
                 fechaServicioAnterior = formatDate(previousInspectionDate),
                 analista = currentUserName?.takeIf { it.isNotBlank() }
                     ?: usuarioActual?.nombre?.takeIf { it.isNotBlank() }
                     ?: usuarioActual?.usuario.orEmpty(),
-                nivel = usuarioActual?.nivelCertificacion.orEmpty()
+                nivel = usuarioActual?.nivelCertificacion.orEmpty(),
+                telefono = usuarioActual?.telefono.orEmpty(),
+                email = usuarioActual?.email.orEmpty()
             )
-
-            val metricas = listOf(
-                ResultadosAnalisisPdfMetric("Total de hallazgos", selectedProblems.size.toString()),
-                ResultadosAnalisisPdfMetric("Electricos", electricos.toString()),
-                ResultadosAnalisisPdfMetric("Visuales", visuales.toString()),
-                ResultadosAnalisisPdfMetric("Mecanicos", mecanicos.toString()),
-                ResultadosAnalisisPdfMetric("Aislamiento termico", aislamiento.toString()),
-                ResultadosAnalisisPdfMetric("Cronicos", cronicos.toString()),
-                ResultadosAnalisisPdfMetric("Cerrados", cerrados.toString())
+            val stats = ResultadosAnalisisPdfStats(
+                totalHallazgos = selectedProblems.size,
+                totalElectricos = electricos,
+                cronicosElectricos = cronicosElectricos,
+                electricosCerrados = electricosCerrados,
+                totalMecanicos = mecanicos,
+                cronicosMecanicos = cronicosMecanicos,
+                mecanicosCerrados = mecanicosCerrados,
+                totalVisuales = visuales,
+                cronicosVisuales = cronicosVisuales,
+                visualesCerrados = visualesCerrados,
+                totalCriticos = totalCriticos,
+                totalSerios = totalSerios,
+                totalImportantes = totalImportantes,
+                totalMenores = totalMenores,
+                totalNormal = totalNormal
             )
 
             val res = context.resources
@@ -148,6 +235,18 @@ class GenerateResultadosAnalisisPdfUseCase(
             val logoBmp = logoId?.let { BitmapFactory.decodeResource(res, it) }
             val isoLogoId = res.getIdentifier("iso_img", "drawable", pkg).takeIf { it != 0 }
             val isoLogoBmp = isoLogoId?.let { BitmapFactory.decodeResource(res, it) }
+            val clienteLogo = inspeccion.idCliente
+                ?.let { clienteDao.getByIdActivo(it) }
+                ?.imagenCliente
+                ?.let { loadImageByName(it) }
+
+            val recomendaciones = draft.recomendaciones.map {
+                ResultadosAnalisisPdfRecommendationEntry(
+                    texto = it.texto,
+                    imagen1 = loadImageByName(it.imagen1),
+                    imagen2 = loadImageByName(it.imagen2)
+                )
+            }
 
             val folder = folderProvider.getReportesFolder(noInspeccion)
                 ?: return@withContext Result.failure(IllegalStateException("No hay acceso a carpeta Reportes (SAF)."))
@@ -160,10 +259,11 @@ class GenerateResultadosAnalisisPdfUseCase(
                 header = header,
                 contactos = draft.contactos,
                 portada = portada,
+                logoCliente = clienteLogo,
                 descripciones = draft.descripciones,
                 areasInspeccionadas = draft.areasInspeccionadas,
-                metricas = metricas,
-                recomendaciones = draft.recomendaciones,
+                stats = stats,
+                recomendaciones = recomendaciones,
                 referencias = draft.referencias,
                 logo = logoBmp,
                 isoLogo = isoLogoBmp

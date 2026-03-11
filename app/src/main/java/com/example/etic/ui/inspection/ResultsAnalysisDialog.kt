@@ -1,6 +1,11 @@
 package com.example.etic.ui.inspection
 
 import android.app.DatePickerDialog
+import android.graphics.Bitmap
+import android.net.Uri
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -32,6 +37,7 @@ import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.ArrowForward
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
@@ -42,6 +48,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -58,6 +65,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.example.etic.core.saf.EticImageStore
 import com.example.etic.features.components.ImageInputButtonGroup
 import com.example.etic.features.inspection.tree.TreeNode
 import com.example.etic.features.inspection.ui.problem.ProblemDialogDraggableHeader
@@ -81,12 +89,19 @@ private val FIELD_BORDER = 1.dp
 private val DIALOG_SIDE_PADDING = 12.dp
 private val IMAGE_SEQUENCE_REGEX = Regex("""^(.*?)(\d+)(\.[^.]*)?$""")
 
+private data class ImagePickerTarget(
+    val recommendationIndex: Int? = null,
+    val imageSlot: Int = 0
+)
+
 @Composable
 fun ResultsAnalysisDialog(
     initialDraft: ResultadosAnalisisDraft,
     locationOptions: List<TreeNode>,
     problemOptions: List<ResultadosAnalisisProblemOption>,
     availableImages: List<String>,
+    rootTreeUri: Uri?,
+    inspectionNumber: String?,
     isBusy: Boolean,
     onDismiss: (ResultadosAnalisisDraft) -> Unit,
     onConfirm: (ResultadosAnalisisDraft, List<String>) -> Unit
@@ -103,6 +118,7 @@ fun ResultsAnalysisDialog(
 
     val context = LocalContext.current
     val offset = remember { mutableStateOf(Offset.Zero) }
+    val availableImageOptions = remember { mutableStateListOf<String>() }
     var fechaInicio by remember { mutableStateOf(initialDraft.fechaInicio) }
     var fechaFin by remember { mutableStateOf(initialDraft.fechaFin) }
     var nombreImgPortada by remember { mutableStateOf(initialDraft.nombreImgPortada) }
@@ -142,6 +158,13 @@ fun ResultsAnalysisDialog(
     var validationError by remember { mutableStateOf<String?>(null) }
     var currentStep by remember { mutableStateOf(0) }
     var maxReachedStep by remember { mutableStateOf(0) }
+    var imagePickerTarget by remember { mutableStateOf<ImagePickerTarget?>(null) }
+    var activeImportTarget by remember { mutableStateOf<ImagePickerTarget?>(null) }
+
+    LaunchedEffect(availableImages) {
+        availableImageOptions.clear()
+        availableImageOptions.addAll(availableImages.distinct())
+    }
 
     fun buildDraft(): ResultadosAnalisisDraft {
         return ResultadosAnalisisDraft(
@@ -200,27 +223,29 @@ fun ResultsAnalysisDialog(
     }
 
     fun nextImage(current: String, forward: Boolean): String {
-        if (availableImages.isEmpty()) return current
+        if (availableImageOptions.isEmpty()) return current
 
         val normalizedCurrent = current.trim()
-        if (normalizedCurrent.isBlank()) return if (forward) availableImages.first() else availableImages.last()
+        if (normalizedCurrent.isBlank()) {
+            return if (forward) availableImageOptions.first() else availableImageOptions.last()
+        }
 
-        val currentIndex = availableImages.indexOfFirst { it.equals(normalizedCurrent, true) }
+        val currentIndex = availableImageOptions.indexOfFirst { it.equals(normalizedCurrent, true) }
         if (currentIndex >= 0) {
             return when {
-                forward -> availableImages[(currentIndex + 1) % availableImages.size]
-                else -> availableImages[(currentIndex - 1 + availableImages.size) % availableImages.size]
+                forward -> availableImageOptions[(currentIndex + 1) % availableImageOptions.size]
+                else -> availableImageOptions[(currentIndex - 1 + availableImageOptions.size) % availableImageOptions.size]
             }
         }
 
         val match = IMAGE_SEQUENCE_REGEX.find(normalizedCurrent)
-            ?: return if (forward) availableImages.first() else availableImages.last()
+            ?: return if (forward) availableImageOptions.first() else availableImageOptions.last()
         val prefix = match.groupValues[1]
         val suffix = match.groupValues[3]
         val currentNumber = match.groupValues[2].toIntOrNull()
-            ?: return if (forward) availableImages.first() else availableImages.last()
+            ?: return if (forward) availableImageOptions.first() else availableImageOptions.last()
 
-        val sequenceCandidates = availableImages.mapNotNull { image ->
+        val sequenceCandidates = availableImageOptions.mapNotNull { image ->
             val parsed = IMAGE_SEQUENCE_REGEX.find(image.trim()) ?: return@mapNotNull null
             if (!parsed.groupValues[1].equals(prefix, true) || !parsed.groupValues[3].equals(suffix, true)) {
                 return@mapNotNull null
@@ -230,7 +255,7 @@ fun ResultsAnalysisDialog(
         }.sortedBy { it.second }
 
         if (sequenceCandidates.isEmpty()) {
-            return if (forward) availableImages.first() else availableImages.last()
+            return if (forward) availableImageOptions.first() else availableImageOptions.last()
         }
 
         return if (forward) {
@@ -253,6 +278,88 @@ fun ResultsAnalysisDialog(
             base.monthValue - 1,
             base.dayOfMonth
         ).show()
+    }
+
+    fun updateImageValue(target: ImagePickerTarget, imageName: String) {
+        val normalized = imageName.trim()
+        if (normalized.isNotBlank() && availableImageOptions.none { it.equals(normalized, true) }) {
+            availableImageOptions.add(normalized)
+            availableImageOptions.sortBy { it.lowercase() }
+        }
+        if (target.recommendationIndex == null) {
+            nombreImgPortada = normalized
+            return
+        }
+        val index = target.recommendationIndex
+        if (index !in recomendaciones.indices) return
+        recomendaciones[index] = when (target.imageSlot) {
+            2 -> recomendaciones[index].copy(imagen2 = normalized)
+            else -> recomendaciones[index].copy(imagen1 = normalized)
+        }
+    }
+
+    fun saveBitmapToImagenes(bmp: Bitmap, prefix: String): String? =
+        EticImageStore.saveBitmap(
+            context = context,
+            rootTreeUri = rootTreeUri,
+            inspectionNumero = inspectionNumber,
+            prefix = prefix,
+            bmp = bmp
+        )
+
+    fun copyImageFromUri(uri: Uri, prefix: String): String? =
+        EticImageStore.copyFromUri(
+            context = context,
+            rootTreeUri = rootTreeUri,
+            inspectionNumero = inspectionNumber,
+            prefix = prefix,
+            uri = uri
+        )
+
+    val imageFolderLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.GetContent()
+    ) { uri ->
+        val target = activeImportTarget
+        activeImportTarget = null
+        if (uri == null || target == null) return@rememberLauncherForActivityResult
+        val saved = copyImageFromUri(uri, "RA")
+        if (saved != null) {
+            updateImageValue(target, saved)
+        } else {
+            Toast.makeText(context, "No se pudo importar la imagen.", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    val imageCameraLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.TakePicturePreview()
+    ) { bmp ->
+        val target = activeImportTarget
+        activeImportTarget = null
+        if (bmp == null || target == null) {
+            if (bmp == null) {
+                Toast.makeText(context, "La camara no devolvio imagen.", Toast.LENGTH_SHORT).show()
+            }
+            return@rememberLauncherForActivityResult
+        }
+        val saved = saveBitmapToImagenes(bmp, "RA")
+        if (saved != null) {
+            updateImageValue(target, saved)
+        } else {
+            Toast.makeText(context, "No se pudo guardar la imagen.", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    fun beginImageImport(target: ImagePickerTarget, fromCamera: Boolean) {
+        if (rootTreeUri == null || inspectionNumber.isNullOrBlank()) {
+            Toast.makeText(context, "No hay acceso a la carpeta Imagenes de la inspeccion.", Toast.LENGTH_SHORT).show()
+            return
+        }
+        activeImportTarget = target
+        if (fromCamera) {
+            imageCameraLauncher.launch(null)
+        } else {
+            imageFolderLauncher.launch("image/*")
+        }
     }
 
     Dialog(
@@ -346,10 +453,12 @@ fun ResultsAnalysisDialog(
                                             isRequired = true,
                                             onMoveUp = { nombreImgPortada = nextImage(nombreImgPortada, true) },
                                             onMoveDown = { nombreImgPortada = nextImage(nombreImgPortada, false) },
-                                            onDotsClick = {
-                                                if (availableImages.isNotEmpty()) {
-                                                    nombreImgPortada = availableImages.last()
-                                                }
+                                            onDotsClick = { imagePickerTarget = ImagePickerTarget() },
+                                            onFolderClick = {
+                                                beginImageImport(ImagePickerTarget(), fromCamera = false)
+                                            },
+                                            onCameraClick = {
+                                                beginImageImport(ImagePickerTarget(), fromCamera = true)
                                             }
                                         )
                                         MultilineField(
@@ -428,11 +537,28 @@ fun ResultsAnalysisDialog(
                                                                 )
                                                             },
                                                             onDotsClick = {
-                                                                if (availableImages.isNotEmpty()) {
-                                                                    recomendaciones[index] = recomendaciones[index].copy(
-                                                                        imagen1 = availableImages.last()
-                                                                    )
-                                                                }
+                                                                imagePickerTarget = ImagePickerTarget(
+                                                                    recommendationIndex = index,
+                                                                    imageSlot = 1
+                                                                )
+                                                            },
+                                                            onFolderClick = {
+                                                                beginImageImport(
+                                                                    ImagePickerTarget(
+                                                                        recommendationIndex = index,
+                                                                        imageSlot = 1
+                                                                    ),
+                                                                    fromCamera = false
+                                                                )
+                                                            },
+                                                            onCameraClick = {
+                                                                beginImageImport(
+                                                                    ImagePickerTarget(
+                                                                        recommendationIndex = index,
+                                                                        imageSlot = 1
+                                                                    ),
+                                                                    fromCamera = true
+                                                                )
                                                             }
                                                         )
                                                         ImageInputButtonGroup(
@@ -453,11 +579,28 @@ fun ResultsAnalysisDialog(
                                                                 )
                                                             },
                                                             onDotsClick = {
-                                                                if (availableImages.isNotEmpty()) {
-                                                                    recomendaciones[index] = recomendaciones[index].copy(
-                                                                        imagen2 = availableImages.last()
-                                                                    )
-                                                                }
+                                                                imagePickerTarget = ImagePickerTarget(
+                                                                    recommendationIndex = index,
+                                                                    imageSlot = 2
+                                                                )
+                                                            },
+                                                            onFolderClick = {
+                                                                beginImageImport(
+                                                                    ImagePickerTarget(
+                                                                        recommendationIndex = index,
+                                                                        imageSlot = 2
+                                                                    ),
+                                                                    fromCamera = false
+                                                                )
+                                                            },
+                                                            onCameraClick = {
+                                                                beginImageImport(
+                                                                    ImagePickerTarget(
+                                                                        recommendationIndex = index,
+                                                                        imageSlot = 2
+                                                                    ),
+                                                                    fromCamera = true
+                                                                )
                                                             }
                                                         )
                                                     }
@@ -594,6 +737,64 @@ fun ResultsAnalysisDialog(
                                 Spacer(Modifier.width(6.dp))
                                 Icon(Icons.Outlined.ArrowForward, contentDescription = null)
                             }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    imagePickerTarget?.let { target ->
+        Dialog(
+            onDismissRequest = { imagePickerTarget = null },
+            properties = DialogProperties(usePlatformDefaultWidth = true)
+        ) {
+            Card(
+                shape = RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text("Seleccionar imagen", style = MaterialTheme.typography.titleMedium)
+                    if (availableImageOptions.isEmpty()) {
+                        Text(
+                            "No hay imagenes disponibles en la inspeccion.",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    } else {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(max = 320.dp)
+                                .verticalScroll(rememberScrollState()),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            availableImageOptions.forEach { imageName ->
+                                TextButton(
+                                    onClick = {
+                                        updateImageValue(target, imageName)
+                                        imagePickerTarget = null
+                                    },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    colors = ButtonDefaults.textButtonColors(
+                                        contentColor = MaterialTheme.colorScheme.onSurface
+                                    )
+                                ) {
+                                    Text(imageName, modifier = Modifier.fillMaxWidth())
+                                }
+                            }
+                        }
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        TextButton(onClick = { imagePickerTarget = null }) {
+                            Text("Cerrar")
                         }
                     }
                 }

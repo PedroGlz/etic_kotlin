@@ -1563,6 +1563,8 @@ fun MainScreen(
                         locationOptions = resultsLocationOptions,
                         problemOptions = resultsProblemOptions,
                         availableImages = resultsAvailableImages,
+                        rootTreeUri = rootTreeUri,
+                        inspectionNumber = currentInspectionSnapshot?.noInspeccion?.toString(),
                         isBusy = isGeneratingReport,
                         onDismiss = { draft ->
                             resultsAnalysisDraft = draft
