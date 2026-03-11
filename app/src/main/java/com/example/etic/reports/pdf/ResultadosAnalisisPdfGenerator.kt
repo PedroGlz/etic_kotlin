@@ -80,7 +80,6 @@ class ResultadosAnalisisPdfGenerator {
             color = Color.rgb(0, 32, 96)
             textSize = pt(11f)
             typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL)
-            textAlign = Paint.Align.CENTER
         }
         val tableHeaderPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.WHITE
@@ -342,6 +341,25 @@ class ResultadosAnalisisPdfGenerator {
             paint.textAlign = previous
         }
 
+        fun drawCenteredParagraph(
+            text: String,
+            yMm: Float,
+            widthMm: Float,
+            paint: TextPaint,
+            startXmm: Float = (220f - widthMm) / 2f,
+            lineHeightMm: Float = 5f
+        ): Float {
+            val lines = wrapPlainText(text, paint, mm(widthMm))
+            var lineY = yMm
+            lines.forEach { line ->
+                val lineWidthMm = paint.measureText(line) * 25.4f / dpi
+                val drawX = startXmm + ((widthMm - lineWidthMm) / 2f)
+                drawSingleLine(line, drawX, lineY + 4.2f, paint)
+                lineY += lineHeightMm
+            }
+            return lineY
+        }
+
         val bulletBaselineOffsetMm = 4.2f
 
         fun ensureSpace(heightMm: Float) {
@@ -601,10 +619,10 @@ class ResultadosAnalisisPdfGenerator {
         currentY += mm(8f)
 
         fun drawTable1(yMm: Float): Float {
-            val c1 = 38f
-            val c2 = 75f
-            val c3 = 117f
-            val c4 = 147f
+            val c1 = 43f
+            val c2 = 80f
+            val c3 = 122f
+            val c4 = 152f
             val blue = Color.rgb(51, 121, 204)
             val lightGray = Color.rgb(236, 236, 236)
             val deepBlue = Color.rgb(0, 32, 96)
@@ -630,15 +648,20 @@ class ResultadosAnalisisPdfGenerator {
             drawTableCell(c4, yMm + 16f, 25f, 6f, data.stats.mecanicosCerrados.toString(), Color.BLACK, Color.WHITE, tableTextPaint)
             drawTableCell(c4, yMm + 22f, 25f, 6f, data.stats.totalCerradosT1.toString(), deepBlue, Color.WHITE, tableBoldPaint)
 
-            drawSingleLine("Tabla No. 1 Listado de anomalias termicas documentados en esta inspeccion.", 110f, yMm + 37f, captionPaint, Paint.Align.CENTER)
-            return yMm + 45f
+            drawCenteredParagraph(
+                "Tabla No. 1 Listado de anomalias termicas documentados en esta inspeccion.",
+                yMm + 30f,
+                160f,
+                captionPaint
+            )
+            return yMm + 39f
         }
 
         fun drawTable2(yMm: Float): Float {
-            val c1 = 38f
-            val c2 = 75f
-            val c3 = 117f
-            val c4 = 147f
+            val c1 = 43f
+            val c2 = 80f
+            val c3 = 122f
+            val c4 = 152f
             val blue = Color.rgb(51, 121, 204)
             val lightGray = Color.rgb(236, 236, 236)
             val deepBlue = Color.rgb(0, 32, 96)
@@ -660,8 +683,13 @@ class ResultadosAnalisisPdfGenerator {
             drawTableCell(c4, yMm + 10f, 25f, 6f, data.stats.visualesCerrados.toString(), visualBlue, lightGray, tableBoldPaint)
             drawTableCell(c4, yMm + 16f, 25f, 6f, data.stats.visualesCerrados.toString(), deepBlue, Color.WHITE, tableBoldPaint)
 
-            drawSingleLine("Tabla No. 2 Listado de anomalias documentadas en esta inspeccion", 110f, yMm + 31f, captionPaint, Paint.Align.CENTER)
-            return yMm + 39f
+            drawCenteredParagraph(
+                "Tabla No. 2 Listado de anomalias documentadas en esta inspeccion",
+                yMm + 24f,
+                160f,
+                captionPaint
+            )
+            return yMm + 33f
         }
 
         fun drawTable3(yMm: Float): Float {
@@ -672,10 +700,10 @@ class ResultadosAnalisisPdfGenerator {
             val yellow = Color.rgb(255, 192, 0)
             val sky = Color.rgb(0, 112, 192)
             val darkGray = Color.rgb(74, 69, 69)
-            val c1 = 25f
-            val c2 = 60f
-            val c3 = 95f
-            val c4 = 127f
+            val c1 = 30f
+            val c2 = 65f
+            val c3 = 100f
+            val c4 = 132f
 
             drawTableCell(c1, yMm, 70f, 10f, "Clasificacion por diferencial\nde temperatura", Color.WHITE, blue, tableHeaderPaint)
             drawTableCell(c1, yMm + 10f, 35f, 12f, "Criticos", red, lightGray, tableBoldPaint)
@@ -704,15 +732,13 @@ class ResultadosAnalisisPdfGenerator {
             drawTableCell(c4, yMm + 52f, 58f, 12f, "Posible deficiencia, requiere de investigacion", sky, Color.WHITE, tableBoldPaint)
             drawTableCell(c4, yMm + 64f, 58f, 12f, "---", sky, lightGray, tableBoldPaint)
 
-            drawTextBlock(
+            drawCenteredParagraph(
                 "Tabla No. 3 Listado de anomalias termicas electricas por diferencial de temperatura Agrupados de acuerdo al Diferencial de Temperatura, basado en la comparacion entre componentes similares bajo similar carga (ANSI-NETA) \"International Electric Testing Association Inc-Approved American National Standards\"",
-                20f,
-                yMm + 82f,
-                180f,
-                captionPaint,
-                Layout.Alignment.ALIGN_CENTER
+                yMm + 78f,
+                160f,
+                captionPaint
             )
-            return yMm + 96f
+            return yMm + 90f
         }
 
         if ((currentY * 25.4f / dpi) + 37f > pageBreakMm) startPage()
