@@ -519,7 +519,7 @@ fun BaselineTableFromDatabase(
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             BaselineInputField(
-                                label = "MTA \u00B0C",
+                                label = "MTA °C",
                                 required = true,
                                 value = mta,
                                 onValueChange = { mta = filter2Dec(it) },
@@ -527,7 +527,7 @@ fun BaselineTableFromDatabase(
                                 modifier = Modifier.weight(1f)
                             )
                             BaselineInputField(
-                                label = "MAX \u00B0C",
+                                label = "MAX °C",
                                 required = true,
                                 value = tempMax,
                                 onValueChange = { tempMax = filter2Dec(it) },
@@ -535,7 +535,7 @@ fun BaselineTableFromDatabase(
                                 modifier = Modifier.weight(1f)
                             )
                             BaselineInputField(
-                                label = "AMB \u00B0C",
+                                label = "AMB °C",
                                 required = true,
                                 value = tempAmb,
                                 onValueChange = { tempAmb = filter2Dec(it) },

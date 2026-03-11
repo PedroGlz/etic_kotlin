@@ -30,7 +30,7 @@ class GenerateAnomaliasChartPdfUseCase(
             val usuarioDao = db.usuarioDao()
 
             val inspeccion = inspeccionDao.getById(inspeccionId)
-                ?: return@withContext Result.failure(IllegalStateException("Inspecci\u00f3n no encontrada."))
+                ?: return@withContext Result.failure(IllegalStateException("Inspección no encontrada."))
             val siteId = inspeccion.idSitio.orEmpty()
             val all = problemaDao.getAllActivos().filter { it.idSitio == siteId && it.idInspeccion == inspeccionId }
 
@@ -49,32 +49,32 @@ class GenerateAnomaliasChartPdfUseCase(
             val bars = listOf(
                 AnomaliaBarData("Total de hallazgos", Color.rgb(74, 127, 194), all.size),
                 AnomaliaBarData(
-                    "El\u00e9ctricos abiertos cr\u00edticos",
+                    "Eléctricos abiertos críticos",
                     Color.rgb(173, 0, 0),
                     countBy(ProblemTypeIds.ELECTRICO, "Abierto", ReportSeverityIds.CRITICO)
                 ),
                 AnomaliaBarData(
-                    "El\u00e9ctricos abiertos serios",
+                    "Eléctricos abiertos serios",
                     Color.rgb(245, 0, 0),
                     countBy(ProblemTypeIds.ELECTRICO, "Abierto", ReportSeverityIds.SERIO)
                 ),
                 AnomaliaBarData(
-                    "El\u00e9ctricos abiertos importantes",
+                    "Eléctricos abiertos importantes",
                     Color.rgb(245, 100, 0),
                     countBy(ProblemTypeIds.ELECTRICO, "Abierto", ReportSeverityIds.IMPORTANTE)
                 ),
                 AnomaliaBarData(
-                    "El\u00e9ctricos abiertos menores",
+                    "Eléctricos abiertos menores",
                     Color.rgb(225, 208, 0),
                     countBy(ProblemTypeIds.ELECTRICO, "Abierto", ReportSeverityIds.MENOR)
                 ),
                 AnomaliaBarData(
-                    "Hallazgos abiertos mec\u00e1nicos",
+                    "Hallazgos abiertos mecánicos",
                     Color.rgb(124, 174, 230),
                     countBy("0D32B334-76C3-11D3-82BF-00104BC75DC2", "Abierto")
                 ),
                 AnomaliaBarData(
-                    "Hallazgos abiertos de ais. t\u00e9rm.",
+                    "Hallazgos abiertos de ais. térm.",
                     Color.rgb(124, 174, 230),
                     countBy(ProblemTypeIds.AISLAMIENTO_TERMICO, "Abierto")
                 ),
@@ -84,7 +84,7 @@ class GenerateAnomaliasChartPdfUseCase(
                     countBy(ProblemTypeIds.VISUAL, "Abierto")
                 ),
                 AnomaliaBarData(
-                    "Anomal\u00edas/hallazgos reparados",
+                    "Anomalías/hallazgos reparados",
                     Color.rgb(0, 149, 2),
                     countBy(null, "Cerrado")
                 )

@@ -114,7 +114,7 @@ class BaselinePdfGenerator {
 
         fun drawFooter(c: Canvas) {
             val line1 = "ETIC PdM System V01-2026"
-            val line2 = "Copyright \u00a9 $currentYear Todos los derechos reservados."
+            val line2 = "Copyright © $currentYear Todos los derechos reservados."
             val w1 = footerPaint.measureText(line1)
             val w2 = footerPaint.measureText(line2)
             val line2Y = pageHeight - footerBottomMargin
@@ -212,7 +212,7 @@ class BaselinePdfGenerator {
                 c.drawLine(x, legendY, x + mm(6f), legendY, p)
                 c.drawText(name, x + mm(7f), legendY + mm(1f), smallPaint)
             }
-            c.drawText("\u00b0C", graphX - mm(8f), legendY + mm(1f), smallPaint)
+            c.drawText("°C", graphX - mm(8f), legendY + mm(1f), smallPaint)
             legend(graphX + mm(2f), "Temp Amb", android.graphics.Color.rgb(23, 49, 182))
             legend(graphX + mm(28f), "MTA", android.graphics.Color.rgb(245, 0, 0))
             legend(graphX + mm(44f), "Temp Max", android.graphics.Color.rgb(15, 142, 149))
@@ -246,21 +246,21 @@ class BaselinePdfGenerator {
             var y = mm(31f)
             c.drawText(header.cliente, mm(10f), y, boldPaint); y += mm(4f)
             c.drawText(header.sitio, mm(10f), y, textPaint); y += mm(4f)
-            c.drawText("Analista term\u00f3grafo: ${header.analista}", mm(10f), y, textPaint); y += mm(4f)
-            c.drawText("Nivel de certificaci\u00f3n: ${header.nivel}", mm(10f), y, textPaint); y += mm(4f)
+            c.drawText("Analista termógrafo: ${header.analista}", mm(10f), y, textPaint); y += mm(4f)
+            c.drawText("Nivel de certificación: ${header.nivel}", mm(10f), y, textPaint); y += mm(4f)
             c.drawText("Fecha de reporte: ${header.fechaReporte}", mm(10f), y, textPaint)
 
-            c.drawText("No. inspecci\u00f3n anterior: ${header.inspeccionAnterior}", mm(95f), mm(31f), textPaint)
+            c.drawText("No. inspección anterior: ${header.inspeccionAnterior}", mm(95f), mm(31f), textPaint)
             c.drawText("Fecha: ${header.fechaAnterior}", mm(95f), mm(35f), textPaint)
-            c.drawText("No. inspecci\u00f3n actual: ${header.inspeccionActual}", mm(95f), mm(39f), textPaint)
+            c.drawText("No. inspección actual: ${header.inspeccionActual}", mm(95f), mm(39f), textPaint)
             c.drawText("Fecha: ${header.fechaActual}", mm(95f), mm(43f), textPaint)
 
             c.drawRect(RectF(mm(175f), mm(27f), mm(247f), mm(45f)), linePaint)
-            c.drawText("Informaci\u00f3n del equipo", mm(176f), mm(30f), boldPaint)
+            c.drawText("Información del equipo", mm(176f), mm(30f), boldPaint)
             c.drawLine(mm(175f), mm(31f), mm(247f), mm(31f), linePaint)
-            c.drawText("C\u00f3digo de barras: ${pageData.codigoBarras}", mm(176f), mm(35f), textPaint)
+            c.drawText("Código de barras: ${pageData.codigoBarras}", mm(176f), mm(35f), textPaint)
             c.drawText("Fabricante: ${pageData.fabricante}", mm(176f), mm(39f), textPaint)
-            c.drawText("Prioridad de operaci\u00f3n: ${pageData.prioridadOperacion}", mm(176f), mm(43f), textPaint)
+            c.drawText("Prioridad de operación: ${pageData.prioridadOperacion}", mm(176f), mm(43f), textPaint)
 
             c.drawText("RUTA: ${pageData.ruta}", mm(10f), mm(60f), boldPaint)
             c.drawLine(mm(10f), mm(61f), mm(287f), mm(61f), linePaint)
@@ -327,7 +327,7 @@ class BaselinePdfGenerator {
             drawImageInfoRow(104f, 133f, 90f, pageData.archivoId, pageData.idFecha, pageData.idHora)
 
             val cols = listOf(24f, 27f, 18f, 12f, 11f, 12f, 173f).map { mm(it) }
-            val headers = listOf("No. inspecci\u00f3n", "Fecha inspecci\u00f3n", "Estatus", "T\u00b0 m\u00e1x.", "MTA", "T\u00b0 amb.", "Notas")
+            val headers = listOf("No. inspección", "Fecha inspección", "Estatus", "T° máx.", "MTA", "T° amb.", "Notas")
             val tableX = mm(10f)
             var ty = mm(150f)
             var x = tableX

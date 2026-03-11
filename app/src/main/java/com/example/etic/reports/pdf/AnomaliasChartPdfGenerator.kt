@@ -93,7 +93,7 @@ class AnomaliasChartPdfGenerator {
 
         fun drawFooter() {
             val line1 = "ETIC PdM System V01-2026"
-            val line2 = "Copyright \u00a9 $currentYear Todos los derechos reservados."
+            val line2 = "Copyright © $currentYear Todos los derechos reservados."
             val w1 = footerPaint.measureText(line1)
             val w2 = footerPaint.measureText(line2)
             val line2Y = pageHeight - footerBottomMargin
@@ -108,13 +108,13 @@ class AnomaliasChartPdfGenerator {
         }
         val titleCenterX = mm(150f)
         c.drawText(
-            "Gr\u00e1fica de anomal\u00edas/hallazgos detectados",
+            "Gráfica de anomalías/hallazgos detectados",
             titleCenterX,
             mm(14f),
             centeredTitlePaint
         )
         c.drawText(
-            "durante la auditor\u00eda-inspecci\u00f3n termogr\u00e1fica.",
+            "durante la auditoría-inspección termográfica.",
             titleCenterX,
             mm(19f),
             centeredTitlePaint
@@ -123,19 +123,19 @@ class AnomaliasChartPdfGenerator {
         var y = mm(31f)
         c.drawText(header.cliente, mm(10f), y, boldPaint); y += mm(4f)
         c.drawText(header.sitio, mm(10f), y, textPaint); y += mm(4f)
-        c.drawText("Analista term\u00f3grafo: ${header.analista}", mm(10f), y, textPaint); y += mm(4f)
-        c.drawText("Nivel de certificaci\u00f3n: ${header.nivel}", mm(10f), y, textPaint)
+        c.drawText("Analista termógrafo: ${header.analista}", mm(10f), y, textPaint); y += mm(4f)
+        c.drawText("Nivel de certificación: ${header.nivel}", mm(10f), y, textPaint)
 
         val rightX = mm(287f)
         drawRightText("Fecha Reporte: ${header.fechaReporte}", rightX, mm(31f), textPaint)
         drawRightText(
-            "No. inspecci\u00f3n anterior: ${header.inspeccionAnterior}  Fecha: ${header.fechaAnterior}",
+            "No. inspección anterior: ${header.inspeccionAnterior}  Fecha: ${header.fechaAnterior}",
             rightX,
             mm(35f),
             textPaint
         )
         drawRightText(
-            "No. inspecci\u00f3n actual: ${header.inspeccionActual}  Fecha: ${header.fechaActual}",
+            "No. inspección actual: ${header.inspeccionActual}  Fecha: ${header.fechaActual}",
             rightX,
             mm(39f),
             textPaint
@@ -199,7 +199,7 @@ class AnomaliasChartPdfGenerator {
             typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
             color = android.graphics.Color.WHITE
         }
-        c.drawText("Anomal\u00edas / Hallazgos cr\u00f3nicos: $cronicos", mm(223f), mm(52f), chronicPaint)
+        c.drawText("Anomalías / Hallazgos crónicos: $cronicos", mm(223f), mm(52f), chronicPaint)
 
         drawFooter()
         doc.finishPage(page)

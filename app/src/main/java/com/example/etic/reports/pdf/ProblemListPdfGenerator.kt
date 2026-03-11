@@ -178,7 +178,7 @@ class ProblemListPdfGenerator {
 
         fun drawFooter(c: Canvas) {
             val line1 = "ETIC PdM System V01-2026"
-            val line2 = "Copyright \u00a9 $currentYear Todos los derechos reservados."
+            val line2 = "Copyright © $currentYear Todos los derechos reservados."
             val w1 = footerPaint.measureText(line1)
             val w2 = footerPaint.measureText(line2)
             val line2Y = pageHeight - footerBottomMargin

@@ -1,4 +1,4 @@
-﻿package com.example.etic.features.saf
+package com.example.etic.features.saf
 
 import android.content.Intent
 import android.net.Uri
@@ -56,7 +56,7 @@ import com.example.etic.core.saf.SafEticManager
 import kotlinx.coroutines.launch
 
 enum class EticFolderType(val label: String) {
-    Images("Carpeta Im\u00e1genes"),
+    Images("Carpeta Imágenes"),
     Reports("Carpeta Archivos")
 }
 
@@ -89,7 +89,7 @@ fun FolderPickerScreen(
     ) {
         Text("Seleccionar carpeta ETIC", style = MaterialTheme.typography.titleMedium)
         Text(
-            "Selecciona una carpeta ra\u00edz para crear ETIC/Inspecciones y mantener la estructura SAF.",
+            "Selecciona una carpeta raíz para crear ETIC/Inspecciones y mantener la estructura SAF.",
             style = MaterialTheme.typography.bodyMedium
         )
         Button(onClick = { launcher.launch(null) }) {
@@ -120,7 +120,7 @@ fun EticFolderShortcutScreen(
 
     if (inspectionNumero.isNullOrBlank()) {
         Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("No hay inspecci\u00f3n activa.")
+            Text("No hay inspección activa.")
         }
         return
     }

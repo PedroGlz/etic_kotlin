@@ -1,4 +1,4 @@
-﻿package com.example.etic.features.home
+package com.example.etic.features.home
 
 import android.graphics.Bitmap
 import android.widget.Toast
@@ -162,7 +162,7 @@ fun MainScreen(
     var isImportingInspection by rememberSaveable { mutableStateOf(false) }
     var isGeneratingReport by rememberSaveable { mutableStateOf(false) }
     var inspectionStatusMessage by rememberSaveable { mutableStateOf("Procesando...") }
-    var inspectionImportMessage by rememberSaveable { mutableStateOf("Importando inspecci\u00f3n...") }
+    var inspectionImportMessage by rememberSaveable { mutableStateOf("Importando inspección...") }
     var showInventoryReportDialog by rememberSaveable { mutableStateOf(false) }
     var isLoadingInventoryOptions by rememberSaveable { mutableStateOf(false) }
     var inventoryOptions by remember { mutableStateOf<List<TreeNode>>(emptyList()) }
@@ -222,7 +222,7 @@ fun MainScreen(
         if (isGeneratingReport || isLoadingResultsAnalysisDialog) return
         val noInspeccion = insp.noInspeccion?.toString()
         if (noInspeccion.isNullOrBlank()) {
-            Toast.makeText(appContext, "No hay inspecci\u00f3n activa.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(appContext, "No hay inspección activa.", Toast.LENGTH_SHORT).show()
             return
         }
         scope.launch {
@@ -321,7 +321,7 @@ fun MainScreen(
         if (isGeneratingReport) return
         val noInspeccion = insp.noInspeccion?.toString()
         if (noInspeccion.isNullOrBlank()) {
-            Toast.makeText(appContext, "No hay inspecci\u00f3n activa.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(appContext, "No hay inspección activa.", Toast.LENGTH_SHORT).show()
             return
         }
         scope.launch {
@@ -350,7 +350,7 @@ fun MainScreen(
                     onFailure = { e ->
                         Toast.makeText(
                             appContext,
-                            "Error al generar resultado de an\u00e1lisis: ${e.message ?: "desconocido"}",
+                            "Error al generar resultado de análisis: ${e.message ?: "desconocido"}",
                             Toast.LENGTH_LONG
                         ).show()
                     }
@@ -366,7 +366,7 @@ fun MainScreen(
         val noInspeccion = insp.noInspeccion?.toString()
         val inspeccionId = insp.idInspeccion
         if (noInspeccion.isNullOrBlank() || inspeccionId.isNullOrBlank()) {
-            Toast.makeText(appContext, "Inspecci\u00f3n inv\u00e1lida.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(appContext, "Inspección inválida.", Toast.LENGTH_SHORT).show()
             return
         }
         scope.launch {
@@ -409,7 +409,7 @@ fun MainScreen(
         val noInspeccion = insp.noInspeccion?.toString()
         val inspeccionId = insp.idInspeccion
         if (noInspeccion.isNullOrBlank() || inspeccionId.isNullOrBlank()) {
-            Toast.makeText(appContext, "Inspecci\u00f3n inv\u00e1lida.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(appContext, "Inspección inválida.", Toast.LENGTH_SHORT).show()
             return
         }
         scope.launch {
@@ -464,7 +464,7 @@ fun MainScreen(
         val noInspeccion = insp.noInspeccion?.toString()
         val inspeccionId = insp.idInspeccion
         if (noInspeccion.isNullOrBlank() || inspeccionId.isNullOrBlank()) {
-            Toast.makeText(appContext, "Inspecci\u00f3n inv\u00e1lida.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(appContext, "Inspección inválida.", Toast.LENGTH_SHORT).show()
             return
         }
         scope.launch {
@@ -521,7 +521,7 @@ fun MainScreen(
         val noInspeccion = insp.noInspeccion?.toString()
         val inspeccionId = insp.idInspeccion
         if (noInspeccion.isNullOrBlank() || inspeccionId.isNullOrBlank()) {
-            Toast.makeText(appContext, "Inspecci\u00f3n inv\u00e1lida.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(appContext, "Inspección inválida.", Toast.LENGTH_SHORT).show()
             return
         }
         scope.launch {
@@ -577,7 +577,7 @@ fun MainScreen(
         val noInspeccion = insp.noInspeccion?.toString()
         val inspeccionId = insp.idInspeccion
         if (noInspeccion.isNullOrBlank() || inspeccionId.isNullOrBlank()) {
-            Toast.makeText(appContext, "Inspecci\u00f3n inv\u00e1lida.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(appContext, "Inspección inválida.", Toast.LENGTH_SHORT).show()
             return
         }
         scope.launch {
@@ -619,7 +619,7 @@ fun MainScreen(
         val noInspeccion = insp.noInspeccion?.toString()
         val inspeccionId = insp.idInspeccion
         if (noInspeccion.isNullOrBlank() || inspeccionId.isNullOrBlank()) {
-            Toast.makeText(appContext, "Inspecci\u00f3n inv\u00e1lida.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(appContext, "Inspección inválida.", Toast.LENGTH_SHORT).show()
             return
         }
         scope.launch {
@@ -660,7 +660,7 @@ fun MainScreen(
         val noInspeccion = insp.noInspeccion?.toString()
         val inspeccionId = insp.idInspeccion
         if (noInspeccion.isNullOrBlank() || inspeccionId.isNullOrBlank()) {
-            Toast.makeText(appContext, "Inspecci\u00f3n inv\u00e1lida.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(appContext, "Inspección inválida.", Toast.LENGTH_SHORT).show()
             return
         }
         scope.launch {
@@ -699,7 +699,7 @@ fun MainScreen(
             ReportAction.InventarioPdf -> {
                 val insp = currentInspectionSnapshot
                 if (insp == null) {
-                    Toast.makeText(appContext, "No hay inspecci\u00f3n activa.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(appContext, "No hay inspección activa.", Toast.LENGTH_SHORT).show()
                 } else {
                     showInventoryReportDialog = true
                     if (inventoryOptions.isEmpty() && !isLoadingInventoryOptions) {
@@ -719,7 +719,7 @@ fun MainScreen(
             ReportAction.ProblemasPdf -> {
                 val insp = currentInspectionSnapshot
                 if (insp == null) {
-                    Toast.makeText(appContext, "No hay inspecci\u00f3n activa.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(appContext, "No hay inspección activa.", Toast.LENGTH_SHORT).show()
                 } else {
                     generateProblemasPdf(insp)
                 }
@@ -727,7 +727,7 @@ fun MainScreen(
             ReportAction.AislamientoTermicoPdf -> {
                 val insp = currentInspectionSnapshot
                 if (insp == null) {
-                    Toast.makeText(appContext, "No hay inspecci\u00f3n activa.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(appContext, "No hay inspección activa.", Toast.LENGTH_SHORT).show()
                 } else {
                     generateAislamientoTermicoPdf(insp)
                 }
@@ -735,7 +735,7 @@ fun MainScreen(
             ReportAction.BaselinePdf -> {
                 val insp = currentInspectionSnapshot
                 if (insp == null) {
-                    Toast.makeText(appContext, "No hay inspecci\u00f3n activa.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(appContext, "No hay inspección activa.", Toast.LENGTH_SHORT).show()
                 } else {
                     generateBaselinePdf(insp)
                 }
@@ -743,7 +743,7 @@ fun MainScreen(
             ReportAction.ListaProblemasAbiertosPdf -> {
                 val insp = currentInspectionSnapshot
                 if (insp == null) {
-                    Toast.makeText(appContext, "No hay inspecci\u00f3n activa.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(appContext, "No hay inspección activa.", Toast.LENGTH_SHORT).show()
                 } else {
                     generateListaProblemasPdf(insp, GenerateProblemListPdfUseCase.ProblemListType.ABIERTOS)
                 }
@@ -751,7 +751,7 @@ fun MainScreen(
             ReportAction.ListaProblemasCerradosPdf -> {
                 val insp = currentInspectionSnapshot
                 if (insp == null) {
-                    Toast.makeText(appContext, "No hay inspecci\u00f3n activa.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(appContext, "No hay inspección activa.", Toast.LENGTH_SHORT).show()
                 } else {
                     generateListaProblemasPdf(insp, GenerateProblemListPdfUseCase.ProblemListType.CERRADOS)
                 }
@@ -759,7 +759,7 @@ fun MainScreen(
             ReportAction.GraficaAnomaliasPdf -> {
                 val insp = currentInspectionSnapshot
                 if (insp == null) {
-                    Toast.makeText(appContext, "No hay inspecci\u00f3n activa.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(appContext, "No hay inspección activa.", Toast.LENGTH_SHORT).show()
                 } else {
                     generateGraficaAnomaliasPdf(insp)
                 }
@@ -767,7 +767,7 @@ fun MainScreen(
             ReportAction.ListaProblemasExcel -> {
                 val insp = currentInspectionSnapshot
                 if (insp == null) {
-                    Toast.makeText(appContext, "No hay inspecci\u00f3n activa.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(appContext, "No hay inspección activa.", Toast.LENGTH_SHORT).show()
                 } else {
                     generateListaProblemasExcel(insp)
                 }
@@ -775,7 +775,7 @@ fun MainScreen(
             ReportAction.ResultadosAnalisis -> {
                 val insp = currentInspectionSnapshot
                 if (insp == null) {
-                    Toast.makeText(appContext, "No hay inspecci\u00f3n activa.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(appContext, "No hay inspección activa.", Toast.LENGTH_SHORT).show()
                 } else {
                     openResultsAnalysisDialog(insp)
                 }
@@ -796,7 +796,7 @@ fun MainScreen(
         if (uri == null) return@rememberLauncherForActivityResult
         scope.launch {
             isImportingInspection = true
-            inspectionImportMessage = "Importando inspecci\u00f3n..."
+            inspectionImportMessage = "Importando inspección..."
             val result = importInspectionDatabase(appContext, uri)
             CurrentInspectionProvider.invalidate()
             currentInspectionSnapshot = CurrentInspectionProvider.get(appContext)
@@ -841,12 +841,12 @@ fun MainScreen(
 
                     Spacer(Modifier.height(4.dp))
                     NavigationDrawerItem(
-                        label = { Text("Estatus de inspecci\u00f3n") },
+                        label = { Text("Estatus de inspección") },
                         selected = false,
                         onClick = {
                             val insp = currentInspectionSnapshot
                             if (insp == null) {
-                                Toast.makeText(appContext, "No hay inspecci\u00f3n activa.", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(appContext, "No hay inspección activa.", Toast.LENGTH_SHORT).show()
                             } else {
                                 scope.launch {
                                     val options = withContext(Dispatchers.IO) {
@@ -866,7 +866,7 @@ fun MainScreen(
                         colors = drawerItemColors
                     )
                     NavigationDrawerItem(
-                        label = { Text("Importar inspecci\u00f3n") },
+                        label = { Text("Importar inspección") },
                         selected = false,
                         onClick = {
                             fontsExpanded = false
@@ -890,7 +890,7 @@ fun MainScreen(
                     )
 
                     NavigationDrawerItem(
-                        label = { Text("Inspecci\u00f3n actual") },
+                        label = { Text("Inspección actual") },
                         selected = section == HomeSection.Inspection,
                         onClick = {
                             section = HomeSection.Inspection
@@ -900,7 +900,7 @@ fun MainScreen(
                         colors = drawerItemColors
                     )
                     NavigationDrawerItem(
-                        label = { Text("Inicializar im\u00e1genes") },
+                        label = { Text("Inicializar imágenes") },
                         selected = false,
                         onClick = {
                             showInitImagesDialog = true
@@ -927,7 +927,7 @@ fun MainScreen(
                     )
 
                     NavigationDrawerItem(
-                        label = { Text("Carpeta Im\u00e1genes") },
+                        label = { Text("Carpeta Imágenes") },
                         selected = section == HomeSection.FolderImages,
                         onClick = {
                             section = HomeSection.FolderImages
@@ -953,7 +953,7 @@ fun MainScreen(
                         color = Color.White.copy(alpha = 0.15f)
                     )
 
-                    // Opci\u00f3n Fuentes con subopciones
+                    // Opción Fuentes con subopciones
                     NavigationDrawerItem(
                         label = { Text("Fuentes") },
                         selected = false,
@@ -971,7 +971,7 @@ fun MainScreen(
                         val isMedium = currentFontSize == FontSizeOption.Medium
                         val isLarge = currentFontSize == FontSizeOption.Large
                         NavigationDrawerItem(
-                            label = { Text("Peque\u00f1a") },
+                            label = { Text("Pequeña") },
                             selected = isSmall,
                             onClick = {
                                 onChangeFontSize(FontSizeOption.Small)
@@ -1048,7 +1048,7 @@ fun MainScreen(
                 fun loadInitialImageFromDb(isThermal: Boolean, onResult: (String) -> Unit) {
                     val inspId = currentInspection?.idInspeccion
                     if (inspId.isNullOrBlank()) {
-                        Toast.makeText(appContext, "No hay inspecci\u00f3n activa.", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(appContext, "No hay inspección activa.", Toast.LENGTH_SHORT).show()
                         return
                     }
                     scope.launch {
@@ -1071,7 +1071,7 @@ fun MainScreen(
                             val label = if (isThermal) "IR" else "digital"
                             Toast.makeText(
                                 appContext,
-                                "No se encontr\u00f3 imagen $label inicial.",
+                                "No se encontró imagen $label inicial.",
                                 Toast.LENGTH_SHORT
                             ).show()
                         }
@@ -1086,10 +1086,10 @@ fun MainScreen(
                             initThermalPath = ""
                             initThermalPath = name
                         } else {
-                            Toast.makeText(appContext, "No se pudo guardar la imagen t\u00e9rmica.", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(appContext, "No se pudo guardar la imagen térmica.", Toast.LENGTH_SHORT).show()
                         }
                     } else {
-                        Toast.makeText(appContext, "La c\u00e1mara no devolvi\u00f3 imagen.", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(appContext, "La cámara no devolvió imagen.", Toast.LENGTH_SHORT).show()
                     }
                 }
                 val digitalCameraLauncher = rememberLauncherForActivityResult(
@@ -1104,7 +1104,7 @@ fun MainScreen(
                             Toast.makeText(appContext, "No se pudo guardar la imagen digital.", Toast.LENGTH_SHORT).show()
                         }
                     } else {
-                        Toast.makeText(appContext, "La c\u00e1mara no devolvi\u00f3 imagen.", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(appContext, "La cámara no devolvió imagen.", Toast.LENGTH_SHORT).show()
                     }
                 }
 
@@ -1121,7 +1121,7 @@ fun MainScreen(
                                     val no = data.noInspeccion?.toString() ?: "-"
                                     val cliente =
                                         data.nombreCliente?.ifBlank { data.idCliente ?: "-" } ?: "-"
-                                    "No. Inspecci\u00f3n actual: $no - Cliente: $cliente"
+                                    "No. Inspección actual: $no - Cliente: $cliente"
                                 } ?: "Pantalla principal"
                                 Text(titleText)
                             },
@@ -1132,12 +1132,12 @@ fun MainScreen(
                                         else drawerState.open()
                                     }
                                 }) {
-                                    Icon(Icons.Filled.Menu, contentDescription = "Abrir men\u00fa")
+                                    Icon(Icons.Filled.Menu, contentDescription = "Abrir menú")
                                 }
                             },
                             actions = {
                                 IconButton(onClick = { showLogoutDialog = true }) {
-                                    Icon(Icons.Filled.Logout, contentDescription = "Cerrar sesi\u00f3n")
+                                    Icon(Icons.Filled.Logout, contentDescription = "Cerrar sesión")
                                 }
                             },
                             colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
@@ -1233,8 +1233,8 @@ fun MainScreen(
                 if (showLogoutDialog) {
                     AlertDialog(
                         onDismissRequest = { showLogoutDialog = false },
-                        title = { Text("Cerrar sesi\u00f3n") },
-                        text = { Text("\u00bfSeguro que deseas cerrar sesi\u00f3n?") },
+                        title = { Text("Cerrar sesión") },
+                        text = { Text("¿Seguro que deseas cerrar sesión?") },
                         dismissButton = {
                             TextButton(onClick = { showLogoutDialog = false }) {
                                 Text("Cancelar")
@@ -1245,7 +1245,7 @@ fun MainScreen(
                                 showLogoutDialog = false
                                 onLogout()
                             }) {
-                                Text("Cerrar sesi\u00f3n")
+                                Text("Cerrar sesión")
                             }
                         }
                     )
@@ -1268,9 +1268,9 @@ fun MainScreen(
                                     .padding(24.dp),
                                 verticalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                Text(text = "Inicializar im\u00e1genes")
+                                Text(text = "Inicializar imágenes")
 
-                                Text(text = "Imagen t\u00e9rmica", style = MaterialTheme.typography.titleSmall)
+                                Text(text = "Imagen térmica", style = MaterialTheme.typography.titleSmall)
                                 ImageInputButtonGroup(
                                     label = "Archivo IR",
                                     value = initThermalPath,
@@ -1321,7 +1321,7 @@ fun MainScreen(
                                             if (isSavingInitImages) return@Button
                                             val inspId = currentInspection?.idInspeccion
                                             if (inspId.isNullOrBlank()) {
-                                                Toast.makeText(appContext, "No hay inspecci\u00f3n activa.", Toast.LENGTH_SHORT).show()
+                                                Toast.makeText(appContext, "No hay inspección activa.", Toast.LENGTH_SHORT).show()
                                                 return@Button
                                             }
                                             scope.launch {
@@ -1342,10 +1342,10 @@ fun MainScreen(
                                                 }
                                                 isSavingInitImages = false
                                                 if (result) {
-                                                    Toast.makeText(appContext, "Im\u00e1genes iniciales actualizadas.", Toast.LENGTH_SHORT).show()
+                                                    Toast.makeText(appContext, "Imágenes iniciales actualizadas.", Toast.LENGTH_SHORT).show()
                                                     showInitImagesDialog = false
                                                 } else {
-                                                    Toast.makeText(appContext, "No se pudo actualizar la inspecci\u00f3n.", Toast.LENGTH_SHORT).show()
+                                                    Toast.makeText(appContext, "No se pudo actualizar la inspección.", Toast.LENGTH_SHORT).show()
                                                 }
                                             }
                                         }
@@ -1365,7 +1365,7 @@ fun MainScreen(
                                 showInspectionStatusDialog = false
                             }
                         },
-                        title = { Text("Estatus de inspecci\u00f3n") },
+                        title = { Text("Estatus de inspección") },
                         text = {
                             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                 if (inspectionStatusOptions.isEmpty()) {
@@ -1416,14 +1416,14 @@ fun MainScreen(
                                     val inspection = currentInspectionSnapshot
                                     val statusId = selectedInspectionStatusId
                                     if (inspection == null || statusId.isNullOrBlank()) {
-                                        Toast.makeText(appContext, "No hay inspecci\u00f3n activa.", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(appContext, "No hay inspección activa.", Toast.LENGTH_SHORT).show()
                                         return@TextButton
                                     }
                                     scope.launch {
                                         isSavingInspectionStatus = true
                                         inspectionStatusMessage =
                                             if (statusId == INSPECTION_STATUS_CERRADA) {
-                                                "Cerrando y generando archivo de la inspecci\u00f3n..."
+                                                "Cerrando y generando archivo de la inspección..."
                                             } else {
                                                 "Actualizando estatus..."
                                             }
@@ -1538,7 +1538,7 @@ fun MainScreen(
                                     if (insp == null) {
                                         Toast.makeText(
                                             appContext,
-                                            "No hay inspecci\u00f3n activa.",
+                                            "No hay inspección activa.",
                                             Toast.LENGTH_SHORT
                                         ).show()
                                         return@TextButton
@@ -1575,7 +1575,7 @@ fun MainScreen(
                             resultsAnalysisDraft = draft
                             val insp = currentInspectionSnapshot
                             if (insp == null) {
-                                Toast.makeText(appContext, "No hay inspecci\u00f3n activa.", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(appContext, "No hay inspección activa.", Toast.LENGTH_SHORT).show()
                             } else {
                                 val expandedIds = mutableListOf<String>()
                                 resultsLocationOptions.forEach { node ->

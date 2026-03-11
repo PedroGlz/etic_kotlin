@@ -63,7 +63,7 @@ class InspectionPdfReportGenerator {
 
         fun drawFooter() {
             val line1 = "ETIC PdM System V01-2026"
-            val line2 = "Copyright \u00a9 $currentYear Todos los derechos reservados."
+            val line2 = "Copyright © $currentYear Todos los derechos reservados."
             val line2Y = pageHeight - footerBottomMargin
             val line1Y = line2Y - mm(4f)
             canvas.drawText(line1, (pageWidth - footerPaint.measureText(line1)) / 2f, line1Y, footerPaint)
