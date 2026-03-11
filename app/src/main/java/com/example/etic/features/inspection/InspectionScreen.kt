@@ -1,4 +1,4 @@
-package com.example.etic.features.inspection.ui.home
+﻿package com.example.etic.features.inspection.ui.home
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
@@ -163,10 +163,10 @@ private val ICON_EQUIPO_COLOR: Color = Color(0xFFFFC107)     // Amarillo (Traffi
 private val ICON_NO_EQUIPO_COLOR: Color = Color(0xFF4CAF50)  // Verde (DragIndicator)
 private val DIALOG_HEADER_TURQUOISE: Color = Color(0xFF159BA6)
 private val PROBLEM_TYPE_IDS = mapOf(
-    "Eléctrico" to "0D32B331-76C3-11D3-82BF-00104BC75DC2",
+    "El\u00e9ctrico" to "0D32B331-76C3-11D3-82BF-00104BC75DC2",
     "Visual" to "0D32B333-76C3-11D3-82BF-00104BC75DC2",
-    "Mecánico" to "0D32B334-76C3-11D3-82BF-00104BC75DC2",
-    "Aislamiento Térmico" to "0D32B335-76C3-11D3-82BF-00104BC75DC2"
+    "Mec\u00e1nico" to "0D32B334-76C3-11D3-82BF-00104BC75DC2",
+    "Aislamiento T\u00e9rmico" to "0D32B335-76C3-11D3-82BF-00104BC75DC2"
 )
 
 private const val PROBLEM_STATUS_ALL = "0"
@@ -222,7 +222,7 @@ private val PROBLEM_TYPE_FILTERS = listOf(
     ProblemTypeFilter("", "Todos", emptyList()),
     ProblemTypeFilter(
         "electrico",
-        "Eléctrico",
+        "El\u00e9ctrico",
         listOf(
             "0D32B331-76C3-11D3-82BF-00104BC75DC2",
             "0D32B332-76C3-11D3-82BF-00104BC75DC2"
@@ -235,12 +235,12 @@ private val PROBLEM_TYPE_FILTERS = listOf(
     ),
     ProblemTypeFilter(
         "mecanico",
-        "Mecánico",
+        "Mec\u00e1nico",
         listOf("0D32B334-76C3-11D3-82BF-00104BC75DC2")
     ),
     ProblemTypeFilter(
         "aislamiento",
-        "Aislamiento Térmico",
+        "Aislamiento T\u00e9rmico",
         listOf("0D32B335-76C3-11D3-82BF-00104BC75DC2")
     )
 )
@@ -257,7 +257,7 @@ private val PROBLEM_STATUS_FILTER_OPTIONS = listOf(
 
 
 private val VISUAL_PROBLEM_TYPE_ID = PROBLEM_TYPE_IDS["Visual"]
-private val ELECTRIC_PROBLEM_TYPE_ID = PROBLEM_TYPE_IDS["Eléctrico"]
+private val ELECTRIC_PROBLEM_TYPE_ID = PROBLEM_TYPE_IDS["El\u00e9ctrico"]
 private val PROBLEM_DATE_FORMATTER: DateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
 
 private enum class ProblemColumn {
@@ -267,8 +267,8 @@ private enum class ProblemColumn {
 private enum class BaselineColumn {
     INSPECCION, EQUIPO, FECHA, MTA, TEMP, AMB, IR, ID, NOTAS
 }
-private val MECHANICAL_PROBLEM_TYPE_ID = PROBLEM_TYPE_IDS["Mecánico"]
-private val AISLAMIENTO_TERMICO_PROBLEM_TYPE_ID = PROBLEM_TYPE_IDS["Aislamiento Térmico"]
+private val MECHANICAL_PROBLEM_TYPE_ID = PROBLEM_TYPE_IDS["Mec\u00e1nico"]
+private val AISLAMIENTO_TERMICO_PROBLEM_TYPE_ID = PROBLEM_TYPE_IDS["Aislamiento T\u00e9rmico"]
 
 private fun problemTypeLabelForId(typeId: String?): String {
     val fallback = PROBLEM_TYPE_IDS.entries.firstOrNull { it.key.contains("Visual", ignoreCase = true) }
@@ -291,13 +291,13 @@ private fun problemTypeIdFromLabel(label: String?): String? {
 
 private fun String.canonicalProblemLabel(): String =
     when (this.normalizeProblemKey()) {
-        "electrico" -> "Eléctrico"
-        "mecanico" -> "Mecánico"
-        "aislamiento termico" -> "Aislamiento Térmico"
+        "electrico" -> "El\u00e9ctrico"
+        "mecanico" -> "Mec\u00e1nico"
+        "aislamiento termico" -> "Aislamiento T\u00e9rmico"
         else -> this
     }
 private val VISUAL_SEVERITY_OPTIONS = listOf(
-    "1D56EDB0-8D6E-11D3-9270-006008A19766" to "Crítico",
+    "1D56EDB0-8D6E-11D3-9270-006008A19766" to "Cr\u00edtico",
     "1D56EDB1-8D6E-11D3-9270-006008A19766" to "Serio",
     "1D56EDB2-8D6E-11D3-9270-006008A19766" to "Importante",
     "1D56EDB3-8D6E-11D3-9270-006008A19766" to "Menor",
@@ -468,7 +468,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             severityCatalog = severityDeferred.await()
         }
     }
-    // Reconstruir el arbol cuando llegue/ cambie la Inspeccion actual
+    // Reconstruir el \u00e1rbol cuando llegue o cambie la inspecci\u00f3n actual
     LaunchedEffect(rootId, rootTitle, currentInspection?.idInspeccion) {
         val rowsVista = try {
             withContext(Dispatchers.IO) { vistaUbicacionArbolDao.getAll() }
@@ -532,7 +532,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             LaunchedEffect(statusOptionsCache) {
                 statusOptions = statusOptionsCache
             }
-            // Tipo de prioridad, fabricantes y catálogos para problema eléctrico
+            // Tipo de prioridad, fabricantes y cat\u00e1logos para problema el\u00e9ctrico
             var prioridadOptions by remember { mutableStateOf<List<com.example.etic.data.local.entities.TipoPrioridad>>(emptyList()) }
             var fabricanteOptions by remember { mutableStateOf<List<com.example.etic.data.local.entities.Fabricante>>(emptyList()) }
             var electricPhaseOptions by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
@@ -666,10 +666,10 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     if (saved != null) {
                         pendingThermalImage = saved
                     } else {
-                        Toast.makeText(ctx, "No se pudo guardar la imagen térmica.", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(ctx, "No se pudo guardar la imagen t\u00e9rmica.", Toast.LENGTH_SHORT).show()
                     }
                 } else {
-                    Toast.makeText(ctx, "La cámara no devolvió imagen.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(ctx, "La c\u00e1mara no devolvi\u00f3 imagen.", Toast.LENGTH_SHORT).show()
                 }
             }
             val digitalCameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { bmp ->
@@ -681,7 +681,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                         Toast.makeText(ctx, "No se pudo guardar la imagen digital.", Toast.LENGTH_SHORT).show()
                     }
                 } else {
-                    Toast.makeText(ctx, "La cámara no devolvió imagen.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(ctx, "La c\u00e1mara no devolvi\u00f3 imagen.", Toast.LENGTH_SHORT).show()
                 }
             }
             val thermalFolderLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
@@ -690,7 +690,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     if (saved != null) {
                         pendingThermalImage = saved
                     } else {
-                        Toast.makeText(ctx, "No se pudo importar la imagen térmica.", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(ctx, "No se pudo importar la imagen t\u00e9rmica.", Toast.LENGTH_SHORT).show()
                     }
                 }
             }
@@ -802,7 +802,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             fun loadInitialImageFromInspection(isThermal: Boolean, onResult: (String) -> Unit) {
                 val inspId = currentInspection?.idInspeccion
                 if (inspId.isNullOrBlank()) {
-                    Toast.makeText(ctx, "No hay inspección activa.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(ctx, "No hay inspecci\u00f3n activa.", Toast.LENGTH_SHORT).show()
                     return
                 }
                 loadInitialImageScope.launch {
@@ -820,8 +820,8 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                         }
                         onResult(suggestion)
                     } else {
-                        val label = if (isThermal) "térmica" else "digital"
-                        Toast.makeText(ctx, "No se encontró imagen $label inicial.", Toast.LENGTH_SHORT).show()
+                        val label = if (isThermal) "t\u00e9rmica" else "digital"
+                        Toast.makeText(ctx, "No se encontr\u00f3 imagen $label inicial.", Toast.LENGTH_SHORT).show()
                     }
                 }
             }
@@ -1194,7 +1194,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                 val missing = buildList {
                     if (pendingHazardId.isNullOrBlank()) add("Problema")
                     if (pendingSeverityId.isNullOrBlank()) add("Severidad")
-                    if (pendingThermalImage.isBlank()) add("Imagen térmica")
+                    if (pendingThermalImage.isBlank()) add("Imagen t\u00e9rmica")
                     if (pendingDigitalImage.isBlank()) add("Imagen digital")
                 }
                 if (missing.isNotEmpty()) {
@@ -1211,7 +1211,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     if (formData.componentPhaseId.isNullOrBlank() && formData.componentPhaseText.isBlank()) add("Fase componente")
                     if (formData.referenceTemperature.isBlank()) add("Temp. referencia")
                     if (formData.referencePhaseId.isNullOrBlank() && formData.referencePhaseText.isBlank()) add("Fase referencia")
-                    if (pendingThermalImage.isBlank()) add("Imagen térmica")
+                    if (pendingThermalImage.isBlank()) add("Imagen t\u00e9rmica")
                     if (pendingDigitalImage.isBlank()) add("Imagen digital")
                 }
                 if (missing.isNotEmpty()) {
@@ -1230,7 +1230,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     if (formData.failureId.isNullOrBlank() && formData.failureText.isBlank()) add("Falla")
                     if (formData.componentTemperature.isBlank()) add("Temp. componente")
                     if (formData.referenceTemperature.isBlank()) add("Temp. referencia")
-                    if (pendingThermalImage.isBlank()) add("Imagen térmica")
+                    if (pendingThermalImage.isBlank()) add("Imagen t\u00e9rmica")
                     if (pendingDigitalImage.isBlank()) add("Imagen digital")
                 }
                 if (missing.isNotEmpty()) {
@@ -1249,7 +1249,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     if (formData.failureId.isNullOrBlank() && formData.failureText.isBlank()) add("Falla")
                     if (formData.componentTemperature.isBlank()) add("Temp. componente")
                     if (formData.referenceTemperature.isBlank()) add("Temp. referencia")
-                    if (pendingThermalImage.isBlank()) add("Imagen térmica")
+                    if (pendingThermalImage.isBlank()) add("Imagen t\u00e9rmica")
                     if (pendingDigitalImage.isBlank()) add("Imagen digital")
                 }
                 if (missing.isNotEmpty()) {
@@ -1291,7 +1291,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     val entity = draft.problema
                     val ubId = entity.idUbicacion
                     if (ubId.isNullOrBlank()) {
-                        Toast.makeText(ctx, "El problema no tiene una ubicacion asociada.", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(ctx, "El problema no tiene una ubicaci\u00f3n asociada.", Toast.LENGTH_SHORT).show()
                         return@launch
                     }
                     val fallbackRoute = titlePathForId(nodes, ubId).joinToString(" / ")
@@ -1348,7 +1348,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             fun startElectricProblemEdit(problem: Problem) {
                 val electricTypeId = ELECTRIC_PROBLEM_TYPE_ID
                 if (electricTypeId.isNullOrBlank()) {
-                    Toast.makeText(ctx, "No se encontro el tipo eléctrico.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(ctx, "No se encontro el tipo el\u00e9ctrico.", Toast.LENGTH_SHORT).show()
                     return
                 }
                 scope.launch {
@@ -1361,7 +1361,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     if (entity == null || entity.idTipoInspeccion.isNullOrBlank()
                         || !entity.idTipoInspeccion.equals(electricTypeId, ignoreCase = true)
                     ) {
-                        Toast.makeText(ctx, "Solo se pueden editar problemas eléctricos.", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(ctx, "Solo se pueden editar problemas el\u00e9ctricos.", Toast.LENGTH_SHORT).show()
                         return@launch
                     }
                     val ubicacionId = entity.idUbicacion
@@ -1398,7 +1398,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             fun startMechanicalProblemEdit(problem: Problem) {
                 val mechanicalTypeId = MECHANICAL_PROBLEM_TYPE_ID
                 if (mechanicalTypeId.isNullOrBlank()) {
-                    Toast.makeText(ctx, "No se encontro el tipo mecánico.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(ctx, "No se encontro el tipo mec\u00e1nico.", Toast.LENGTH_SHORT).show()
                     return
                 }
                 scope.launch {
@@ -1410,7 +1410,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     if (entity == null || entity.idTipoInspeccion.isNullOrBlank()
                         || !entity.idTipoInspeccion.equals(mechanicalTypeId, ignoreCase = true)
                     ) {
-                        Toast.makeText(ctx, "Solo se pueden editar problemas mecánicos.", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(ctx, "Solo se pueden editar problemas mec\u00e1nicos.", Toast.LENGTH_SHORT).show()
                         return@launch
                     }
                     val ubicacionId = entity.idUbicacion
@@ -1447,7 +1447,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             fun startAislamientoTermicoProblemEdit(problem: Problem) {
                 val aislamientoTypeId = AISLAMIENTO_TERMICO_PROBLEM_TYPE_ID
                 if (aislamientoTypeId.isNullOrBlank()) {
-                    Toast.makeText(ctx, "No se encontro el tipo aislamiento térrmico.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(ctx, "No se encontro el tipo aislamiento t\u00e9rmico.", Toast.LENGTH_SHORT).show()
                     return
                 }
                 scope.launch {
@@ -1463,7 +1463,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     ) {
                         Toast.makeText(
                             ctx,
-                            "Solo se pueden editar problemas de aislamiento térrmico.",
+                            "Solo se pueden editar problemas de aislamiento t\u00e9rmico.",
                             Toast.LENGTH_SHORT
                         ).show()
                         return@launch
@@ -1510,7 +1510,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     normalizedType == "electrico" -> startElectricProblemEdit(problem)
                     normalizedType == "mecanico" -> startMechanicalProblemEdit(problem)
                     normalizedType == "aislamiento termico" -> startAislamientoTermicoProblemEdit(problem)
-                    else -> Toast.makeText(ctx, "La edición de este tipo de problema no está disponible.", Toast.LENGTH_SHORT).show()
+                    else -> Toast.makeText(ctx, "La edici\u00f3n de este tipo de problema no est\u00e1 disponible.", Toast.LENGTH_SHORT).show()
                 }
             }
 
@@ -1723,7 +1723,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     .distinct()
                 if (targetIds.isEmpty()) {
                     withContext(Dispatchers.Main) {
-                        Toast.makeText(ctx, "Selecciona una ubicación del árbol.", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(ctx, "Selecciona una ubicaci\u00f3n del \u00e1rbol.", Toast.LENGTH_SHORT).show()
                     }
                     return
                 }
@@ -1759,7 +1759,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     if (updatedCount > 0) {
                         Toast.makeText(ctx, "Estatus actualizado.", Toast.LENGTH_SHORT).show()
                     } else {
-                        Toast.makeText(ctx, "No se encontró detalle de inspección para los elementos seleccionados.", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(ctx, "No se encontr\u00f3 detalle de inspecci\u00f3n para los elementos seleccionados.", Toast.LENGTH_SHORT).show()
                     }
                 }
             }
@@ -2441,7 +2441,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             fun saveElectricProblem(formData: ElectricProblemFormData) {
                 val inspection = currentInspection
                 if (inspection == null) {
-                    Toast.makeText(ctx, "No hay inspección activa.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(ctx, "No hay inspecci\u00f3n activa.", Toast.LENGTH_SHORT).show()
                     return
                 }
                 val locationId = pendingProblemUbicacionId ?: selectedId
@@ -2450,7 +2450,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     return
                 }
                 if (pendingThermalImage.isBlank() || pendingDigitalImage.isBlank()) {
-                    Toast.makeText(ctx, "Carga las imágenes térmica y digital para guardar el problema.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(ctx, "Carga las im\u00e1genes t\u00e9rmica y digital para guardar el problema.", Toast.LENGTH_SHORT).show()
                     return
                 }
                 val typeId = ELECTRIC_PROBLEM_TYPE_ID ?: "0D32B331-76C3-11D3-82BF-00104BC75DC2"
@@ -2708,9 +2708,9 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                             problemsRefreshTick++
                             refreshTree(preserveSelection = locationId)
                             val successMessage = if (isEditingElectricProblem)
-                                "Problema eléctrico actualizado."
+                                "Problema el\u00e9ctrico actualizado."
                             else
-                                "Problema eléctrico guardado."
+                                "Problema el\u00e9ctrico guardado."
                             Toast.makeText(ctx, successMessage, Toast.LENGTH_SHORT).show()
                             resetElectricProblemState()
                             showElectricProblemDialog = false
@@ -2718,7 +2718,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                             val message = result.exceptionOrNull()?.localizedMessage ?: "Error desconocido"
                             Toast.makeText(
                                 ctx,
-                                "No se pudo guardar el problema eléctrico: $message",
+                                "No se pudo guardar el problema el\u00e9ctrico: $message",
                                 Toast.LENGTH_LONG
                             ).show()
                         }
@@ -2731,7 +2731,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             fun saveMechanicalProblem(formData: MechanicalProblemFormData) {
                 val inspection = currentInspection
                 if (inspection == null) {
-                    Toast.makeText(ctx, "No hay inspección activa.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(ctx, "No hay inspecci\u00f3n activa.", Toast.LENGTH_SHORT).show()
                     return
                 }
                 val locationId = pendingProblemUbicacionId ?: selectedId
@@ -2740,7 +2740,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     return
                 }
                 if (pendingThermalImage.isBlank() || pendingDigitalImage.isBlank()) {
-                    Toast.makeText(ctx, "Carga las imágenes térmica y digital para guardar el problema.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(ctx, "Carga las im\u00e1genes t\u00e9rmica y digital para guardar el problema.", Toast.LENGTH_SHORT).show()
                     return
                 }
                 val typeId = MECHANICAL_PROBLEM_TYPE_ID ?: "0D32B334-76C3-11D3-82BF-00104BC75DC2"
@@ -2984,9 +2984,9 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                             problemsRefreshTick++
                             refreshTree(preserveSelection = locationId)
                             val successMessage = if (isEditingMechanicalProblem)
-                                "Problema mecánico actualizado."
+                                "Problema mec\u00e1nico actualizado."
                             else
-                                "Problema mecánico guardado."
+                                "Problema mec\u00e1nico guardado."
                             Toast.makeText(ctx, successMessage, Toast.LENGTH_SHORT).show()
                             resetMechanicalProblemState()
                             showMechanicalProblemDialog = false
@@ -2994,7 +2994,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                             val message = result.exceptionOrNull()?.localizedMessage ?: "Error desconocido"
                             Toast.makeText(
                                 ctx,
-                                "No se pudo guardar el problema mecánico: $message",
+                                "No se pudo guardar el problema mec\u00e1nico: $message",
                                 Toast.LENGTH_LONG
                             ).show()
                         }
@@ -3007,7 +3007,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             fun saveAislamientoTermicoProblem(formData: AislamientoTermicoProblemFormData) {
                 val inspection = currentInspection
                 if (inspection == null) {
-                    Toast.makeText(ctx, "No hay inspección activa.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(ctx, "No hay inspecci\u00f3n activa.", Toast.LENGTH_SHORT).show()
                     return
                 }
                 val locationId = pendingProblemUbicacionId ?: selectedId
@@ -3016,7 +3016,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     return
                 }
                 if (pendingThermalImage.isBlank() || pendingDigitalImage.isBlank()) {
-                    Toast.makeText(ctx, "Carga las imágenes térmica y digital para guardar el problema.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(ctx, "Carga las im\u00e1genes t\u00e9rmica y digital para guardar el problema.", Toast.LENGTH_SHORT).show()
                     return
                 }
                 val typeId = AISLAMIENTO_TERMICO_PROBLEM_TYPE_ID ?: "0D32B335-76C3-11D3-82BF-00104BC75DC2"
@@ -3260,9 +3260,9 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                             problemsRefreshTick++
                             refreshTree(preserveSelection = locationId)
                             val successMessage = if (isEditingProblem)
-                                "Problema aislamiento térrmico actualizado."
+                                "Problema aislamiento t\u00e9rmico actualizado."
                             else
-                                "Problema aislamiento térrmico guardado."
+                                "Problema aislamiento t\u00e9rmico guardado."
                             Toast.makeText(ctx, successMessage, Toast.LENGTH_SHORT).show()
                             resetAislamientoTermicoProblemState()
                             showAislamientoTermicoProblemDialog = false
@@ -3270,7 +3270,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                             val message = result.exceptionOrNull()?.localizedMessage ?: "Error desconocido"
                             Toast.makeText(
                                 ctx,
-                                "No se pudo guardar el problema aislamiento térrmico: $message",
+                                "No se pudo guardar el problema aislamiento t\u00e9rmico: $message",
                                 Toast.LENGTH_LONG
                             ).show()
                         }
@@ -3347,9 +3347,9 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                 if (code.isEmpty()) return
                 val path = findPathByBarcode(nodes, code)
                 if (path == null) {
-                    searchMessage = "No hay elementos con ese Código De Barras"
+                    searchMessage = "No hay elementos con ese c\u00f3digo de barras"
                 } else {
-                    // expandir ancestros y seleccionar objetivo
+                    // Expandir ancestros y seleccionar objetivo
                     path.dropLast(1).forEach { id -> if (!expanded.contains(id)) expanded.add(id) }
                     val targetId = path.last()
                     selectedId = targetId
@@ -3377,7 +3377,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                 onApplyStatus = {
                     val statusId = selectedStatusId
                     if (statusId.isNullOrBlank()) {
-                        Toast.makeText(ctx, "Seleccionar estatus", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(ctx, "Selecciona un estatus", Toast.LENGTH_SHORT).show()
                     } else {
                         scope.launch {
                             val targets = if (checkedStatusLocationIds.isNotEmpty()) {
@@ -3413,45 +3413,45 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     confirmButton = {
                         Button(onClick = { searchMessage = null }) { Text("Aceptar") }
                     },
-                    title = { Text("Informacion") },
+                    title = { Text("Informaci\u00f3n") },
                     text = { Text(searchMessage!!) }
                 )
             }
             Divider(thickness = DIVIDER_THICKNESS)
 
-            // dialogo informativo para errores al borrar ubicacion
+            // Di\u00e1logo informativo para errores al borrar ubicaci\u00f3n
             if (deleteUbInfoMessage != null) {
                 AlertDialog(
                     onDismissRequest = { deleteUbInfoMessage = null },
                     confirmButton = {
                         Button(onClick = { deleteUbInfoMessage = null }) { Text("Aceptar") }
                     },
-                    title = { Text("Informacion") },
+                    title = { Text("Informaci\u00f3n") },
                     text = { Text(deleteUbInfoMessage!!) }
                 )
             }
 
-            // Dialogo cuando se intenta crear una ubicacion debajo de un equipo
+            // Di\u00e1logo cuando se intenta crear una ubicaci\u00f3n debajo de un equipo
             if (showInvalidParentDialog) {
                 AlertDialog(
                     onDismissRequest = { showInvalidParentDialog = false },
                     confirmButton = {
                         Button(onClick = { showInvalidParentDialog = false }) { Text("Aceptar") }
                     },
-                    title = { Text("Informacion") },
+                    title = { Text("Informaci\u00f3n") },
                     text = { Text("Solo puede crear elementos dentro de ubicaciones.") }
                 )
             }
 
-            // dialogo cuando no hay ubicacion seleccionada
+            // Di\u00e1logo cuando no hay ubicaci\u00f3n seleccionada
             if (showNoSelectionDialog) {
                 AlertDialog(
                     onDismissRequest = { showNoSelectionDialog = false },
                     confirmButton = {
                         Button(onClick = { showNoSelectionDialog = false }) { Text("Aceptar") }
                     },
-                    title = { Text("Informacion") },
-                    text = { Text("Debes seleccionar una ubicacion para agregar un nuevo elemento.") }
+                    title = { Text("Informaci\u00f3n") },
+                    text = { Text("Debes seleccionar una ubicaci\u00f3n para agregar un nuevo elemento.") }
                 )
             }
 
@@ -3575,7 +3575,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                     }
                                 }                                else -> {
                                     showProblemTypeDialog = false
-                                    Toast.makeText(ctx, "Selecciona un tipo válido.", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(ctx, "Selecciona un tipo v\u00e1lido.", Toast.LENGTH_SHORT).show()
                                 }
                             }
                         }) { Text("Aceptar") }
@@ -3618,13 +3618,13 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             if (showVisualInspectionWarning) {
                 AlertDialog(
                     onDismissRequest = { showVisualInspectionWarning = false },
-                    title = { Text("Inspección visual") },
+                    title = { Text("Inspecci\u00f3n visual") },
                     text = {
                         Text(
-                            "Está a punto de crear un registro de inspección visual.\n\n" +
-                                    "Actualmente tiene una ubicación seleccionada (en lugar de equipo). " +
-                                    "Solo puede crear registros de inspección visual para ubicaciones.\n\n" +
-                                    "¿Le gustaría agregar un registro de inspección visual?"
+                            "Est\u00e1 a punto de crear un registro de inspecci\u00f3n visual.\n\n" +
+                                    "Actualmente tiene una ubicaci\u00f3n seleccionada (en lugar de equipo). " +
+                                    "Solo puede crear registros de inspecci\u00f3n visual para ubicaciones.\n\n" +
+                                    "\u00bfLe gustar\u00eda agregar un registro de inspecci\u00f3n visual?"
                         )
                     },
                     confirmButton = {
@@ -3900,7 +3900,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                         val digital = pendingDigitalImage
                         val typeId = PROBLEM_TYPE_IDS["Visual"]
                         if (typeId == null) {
-                            Toast.makeText(ctx, "No se encontró el tipo Visual.", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(ctx, "No se encontr\u00f3 el tipo Visual.", Toast.LENGTH_SHORT).show()
                             return@VisualProblemDialog
                         }
                         if (ubicacionId.isNullOrBlank()) {
@@ -3910,7 +3910,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                         val missing = buildList {
                             if (hazardId.isNullOrBlank() && pendingHazardLabel.isNullOrBlank()) add("Problema")
                             if (severityId.isNullOrBlank()) add("Severidad")
-                            if (thermal.isBlank()) add("Imagen térmica")
+                            if (thermal.isBlank()) add("Imagen t\u00e9rmica")
                             if (digital.isBlank()) add("Imagen digital")
                         }
                         if (missing.isNotEmpty()) {
@@ -3931,7 +3931,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                     tipoInspeccionId = typeId
                                 )
                                 if (resolvedHazardId.isNullOrBlank()) {
-                                    Toast.makeText(ctx, "Debe capturar una falla válida.", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(ctx, "Debe capturar una falla v\u00e1lida.", Toast.LENGTH_SHORT).show()
                                     return@launch
                                 }
                                 val resolvedCauseId = ensureCausaPrincipalId(
@@ -4358,12 +4358,12 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                             pendingCronicoEntity = null
                         }) { Text("Cancelar") }
                     },
-                    title = { Text("Confirmación") },
+                    title = { Text("Confirmaci\u00f3n") },
                     text = {
                         Text(
-                            "Estás a punto de crear un problema crónico, el problema actual " +
-                            "se cerrará y se abrirá un nuevo problema en la inspección actual. " +
-                            "¿Deseas continuar?"
+                            "Est\u00e1s a punto de crear un problema cr\u00f3nico, el problema actual " +
+                            "se cerrar\u00e1 y se abrir\u00e1 un nuevo problema en la inspecci\u00f3n actual. " +
+                            "\u00bfDeseas continuar?"
                         )
                     }
                 )
@@ -4407,14 +4407,14 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     dismissButton = {
                         Button(onClick = { deleteUbConfirmNode = null }) { Text("Cancelar") }
                     },
-                    title = { Text("Confirmar eliminacion") },
-                    text = { Text("Eliminar la ubicacion seleccionada?") }
+                    title = { Text("Confirmar eliminaci\u00f3n") },
+                    text = { Text("\u00bfEliminar la ubicaci\u00f3n seleccionada?") }
                 )
             }
 
 
 
-            // ------------------ DIaLOGO: NUEVA UBICACIoN ------------------
+            // ------------------ DI\u00c1LOGO: NUEVA UBICACI\u00d3N ------------------
             val previewRoute = run {
                 val parentForPreview = when {
                     editingUbId != null -> editingParentId
@@ -4458,7 +4458,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     val isEdit = editingUbId != null
                     val id = editingUbId ?: java.util.UUID.randomUUID().toString().uppercase()
                     if (!isEdit && selectedId == null) {
-                        locationForm.error = "Selecciona una ubicacion en el arbol"
+                        locationForm.error = "Selecciona una ubicaci\u00f3n en el \u00e1rbol"
                         return@confirm
                     }
                     val parentForCalc = if (isEdit) {
@@ -4551,16 +4551,16 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                     showNewUbDialog = false
                                     locationForm.resetForNew()
                                 } else {
-                                    Toast.makeText(ctx, "Ubicacion creada correctamente.", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(ctx, "Ubicaci\u00f3n creada correctamente.", Toast.LENGTH_SHORT).show()
                                     applyNewUbDefaults()
                                 }
                                 isSavingNewUb = false
                             } else {
-                                locationForm.error = "No se pudo guardar la ubicacion"
+                                locationForm.error = "No se pudo guardar la ubicaci\u00f3n"
                                 isSavingNewUb = false
                             }
                         } catch (_: Exception) {
-                            locationForm.error = "No se pudo guardar la ubicacion"
+                            locationForm.error = "No se pudo guardar la ubicaci\u00f3n"
                             isSavingNewUb = false
                         }
                     }
@@ -4569,10 +4569,10 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             // -------------------------------------------------------------------------------
 
             // =====================================================================
-            // DIÁLOGO COMPLETO: EDITAR UBICACIÓN EN 2 COLUMNAS
-            //   - Diálogo más ancho
+            // DI\u00c1LOGO COMPLETO: EDITAR UBICACI\u00d3N EN 2 COLUMNAS
+            //   - Di\u00e1logo m\u00e1s ancho
             //   - Columna izquierda angosta (formulario)
-            //   - Columna derecha ancha (Baseline / Histórico)
+            //   - Columna derecha ancha (Baseline / Hist\u00f3rico)
             // =====================================================================
             if (showEditUbDialog) {
                 var dialogOffset by remember { mutableStateOf(Offset.Zero) }
@@ -4582,12 +4582,12 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     properties = DialogProperties(
                         dismissOnClickOutside = false,
                         dismissOnBackPress = false,
-                        usePlatformDefaultWidth = false   // ahora sí usamos TODO el tamaño disponible
+                        usePlatformDefaultWidth = false   // ahora s\u00ed usamos TODO el tama\u00f1o disponible
                     )
                 ) {
 
                     // ---------------------------------------------------------------
-                    // BOX QUE CONTROLA EL ANCHO REAL DEL DIÁLOGO
+                    // BOX QUE CONTROLA EL ANCHO REAL DEL DI\u00c1LOGO
                     // fillMaxWidth(0.98f) = usa casi toda la pantalla
                     // ---------------------------------------------------------------
                     Box(
@@ -4597,7 +4597,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     ) {
 
                         // ---------------------------------------------------------------
-                        // CARD PRINCIPAL DEL DIÁLOGO
+                        // CARD PRINCIPAL DEL DI\u00c1LOGO
                         // Se expande a todo el ancho permitido por el Box
                         // ---------------------------------------------------------------
                         Surface(
@@ -4622,7 +4622,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                             ) {
 
                                 // ---------------------------------------------------------------
-                                // TÍTULO DEL DIÁLOGO
+                                // T\u00cdTULO DEL DI\u00c1LOGO
                                 // ---------------------------------------------------------------
                                 Box(
                                     modifier = Modifier
@@ -4636,7 +4636,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                         }
                                 ) {
                                     Text(
-                                        text = "Editar ubicación",
+                                        text = "Editar ubicaci\u00f3n",
                                         color = Color.White,
                                         style = MaterialTheme.typography.titleMedium,
                                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
@@ -4647,8 +4647,8 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
 
                                 // ===============================================================
                                 // FILA PRINCIPAL EN DOS COLUMNAS
-                                //   IZQUIERDA: formulario de ubicación
-                                //   DERECHA: tabs Baseline / Histórico
+                                //   IZQUIERDA: formulario de ubicaci\u00f3n
+                                //   DERECHA: tabs Baseline / Hist\u00f3rico
                                 // ===============================================================
                                 Row(
                                     modifier = Modifier
@@ -4660,13 +4660,13 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
 
 
                                     // ===========================================================
-                                    // COLUMNA IZQUIERDA  (Formulario de Ubicación)
-                                    // MÁS ANGOSTA → 35%
+                                    // COLUMNA IZQUIERDA  (Formulario de Ubicaci\u00f3n)
+                                    // M\u00c1S ANGOSTA -> 35%
                                     // ===========================================================
                                     val scrollForm = rememberScrollState()
                                     Column(
                                         modifier = Modifier
-                                            .weight(0.32f)   // ← columna angosta
+                                            .weight(0.32f)   // -> columna angosta
                                             .fillMaxHeight()
                                             .verticalScroll(scrollForm),
                                         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -4877,17 +4877,17 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
 
 
                                     // ===========================================================
-                                    // COLUMNA DERECHA  (Baseline / Histórico)
-                                    // MÁS ANCHA → 65%
+                                    // COLUMNA DERECHA  (Baseline / Hist\u00f3rico)
+                                    // M\u00c1S ANCHA -> 65%
                                     // ===========================================================
                                     Column(
                                         modifier = Modifier
-                                            .weight(0.68f)  // ← columna más ancha
+                                            .weight(0.68f)  // -> columna m\u00e1s ancha
                                             .fillMaxHeight()
                                     ) {
 
                                         // ---------------------------------------------------------------
-                                        // TABS DERECHA (ya NO mostramos tab de Ubicación)
+                                        // TABS DERECHA (ya NO mostramos tab de Ubicaci\u00f3n)
                                         // ---------------------------------------------------------------
 
                                         val editingRoute = remember(editingUbId, nodes, rootTitle) {
@@ -4921,7 +4921,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                             Tab(
                                                 selected = editTab == 1,
                                                 onClick = { editTab = 1 },
-                                                text = { Text("Histórico Inspecciones") }
+                                                text = { Text("Hist\u00f3rico Inspecciones") }
                                             )
                                         }
 
@@ -4935,7 +4935,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
 
 
                                             // -----------------------------------------------------------
-                                            // TAB 0 → BASELINE
+                                            // TAB 0 -> BASELINE
                                             // -----------------------------------------------------------
                                             0 -> {
                                                 val lineaBaseDao = remember { com.example.etic.data.local.DbProvider.get(ctx).lineaBaseDao() }
@@ -5227,7 +5227,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                                         }
                                                     }
 
-                                                    // Diálogo de confirmación de borrado (igual que ya tenías)
+                                                    // Di\u00e1logo de confirmaci\u00f3n de borrado (igual que ya ten\u00edas)
                                                     if (confirmDeleteId != null) {
                                                         AlertDialog(
                                                             onDismissRequest = { confirmDeleteId = null },
@@ -5775,7 +5775,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
 
 
                                             // -----------------------------------------------------------
-                                            // TAB 1 → HISTÓRICO
+                                            // TAB 1 -> HIST\u00d3RICO
                                             // -----------------------------------------------------------
                                             }
                                             1 -> {
@@ -5925,7 +5925,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
 
 
                                 // ===============================================================
-                                // BOTÓN CERRAR EN EL PIE DEL DIÁLOGO
+                                // BOT\u00d3N CERRAR EN EL PIE DEL DI\u00c1LOGO
                                 // ===============================================================
                                 Spacer(Modifier.height(12.dp))
                                 Row(
@@ -6054,7 +6054,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                     ubicacionDao.getAllActivas().any { it.idUbicacionPadre == ubId }
                                 }.getOrDefault(false)
                                 if (hasChildren) {
-                                    deleteUbInfoMessage = "No se puede eliminar la ubicacion porque tiene ubicaciones hijas."
+                                    deleteUbInfoMessage = "No se puede eliminar la ubicaci\u00f3n porque tiene ubicaciones hijas."
                                     return@launch
                                 }
 
@@ -6081,18 +6081,18 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                 when {
                                     hasBaseline && hasProblems -> {
                                         deleteUbInfoMessage =
-                                            "No se puede eliminar la ubicacion porque tiene baseline y problemas registrados."
+                                            "No se puede eliminar la ubicaci\u00f3n porque tiene baseline y problemas registrados."
                                     }
                                     hasBaseline -> {
                                         deleteUbInfoMessage =
-                                            "No se puede eliminar la ubicacion porque tiene baseline registrado."
+                                            "No se puede eliminar la ubicaci\u00f3n porque tiene baseline registrado."
                                     }
                                     hasProblems -> {
                                         deleteUbInfoMessage =
-                                            "No se puede eliminar la ubicacion porque tiene problemas registrados."
+                                            "No se puede eliminar la ubicaci\u00f3n porque tiene problemas registrados."
                                     }
                                     else -> {
-                                        // Sin hijos, sin baseline y sin problemas: pedir confirmacion
+                                        // Sin hijos, sin baseline y sin problemas: pedir confirmaci\u00f3n
                                         // Sin hijos, sin baseline y sin problemas: marcar para confirmar
                                         deleteUbConfirmNode = node
                                     }
@@ -6158,7 +6158,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                         if (shouldBlockProblemOpen(problem, inspectionPrevious)) {
                             Toast.makeText(
                                 ctx,
-                                "Este problema cerrado pertenece a una inspeccion pasada.",
+                                "Este problema cerrado pertenece a una inspecci\u00f3n pasada.",
                                 Toast.LENGTH_SHORT
                             ).show()
                             return@ListTabs
@@ -6190,7 +6190,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                 } else if (node.verified) {
                                     val electricTypeId = ELECTRIC_PROBLEM_TYPE_ID
                                     if (electricTypeId.isNullOrBlank()) {
-                                        Toast.makeText(ctx, "Tipo eléctrico no disponible.", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(ctx, "Tipo el\u00e9ctrico no disponible.", Toast.LENGTH_SHORT).show()
                                     } else {
                                         selectedProblemType = problemTypeLabelForId(electricTypeId)
                                         pendingProblemEquipmentName = node.title
@@ -6485,8 +6485,8 @@ private fun DetailsTable(
                 .background(MaterialTheme.colorScheme.surface)
                 .padding(vertical = 2.dp, horizontal = 4.dp)
         ) {
-            HeaderCell("Ubicación", 3)
-            HeaderCell("Código de barras", 2)
+            HeaderCell("Ubicaci\u00f3n", 3)
+            HeaderCell("C\u00f3digo de barras", 2)
             HeaderCell("Estatus", 2)
             HeaderCell("", 1)
         }
@@ -6705,9 +6705,10 @@ internal fun ProblemsTable(
     onDoubleTap: ((Problem, List<Problem>) -> Unit)? = null
 ) {
     val currentInspectionId = LocalCurrentInspection.current?.idInspeccion
-    // ─────────────────────────────
-    // Anchos fijos (Opción A)
-    // ─────────────────────────────
+    // ------------------------------------------------------------------------------
+    // ------------------------------------------------------------------------------
+    // ------------------------------------------------------------------------------
+    // ------------------------------------------------------------------------------
     val wNo = 55.dp
     val wFecha = 95.dp
     val wInspeccion = 85.dp
@@ -6759,9 +6760,10 @@ internal fun ProblemsTable(
         ) { content() }
     }
 
-    // ─────────────────────────────
-    // Estado de ordenamiento
-    // ─────────────────────────────
+    // ------------------------------------------------------------------------------
+    // ------------------------------------------------------------------------------
+    // ------------------------------------------------------------------------------
+    // ------------------------------------------------------------------------------
     var sortColumn by rememberSaveable { mutableStateOf(ProblemColumn.FECHA) }
     var sortAsc by rememberSaveable { mutableStateOf(true) }
 
@@ -6802,9 +6804,8 @@ internal fun ProblemsTable(
         ) {
             Column(Modifier.widthIn(min = tableMinWidth)) {
 
-                // ───────── HEADER ─────────
+                // ------------------------------ HEADER ------------------------------
                 Row(Modifier.fillMaxWidth()) {
-
                     headerCell(wNo, headerBackground, Modifier.clickable { toggleSort(ProblemColumn.NUMERO) }) {
                         SortHeader(
                             label = "No.",
@@ -6915,7 +6916,7 @@ internal fun ProblemsTable(
 
                 Divider(thickness = DIVIDER_THICKNESS)
 
-                // ───────── BODY ─────────
+                // ------------------------------- BODY -------------------------------
                 if (sortedProblems.isEmpty()) {
                     Box(
                         modifier = Modifier
@@ -6976,9 +6977,10 @@ internal fun ProblemsTable(
     }
 }
 
-// ─────────────────────────────
-// Header con flecha delgada (Icon)
-// ─────────────────────────────
+// ------------------------------------------------------------------------------
+// ------------------------------------------------------------------------------
+// ------------------------- Header con flecha delgada (Icon) -------------------------
+// ------------------------- Header con flecha delgada (Icon) -------------------------
 @Composable
 private fun SortHeader(
     label: String,
@@ -7002,7 +7004,7 @@ private fun SortHeader(
                 imageVector = if (sortAsc) Icons.Filled.ArrowDropUp else Icons.Filled.ArrowDropDown,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.size(15.dp) // 👈 más delgada / ocupa menos
+                modifier = Modifier.size(15.dp) // -> m\u00e1s delgada / ocupa menos
             )
         }
     }

@@ -48,7 +48,7 @@ class GenerateProblemasPdfUseCase(
             val fallaDao = db.fallaDao()
 
             val inspeccion = inspeccionDao.getById(inspeccionId)
-                ?: return@withContext Result.failure(IllegalStateException("Inspeccion no encontrada."))
+                ?: return@withContext Result.failure(IllegalStateException("Inspección no encontrada."))
 
             val selectedSet = selectedProblemaIds.toSet()
             val problemas = problemaDao.getByInspeccionActivos(inspeccionId)

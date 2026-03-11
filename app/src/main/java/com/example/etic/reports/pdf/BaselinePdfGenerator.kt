@@ -246,21 +246,21 @@ class BaselinePdfGenerator {
             var y = mm(31f)
             c.drawText(header.cliente, mm(10f), y, boldPaint); y += mm(4f)
             c.drawText(header.sitio, mm(10f), y, textPaint); y += mm(4f)
-            c.drawText("Analista Termografo: ${header.analista}", mm(10f), y, textPaint); y += mm(4f)
-            c.drawText("Nivel De Certificacion: ${header.nivel}", mm(10f), y, textPaint); y += mm(4f)
-            c.drawText("Fecha De Reporte: ${header.fechaReporte}", mm(10f), y, textPaint)
+            c.drawText("Analista term\u00f3grafo: ${header.analista}", mm(10f), y, textPaint); y += mm(4f)
+            c.drawText("Nivel de certificaci\u00f3n: ${header.nivel}", mm(10f), y, textPaint); y += mm(4f)
+            c.drawText("Fecha de reporte: ${header.fechaReporte}", mm(10f), y, textPaint)
 
-            c.drawText("No. Inspeccion Anterior: ${header.inspeccionAnterior}", mm(95f), mm(31f), textPaint)
+            c.drawText("No. inspecci\u00f3n anterior: ${header.inspeccionAnterior}", mm(95f), mm(31f), textPaint)
             c.drawText("Fecha: ${header.fechaAnterior}", mm(95f), mm(35f), textPaint)
-            c.drawText("No. Inspeccion Actual: ${header.inspeccionActual}", mm(95f), mm(39f), textPaint)
+            c.drawText("No. inspecci\u00f3n actual: ${header.inspeccionActual}", mm(95f), mm(39f), textPaint)
             c.drawText("Fecha: ${header.fechaActual}", mm(95f), mm(43f), textPaint)
 
             c.drawRect(RectF(mm(175f), mm(27f), mm(247f), mm(45f)), linePaint)
-            c.drawText("Informacion Del Equipo", mm(176f), mm(30f), boldPaint)
+            c.drawText("Informaci\u00f3n del equipo", mm(176f), mm(30f), boldPaint)
             c.drawLine(mm(175f), mm(31f), mm(247f), mm(31f), linePaint)
-            c.drawText("Codigo De Barras: ${pageData.codigoBarras}", mm(176f), mm(35f), textPaint)
+            c.drawText("C\u00f3digo de barras: ${pageData.codigoBarras}", mm(176f), mm(35f), textPaint)
             c.drawText("Fabricante: ${pageData.fabricante}", mm(176f), mm(39f), textPaint)
-            c.drawText("Prioridad Operacion: ${pageData.prioridadOperacion}", mm(176f), mm(43f), textPaint)
+            c.drawText("Prioridad de operaci\u00f3n: ${pageData.prioridadOperacion}", mm(176f), mm(43f), textPaint)
 
             c.drawText("RUTA: ${pageData.ruta}", mm(10f), mm(60f), boldPaint)
             c.drawLine(mm(10f), mm(61f), mm(287f), mm(61f), linePaint)
@@ -289,7 +289,7 @@ class BaselinePdfGenerator {
                         null
                     )
                 } else {
-                    c.drawText("Sin Imagen", x + w / 2f - mm(10f), y0 + h / 2f, textPaint)
+                    c.drawText("Sin imagen", x + w / 2f - mm(10f), y0 + h / 2f, textPaint)
                 }
             }
 
@@ -327,7 +327,7 @@ class BaselinePdfGenerator {
             drawImageInfoRow(104f, 133f, 90f, pageData.archivoId, pageData.idFecha, pageData.idHora)
 
             val cols = listOf(24f, 27f, 18f, 12f, 11f, 12f, 173f).map { mm(it) }
-            val headers = listOf("No. Inspeccion", "Fecha Inspeccion", "Estatus", "T° max", "MTA", "T° amb", "Notas")
+            val headers = listOf("No. inspecci\u00f3n", "Fecha inspecci\u00f3n", "Estatus", "T\u00b0 m\u00e1x.", "MTA", "T\u00b0 amb.", "Notas")
             val tableX = mm(10f)
             var ty = mm(150f)
             var x = tableX

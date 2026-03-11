@@ -108,13 +108,13 @@ class AnomaliasChartPdfGenerator {
         }
         val titleCenterX = mm(150f)
         c.drawText(
-            "Gráfica de anomalías/hallazgos detectadas",
+            "Gr\u00e1fica de anomal\u00edas/hallazgos detectados",
             titleCenterX,
             mm(14f),
             centeredTitlePaint
         )
         c.drawText(
-            "durante la auditoría-inspección termográfica.",
+            "durante la auditor\u00eda-inspecci\u00f3n termogr\u00e1fica.",
             titleCenterX,
             mm(19f),
             centeredTitlePaint
@@ -123,19 +123,19 @@ class AnomaliasChartPdfGenerator {
         var y = mm(31f)
         c.drawText(header.cliente, mm(10f), y, boldPaint); y += mm(4f)
         c.drawText(header.sitio, mm(10f), y, textPaint); y += mm(4f)
-        c.drawText("Analista Termógrafo: ${header.analista}", mm(10f), y, textPaint); y += mm(4f)
-        c.drawText("Nivel Certificación: ${header.nivel}", mm(10f), y, textPaint)
+        c.drawText("Analista term\u00f3grafo: ${header.analista}", mm(10f), y, textPaint); y += mm(4f)
+        c.drawText("Nivel de certificaci\u00f3n: ${header.nivel}", mm(10f), y, textPaint)
 
         val rightX = mm(287f)
         drawRightText("Fecha Reporte: ${header.fechaReporte}", rightX, mm(31f), textPaint)
         drawRightText(
-            "No. Inspección Anterior: ${header.inspeccionAnterior}  Fecha: ${header.fechaAnterior}",
+            "No. inspecci\u00f3n anterior: ${header.inspeccionAnterior}  Fecha: ${header.fechaAnterior}",
             rightX,
             mm(35f),
             textPaint
         )
         drawRightText(
-            "No. Inspección Actual: ${header.inspeccionActual}  Fecha: ${header.fechaActual}",
+            "No. inspecci\u00f3n actual: ${header.inspeccionActual}  Fecha: ${header.fechaActual}",
             rightX,
             mm(39f),
             textPaint
@@ -199,7 +199,7 @@ class AnomaliasChartPdfGenerator {
             typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
             color = android.graphics.Color.WHITE
         }
-        c.drawText("Anomalías / Hallazgos Crónicos: $cronicos", mm(223f), mm(52f), chronicPaint)
+        c.drawText("Anomal\u00edas / Hallazgos cr\u00f3nicos: $cronicos", mm(223f), mm(52f), chronicPaint)
 
         drawFooter()
         doc.finishPage(page)

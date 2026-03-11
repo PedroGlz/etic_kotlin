@@ -35,7 +35,7 @@ class GenerateResultadosAnalisisPdfUseCase(
             val problemaDao = db.problemaDao()
 
             val inspeccion = inspeccionDao.getById(inspeccionId)
-                ?: return@withContext Result.failure(IllegalStateException("Inspeccion no encontrada."))
+                ?: return@withContext Result.failure(IllegalStateException("Inspección no encontrada."))
             val sitio = inspeccion.idSitio?.let { sitioDao.getByIdActivo(it) }
             val usuarioActual = if (!currentUserId.isNullOrBlank()) {
                 usuarioDao.getById(currentUserId)

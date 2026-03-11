@@ -107,13 +107,13 @@ fun ResultsAnalysisDialog(
     onConfirm: (ResultadosAnalisisDraft, List<String>) -> Unit
 ) {
     val steps = listOf(
-        WizardStep("Portada", "Información principal"),
-        WizardStep("Descripción", "Objetivos y alcance"),
+        WizardStep("Portada", "Informaci\u00f3n principal"),
+        WizardStep("Descripci\u00f3n", "Objetivos y alcance"),
         WizardStep("Recomendaciones", "Hallazgos y seguimiento"),
         WizardStep("Referencias", "Normas y observaciones"),
         WizardStep("Inventario", "Seleccionar equipos inspeccionados"),
         WizardStep("Problemas", "Seleccionar observaciones"),
-        WizardStep("Resumen", "Revisión final antes de generar")
+        WizardStep("Resumen", "Revisi\u00f3n final antes de generar")
     )
 
     val context = LocalContext.current
@@ -337,7 +337,7 @@ fun ResultsAnalysisDialog(
         activeImportTarget = null
         if (bmp == null || target == null) {
             if (bmp == null) {
-                Toast.makeText(context, "La camara no devolvio imagen.", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "La c\u00e1mara no devolvi\u00f3 imagen.", Toast.LENGTH_SHORT).show()
             }
             return@rememberLauncherForActivityResult
         }
@@ -351,7 +351,7 @@ fun ResultsAnalysisDialog(
 
     fun beginImageImport(target: ImagePickerTarget, fromCamera: Boolean) {
         if (rootTreeUri == null || inspectionNumber.isNullOrBlank()) {
-            Toast.makeText(context, "No hay acceso a la carpeta Imagenes de la inspeccion.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "No hay acceso a la carpeta Im\u00e1genes de la inspecci\u00f3n.", Toast.LENGTH_SHORT).show()
             return
         }
         activeImportTarget = target
@@ -382,7 +382,7 @@ fun ResultsAnalysisDialog(
             ) {
                 Column(modifier = Modifier.fillMaxSize()) {
                     ProblemDialogDraggableHeader(
-                        title = "Resultados de análisis",
+                        title = "Resultados de an\u00e1lisis",
                         onDrag = { drag -> offset.value += drag }
                     )
 
@@ -465,18 +465,18 @@ fun ResultsAnalysisDialog(
                                             value = detalleUbicacion,
                                             onValueChange = { detalleUbicacion = it },
                                             modifier = Modifier.fillMaxWidth(),
-                                            label = "Detalle ubicación"
+                                            label = "Detalle ubicaci\u00f3n"
                                         )
                                     }
                                     1 -> {
-                                        Text("Paso 2: Descripción", style = MaterialTheme.typography.titleMedium)
+                                        Text("Paso 2: Descripci\u00f3n", style = MaterialTheme.typography.titleMedium)
                                         EditableStringList(
                                             title = "Descripciones",
                                             values = descripciones,
                                             minRows = 1
                                         )
                                         EditableStringList(
-                                            title = "Áreas inspeccionadas",
+                                            title = "\u00c1reas inspeccionadas",
                                             values = areas,
                                             minRows = 1
                                         )
@@ -498,7 +498,7 @@ fun ResultsAnalysisDialog(
                                                         verticalAlignment = Alignment.CenterVertically
                                                     ) {
                                                         Text(
-                                                            "Recomendación ${index + 1}",
+                                                            "Recomendaci\u00f3n ${index + 1}",
                                                             style = MaterialTheme.typography.titleSmall,
                                                             modifier = Modifier.weight(1f)
                                                         )
@@ -613,7 +613,7 @@ fun ResultsAnalysisDialog(
                                         ) {
                                             Icon(Icons.Outlined.Add, contentDescription = null)
                                             Spacer(Modifier.width(8.dp))
-                                            Text("Agregar recomendación")
+                                            Text("Agregar recomendaci\u00f3n")
                                         }
                                     }
                                     3 -> {
@@ -648,18 +648,18 @@ fun ResultsAnalysisDialog(
                                         val problemLookup = problemOptions.associate { it.id to it.label }
                                         Text("Paso 7: Resumen", style = MaterialTheme.typography.titleMedium)
                                         Text(
-                                            "Revisa esta sección y usa Atrás para corregir cualquier sección.",
+                                            "Revisa esta secci\u00f3n y usa Atr\u00e1s para corregir cualquier secci\u00f3n.",
                                             style = MaterialTheme.typography.bodyMedium,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
                                         SectionCard("Portada") {
                                             SummaryRow("Fechas", "${draft.fechaInicio} / ${draft.fechaFin}")
                                             SummaryRow("Portada", draft.nombreImgPortada.ifBlank { "Sin imagen" })
-                                            SummaryRow("Detalle de ubicación", draft.detalleUbicacion.ifBlank { "Sin detalle" })
+                                            SummaryRow("Detalle de ubicaci\u00f3n", draft.detalleUbicacion.ifBlank { "Sin detalle" })
                                         }
-                                        SectionCard("Descripción") {
+                                        SectionCard("Descripci\u00f3n") {
                                             SummaryList("Descripciones", draft.descripciones, "Sin descripciones")
-                                            SummaryList("Áreas inspeccionadas", draft.areasInspeccionadas, "Sin áreas")
+                                            SummaryList("\u00c1reas inspeccionadas", draft.areasInspeccionadas, "Sin \u00e1reas")
                                         }
                                         SectionCard("Recomendaciones") {
                                             if (draft.recomendaciones.isEmpty()) {
@@ -762,7 +762,7 @@ fun ResultsAnalysisDialog(
                     Text("Seleccionar imagen", style = MaterialTheme.typography.titleMedium)
                     if (availableImageOptions.isEmpty()) {
                         Text(
-                            "No hay imagenes disponibles en la inspeccion.",
+                            "No hay im\u00e1genes disponibles en la inspecci\u00f3n.",
                             style = MaterialTheme.typography.bodyMedium
                         )
                     } else {

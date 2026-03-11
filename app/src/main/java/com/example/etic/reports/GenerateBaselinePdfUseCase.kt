@@ -39,12 +39,12 @@ class GenerateBaselinePdfUseCase(
             val estatusDetDao = db.estatusInspeccionDetDao()
 
             val inspeccion = inspeccionDao.getById(inspeccionId)
-                ?: return@withContext Result.failure(IllegalStateException("Inspeccion no encontrada."))
+                ?: return@withContext Result.failure(IllegalStateException("Inspección no encontrada."))
 
             val baselinesCurrent = lineaBaseDao.getByInspeccionActivos(inspeccionId)
             if (baselinesCurrent.isEmpty()) {
                 return@withContext Result.failure(
-                    IllegalStateException("No hay baseline en la inspeccion actual.")
+                    IllegalStateException("No hay baseline en la inspección actual.")
                 )
             }
 

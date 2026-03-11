@@ -117,7 +117,7 @@ fun ReportsMenuSection(
                 ) {
                     Icon(Icons.Outlined.Insights, contentDescription = null)
                     Spacer(Modifier.width(10.dp))
-                    Text("Grafica de anomalias", modifier = Modifier.weight(1f))
+                    Text("Gr\u00e1fica de anomal\u00edas", modifier = Modifier.weight(1f))
                 }
                 TextButton(
                     enabled = enabled,
@@ -127,7 +127,7 @@ fun ReportsMenuSection(
                 ) {
                     Icon(Icons.Outlined.Description, contentDescription = null)
                     Spacer(Modifier.width(10.dp))
-                    Text("Resultados de analisis", modifier = Modifier.weight(1f))
+                    Text("Resultados de an\u00e1lisis", modifier = Modifier.weight(1f))
                 }
                 TextButton(
                     enabled = enabled,

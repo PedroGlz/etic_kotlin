@@ -1,4 +1,4 @@
-﻿package com.example.etic.features.components
+package com.example.etic.features.components
 
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -167,7 +167,7 @@ fun ImageInputButtonGroup(
                     bgColor = cameraBgColor,
                     contentColor = cameraContentColor
                 ) {
-                    Icon(Icons.Outlined.PhotoCamera, contentDescription = "Abrir camara", modifier = Modifier.size(iconSize))
+                    Icon(Icons.Outlined.PhotoCamera, contentDescription = "Abrir cámara", modifier = Modifier.size(iconSize))
                 }
             }
         }

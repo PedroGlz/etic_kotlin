@@ -28,7 +28,7 @@ class GenerateProblemListExcelUseCase(
             val severidadDao = db.severidadDao()
 
             val inspeccion = inspeccionDao.getById(inspeccionId)
-                ?: return@withContext Result.failure(IllegalStateException("Inspeccion no encontrada."))
+                ?: return@withContext Result.failure(IllegalStateException("Inspecci\u00f3n no encontrada."))
 
             val problemas = problemaDao.getByInspeccionActivos(inspeccionId)
                 .sortedWith(
