@@ -420,11 +420,26 @@ class ResultadosAnalisisPdfGenerator {
             canvas.drawRect(left, top, right, bottom, fillPaint)
             canvas.drawRect(left, top, right, bottom, linePaint)
             val prevColor = paint.color
+            val prevAlign = paint.textAlign
             paint.color = textColor
-            val layoutHeightMm = measureTextHeight(text, paint, wMm - 2f) * 25.4f / dpi
-            val textY = yMm + ((hMm - layoutHeightMm) / 2f).coerceAtLeast(0.8f)
-            drawTextBlock(text, xMm + 1f, textY, wMm - 2f, paint, align)
+            val innerWidthPx = mm(wMm - 2f)
+            val lines = wrapPlainText(text, paint, innerWidthPx)
+            val lineHeightMm = 4.4f
+            val totalHeightMm = lines.size * lineHeightMm
+            var lineY = yMm + ((hMm - totalHeightMm) / 2f).coerceAtLeast(0.8f) + 3.4f
+            lines.forEach { line ->
+                val lineWidthPx = paint.measureText(line)
+                val drawX = when (align) {
+                    Layout.Alignment.ALIGN_CENTER -> mm(xMm) + ((mm(wMm) - lineWidthPx) / 2f)
+                    Layout.Alignment.ALIGN_OPPOSITE -> mm(xMm + wMm - 1f) - lineWidthPx
+                    else -> mm(xMm + 1f)
+                }
+                paint.textAlign = Paint.Align.LEFT
+                canvas.drawText(line, drawX, mm(lineY), paint)
+                lineY += lineHeightMm
+            }
             paint.color = prevColor
+            paint.textAlign = prevAlign
         }
 
         fun richText(vararg parts: Pair<String, Int>, boldAll: Boolean = false, underline: Boolean = false): CharSequence {
