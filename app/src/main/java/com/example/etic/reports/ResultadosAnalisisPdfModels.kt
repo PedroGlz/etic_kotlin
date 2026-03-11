@@ -27,5 +27,6 @@ data class ResultadosAnalisisPdfData(
     val metricas: List<ResultadosAnalisisPdfMetric>,
     val recomendaciones: List<ResultadosAnalisisRecomendacion>,
     val referencias: List<String>,
-    val logo: Bitmap?
+    val logo: Bitmap?,
+    val isoLogo: Bitmap?
 )

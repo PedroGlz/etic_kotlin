@@ -146,6 +146,8 @@ class GenerateResultadosAnalisisPdfUseCase(
                 ?: res.getIdentifier("etic_logo", "drawable", pkg).takeIf { it != 0 }
                 ?: res.getIdentifier("etic_logo_login", "drawable", pkg).takeIf { it != 0 }
             val logoBmp = logoId?.let { BitmapFactory.decodeResource(res, it) }
+            val isoLogoId = res.getIdentifier("iso_img", "drawable", pkg).takeIf { it != 0 }
+            val isoLogoBmp = isoLogoId?.let { BitmapFactory.decodeResource(res, it) }
 
             val folder = folderProvider.getReportesFolder(noInspeccion)
                 ?: return@withContext Result.failure(IllegalStateException("No hay acceso a carpeta Reportes (SAF)."))
@@ -163,7 +165,8 @@ class GenerateResultadosAnalisisPdfUseCase(
                 metricas = metricas,
                 recomendaciones = draft.recomendaciones,
                 referencias = draft.referencias,
-                logo = logoBmp
+                logo = logoBmp,
+                isoLogo = isoLogoBmp
             )
 
             context.contentResolver.openOutputStream(file.uri)?.use { out ->

@@ -14,13 +14,18 @@ class ResultadosAnalisisPdfGenerator {
         val doc = PdfDocument()
         val pageWidth = 1240
         val pageHeight = 1754
-        val left = 72f
-        val right = pageWidth - 72f
-        val bottom = pageHeight - 72f
+        fun mmX(v: Float) = pageWidth * (v / 220f)
+        fun mmY(v: Float) = pageHeight * (v / 280f)
+
+        val left = mmX(30f)
+        val right = pageWidth - left
+        val top = mmY(25f)
+        val bottom = pageHeight - mmY(41f)
+        val contentWidth = right - left
         var pageNo = 0
         var page = doc.startPage(PdfDocument.PageInfo.Builder(pageWidth, pageHeight, ++pageNo).create())
         var canvas = page.canvas
-        var y = 72f
+        var y = top
 
         val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.BLACK
@@ -47,31 +52,59 @@ class ResultadosAnalisisPdfGenerator {
             color = Color.LTGRAY
             strokeWidth = 2f
         }
-        val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.rgb(240, 245, 250)
+
+        fun drawCenteredText(text: String, paint: Paint, baselineY: Float) {
+            val x = left + ((contentWidth - paint.measureText(text)) / 2f)
+            canvas.drawText(text, x, baselineY, paint)
         }
 
-        fun drawHeader() {
-            canvas.drawRect(0f, 0f, pageWidth.toFloat(), 52f, fillPaint)
-            data.logo?.let { logo ->
-                val scaled = scaleToFit(logo, 220, 80)
-                canvas.drawBitmap(scaled, left, 60f, null)
+        lateinit var drawHeader: () -> Unit
+        lateinit var newPage: () -> Unit
+
+        val ensureSpace: (Float) -> Unit = { space ->
+            if (y + space > bottom) newPage()
+        }
+
+        fun drawCenteredTextBlock(text: String, paint: Paint, maxWidth: Float = contentWidth, gapAfter: Float = 16f) {
+            val lines = wrapText(text, paint, maxWidth)
+            lines.forEach { line ->
+                ensureSpace(paint.textSize + 8f)
+                drawCenteredText(line, paint, y)
+                y += paint.textSize + 8f
             }
-            canvas.drawText("Resultados de analisis de riesgos", right - 440f, 105f, titlePaint)
-            canvas.drawLine(left, 132f, right, 132f, linePaint)
-            y = 160f
+            y += gapAfter
         }
 
-        fun newPage() {
+        fun drawBitmapAtWidth(bitmap: Bitmap, x: Float, y: Float, width: Float) {
+            val scale = (width / bitmap.width).coerceAtMost(1f)
+            val scaled = if (scale < 1f) {
+                Bitmap.createScaledBitmap(
+                    bitmap,
+                    (bitmap.width * scale).toInt().coerceAtLeast(1),
+                    (bitmap.height * scale).toInt().coerceAtLeast(1),
+                    true
+                )
+            } else {
+                bitmap
+            }
+            canvas.drawBitmap(scaled, x, y, null)
+        }
+
+        drawHeader = {
+            data.logo?.let { logo ->
+                drawBitmapAtWidth(logo, mmX(25f), mmY(25f), mmX(53f))
+            }
+            data.isoLogo?.let { isoLogo ->
+                drawBitmapAtWidth(isoLogo, mmX(18f), mmY(9f), mmX(20f))
+            }
+        }
+
+        newPage = {
             doc.finishPage(page)
             page = doc.startPage(PdfDocument.PageInfo.Builder(pageWidth, pageHeight, ++pageNo).create())
             canvas = page.canvas
-            y = 72f
+            y = top
             drawHeader()
-        }
-
-        fun ensureSpace(space: Float) {
-            if (y + space > bottom) newPage()
         }
 
         fun drawTextBlock(text: String, paint: Paint, indent: Float = 0f, gapAfter: Float = 16f) {
@@ -111,15 +144,20 @@ class ResultadosAnalisisPdfGenerator {
 
         drawHeader()
 
-        canvas.drawText("F-PRS-02 - Resultados de analisis de riesgos con termografia infrarroja", left, y, titlePaint)
-        y += 54f
+        y = mmY(55f)
+        drawCenteredTextBlock(
+            "F-PRS-02 - Resultados de analisis de riesgos con termografia infrarroja",
+            titlePaint,
+            maxWidth = contentWidth
+        )
 
         data.portada?.let { portada ->
             ensureSpace(350f)
-            val scaled = scaleToFit(portada, (right - left).toInt(), 320)
-            val x = left + ((right - left) - scaled.width) / 2f
-            canvas.drawBitmap(scaled, x, y, null)
-            y += scaled.height + 28f
+            val scaled = scaleToFit(portada, mmX(106f).toInt(), mmY(70f).toInt())
+            val portadaX = mmX(57f)
+            val portadaY = mmY(80f)
+            canvas.drawBitmap(scaled, portadaX, portadaY, null)
+            y = portadaY + scaled.height + mmY(10f)
         }
 
         drawTextBlock("Cliente: ${data.header.cliente}", labelPaint, gapAfter = 8f)
