@@ -422,7 +422,7 @@ fun ResultsAnalysisDialog(
                             Column(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = DIALOG_SIDE_PADDING, vertical = 5.dp)
+                                    .padding(horizontal = DIALOG_SIDE_PADDING + 20.dp, vertical = 12.dp)
                                     .verticalScroll(rememberScrollState()),
                                 verticalArrangement = Arrangement.spacedBy(5.dp)
                             ) {
