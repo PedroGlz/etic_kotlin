@@ -1209,62 +1209,86 @@ fun MainScreen(
                             .padding(innerPadding)
                     ) {
 
-                        when (section) {
-                            HomeSection.Inspection ->
-                                InspectionScreen(
-                                    onReady = {
-                                        scope.launch {
-                                            delay(900)
-                                            isLoading = false
+                        Box(
+                            modifier = if (section == HomeSection.Inspection) {
+                                Modifier.fillMaxSize()
+                            } else {
+                                Modifier.size(0.dp)
+                            }
+                        ) {
+                            InspectionScreen(
+                                onReady = {
+                                    scope.launch {
+                                        delay(900)
+                                        isLoading = false
+                                    }
+                                }
+                            )
+                        }
+
+                        Box(
+                            modifier = if (section == HomeSection.Reports) {
+                                Modifier.fillMaxSize()
+                            } else {
+                                Modifier.size(0.dp)
+                            },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("Reportes")
+                        }
+
+                        Box(
+                            modifier = if (section == HomeSection.FolderImages) {
+                                Modifier.fillMaxSize()
+                            } else {
+                                Modifier.size(0.dp)
+                            }
+                        ) {
+                            EticFolderShortcutScreen(
+                                folderType = EticFolderType.Images,
+                                rootTreeUri = rootTreeUri,
+                                inspectionNumero = inspectionNumero,
+                                onPickRoot = { uri ->
+                                    scope.launch {
+                                        eticPrefs.setRootTreeUri(uri)
+                                        withContext(Dispatchers.IO) {
+                                            safManager.ensureEticFolders(appContext, uri)
+                                            if (!inspectionNumero.isNullOrBlank()) {
+                                                safManager.ensureInspectionFolders(appContext, uri, inspectionNumero)
+                                            }
                                         }
                                     }
-                                )
+                                },
+                                manager = safManager,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
 
-                            HomeSection.Reports ->
-                                Box(
-                                    Modifier.fillMaxSize(),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text("Reportes")
-                                }
-                            HomeSection.FolderImages ->
-                                EticFolderShortcutScreen(
-                                    folderType = EticFolderType.Images,
-                                    rootTreeUri = rootTreeUri,
-                                    inspectionNumero = inspectionNumero,
-                                    onPickRoot = { uri ->
-                                        scope.launch {
-                                            eticPrefs.setRootTreeUri(uri)
-                                            withContext(Dispatchers.IO) {
-                                                safManager.ensureEticFolders(appContext, uri)
-                                                if (!inspectionNumero.isNullOrBlank()) {
-                                                    safManager.ensureInspectionFolders(appContext, uri, inspectionNumero)
-                                                }
+                        Box(
+                            modifier = if (section == HomeSection.FolderReports) {
+                                Modifier.fillMaxSize()
+                            } else {
+                                Modifier.size(0.dp)
+                            }
+                        ) {
+                            EticFolderShortcutScreen(
+                                folderType = EticFolderType.Reports,
+                                rootTreeUri = rootTreeUri,
+                                inspectionNumero = inspectionNumero,
+                                onPickRoot = { uri ->
+                                    scope.launch {
+                                        eticPrefs.setRootTreeUri(uri)
+                                        withContext(Dispatchers.IO) {
+                                            safManager.ensureEticFolders(appContext, uri)
+                                            if (!inspectionNumero.isNullOrBlank()) {
+                                                safManager.ensureInspectionFolders(appContext, uri, inspectionNumero)
                                             }
                                         }
-                                    },
-                                    manager = safManager,
-                                    modifier = Modifier.fillMaxSize()
-                                )
-                            HomeSection.FolderReports ->
-                                EticFolderShortcutScreen(
-                                    folderType = EticFolderType.Reports,
-                                    rootTreeUri = rootTreeUri,
-                                    inspectionNumero = inspectionNumero,
-                                    onPickRoot = { uri ->
-                                        scope.launch {
-                                            eticPrefs.setRootTreeUri(uri)
-                                            withContext(Dispatchers.IO) {
-                                                safManager.ensureEticFolders(appContext, uri)
-                                                if (!inspectionNumero.isNullOrBlank()) {
-                                                    safManager.ensureInspectionFolders(appContext, uri, inspectionNumero)
-                                                }
-                                            }
-                                        }
-                                    },
-                                    manager = safManager,
-                                    modifier = Modifier.fillMaxSize()
-                                )
+                                    }
+                                },
+                                manager = safManager,
+                                modifier = Modifier.fillMaxSize()
+                            )
                         }
 
                         if (isLoading) {
