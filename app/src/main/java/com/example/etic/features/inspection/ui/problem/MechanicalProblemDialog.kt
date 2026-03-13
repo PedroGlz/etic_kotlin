@@ -1,5 +1,12 @@
 ﻿package com.example.etic.features.inspection.ui.problem
 
+import android.app.Activity
+import android.view.WindowManager
+import android.content.Context
+import android.content.ContextWrapper
+import android.view.View
+import android.view.ViewParent
+import android.view.Window
 import androidx.compose.foundation.Image
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
@@ -37,6 +44,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.outlined.AccessTime
 import androidx.compose.material.icons.outlined.ArrowLeft
 import androidx.compose.material.icons.outlined.ArrowRight
@@ -55,6 +63,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.LocalMinimumInteractiveComponentEnforcement
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.CompositionLocalProvider
@@ -71,6 +80,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -79,12 +89,32 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.DialogWindowProvider
 import androidx.compose.ui.window.PopupProperties
 import com.example.etic.features.components.ImageInputButtonGroup
 import com.example.etic.core.saf.EticImageStore
 import com.example.etic.core.settings.EticPrefs
 import com.example.etic.core.settings.settingsDataStore
 import kotlin.math.roundToInt
+
+private fun getWindowFromContext(context: Context): Window? {
+    var currentContext = context
+    while (currentContext is ContextWrapper) {
+        if (currentContext is Activity) return currentContext.window
+        currentContext = currentContext.baseContext
+    }
+    return if (currentContext is Activity) currentContext.window else null
+}
+
+private fun resolveDialogWindow(context: Context, anchorView: View): Window? {
+    var parent: ViewParent? = anchorView.parent
+    while (parent != null) {
+        if (parent is DialogWindowProvider) return parent.window
+        if (parent !is View) break
+        parent = parent.parent
+    }
+    return getWindowFromContext(context)
+}
 
 private val DIALOG_MIN_WIDTH = 980.dp
 private val DIALOG_MAX_WIDTH = 980.dp
@@ -149,6 +179,18 @@ fun MechanicalProblemDialog(
     onSelectedTabChange: ((Int) -> Unit)? = null,
     transitionKey: Any = Unit
 ) {
+    val context = LocalContext.current
+    val currentView = LocalView.current
+    val dialogWindow = remember(context, currentView) {
+        resolveDialogWindow(context, currentView)
+    }
+    DisposableEffect(dialogWindow) {
+        val window = dialogWindow ?: return@DisposableEffect onDispose {}
+        val previousMode = window.attributes.softInputMode
+        window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING)
+        onDispose { window.setSoftInputMode(previousMode) }
+    }
+
     val initial = initialFormData ?: MechanicalProblemFormData()
     val initialFailureLabel = failureOptions.firstOrNull { it.first == initial.failureId }?.second?.takeIf { it.isNotBlank() }
     val initialPhaseLabel = phaseOptions.firstOrNull { it.first == initial.componentPhaseId }?.second?.takeIf { it.isNotBlank() }
@@ -164,6 +206,7 @@ fun MechanicalProblemDialog(
         properties = DialogProperties(
             usePlatformDefaultWidth = false,
             dismissOnClickOutside = false,
+            decorFitsSystemWindows = false,
             dismissOnBackPress = false
         )
     ) {
@@ -260,18 +303,41 @@ fun MechanicalProblemDialog(
                     equipmentName.takeUnless { it.isBlank() }?.let { add(it) }
                 }.joinToString(", ")
 
-                LaunchedEffect(autoCommentText) {
-                    if (autoCommentText.isNotBlank()) {
-                        if (!commentsTouched || comments == lastAutoComment || comments.isBlank()) {
-                            comments = autoCommentText
-                            lastAutoComment = autoCommentText
-                            commentsTouched = false
-                        }
-                    } else if (!commentsTouched) {
-                        comments = ""
-                        lastAutoComment = ""
+            fun mergeAutoComment(currentAuto: String, currentComment: String, oldAuto: String): String {
+                val current = currentComment.trim()
+                val previousAuto = oldAuto.trim()
+                val nextAuto = currentAuto.trim()
+                if (nextAuto.isBlank()) {
+                    if (previousAuto.isNotBlank() && current.startsWith(previousAuto)) {
+                        val suffix = current.substring(previousAuto.length).trimStart(',', ' ').trim()
+                        return suffix
                     }
+                    return current
                 }
+                if (current.isBlank()) return nextAuto
+                if (previousAuto.isBlank()) return current
+                if (current == previousAuto) return nextAuto
+                if (!current.startsWith(previousAuto)) return current
+                val suffix = current.substring(previousAuto.length).trim()
+                return when {
+                    suffix.isBlank() -> nextAuto
+                    suffix.startsWith(",") -> "$nextAuto$suffix"
+                    else -> "$nextAuto, $suffix"
+                }
+            }
+
+            LaunchedEffect(autoCommentText) {
+                val mergedComment = mergeAutoComment(autoCommentText, comments, lastAutoComment)
+                if (mergedComment != comments) {
+                    comments = mergedComment
+                }
+                commentsTouched = when {
+                    comments.isBlank() -> false
+                    autoCommentText.isBlank() -> mergedComment.isNotBlank()
+                    else -> mergedComment != autoCommentText
+                }
+                lastAutoComment = autoCommentText
+            }
 
                 val handleEmissivityInput: (String) -> Unit = { input ->
                     val filtered = input.filter { it.isDigit() || it == '.' || it == ',' }
@@ -1008,10 +1074,10 @@ private fun FilterableSelectorNoLabel(
                     textStyle = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurface),
                     modifier = Modifier.weight(1f)
                 )
-                Text(
-                    text = "▼",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                Icon(
+                    imageVector = Icons.Filled.ArrowDropDown,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
@@ -1141,12 +1207,12 @@ private fun CheckboxDropdownRow(
 
     Row(
         modifier = modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.Bottom // ✅ alineado al input
+        verticalAlignment = Alignment.Bottom // ? alineado al input
     ) {
         CompactCheckbox(
             checked = checked,
             onCheckedChange = onCheckedChange,
-            modifier = Modifier.padding(bottom = 2.dp) // 🔥 micro-ajuste
+            modifier = Modifier.padding(bottom = 2.dp) // ?? micro-ajuste
         )
 
         Spacer(Modifier.width(4.dp))
@@ -1178,10 +1244,10 @@ private fun CheckboxDropdownRow(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                    Text(
-                        "▼",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    Icon(
+                        imageVector = Icons.Filled.ArrowDropDown,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -1344,6 +1410,7 @@ private fun RowScope.CenterCell(
         content()
     }
 }
+
 
 
 

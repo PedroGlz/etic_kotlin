@@ -1,6 +1,13 @@
 package com.example.etic.ui.inspection
 
+import android.app.Activity
 import android.app.DatePickerDialog
+import android.content.Context
+import android.content.ContextWrapper
+import android.view.WindowManager
+import android.view.Window
+import android.view.View
+import android.view.ViewParent
 import android.graphics.Bitmap
 import android.net.Uri
 import android.widget.Toast
@@ -48,6 +55,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
@@ -60,11 +68,13 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.DialogWindowProvider
 import com.example.etic.core.saf.EticImageStore
 import com.example.etic.features.components.ImageInputButtonGroup
 import com.example.etic.features.inspection.tree.TreeNode
@@ -76,6 +86,25 @@ import com.example.etic.reports.ResultadosAnalisisRecomendacion
 import java.time.LocalDate
 import kotlin.math.max
 import kotlin.math.roundToInt
+
+private fun getWindowFromContext(context: Context): Window? {
+    var currentContext = context
+    while (currentContext is ContextWrapper) {
+        if (currentContext is Activity) return currentContext.window
+        currentContext = currentContext.baseContext
+    }
+    return if (currentContext is Activity) currentContext.window else null
+}
+
+private fun resolveDialogWindow(context: Context, anchorView: View): Window? {
+    var parent: ViewParent? = anchorView.parent
+    while (parent != null) {
+        if (parent is DialogWindowProvider) return parent.window
+        if (parent !is View) break
+        parent = parent.parent
+    }
+    return getWindowFromContext(context)
+}
 
 private data class WizardStep(
     val title: String,
@@ -106,6 +135,20 @@ fun ResultsAnalysisDialog(
     onDismiss: (ResultadosAnalisisDraft) -> Unit,
     onConfirm: (ResultadosAnalisisDraft, List<String>) -> Unit
 ) {
+    val dialogContext = LocalContext.current
+    val currentView = LocalView.current
+    val dialogWindow = remember(dialogContext, currentView) {
+        resolveDialogWindow(dialogContext, currentView)
+    }
+    DisposableEffect(dialogWindow) {
+        val window = dialogWindow ?: return@DisposableEffect onDispose {}
+        val previousMode = window.attributes.softInputMode
+        window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING)
+        onDispose {
+            window.setSoftInputMode(previousMode)
+        }
+    }
+
     val steps = listOf(
         WizardStep("Portada", "Informacion principal"),
         WizardStep("Descripcion", "Objetivos y alcance"),
@@ -363,7 +406,10 @@ fun ResultsAnalysisDialog(
 
     Dialog(
         onDismissRequest = { if (!isBusy) onDismiss(buildDraft()) },
-        properties = DialogProperties(usePlatformDefaultWidth = false)
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            decorFitsSystemWindows = false
+        )
     ) {
         Box(
             modifier = Modifier

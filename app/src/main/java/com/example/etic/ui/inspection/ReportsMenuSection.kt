@@ -1,4 +1,4 @@
-package com.example.etic.ui.inspection
+﻿package com.example.etic.ui.inspection
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
@@ -143,3 +143,4 @@ fun ReportsMenuSection(
         }
     }
 }
+

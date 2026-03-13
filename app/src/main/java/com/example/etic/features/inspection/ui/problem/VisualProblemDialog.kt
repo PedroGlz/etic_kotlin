@@ -1,5 +1,6 @@
 ﻿package com.example.etic.features.inspection.ui.problem
 
+import android.app.Activity
 import android.annotation.SuppressLint
 import androidx.compose.foundation.Image
 import androidx.compose.animation.AnimatedContent
@@ -24,6 +25,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.outlined.AccessTime
 import androidx.compose.material.icons.outlined.ArrowLeft
 import androidx.compose.material.icons.outlined.ArrowRight
@@ -36,6 +38,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.Divider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -50,6 +53,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -59,12 +63,38 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.PopupProperties
+import androidx.compose.ui.window.DialogWindowProvider
 import com.example.etic.data.local.dao.VisualProblemHistoryRow
 import com.example.etic.features.components.ImageInputButtonGroup
 import com.example.etic.core.saf.EticImageStore
 import com.example.etic.core.settings.EticPrefs
 import com.example.etic.core.settings.settingsDataStore
+import android.content.Context
+import android.content.ContextWrapper
+import android.view.View
+import android.view.ViewParent
+import android.view.Window
+import android.view.WindowManager
 import kotlin.math.roundToInt
+
+private fun getWindowFromContext(context: Context): Window? {
+    var currentContext = context
+    while (currentContext is ContextWrapper) {
+        if (currentContext is Activity) return currentContext.window
+        currentContext = currentContext.baseContext
+    }
+    return if (currentContext is Activity) currentContext.window else null
+}
+
+private fun resolveDialogWindow(context: Context, anchorView: View): Window? {
+    var parent: ViewParent? = anchorView.parent
+    while (parent != null) {
+        if (parent is DialogWindowProvider) return parent.window
+        if (parent !is View) break
+        parent = parent.parent
+    }
+    return getWindowFromContext(context)
+}
 
 private val DIALOG_MIN_WIDTH = 980.dp
 private val DIALOG_MAX_WIDTH = 980.dp
@@ -135,12 +165,27 @@ fun VisualProblemDialog(
     onSelectedTabChange: ((Int) -> Unit)? = null,
     transitionKey: Any = Unit
 ) {
+    val context = LocalContext.current
+    val currentView = LocalView.current
+    val dialogWindow = remember(context, currentView) {
+        resolveDialogWindow(context, currentView)
+    }
+    DisposableEffect(dialogWindow) {
+        val window = dialogWindow ?: return@DisposableEffect onDispose {}
+        val previousMode = window.attributes.softInputMode
+        window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING)
+        onDispose {
+            window.setSoftInputMode(previousMode)
+        }
+    }
+
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(
             usePlatformDefaultWidth = false,
             dismissOnClickOutside = false,
-            dismissOnBackPress = false
+            dismissOnBackPress = false,
+            decorFitsSystemWindows = false
         )
     ) {
         var dialogOffset by remember { mutableStateOf(Offset.Zero) }
@@ -530,10 +575,10 @@ private fun FilterableSelectorNoLabel(
                             .weight(1f)
                             .onFocusChanged { isFocused = it.isFocused }
                     )
-                    Text(
-                        text = "▼",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    Icon(
+                        imageVector = Icons.Filled.ArrowDropDown,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -594,10 +639,10 @@ private fun SimpleDropdownSelector(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                Text(
-                    text = "▼",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                Icon(
+                    imageVector = Icons.Filled.ArrowDropDown,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
@@ -816,6 +861,7 @@ private fun ImagePreviewBox(fileName: String, inspectionNumber: String) {
         }
     }
 }
+
 
 
 
