@@ -588,6 +588,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             var pendingSeverityLabel by rememberSaveable { mutableStateOf<String?>(null) }
             var pendingProblemUbicacionId by rememberSaveable { mutableStateOf<String?>(null) }
             var pendingObservation by rememberSaveable { mutableStateOf("") }
+            var isVisualObservationAuto by rememberSaveable { mutableStateOf(false) }
             var pendingThermalImage by rememberSaveable { mutableStateOf("") }
             var pendingDigitalImage by rememberSaveable { mutableStateOf("") }
             var isSavingVisualProblem by remember { mutableStateOf(false) }
@@ -620,6 +621,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                 pendingSeverityId = null
                 pendingSeverityLabel = null
                 pendingObservation = ""
+                isVisualObservationAuto = false
                 pendingThermalImage = ""
                 pendingDigitalImage = ""
                 pendingProblemUbicacionId = null
@@ -742,12 +744,20 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                 }
             }
 
-            fun buildVisualObservation(hazardId: String?, equipmentName: String?): String {
+            fun buildVisualObservation(
+                hazardId: String?,
+                equipmentName: String?,
+                recommendationLabel: String?
+            ): String {
                 val hazardText = hazardId?.let { id ->
                     visualHazardOptionsFixed.firstOrNull { it.first == id }?.second
                 }
                 val equipment = equipmentName?.takeUnless { it.isBlank() }
-                val parts = listOfNotNull(hazardText, equipment).filter { it.isNotBlank() }
+                val parts = listOfNotNull(
+                    hazardText ?: hazardId,
+                    equipment,
+                    recommendationLabel
+                ).filter { it.isNotBlank() }
                 return parts.joinToString(", ").uppercase(Locale.getDefault())
             }
 
@@ -774,7 +784,12 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     pendingSeverityId = if (normalized != null) normalized else if (allowUnknownSelections) pendingSeverityId else null
                 }
                 if (allowObservationUpdate) {
-                    pendingObservation = buildVisualObservation(pendingHazardId, pendingProblemEquipmentName)
+                    pendingObservation = buildVisualObservation(
+                        pendingHazardId,
+                        pendingProblemEquipmentName,
+                        pendingRecommendationLabel ?: pendingRecommendationId
+                    )
+                    isVisualObservationAuto = true
                 }
             }
             fun withPendingOption(
@@ -927,6 +942,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                 pendingSeverityId = draft.severityId
                 pendingSeverityLabel = draft.severityLabel
                 pendingObservation = draft.observation
+                isVisualObservationAuto = false
                 pendingThermalImage = draft.thermalImage
                 pendingDigitalImage = draft.digitalImage
                 visualProblemClosed = draft.closed
@@ -1333,6 +1349,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                         it.idSeveridad.equals(entity.idSeveridad, ignoreCase = true)
                     }?.severidad
                     pendingObservation = entity.componentComment.orEmpty()
+                    isVisualObservationAuto = false
                     pendingThermalImage = entity.irFile.orEmpty()
                     pendingDigitalImage = entity.photoFile.orEmpty()
                     pendingProblemType = problemTypeLabelForId(VISUAL_PROBLEM_TYPE_ID)
@@ -3757,7 +3774,10 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     selectedRecommendation = pendingRecommendationId ?: pendingRecommendationLabel,
                     selectedSeverity = pendingSeverityId ?: pendingSeverityLabel,
                     observations = pendingObservation,
-                    onObservationsChange = { pendingObservation = it },
+                    onObservationsChange = {
+                        pendingObservation = it
+                        isVisualObservationAuto = false
+                    },
                     historyRows = visualProblemHistory,
                     historyLoading = isHistoryLoading,
                     thermalImageName = pendingThermalImage,
@@ -3811,10 +3831,17 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                         }
                         pendingHazardId = match?.first
                         pendingHazardLabel = match?.second ?: normalized
-                        pendingObservation = buildVisualObservation(
-                            pendingHazardId ?: pendingHazardLabel,
-                            pendingProblemEquipmentName
-                        )
+                        val recommendationText = pendingRecommendationId?.let { id ->
+                            visualRecommendationOptionsForDialog.firstOrNull { it.first == id }?.second
+                        } ?: pendingRecommendationLabel
+                        if (isVisualObservationAuto || pendingObservation.isBlank()) {
+                            pendingObservation = buildVisualObservation(
+                                pendingHazardId ?: pendingHazardLabel,
+                                pendingProblemEquipmentName,
+                                recommendationText
+                            )
+                            isVisualObservationAuto = true
+                        }
                     },
                     onSeveritySelected = { selected ->
                         val normalized = selected.takeIf { it.isNotBlank() }
@@ -3845,6 +3872,14 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                         }
                         pendingRecommendationId = match?.first
                         pendingRecommendationLabel = match?.second ?: normalized
+                        if (isVisualObservationAuto || pendingObservation.isBlank()) {
+                            pendingObservation = buildVisualObservation(
+                                pendingHazardId ?: pendingHazardLabel,
+                                pendingProblemEquipmentName,
+                                pendingRecommendationLabel ?: pendingRecommendationId
+                            )
+                            isVisualObservationAuto = true
+                        }
                     },
                     showEditControls = editingProblemId != null,
                     selectedTabIndex = problemDialogTab,
@@ -3950,7 +3985,15 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                                     it.first.equals(resolvedHazardId, ignoreCase = true)
                                 }?.second ?: pendingHazardLabel
                                 val comment = pendingObservation.ifBlank {
-                                    buildVisualObservation(resolvedHazardId, pendingProblemEquipmentName)
+                                    buildVisualObservation(
+                                        resolvedHazardId,
+                                        pendingProblemEquipmentName,
+                                        resolvedRecommendationId?.let { recommendationId ->
+                                            visualRecommendationOptionsForDialog.firstOrNull {
+                                                it.first == recommendationId
+                                            }?.second
+                                        } ?: pendingRecommendationLabel ?: pendingRecommendationId
+                                    )
                                 }
                                 val nowTs = java.time.LocalDateTime.now()
                                     .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
