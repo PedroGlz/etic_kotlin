@@ -247,8 +247,7 @@ fun MainScreen(
         return listOf(
             ResultadosAnalisisContacto(site?.contacto1.orEmpty(), site?.puestoContacto1.orEmpty()),
             ResultadosAnalisisContacto(site?.contacto2.orEmpty(), site?.puestoContacto2.orEmpty()),
-            ResultadosAnalisisContacto(site?.contacto3.orEmpty(), site?.puestoContacto3.orEmpty()),
-            ResultadosAnalisisContacto()
+            ResultadosAnalisisContacto(site?.contacto3.orEmpty(), site?.puestoContacto3.orEmpty())
         )
     }
 

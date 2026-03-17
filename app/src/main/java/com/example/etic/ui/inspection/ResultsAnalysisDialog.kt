@@ -117,6 +117,7 @@ private val FIELD_HEIGHT = 25.dp
 private val FIELD_BORDER = 1.dp
 private val DIALOG_SIDE_PADDING = 12.dp
 private val IMAGE_SEQUENCE_REGEX = Regex("""^(.*?)(\d+)(\.[^.]*)?$""")
+private const val MAX_CONTACTOS = 7
 
 private data class ImagePickerTarget(
     val recommendationIndex: Int? = null,
@@ -167,7 +168,14 @@ fun ResultsAnalysisDialog(
     var detalleUbicacion by remember { mutableStateOf(initialDraft.detalleUbicacion) }
     val contactos = remember {
         mutableStateListOf<ResultadosAnalisisContacto>().apply {
-            addAll((initialDraft.contactos + List(4) { ResultadosAnalisisContacto() }).take(4))
+            val initialCount = initialDraft.contactos.size
+            val minVisibleContacts = 3
+            val defaultedContactos = if (initialCount >= minVisibleContacts) {
+                initialDraft.contactos
+            } else {
+                initialDraft.contactos + List(minVisibleContacts - initialCount) { ResultadosAnalisisContacto() }
+            }
+            addAll(defaultedContactos.take(MAX_CONTACTOS))
         }
     }
     val descripciones = remember {
@@ -418,7 +426,7 @@ fun ResultsAnalysisDialog(
         ) {
             Card(
                 modifier = Modifier
-                    .fillMaxWidth(0.84f)
+                    .fillMaxWidth(0.65f)
                     .fillMaxHeight(0.9f)
                     .align(Alignment.Center)
                     .offset { IntOffset(offset.value.x.roundToInt(), offset.value.y.roundToInt()) },
@@ -475,7 +483,10 @@ fun ResultsAnalysisDialog(
                                 when (currentStep) {
                                     0 -> {
                                         Text("Paso 1: Portada", style = MaterialTheme.typography.titleMedium)
-                                        ContactosEditor(contactos = contactos)
+                                        ContactosEditor(
+                                            contactos = contactos,
+                                            maxContacts = MAX_CONTACTOS
+                                        )
                                         Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                                             DateField(
                                                 modifier = Modifier.weight(1f),
@@ -912,7 +923,10 @@ private fun SummaryList(label: String, items: List<String>, fallback: String) {
 }
 
 @Composable
-private fun ContactosEditor(contactos: androidx.compose.runtime.snapshots.SnapshotStateList<ResultadosAnalisisContacto>) {
+private fun ContactosEditor(
+    contactos: androidx.compose.runtime.snapshots.SnapshotStateList<ResultadosAnalisisContacto>,
+    maxContacts: Int
+) {
     Text("Contactos", style = MaterialTheme.typography.titleSmall)
     contactos.forEachIndexed { index, contacto ->
             Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
@@ -928,6 +942,13 @@ private fun ContactosEditor(contactos: androidx.compose.runtime.snapshots.Snapsh
                 modifier = Modifier.weight(1f),
                 label = "Puesto ${index + 1}"
             )
+        }
+    }
+    if (contactos.size < maxContacts) {
+        TextButton(onClick = { contactos.add(ResultadosAnalisisContacto()) }) {
+            Icon(Icons.Outlined.Add, contentDescription = null)
+            Spacer(Modifier.width(8.dp))
+            Text("Agregar")
         }
     }
 }

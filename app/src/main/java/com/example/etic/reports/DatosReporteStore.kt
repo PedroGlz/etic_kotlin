@@ -98,8 +98,8 @@ internal object DatosReporteStore {
             put("Id_Inspeccion", draft.inspectionId)
             put("Id_Sitio", draft.siteId)
             put("detalle_ubicacion", draft.detalleUbicacion.ifBlank { null })
-            put("nombre_contacto", serializeStrings(padFour(draft.contactos.map { it.nombre })))
-            put("puesto_contacto", serializeStrings(padFour(draft.contactos.map { it.puesto })))
+            put("nombre_contacto", serializeStrings(padContactos(draft.contactos.map { it.nombre })))
+            put("puesto_contacto", serializeStrings(padContactos(draft.contactos.map { it.puesto })))
             put("fecha_inicio_ra", draft.fechaInicio.ifBlank { null })
             put("fecha_fin_ra", draft.fechaFin.ifBlank { null })
             put("nombre_img_portada", draft.nombreImgPortada.ifBlank { null })
@@ -121,9 +121,9 @@ internal object DatosReporteStore {
     }
 
     private fun StoredDatosReporte.toDraft(defaultInspectionId: String): ResultadosAnalisisDraft {
-        val nombres = padFour(splitSerialized(nombreContacto))
-        val puestos = padFour(splitSerialized(puestoContacto))
-        val contactos = (0 until 4).map { index ->
+        val nombres = padContactos(splitSerialized(nombreContacto))
+        val puestos = padContactos(splitSerialized(puestoContacto))
+        val contactos = (0 until MAX_CONTACTOS).map { index ->
             ResultadosAnalisisContacto(
                 nombre = nombres.getOrElse(index) { "" },
                 puesto = puestos.getOrElse(index) { "" }

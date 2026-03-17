@@ -2,6 +2,8 @@ package com.example.etic.reports
 
 import com.example.etic.data.local.entities.DatosReporte
 
+internal const val MAX_CONTACTOS = 7
+
 data class ResultadosAnalisisContacto(
     val nombre: String = "",
     val puesto: String = ""
@@ -43,12 +45,12 @@ internal fun splitSerialized(raw: String?): List<String> =
 internal fun serializeStrings(values: List<String>): String =
     values.joinToString("$") { it.trim() }
 
-internal fun padFour(values: List<String>): List<String> =
-    (values + List(4) { "" }).take(4)
+internal fun padContactos(values: List<String>): List<String> =
+    (values + List(MAX_CONTACTOS) { "" }).take(MAX_CONTACTOS)
 
 fun ResultadosAnalisisDraft.toEntity(existingId: Int = 0): DatosReporte {
-    val nombres = padFour(contactos.map { it.nombre })
-    val puestos = padFour(contactos.map { it.puesto })
+    val nombres = padContactos(contactos.map { it.nombre })
+    val puestos = padContactos(contactos.map { it.puesto })
     val recomendacionesTexto = recomendaciones.map { it.texto }
     val recomendacionesImg1 = recomendaciones.map { it.imagen1 }
     val recomendacionesImg2 = recomendaciones.map { it.imagen2 }
@@ -75,9 +77,9 @@ fun ResultadosAnalisisDraft.toEntity(existingId: Int = 0): DatosReporte {
 }
 
 fun DatosReporte.toDraft(defaultInspectionId: String, defaultSiteId: String?): ResultadosAnalisisDraft {
-    val nombres = padFour(splitSerialized(nombreContacto))
-    val puestos = padFour(splitSerialized(puestoContacto))
-    val contactos = (0 until 4).map { index ->
+    val nombres = padContactos(splitSerialized(nombreContacto))
+    val puestos = padContactos(splitSerialized(puestoContacto))
+    val contactos = (0 until MAX_CONTACTOS).map { index ->
         ResultadosAnalisisContacto(
             nombre = nombres.getOrElse(index) { "" },
             puesto = puestos.getOrElse(index) { "" }
