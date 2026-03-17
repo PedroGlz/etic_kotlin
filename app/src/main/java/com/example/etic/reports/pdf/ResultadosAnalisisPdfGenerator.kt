@@ -495,8 +495,8 @@ class ResultadosAnalisisPdfGenerator {
             if (data.portada2 == null) {
                 drawBitmapInBox(portada, 57f, 80f, 106f)
             } else {
-                val portadaWidthMm = 50f
-                val portadaGapMm = 6f
+                val portadaWidthMm = 90f
+                val portadaGapMm = 2f
                 val totalWidthMm = portadaWidthMm * 2f + portadaGapMm
                 val startX = (220f - totalWidthMm) / 2f
                 drawBitmapInBox(portada, startX, 80f, portadaWidthMm)
@@ -504,7 +504,9 @@ class ResultadosAnalisisPdfGenerator {
             }
         }
 
-        currentY = mm(170f)
+        val portadaContactos = data.contactos.filter { it.nombre.isNotBlank() && it.puesto.isNotBlank() }
+        val manyContacts = portadaContactos.size > 4
+        currentY = if (manyContacts) mm(160f) else mm(166f)
         drawRow("Cliente:", data.header.cliente)
         if (data.header.grupoSitio.isNotBlank()) {
             val yMm = currentY * 25.4f / dpi
@@ -513,9 +515,9 @@ class ResultadosAnalisisPdfGenerator {
         }
         drawRow("", data.header.sitio)
         drawRow("", data.header.direccionCompleta.uppercase())
-        currentY += mm(13f)
+        currentY += if (manyContacts) mm(2.5f) else mm(13f)
 
-        data.contactos.filter { it.nombre.isNotBlank() && it.puesto.isNotBlank() }.forEachIndexed { index, contacto ->
+        portadaContactos.forEachIndexed { index, contacto ->
             ensureSpace(6f)
             val yMm = currentY * 25.4f / dpi
             if (index == 0) drawSingleLine("Contactos:", 30f, yMm + 4.4f, bodyBoldPaint)
