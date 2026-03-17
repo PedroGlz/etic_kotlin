@@ -6,7 +6,8 @@ import android.net.Uri
 class GenerateResultadosAnalisisUseCase(
     private val context: Context,
     private val folderProvider: ReportesFolderProvider,
-    private val getInspeccionImagenesTreeUri: (inspectionNumber: String) -> Uri?
+    private val getInspeccionImagenesTreeUri: (inspectionNumber: String) -> Uri?,
+    private val getClientesImagenesTreeUri: (inspectionNumber: String) -> Uri?
 ) {
     suspend fun run(
         noInspeccion: String,
@@ -19,7 +20,8 @@ class GenerateResultadosAnalisisUseCase(
         val pdfPrincipal = GenerateResultadosAnalisisPdfUseCase(
             context = context,
             folderProvider = folderProvider,
-            getInspeccionImagenesTreeUri = getInspeccionImagenesTreeUri
+            getInspeccionImagenesTreeUri = getInspeccionImagenesTreeUri,
+            getClientesImagenesTreeUri = getClientesImagenesTreeUri
         ).run(
             noInspeccion = noInspeccion,
             inspeccionId = inspeccionId,

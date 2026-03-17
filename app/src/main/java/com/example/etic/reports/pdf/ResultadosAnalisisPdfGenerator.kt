@@ -1,4 +1,4 @@
-package com.example.etic.reports.pdf
+﻿package com.example.etic.reports.pdf
 
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -47,6 +47,9 @@ class ResultadosAnalisisPdfGenerator {
             textSize = pt(20f)
             typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL)
         }
+        val titleBoldPaint = TextPaint(titlePaint).apply {
+            typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
+        }
         val headingBluePaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.rgb(0, 2, 83)
             textSize = pt(11f)
@@ -75,6 +78,9 @@ class ResultadosAnalisisPdfGenerator {
             color = Color.BLACK
             textSize = pt(8f)
             typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL)
+        }
+        val footerBoldPaint = TextPaint(footerPaint).apply {
+            typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
         }
         val captionPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.rgb(0, 32, 96)
@@ -160,7 +166,11 @@ class ResultadosAnalisisPdfGenerator {
             footerRow("Sucursal matriz", "Col. El Dorado, C.P. 37590", 2)
             footerRow("Col. Las Américas, C.P. 55076", "León, Guanajuato", 3)
             footerRow("Ecatepec de Morelos, Estado de México", "Teléfonos: 55 8032 5401", 4)
-            footerRow("Teléfonos: 55 8032 5401", "F-PRS-02", 5)
+            val footerRowY = footerY + mm(20f)
+            canvas.drawText("Teléfonos: 55 8032 5401", x, footerRowY, footerPaint)
+            val rightText = "F-PRS-02"
+            val rightWidth = footerBoldPaint.measureText(rightText)
+            canvas.drawText(rightText, pageWidth - x - rightWidth, footerRowY, footerBoldPaint)
         }
 
         fun drawPageHeader() {
@@ -480,15 +490,15 @@ class ResultadosAnalisisPdfGenerator {
 
         data.logo?.let { drawBitmapInBox(it, 25f, 25f, 53f) }
         data.isoLogo?.let { drawBitmapInBox(it, 18f, 9f, 20f) }
-        data.logoCliente?.let { drawBitmapInBox(it, 139f, 23f, 51f, 21f) }
+        data.logoCliente?.let { drawBitmapInBox(it, 139f, 9f, 53f, 53f) }
 
-        drawTextBlock(
-            "F-PRS-02 - Resultados de análisis de riesgos con termografía infrarroja",
-            30f,
-            55f,
-            160f,
+        drawSingleLine("F-PRS-02 - Resultados de análisis de riesgos", 110f, 53f, titlePaint, Paint.Align.CENTER)
+        drawSingleLine(
+            "con termografía infrarroja",
+            110f,
+            59f,
             titlePaint,
-            Layout.Alignment.ALIGN_CENTER
+            Paint.Align.CENTER
         )
 
         data.portada?.let { portada ->
@@ -503,10 +513,13 @@ class ResultadosAnalisisPdfGenerator {
                 drawBitmapInBox(data.portada2, startX + portadaWidthMm + portadaGapMm, 80f, portadaWidthMm)
             }
         }
+        data.portada3?.let { portada3 ->
+            drawBitmapInBox(portada3, 174f, 58f, 40f, 28f)
+        }
 
         val portadaContactos = data.contactos.filter { it.nombre.isNotBlank() && it.puesto.isNotBlank() }
         val manyContacts = portadaContactos.size > 4
-        currentY = if (manyContacts) mm(160f) else mm(166f)
+        currentY = if (manyContacts) mm(154f) else mm(156f)
         drawRow("Cliente:", data.header.cliente)
         if (data.header.grupoSitio.isNotBlank()) {
             val yMm = currentY * 25.4f / dpi
@@ -515,7 +528,20 @@ class ResultadosAnalisisPdfGenerator {
         }
         drawRow("", data.header.sitio)
         drawRow("", data.header.direccionCompleta.uppercase())
-        currentY += if (manyContacts) mm(2.5f) else mm(13f)
+        if (data.header.detalleUbicacion.isNotBlank()) {
+            val yMm = currentY * 25.4f / dpi
+            drawTextBlock(data.header.detalleUbicacion.uppercase(), 77f, yMm, 113f, bodyPaint)
+            val detailHeightMm = max(
+                5f,
+                measureTextHeight(data.header.detalleUbicacion, bodyPaint, 113f) * 25.4f / dpi
+            )
+            currentY = mm(yMm + detailHeightMm)
+        }
+        currentY += if (manyContacts) {
+            mm(2.5f)
+        } else {
+            mm(13f)
+        }
 
         portadaContactos.forEachIndexed { index, contacto ->
             ensureSpace(6f)
@@ -532,20 +558,36 @@ class ResultadosAnalisisPdfGenerator {
 
         startPage()
         drawSingleLine(data.header.cliente, 190f, 39.4f, bodyBoldPaint, Paint.Align.RIGHT)
-        if (data.header.grupoSitio.isNotBlank()) {
-            drawTextBlock(data.header.grupoSitio, 30f, 40f, 160f, bodyPaint, Layout.Alignment.ALIGN_OPPOSITE)
+        var pagina2Y = if (data.header.grupoSitio.isNotBlank()) {
+            drawTextBlock(data.header.grupoSitio, 30f, 40f, 160f, bodyPaint, Layout.Alignment.ALIGN_OPPOSITE) + 3.5f
+        } else {
+            44.8f
+        }
+        if (data.header.sitio.isNotBlank()) {
+            drawSingleLine(data.header.sitio.uppercase(), 190f, pagina2Y, bodyBoldPaint, Paint.Align.RIGHT)
+            pagina2Y += 5f
+        }
+        if (data.header.direccionCompleta.isNotBlank()) {
+            pagina2Y = drawTextBlock(
+                data.header.direccionCompleta.uppercase(),
+                30f,
+                pagina2Y,
+                160f,
+                bodyPaint,
+                Layout.Alignment.ALIGN_OPPOSITE
+            ) + 2f
         }
         drawTextBlock(
             "Asunto: Entrega de informe de servicio de análisis de riesgo con termografía infrarroja.",
             30f,
-            64f,
+            pagina2Y + 6f,
             160f,
             bodyUnderlinePaint,
             Layout.Alignment.ALIGN_OPPOSITE
         )
         drawSingleLine(if (data.contactos.getOrNull(1)?.nombre?.isNotBlank() == true) "Estimados:" else "Estimado:", 30f, 89f, bodyBoldPaint)
         var saludoY = 94f
-        data.contactos.filter { it.nombre.isNotBlank() && it.puesto.isNotBlank() }.forEach {
+        data.contactos.filter { it.nombre.isNotBlank() && it.puesto.isNotBlank() }.take(5).forEach {
             drawSingleLine(it.nombre, 30f, saludoY, bodyPaint)
             saludoY += 5f
         }
@@ -596,7 +638,7 @@ class ResultadosAnalisisPdfGenerator {
         currentY += mm(10f)
         drawBulletJustifiedSegments(
             listOf(
-                StyledSegment("Se genero el inventario de todos los equipos criticos en nuestra base de datos ETIC System,", Color.BLACK),
+                StyledSegment("Se generó el inventario de todos los equipos críticos en nuestra base de datos ETIC System,", Color.BLACK),
                 StyledSegment("(Inventario De Equipo).", Color.rgb(79, 129, 189)),
                 StyledSegment("Se colocó un código de barras que ayudará a tener un control de rápida identificación para futuras inspecciones.", Color.BLACK)
             ),
@@ -613,7 +655,7 @@ class ResultadosAnalisisPdfGenerator {
         drawBulletJustifiedSegments(
             listOf(
                 StyledSegment("Los problemas identificados en esta inspección han sido documentados en las secciones eléctrica, mecánica y anomalías visuales, según aplique,", Color.BLACK),
-                StyledSegment("(Eléctrico, Mecánico, Visual).", Color.rgb(79, 129, 189))
+                StyledSegment("(Eléctrico, Mecánico, Visual, Aislamiento Térmico).", Color.rgb(79, 129, 189))
             ),
             bulletLabel = "c."
         )

@@ -16,6 +16,7 @@ class GenerateResultadosAnalisisPdfUseCase(
     private val context: Context,
     private val folderProvider: ReportesFolderProvider,
     private val getInspeccionImagenesTreeUri: (inspectionNumber: String) -> Uri?,
+    private val getClientesImagenesTreeUri: (inspectionNumber: String) -> Uri?,
     private val pdfGenerator: ResultadosAnalisisPdfGenerator = ResultadosAnalisisPdfGenerator()
 ) {
     suspend fun run(
@@ -187,22 +188,31 @@ class GenerateResultadosAnalisisPdfUseCase(
             val imageFolder = getInspeccionImagenesTreeUri(noInspeccion)?.let { treeUri ->
                 DocumentFile.fromTreeUri(context, treeUri) ?: DocumentFile.fromSingleUri(context, treeUri)
             }
-            fun loadImageByName(imageName: String?): android.graphics.Bitmap? {
+            val clienteImageFolder = getClientesImagenesTreeUri(noInspeccion)?.let { treeUri ->
+                DocumentFile.fromTreeUri(context, treeUri) ?: DocumentFile.fromSingleUri(context, treeUri)
+            }
+
+            fun loadImageByName(imageName: String?, folder: DocumentFile?): android.graphics.Bitmap? {
                 val normalized = imageName?.trim().orEmpty()
                 if (normalized.isBlank()) return null
-                val file = imageFolder?.findFile(normalized)
-                    ?: imageFolder?.listFiles()?.firstOrNull { it.name.equals(normalized, true) }
+                val file = folder?.findFile(normalized)
+                    ?: folder?.listFiles()?.firstOrNull { it.name.equals(normalized, true) }
                 return runCatching {
                     file?.let {
                         context.contentResolver.openInputStream(it.uri)?.use(BitmapFactory::decodeStream)
                     }
                 }.getOrNull()
             }
+
             val portada = draft.nombreImgPortada.takeIf { it.isNotBlank() }?.let { imageName ->
-                loadImageByName(imageName)
+                loadImageByName(imageName, imageFolder)
             }
             val portada2 = draft.nombreImgPortada2.takeIf { it.isNotBlank() }?.let { imageName ->
-                loadImageByName(imageName)
+                loadImageByName(imageName, imageFolder)
+            }
+            val portada3 = draft.nombreImgPortada3.takeIf { it.isNotBlank() }?.let { imageName ->
+                loadImageByName(imageName, clienteImageFolder)
+                    ?: loadImageByName(imageName, imageFolder)
             }
 
             val direccion = listOfNotNull(
@@ -217,6 +227,7 @@ class GenerateResultadosAnalisisPdfUseCase(
                 sitio = sitio?.sitio.orEmpty(),
                 grupoSitio = inspeccion.idGrupoSitios?.let { grupoDao.getByIdActivo(it)?.grupo }.orEmpty(),
                 direccionCompleta = direccion,
+                detalleUbicacion = draft.detalleUbicacion.trim(),
                 municipio = sitio?.municipio.orEmpty(),
                 estado = sitio?.estado.orEmpty(),
                 fechaServicio = formatFechaServicio(draft.fechaInicio, draft.fechaFin),
@@ -260,13 +271,13 @@ class GenerateResultadosAnalisisPdfUseCase(
             val clienteLogo = inspeccion.idCliente
                 ?.let { clienteDao.getByIdActivo(it) }
                 ?.imagenCliente
-                ?.let { loadImageByName(it) }
+                ?.let { loadImageByName(it, imageFolder) }
 
             val recomendaciones = draft.recomendaciones.map {
                 ResultadosAnalisisPdfRecommendationEntry(
                     texto = it.texto,
-                    imagen1 = loadImageByName(it.imagen1),
-                    imagen2 = loadImageByName(it.imagen2)
+                    imagen1 = loadImageByName(it.imagen1, imageFolder),
+                    imagen2 = loadImageByName(it.imagen2, imageFolder)
                 )
             }
 
@@ -282,6 +293,7 @@ class GenerateResultadosAnalisisPdfUseCase(
                 contactos = draft.contactos,
                 portada = portada,
                 portada2 = portada2,
+                portada3 = portada3,
                 logoCliente = clienteLogo,
                 descripciones = draft.descripciones,
                 areasInspeccionadas = draft.areasInspeccionadas,

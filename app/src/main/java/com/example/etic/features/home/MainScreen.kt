@@ -176,6 +176,7 @@ fun MainScreen(
     var resultsLocationOptions by remember { mutableStateOf<List<TreeNode>>(emptyList()) }
     var resultsProblemOptions by remember { mutableStateOf<List<ResultadosAnalisisProblemOption>>(emptyList()) }
     var resultsAvailableImages by remember { mutableStateOf<List<String>>(emptyList()) }
+    var resultsAvailableClientImages by remember { mutableStateOf<List<String>>(emptyList()) }
     val imageExtensionRegex = remember { Regex("\\.(jpg|jpeg|png|bmp|gif)$", RegexOption.IGNORE_CASE) }
     val rootTreeUriStr by eticPrefs.rootTreeUriFlow.collectAsState(initial = null)
     val rootTreeUri = remember(rootTreeUriStr) { rootTreeUriStr?.let { Uri.parse(it) } }
@@ -338,6 +339,14 @@ fun MainScreen(
                         .filter { imageExtensionRegex.containsMatchIn(it) }
                         .sorted()
                 }
+                resultsAvailableClientImages = withContext(Dispatchers.IO) {
+                    val currentRootUri = rootTreeUri ?: return@withContext emptyList()
+                    val dir = safManager.getClientesDir(appContext, currentRootUri)
+                    safManager.listFiles(dir)
+                        .mapNotNull { it.name }
+                        .filter { imageExtensionRegex.containsMatchIn(it) }
+                        .sorted()
+                }
 
                 if (resultsAnalysisDraft?.fechaInicio.isNullOrBlank()) {
                     val start = inspeccionDao.getById(insp.idInspeccion)?.fechaInicio?.take(10).orEmpty()
@@ -384,7 +393,10 @@ fun MainScreen(
                 val useCase = GenerateResultadosAnalisisUseCase(
                     context = appContext,
                     folderProvider = buildFolderProvider(),
-                    getInspeccionImagenesTreeUri = buildImagesProvider()
+                    getInspeccionImagenesTreeUri = buildImagesProvider(),
+                    getClientesImagenesTreeUri = { _: String ->
+                        rootTreeUri?.let { safManager.getClientesDir(appContext, it)?.uri }
+                    }
                 )
                 val result = useCase.run(
                     noInspeccion = noInspeccion,
@@ -1666,6 +1678,7 @@ fun MainScreen(
                         locationOptions = resultsLocationOptions,
                         problemOptions = resultsProblemOptions,
                         availableImages = resultsAvailableImages,
+                        availableClientImages = resultsAvailableClientImages,
                         rootTreeUri = rootTreeUri,
                         inspectionNumber = currentInspectionSnapshot?.noInspeccion?.toString(),
                         isBusy = isGeneratingReport,

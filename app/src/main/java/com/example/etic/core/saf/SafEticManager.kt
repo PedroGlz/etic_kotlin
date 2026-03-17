@@ -10,7 +10,13 @@ class SafEticManager {
     fun ensureEticFolders(context: Context, rootTreeUri: Uri): DocumentFile? {
         val root = DocumentFile.fromTreeUri(context, rootTreeUri) ?: return null
         val etic = findOrCreateDir(root, "ETIC") ?: return null
+        findOrCreateDir(etic, "IMG_CLIENTES")
         return findOrCreateDir(etic, "Inspecciones")
+    }
+
+    fun getEticDir(context: Context, rootTreeUri: Uri): DocumentFile? {
+        val root = DocumentFile.fromTreeUri(context, rootTreeUri) ?: return null
+        return findOrCreateDir(root, "ETIC")
     }
 
     fun ensureInspectionFolders(
@@ -30,6 +36,13 @@ class SafEticManager {
         rootTreeUri: Uri,
         inspectionNumero: String
     ): DocumentFile? = ensureInspectionFolders(context, rootTreeUri, inspectionNumero).first
+
+    fun getClientesDir(
+        context: Context,
+        rootTreeUri: Uri
+    ): DocumentFile? = getEticDir(context, rootTreeUri)?.let { etic ->
+        findOrCreateDir(etic, "IMG_CLIENTES")
+    }
 
     fun getReportsDir(
         context: Context,

@@ -25,6 +25,7 @@ data class ResultadosAnalisisDraft(
     val fechaAnterior: String = "",
     val nombreImgPortada: String = "",
     val nombreImgPortada2: String = "",
+    val nombreImgPortada3: String = "",
     val descripciones: List<String> = emptyList(),
     val areasInspeccionadas: List<String> = emptyList(),
     val recomendaciones: List<ResultadosAnalisisRecomendacion> = emptyList(),
@@ -56,7 +57,7 @@ fun ResultadosAnalisisDraft.toEntity(existingId: Int = 0): DatosReporte {
     val recomendacionesTexto = recomendaciones.map { it.texto }
     val recomendacionesImg1 = recomendaciones.map { it.imagen1 }
     val recomendacionesImg2 = recomendaciones.map { it.imagen2 }
-    val portadaImages = listOf(nombreImgPortada, nombreImgPortada2)
+    val portadaImages = listOf(nombreImgPortada, nombreImgPortada2, nombreImgPortada3)
         .map { it.trim() }
         .filter { it.isNotEmpty() }
 
@@ -122,6 +123,7 @@ fun DatosReporte.toDraft(defaultInspectionId: String, defaultSiteId: String?): R
             fechaAnterior = "",
             nombreImgPortada = portadaImages.getOrElse(0) { "" },
         nombreImgPortada2 = portadaImages.getOrElse(1) { "" },
+        nombreImgPortada3 = portadaImages.getOrElse(2) { "" },
         descripciones = splitSerialized(descripcionReporte),
         areasInspeccionadas = splitSerialized(areasInspeccionadas),
         recomendaciones = recomendaciones,

@@ -1,4 +1,4 @@
-package com.example.etic.ui.inspection
+﻿package com.example.etic.ui.inspection
 
 import android.app.Activity
 import android.app.DatePickerDialog
@@ -131,6 +131,7 @@ fun ResultsAnalysisDialog(
     locationOptions: List<TreeNode>,
     problemOptions: List<ResultadosAnalisisProblemOption>,
     availableImages: List<String>,
+    availableClientImages: List<String>,
     rootTreeUri: Uri?,
     inspectionNumber: String?,
     isBusy: Boolean,
@@ -152,8 +153,8 @@ fun ResultsAnalysisDialog(
     }
 
     val steps = listOf(
-        WizardStep("Portada", "Informacion principal"),
-        WizardStep("Descripcion", "Objetivos y alcance"),
+        WizardStep("Portada", "Información principal"),
+        WizardStep("Descripción", "Objetivos y alcance"),
         WizardStep("Recomendaciones", "Hallazgos y seguimiento"),
         WizardStep("Referencias", "Normas y observaciones"),
         WizardStep("Inventario", "Seleccionar equipos inspeccionados"),
@@ -174,6 +175,7 @@ fun ResultsAnalysisDialog(
 
     val offset = remember { mutableStateOf(Offset.Zero) }
     val availableImageOptions = remember { mutableStateListOf<String>() }
+    val availableClientImageOptions = remember { mutableStateListOf<String>() }
     val today = LocalDate.now()
     var fechaInicio by remember {
         mutableStateOf(
@@ -191,6 +193,7 @@ fun ResultsAnalysisDialog(
     }
     var nombreImgPortada by remember { mutableStateOf(initialDraft.nombreImgPortada) }
     var nombreImgPortada2 by remember { mutableStateOf(initialDraft.nombreImgPortada2) }
+    var nombreImgPortada3 by remember { mutableStateOf(initialDraft.nombreImgPortada3) }
     var detalleUbicacion by remember { mutableStateOf(initialDraft.detalleUbicacion) }
     val contactos = remember {
         mutableStateListOf<ResultadosAnalisisContacto>().apply {
@@ -241,6 +244,10 @@ fun ResultsAnalysisDialog(
         availableImageOptions.clear()
         availableImageOptions.addAll(availableImages.distinct())
     }
+    LaunchedEffect(availableClientImages) {
+        availableClientImageOptions.clear()
+        availableClientImageOptions.addAll(availableClientImages.distinct())
+    }
 
     fun buildDraft(): ResultadosAnalisisDraft {
         return ResultadosAnalisisDraft(
@@ -251,8 +258,9 @@ fun ResultsAnalysisDialog(
             fechaInicio = fechaInicio,
             fechaFin = fechaFin,
             fechaAnterior = fechaAnterior,
-            nombreImgPortada = nombreImgPortada.trim(),
-            nombreImgPortada2 = nombreImgPortada2.trim(),
+                nombreImgPortada = nombreImgPortada.trim(),
+                nombreImgPortada2 = nombreImgPortada2.trim(),
+                nombreImgPortada3 = nombreImgPortada3.trim(),
             descripciones = descripciones.map { it.trim() }.filter { it.isNotEmpty() },
             areasInspeccionadas = areas.map { it.trim() }.filter { it.isNotEmpty() },
             recomendaciones = recomendaciones.map {
@@ -300,30 +308,34 @@ fun ResultsAnalysisDialog(
         validationError = null
     }
 
-    fun nextImage(current: String, forward: Boolean): String {
-        if (availableImageOptions.isEmpty()) return current
+    fun nextImage(current: String, forward: Boolean, target: ImagePickerTarget? = null): String {
+        val imageOptions = when (target?.imageSlot) {
+            3 -> availableClientImageOptions
+            else -> availableImageOptions
+        }
+        if (imageOptions.isEmpty()) return current
 
         val normalizedCurrent = current.trim()
         if (normalizedCurrent.isBlank()) {
-            return if (forward) availableImageOptions.first() else availableImageOptions.last()
+            return if (forward) imageOptions.first() else imageOptions.last()
         }
 
-        val currentIndex = availableImageOptions.indexOfFirst { it.equals(normalizedCurrent, true) }
+        val currentIndex = imageOptions.indexOfFirst { it.equals(normalizedCurrent, true) }
         if (currentIndex >= 0) {
             return when {
-                forward -> availableImageOptions[(currentIndex + 1) % availableImageOptions.size]
-                else -> availableImageOptions[(currentIndex - 1 + availableImageOptions.size) % availableImageOptions.size]
+                forward -> imageOptions[(currentIndex + 1) % imageOptions.size]
+                else -> imageOptions[(currentIndex - 1 + imageOptions.size) % imageOptions.size]
             }
         }
 
         val match = IMAGE_SEQUENCE_REGEX.find(normalizedCurrent)
-            ?: return if (forward) availableImageOptions.first() else availableImageOptions.last()
+            ?: return if (forward) imageOptions.first() else imageOptions.last()
         val prefix = match.groupValues[1]
         val suffix = match.groupValues[3]
         val currentNumber = match.groupValues[2].toIntOrNull()
-            ?: return if (forward) availableImageOptions.first() else availableImageOptions.last()
+            ?: return if (forward) imageOptions.first() else imageOptions.last()
 
-        val sequenceCandidates = availableImageOptions.mapNotNull { image ->
+        val sequenceCandidates = imageOptions.mapNotNull { image ->
             val parsed = IMAGE_SEQUENCE_REGEX.find(image.trim()) ?: return@mapNotNull null
             if (!parsed.groupValues[1].equals(prefix, true) || !parsed.groupValues[3].equals(suffix, true)) {
                 return@mapNotNull null
@@ -333,7 +345,7 @@ fun ResultsAnalysisDialog(
         }.sortedBy { it.second }
 
         if (sequenceCandidates.isEmpty()) {
-            return if (forward) availableImageOptions.first() else availableImageOptions.last()
+            return if (forward) imageOptions.first() else imageOptions.last()
         }
 
         return if (forward) {
@@ -362,13 +374,18 @@ fun ResultsAnalysisDialog(
 
     fun updateImageValue(target: ImagePickerTarget, imageName: String) {
         val normalized = imageName.trim()
-        if (normalized.isNotBlank() && availableImageOptions.none { it.equals(normalized, true) }) {
-            availableImageOptions.add(normalized)
-            availableImageOptions.sortBy { it.lowercase() }
+        val imageOptions = when (target.imageSlot) {
+            3 -> availableClientImageOptions
+            else -> availableImageOptions
+        }
+        if (normalized.isNotBlank() && imageOptions.none { it.equals(normalized, true) }) {
+            imageOptions.add(normalized)
+            imageOptions.sortBy { it.lowercase() }
         }
         if (target.recommendationIndex == null) {
             when (target.imageSlot) {
                 2 -> nombreImgPortada2 = normalized
+                3 -> nombreImgPortada3 = normalized
                 else -> nombreImgPortada = normalized
             }
             return
@@ -420,7 +437,7 @@ fun ResultsAnalysisDialog(
         activeImportTarget = null
         if (bmp == null || target == null) {
             if (bmp == null) {
-                Toast.makeText(context, "La camara no devolvio imagen.", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "La cámara no devolvió imagen.", Toast.LENGTH_SHORT).show()
             }
             return@rememberLauncherForActivityResult
         }
@@ -434,7 +451,11 @@ fun ResultsAnalysisDialog(
 
     fun beginImageImport(target: ImagePickerTarget, fromCamera: Boolean) {
         if (rootTreeUri == null || inspectionNumber.isNullOrBlank()) {
-            Toast.makeText(context, "No hay acceso a la carpeta Imagenes de la inspeccion.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(
+                context,
+                "No hay acceso a la carpeta Imágenes de la inspección.",
+                Toast.LENGTH_SHORT
+            ).show()
             return
         }
         activeImportTarget = target
@@ -468,7 +489,7 @@ fun ResultsAnalysisDialog(
             ) {
                 Column(modifier = Modifier.fillMaxSize()) {
                     ProblemDialogDraggableHeader(
-                        title = "Resultados de analisis",
+                        title = "Resultados de análisis",
                         onDrag = { drag -> offset.value += drag }
                     )
 
@@ -618,22 +639,56 @@ fun ResultsAnalysisDialog(
                                                 }
                                             )
                                         }
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            ImageInputButtonGroup(
+                                                label = "Img Cliente",
+                                                value = nombreImgPortada3,
+                                                onValueChange = { nombreImgPortada3 = it },
+                                                modifier = Modifier.weight(1f),
+                                                isRequired = false,
+                                                onMoveUp = {
+                                                    nombreImgPortada3 = nextImage(
+                                                        nombreImgPortada3,
+                                                        true,
+                                                        ImagePickerTarget(imageSlot = 3)
+                                                    )
+                                                },
+                                                onMoveDown = {
+                                                    nombreImgPortada3 = nextImage(
+                                                        nombreImgPortada3,
+                                                        false,
+                                                        ImagePickerTarget(imageSlot = 3)
+                                                    )
+                                                },
+                                                onDotsClick = {
+                                                    imagePickerTarget = ImagePickerTarget(
+                                                        recommendationIndex = null,
+                                                        imageSlot = 3
+                                                    )
+                                                },
+                                                onFolderClick = null,
+                                                onCameraClick = null
+                                            )
+                                        }
                                         MultilineField(
                                             value = detalleUbicacion,
                                             onValueChange = { detalleUbicacion = it },
                                             modifier = Modifier.fillMaxWidth(),
-                                            label = "Detalle ubicacion"
+                                            label = "Detalle ubicación"
                                         )
                                     }
                                     1 -> {
-                                        Text("Paso 2: Descripcion", style = MaterialTheme.typography.titleMedium)
+                                        Text("Paso 2: Descripción", style = MaterialTheme.typography.titleMedium)
                                         EditableStringList(
                                             title = "Descripciones",
                                             values = descripciones,
                                             minRows = 1
                                         )
                                         EditableStringList(
-                                            title = "Areas inspeccionadas",
+                                            title = "Áreas inspeccionadas",
                                             values = areas,
                                             minRows = 1
                                         )
@@ -655,7 +710,7 @@ fun ResultsAnalysisDialog(
                                                         verticalAlignment = Alignment.CenterVertically
                                                     ) {
                                                         Text(
-                                                            "Recomendacion ${index + 1}",
+                                                            "Recomendación ${index + 1}",
                                                             style = MaterialTheme.typography.titleSmall,
                                                             modifier = Modifier.weight(1f)
                                                         )
@@ -770,7 +825,7 @@ fun ResultsAnalysisDialog(
                                         ) {
                                             Icon(Icons.Outlined.Add, contentDescription = null)
                                             Spacer(Modifier.width(8.dp))
-                                            Text("Agregar recomendacion")
+                                            Text("Agregar recomendación")
                                         }
                                     }
                                     3 -> {
@@ -857,11 +912,15 @@ fun ResultsAnalysisDialog(
         }
     }
 
-    imagePickerTarget?.let { target ->
+        imagePickerTarget?.let { target ->
         Dialog(
             onDismissRequest = { imagePickerTarget = null },
             properties = DialogProperties(usePlatformDefaultWidth = true)
         ) {
+            val optionsForTarget = when (target.imageSlot) {
+                3 -> availableClientImageOptions
+                else -> availableImageOptions
+            }
             Card(
                 shape = RoundedCornerShape(14.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
@@ -873,9 +932,13 @@ fun ResultsAnalysisDialog(
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Text("Seleccionar imagen", style = MaterialTheme.typography.titleMedium)
-                    if (availableImageOptions.isEmpty()) {
+                    if (optionsForTarget.isEmpty()) {
                         Text(
-                            "No hay imagenes disponibles en la inspeccion.",
+                            if (target.imageSlot == 3) {
+                                "No hay imagenes disponibles en IMG_CLIENTES."
+                            } else {
+                                "No hay imagenes disponibles en la inspeccion."
+                            },
                             style = MaterialTheme.typography.bodyMedium
                         )
                     } else {
@@ -886,7 +949,7 @@ fun ResultsAnalysisDialog(
                                 .verticalScroll(rememberScrollState()),
                             verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            availableImageOptions.forEach { imageName ->
+                            optionsForTarget.forEach { imageName ->
                                 TextButton(
                                     onClick = {
                                         updateImageValue(target, imageName)
@@ -1241,4 +1304,3 @@ private fun MultilineField(
         }
     }
 }
-

@@ -105,7 +105,7 @@ internal object DatosReporteStore {
             put(
                 "nombre_img_portada",
                 serializeStrings(
-                    listOf(draft.nombreImgPortada, draft.nombreImgPortada2)
+                    listOf(draft.nombreImgPortada, draft.nombreImgPortada2, draft.nombreImgPortada3)
                         .map { it.trim() }
                         .filter { it.isNotEmpty() }
                 ).ifBlank { null }
@@ -167,6 +167,7 @@ internal object DatosReporteStore {
             fechaFin = fechaFin.orEmpty(),
             nombreImgPortada = portadaImages.getOrElse(0) { "" },
             nombreImgPortada2 = portadaImages.getOrElse(1) { "" },
+            nombreImgPortada3 = portadaImages.getOrElse(2) { "" },
             descripciones = splitSerialized(descripcionReporte),
             areasInspeccionadas = splitSerialized(areasInspeccionadas),
             recomendaciones = recomendaciones,
