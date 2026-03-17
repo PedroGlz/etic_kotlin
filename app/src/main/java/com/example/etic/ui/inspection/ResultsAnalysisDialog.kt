@@ -84,6 +84,7 @@ import com.example.etic.reports.ResultadosAnalisisDraft
 import com.example.etic.reports.ResultadosAnalisisProblemOption
 import com.example.etic.reports.ResultadosAnalisisRecomendacion
 import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 import kotlin.math.max
 import kotlin.math.roundToInt
 
@@ -160,10 +161,34 @@ fun ResultsAnalysisDialog(
     )
 
     val context = LocalContext.current
+    val dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
+    fun normalizeDate(value: String?, formatter: DateTimeFormatter): String {
+        val raw = value.orEmpty().trim()
+        if (raw.isBlank()) return ""
+        val dateToken = raw.take(10)
+        val parsed = runCatching { LocalDate.parse(dateToken) }.getOrNull()
+            ?: runCatching { LocalDate.parse(dateToken, formatter) }.getOrNull()
+            ?: runCatching { LocalDate.parse(raw, formatter) }.getOrNull()
+        return parsed?.format(formatter).orEmpty()
+    }
+
     val offset = remember { mutableStateOf(Offset.Zero) }
     val availableImageOptions = remember { mutableStateListOf<String>() }
-    var fechaInicio by remember { mutableStateOf(initialDraft.fechaInicio) }
-    var fechaFin by remember { mutableStateOf(initialDraft.fechaFin) }
+    val today = LocalDate.now()
+    var fechaInicio by remember {
+        mutableStateOf(
+            normalizeDate(initialDraft.fechaInicio, dateFormatter).ifBlank { today.format(dateFormatter) }
+        )
+    }
+    var fechaFin by remember {
+        mutableStateOf(
+            normalizeDate(initialDraft.fechaFin, dateFormatter)
+                .ifBlank { normalizeDate(initialDraft.fechaInicio, dateFormatter).ifBlank { today.format(dateFormatter) } }
+        )
+    }
+    var fechaAnterior by remember {
+        mutableStateOf(normalizeDate(initialDraft.fechaAnterior, dateFormatter))
+    }
     var nombreImgPortada by remember { mutableStateOf(initialDraft.nombreImgPortada) }
     var nombreImgPortada2 by remember { mutableStateOf(initialDraft.nombreImgPortada2) }
     var detalleUbicacion by remember { mutableStateOf(initialDraft.detalleUbicacion) }
@@ -225,6 +250,7 @@ fun ResultsAnalysisDialog(
             contactos = contactos.toList(),
             fechaInicio = fechaInicio,
             fechaFin = fechaFin,
+            fechaAnterior = fechaAnterior,
             nombreImgPortada = nombreImgPortada.trim(),
             nombreImgPortada2 = nombreImgPortada2.trim(),
             descripciones = descripciones.map { it.trim() }.filter { it.isNotEmpty() },
@@ -320,11 +346,13 @@ fun ResultsAnalysisDialog(
     }
 
     fun openDatePicker(currentValue: String, onSelected: (String) -> Unit) {
-        val base = runCatching { LocalDate.parse(currentValue) }.getOrElse { LocalDate.now() }
+        val normalized = normalizeDate(currentValue, dateFormatter)
+        val base = runCatching { LocalDate.parse(normalized, dateFormatter) }.getOrNull()
+            ?: LocalDate.now()
         DatePickerDialog(
             context,
             { _, year, month, dayOfMonth ->
-                onSelected("%04d-%02d-%02d".format(year, month + 1, dayOfMonth))
+                onSelected("%02d/%02d/%04d".format(dayOfMonth, month + 1, year))
             },
             base.year,
             base.monthValue - 1,
@@ -492,7 +520,10 @@ fun ResultsAnalysisDialog(
                                             contactos = contactos,
                                             maxContacts = MAX_CONTACTOS
                                         )
-                                        Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.spacedBy(5.dp)
+                                        ) {
                                             DateField(
                                                 modifier = Modifier.weight(1f),
                                                 label = "Fecha de inicio",
@@ -504,6 +535,12 @@ fun ResultsAnalysisDialog(
                                                 label = "Fecha final",
                                                 value = fechaFin,
                                                 onClick = { openDatePicker(fechaFin) { fechaFin = it } }
+                                            )
+                                            DateField(
+                                                modifier = Modifier.weight(1f),
+                                                label = "Fecha anterior",
+                                                value = fechaAnterior,
+                                                onClick = { openDatePicker(fechaAnterior) { fechaAnterior = it } }
                                             )
                                         }
                                         Row(
@@ -1024,14 +1061,18 @@ private fun DateField(
     value: String,
     onClick: () -> Unit
 ) {
-    InfoField(
-        value = value,
-        onValueChange = {},
-        modifier = modifier.clickable(onClick = onClick),
-        label = label,
-        readOnly = true,
-        enabled = true
-    )
+    Column(modifier = modifier) {
+        Text(text = label, style = MaterialTheme.typography.labelSmall)
+        OutlinedFieldBox(modifier = Modifier.clickable(onClick = onClick)) {
+            Text(
+                text = value,
+                style = MaterialTheme.typography.bodySmall.copy(
+                    color = MaterialTheme.colorScheme.onSurface
+                ),
+                modifier = Modifier.weight(1f)
+            )
+        }
+    }
 }
 
 @Composable

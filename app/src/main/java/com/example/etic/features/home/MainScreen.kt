@@ -317,10 +317,15 @@ fun MainScreen(
                     siteId = insp.idSitio,
                     defaultDraft = defaultDraft
                 ).getOrElse { defaultDraft }
+                val previousInspectionDate = runCatching {
+                    val previousNo = inspeccionDao.getById(insp.idInspeccion)?.noInspeccionAnt ?: return@runCatching ""
+                    inspeccionDao.getAll().firstOrNull { it.noInspeccion == previousNo }?.fechaInicio.orEmpty()
+                }.getOrNull().orEmpty()
 
                 resultsAnalysisDraft = loadedDraft.copy(
                     fechaInicio = loadedDraft.fechaInicio,
                     fechaFin = loadedDraft.fechaFin.ifBlank { loadedDraft.fechaInicio },
+                    fechaAnterior = loadedDraft.fechaAnterior.ifBlank { previousInspectionDate },
                     selectedInventoryIds = loadedDraft.selectedInventoryIds.ifEmpty { locationRoots.map { it.id } },
                     selectedProblemIds = loadedDraft.selectedProblemIds.ifEmpty { problemOptions.map { it.id } }
                 )

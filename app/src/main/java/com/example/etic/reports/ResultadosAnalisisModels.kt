@@ -22,6 +22,7 @@ data class ResultadosAnalisisDraft(
     val contactos: List<ResultadosAnalisisContacto> = emptyList(),
     val fechaInicio: String = "",
     val fechaFin: String = "",
+    val fechaAnterior: String = "",
     val nombreImgPortada: String = "",
     val nombreImgPortada2: String = "",
     val descripciones: List<String> = emptyList(),
@@ -111,14 +112,15 @@ fun DatosReporte.toDraft(defaultInspectionId: String, defaultSiteId: String?): R
         }
     }
 
-    return ResultadosAnalisisDraft(
-        inspectionId = idInspeccion ?: defaultInspectionId,
-        siteId = idSitio ?: defaultSiteId,
-        detalleUbicacion = detalleUbicacion.orEmpty(),
-        contactos = contactos,
-        fechaInicio = fechaInicioRa.orEmpty(),
-        fechaFin = fechaFinRa.orEmpty(),
-        nombreImgPortada = portadaImages.getOrElse(0) { "" },
+        return ResultadosAnalisisDraft(
+            inspectionId = idInspeccion ?: defaultInspectionId,
+            siteId = idSitio ?: defaultSiteId,
+            detalleUbicacion = detalleUbicacion.orEmpty(),
+            contactos = contactos,
+            fechaInicio = fechaInicioRa.orEmpty(),
+            fechaFin = fechaFinRa.orEmpty(),
+            fechaAnterior = "",
+            nombreImgPortada = portadaImages.getOrElse(0) { "" },
         nombreImgPortada2 = portadaImages.getOrElse(1) { "" },
         descripciones = splitSerialized(descripcionReporte),
         areasInspeccionadas = splitSerialized(areasInspeccionadas),

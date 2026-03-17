@@ -45,21 +45,40 @@ class GenerateResultadosAnalisisPdfUseCase(
                 null
             }
 
-            fun formatDate(raw: String?): String {
-                val value = raw?.take(10).orEmpty()
+            val inputDateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
+            fun parseInputDate(raw: String?): LocalDate? {
+                val value = raw.orEmpty().trim()
+                if (value.isBlank()) return null
+                return runCatching { LocalDate.parse(value) }.getOrNull()
+                    ?: runCatching { LocalDate.parse(value, inputDateFormatter) }.getOrNull()
+            }
+
+            fun formatMonthYear(raw: String?): String {
+                val value = raw.orEmpty().trim()
                 if (value.isBlank()) return ""
+                val parsed = parseInputDate(value) ?: return ""
+                val text = parsed.format(
+                    DateTimeFormatter.ofPattern("MMMM yyyy", Locale("es", "MX"))
+                )
+                return text.replaceFirstChar {
+                    if (it.isLowerCase()) it.titlecase(java.util.Locale("es", "MX")) else it.toString()
+                }
+            }
+
+            fun formatDate(raw: String?): String {
+                val value = raw?.trim().orEmpty()
+                if (value.isBlank()) return ""
+                val parsed = parseInputDate(value) ?: return value
                 return runCatching {
-                    LocalDate.parse(value).format(
+                    parsed.format(
                         DateTimeFormatter.ofPattern("d 'de' MMMM 'del' yyyy", Locale("es", "MX"))
                     )
                 }.getOrDefault(value)
             }
 
             fun formatFechaServicio(startRaw: String?, endRaw: String?): String {
-                val startValue = startRaw?.take(10).orEmpty()
-                val endValue = endRaw?.take(10).orEmpty()
-                val start = runCatching { LocalDate.parse(startValue) }.getOrNull()
-                val end = runCatching { LocalDate.parse(endValue) }.getOrNull() ?: start
+                val start = parseInputDate(startRaw)
+                val end = parseInputDate(endRaw) ?: start
                 if (start == null || end == null) return formatDate(startRaw ?: endRaw)
                 return if (start == end) {
                     formatDate(start.toString())
@@ -75,10 +94,8 @@ class GenerateResultadosAnalisisPdfUseCase(
             }
 
             fun formatFechaServicioNarrativa(startRaw: String?, endRaw: String?): String {
-                val startValue = startRaw?.take(10).orEmpty()
-                val endValue = endRaw?.take(10).orEmpty()
-                val start = runCatching { LocalDate.parse(startValue) }.getOrNull()
-                val end = runCatching { LocalDate.parse(endValue) }.getOrNull() ?: start
+                val start = parseInputDate(startRaw)
+                val end = parseInputDate(endRaw) ?: start
                 if (start == null || end == null) return ""
                 return if (start == end) {
                     "el ${formatDate(start.toString())}"
@@ -204,7 +221,9 @@ class GenerateResultadosAnalisisPdfUseCase(
                 estado = sitio?.estado.orEmpty(),
                 fechaServicio = formatFechaServicio(draft.fechaInicio, draft.fechaFin),
                 fechaServicioNarrativa = formatFechaServicioNarrativa(draft.fechaInicio, draft.fechaFin),
-                fechaServicioAnterior = formatDate(previousInspectionDate),
+                fechaServicioAnterior = formatMonthYear(
+                    draft.fechaAnterior.ifBlank { previousInspectionDate }
+                ),
                 analista = currentUserName?.takeIf { it.isNotBlank() }
                     ?: usuarioActual?.nombre?.takeIf { it.isNotBlank() }
                     ?: usuarioActual?.usuario.orEmpty(),
