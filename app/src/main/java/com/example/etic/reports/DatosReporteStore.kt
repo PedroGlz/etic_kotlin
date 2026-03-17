@@ -75,7 +75,7 @@ internal object DatosReporteStore {
                     arrayElementosSeleccionados = cursor.getString(15),
                     arrayProblemasSeleccionados = cursor.getString(16)
                 )
-                row.toDraft(inspectionId)
+        row.toDraft(inspectionId)
             }
         }
 
@@ -102,7 +102,14 @@ internal object DatosReporteStore {
             put("puesto_contacto", serializeStrings(padContactos(draft.contactos.map { it.puesto })))
             put("fecha_inicio_ra", draft.fechaInicio.ifBlank { null })
             put("fecha_fin_ra", draft.fechaFin.ifBlank { null })
-            put("nombre_img_portada", draft.nombreImgPortada.ifBlank { null })
+            put(
+                "nombre_img_portada",
+                serializeStrings(
+                    listOf(draft.nombreImgPortada, draft.nombreImgPortada2)
+                        .map { it.trim() }
+                        .filter { it.isNotEmpty() }
+                ).ifBlank { null }
+            )
             put("descripcion_reporte", serializeStrings(draft.descripciones))
             put("areas_inspeccionadas", serializeStrings(draft.areasInspeccionadas))
             put("recomendacion_reporte", serializeStrings(draft.recomendaciones.map { it.texto }))
@@ -133,6 +140,7 @@ internal object DatosReporteStore {
         val recomendacionesTexto = splitSerialized(recomendacionReporte)
         val recomendacionesImg1 = splitSerialized(imagenRecomendacion)
         val recomendacionesImg2 = splitSerialized(imagenRecomendacion2)
+        val portadaImages = splitSerialized(nombreImgPortada)
         val maxRecCount = maxOf(
             recomendacionesTexto.size,
             recomendacionesImg1.size,
@@ -157,7 +165,8 @@ internal object DatosReporteStore {
             contactos = contactos,
             fechaInicio = fechaInicio.orEmpty(),
             fechaFin = fechaFin.orEmpty(),
-            nombreImgPortada = nombreImgPortada.orEmpty(),
+            nombreImgPortada = portadaImages.getOrElse(0) { "" },
+            nombreImgPortada2 = portadaImages.getOrElse(1) { "" },
             descripciones = splitSerialized(descripcionReporte),
             areasInspeccionadas = splitSerialized(areasInspeccionadas),
             recomendaciones = recomendaciones,

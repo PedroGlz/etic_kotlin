@@ -50,6 +50,7 @@ data class ResultadosAnalisisPdfData(
     val header: ResultadosAnalisisPdfHeader,
     val contactos: List<ResultadosAnalisisContacto>,
     val portada: Bitmap?,
+    val portada2: Bitmap?,
     val logoCliente: Bitmap?,
     val descripciones: List<String>,
     val areasInspeccionadas: List<String>,

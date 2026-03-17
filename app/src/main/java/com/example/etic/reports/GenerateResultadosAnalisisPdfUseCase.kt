@@ -184,6 +184,9 @@ class GenerateResultadosAnalisisPdfUseCase(
             val portada = draft.nombreImgPortada.takeIf { it.isNotBlank() }?.let { imageName ->
                 loadImageByName(imageName)
             }
+            val portada2 = draft.nombreImgPortada2.takeIf { it.isNotBlank() }?.let { imageName ->
+                loadImageByName(imageName)
+            }
 
             val direccion = listOfNotNull(
                 sitio?.direccion?.takeIf { it.isNotBlank() },
@@ -259,6 +262,7 @@ class GenerateResultadosAnalisisPdfUseCase(
                 header = header,
                 contactos = draft.contactos,
                 portada = portada,
+                portada2 = portada2,
                 logoCliente = clienteLogo,
                 descripciones = draft.descripciones,
                 areasInspeccionadas = draft.areasInspeccionadas,

@@ -491,7 +491,18 @@ class ResultadosAnalisisPdfGenerator {
             Layout.Alignment.ALIGN_CENTER
         )
 
-        data.portada?.let { drawBitmapInBox(it, 57f, 80f, 106f) }
+        data.portada?.let { portada ->
+            if (data.portada2 == null) {
+                drawBitmapInBox(portada, 57f, 80f, 106f)
+            } else {
+                val portadaWidthMm = 50f
+                val portadaGapMm = 6f
+                val totalWidthMm = portadaWidthMm * 2f + portadaGapMm
+                val startX = (220f - totalWidthMm) / 2f
+                drawBitmapInBox(portada, startX, 80f, portadaWidthMm)
+                drawBitmapInBox(data.portada2, startX + portadaWidthMm + portadaGapMm, 80f, portadaWidthMm)
+            }
+        }
 
         currentY = mm(170f)
         drawRow("Cliente:", data.header.cliente)

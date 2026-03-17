@@ -165,6 +165,7 @@ fun ResultsAnalysisDialog(
     var fechaInicio by remember { mutableStateOf(initialDraft.fechaInicio) }
     var fechaFin by remember { mutableStateOf(initialDraft.fechaFin) }
     var nombreImgPortada by remember { mutableStateOf(initialDraft.nombreImgPortada) }
+    var nombreImgPortada2 by remember { mutableStateOf(initialDraft.nombreImgPortada2) }
     var detalleUbicacion by remember { mutableStateOf(initialDraft.detalleUbicacion) }
     val contactos = remember {
         mutableStateListOf<ResultadosAnalisisContacto>().apply {
@@ -225,6 +226,7 @@ fun ResultsAnalysisDialog(
             fechaInicio = fechaInicio,
             fechaFin = fechaFin,
             nombreImgPortada = nombreImgPortada.trim(),
+            nombreImgPortada2 = nombreImgPortada2.trim(),
             descripciones = descripciones.map { it.trim() }.filter { it.isNotEmpty() },
             areasInspeccionadas = areas.map { it.trim() }.filter { it.isNotEmpty() },
             recomendaciones = recomendaciones.map {
@@ -337,7 +339,10 @@ fun ResultsAnalysisDialog(
             availableImageOptions.sortBy { it.lowercase() }
         }
         if (target.recommendationIndex == null) {
-            nombreImgPortada = normalized
+            when (target.imageSlot) {
+                2 -> nombreImgPortada2 = normalized
+                else -> nombreImgPortada = normalized
+            }
             return
         }
         val index = target.recommendationIndex
@@ -501,22 +506,81 @@ fun ResultsAnalysisDialog(
                                                 onClick = { openDatePicker(fechaFin) { fechaFin = it } }
                                             )
                                         }
-                                        ImageInputButtonGroup(
-                                            label = "Portada",
-                                            value = nombreImgPortada,
-                                            onValueChange = { nombreImgPortada = it },
+                                        Row(
                                             modifier = Modifier.fillMaxWidth(),
-                                            isRequired = true,
-                                            onMoveUp = { nombreImgPortada = nextImage(nombreImgPortada, true) },
-                                            onMoveDown = { nombreImgPortada = nextImage(nombreImgPortada, false) },
-                                            onDotsClick = { imagePickerTarget = ImagePickerTarget() },
-                                            onFolderClick = {
-                                                beginImageImport(ImagePickerTarget(), fromCamera = false)
-                                            },
-                                            onCameraClick = {
-                                                beginImageImport(ImagePickerTarget(), fromCamera = true)
-                                            }
-                                        )
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            ImageInputButtonGroup(
+                                                label = "Portada",
+                                                value = nombreImgPortada,
+                                                onValueChange = { nombreImgPortada = it },
+                                                modifier = Modifier.weight(1f),
+                                                isRequired = true,
+                                                onMoveUp = { nombreImgPortada = nextImage(nombreImgPortada, true) },
+                                                onMoveDown = { nombreImgPortada = nextImage(nombreImgPortada, false) },
+                                                onDotsClick = {
+                                                    imagePickerTarget = ImagePickerTarget(
+                                                        recommendationIndex = null,
+                                                        imageSlot = 1
+                                                    )
+                                                },
+                                                onFolderClick = {
+                                                    beginImageImport(
+                                                        ImagePickerTarget(
+                                                            recommendationIndex = null,
+                                                            imageSlot = 1
+                                                        ),
+                                                        fromCamera = false
+                                                    )
+                                                },
+                                                onCameraClick = {
+                                                    beginImageImport(
+                                                        ImagePickerTarget(
+                                                            recommendationIndex = null,
+                                                            imageSlot = 1
+                                                        ),
+                                                        fromCamera = true
+                                                    )
+                                                }
+                                            )
+                                            ImageInputButtonGroup(
+                                                label = "Portada 2",
+                                                value = nombreImgPortada2,
+                                                onValueChange = { nombreImgPortada2 = it },
+                                                modifier = Modifier.weight(1f),
+                                                isRequired = false,
+                                                onMoveUp = {
+                                                    nombreImgPortada2 = nextImage(nombreImgPortada2, true)
+                                                },
+                                                onMoveDown = {
+                                                    nombreImgPortada2 = nextImage(nombreImgPortada2, false)
+                                                },
+                                                onDotsClick = {
+                                                    imagePickerTarget = ImagePickerTarget(
+                                                        recommendationIndex = null,
+                                                        imageSlot = 2
+                                                    )
+                                                },
+                                                onFolderClick = {
+                                                    beginImageImport(
+                                                        ImagePickerTarget(
+                                                            recommendationIndex = null,
+                                                            imageSlot = 2
+                                                        ),
+                                                        fromCamera = false
+                                                    )
+                                                },
+                                                onCameraClick = {
+                                                    beginImageImport(
+                                                        ImagePickerTarget(
+                                                            recommendationIndex = null,
+                                                            imageSlot = 2
+                                                        ),
+                                                        fromCamera = true
+                                                    )
+                                                }
+                                            )
+                                        }
                                         MultilineField(
                                             value = detalleUbicacion,
                                             onValueChange = { detalleUbicacion = it },

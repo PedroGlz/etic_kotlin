@@ -23,6 +23,7 @@ data class ResultadosAnalisisDraft(
     val fechaInicio: String = "",
     val fechaFin: String = "",
     val nombreImgPortada: String = "",
+    val nombreImgPortada2: String = "",
     val descripciones: List<String> = emptyList(),
     val areasInspeccionadas: List<String> = emptyList(),
     val recomendaciones: List<ResultadosAnalisisRecomendacion> = emptyList(),
@@ -54,6 +55,9 @@ fun ResultadosAnalisisDraft.toEntity(existingId: Int = 0): DatosReporte {
     val recomendacionesTexto = recomendaciones.map { it.texto }
     val recomendacionesImg1 = recomendaciones.map { it.imagen1 }
     val recomendacionesImg2 = recomendaciones.map { it.imagen2 }
+    val portadaImages = listOf(nombreImgPortada, nombreImgPortada2)
+        .map { it.trim() }
+        .filter { it.isNotEmpty() }
 
     return DatosReporte(
         idDatosReporte = existingId,
@@ -63,7 +67,7 @@ fun ResultadosAnalisisDraft.toEntity(existingId: Int = 0): DatosReporte {
         puestoContacto = serializeStrings(puestos),
         fechaInicioRa = fechaInicio.ifBlank { null },
         fechaFinRa = fechaFin.ifBlank { null },
-        nombreImgPortada = nombreImgPortada.ifBlank { null },
+        nombreImgPortada = serializeStrings(portadaImages).ifBlank { null },
         descripcionReporte = serializeStrings(descripciones),
         areasInspeccionadas = serializeStrings(areasInspeccionadas),
         recomendacionReporte = serializeStrings(recomendacionesTexto),
@@ -89,6 +93,7 @@ fun DatosReporte.toDraft(defaultInspectionId: String, defaultSiteId: String?): R
     val recomendacionesTexto = splitSerialized(recomendacionReporte)
     val recomendacionesImg1 = splitSerialized(imagenRecomendacion)
     val recomendacionesImg2 = splitSerialized(imagenRecomendacion2)
+    val portadaImages = splitSerialized(nombreImgPortada)
     val maxRecCount = maxOf(
         recomendacionesTexto.size,
         recomendacionesImg1.size,
@@ -113,7 +118,8 @@ fun DatosReporte.toDraft(defaultInspectionId: String, defaultSiteId: String?): R
         contactos = contactos,
         fechaInicio = fechaInicioRa.orEmpty(),
         fechaFin = fechaFinRa.orEmpty(),
-        nombreImgPortada = nombreImgPortada.orEmpty(),
+        nombreImgPortada = portadaImages.getOrElse(0) { "" },
+        nombreImgPortada2 = portadaImages.getOrElse(1) { "" },
         descripciones = splitSerialized(descripcionReporte),
         areasInspeccionadas = splitSerialized(areasInspeccionadas),
         recomendaciones = recomendaciones,
