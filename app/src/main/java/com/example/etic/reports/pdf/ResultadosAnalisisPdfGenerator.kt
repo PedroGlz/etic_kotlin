@@ -124,30 +124,48 @@ class ResultadosAnalisisPdfGenerator {
             doc.finishPage(page)
         }
 
-        fun drawBitmapInBox(bitmap: Bitmap, xMm: Float, yMm: Float, widthMm: Float, heightMm: Float? = null) {
+        fun drawBitmapInBox(
+            bitmap: Bitmap,
+            xMm: Float,
+            yMm: Float,
+            widthMm: Float,
+            heightMm: Float? = null
+        ) {
             val targetW = mm(widthMm)
             val targetH = heightMm?.let(::mm)
-            val widthRatio = targetW / bitmap.width
-            val heightRatio = targetH?.let { it / bitmap.height }
+            val widthRatio = targetW / bitmap.width.toFloat()
+            val heightRatio = targetH?.let { it / bitmap.height.toFloat() }
             val ratio = heightRatio?.let { min(widthRatio, it) } ?: widthRatio
-            val scaled = if (ratio == 1f) {
+
+            val scaledWidth = max(1, (bitmap.width * ratio).toInt())
+            val scaledHeight = max(1, (bitmap.height * ratio).toInt())
+
+            val scaled = if (scaledWidth == bitmap.width && scaledHeight == bitmap.height) {
                 bitmap
             } else {
-                Bitmap.createScaledBitmap(
-                    bitmap,
-                    max(1, (bitmap.width * ratio).toInt()),
-                    max(1, (bitmap.height * ratio).toInt()),
-                    true
-                )
+                Bitmap.createScaledBitmap(bitmap, scaledWidth, scaledHeight, true)
             }
+
             val drawX = mm(xMm)
             val drawY = mm(yMm)
+
             if (targetH != null) {
                 val centeredY = drawY + ((targetH - scaled.height) / 2f)
                 canvas.drawBitmap(scaled, drawX, centeredY, null)
             } else {
                 canvas.drawBitmap(scaled, drawX, drawY, null)
             }
+        }
+
+        fun drawBitmapRight(
+            bitmap: Bitmap,
+            rightMm: Float,
+            yMm: Float,
+            widthMm: Float,
+            heightMm: Float? = null
+        ) {
+            val xMm = rightMm - widthMm
+            drawBitmapInBox(bitmap, xMm, yMm, widthMm, heightMm)
         }
 
         fun drawFooter() {
@@ -175,7 +193,7 @@ class ResultadosAnalisisPdfGenerator {
 
         fun drawPageHeader() {
             if (pageNumber > 1) {
-                data.logo?.let { drawBitmapInBox(it, 147f, 10f, 38f) }
+                data.logo?.let { drawBitmapRight(it, 185f, 10f, 38f, 18f) }
             }
             drawFooter()
         }
@@ -249,7 +267,6 @@ class ResultadosAnalisisPdfGenerator {
             paint: TextPaint,
             lineHeightMm: Float = 5f
         ): Float {
-            // Justificación manual para simular el bloque de texto del PDF original.
             val lines = wrapPlainText(text, paint, mm(widthMm))
             var currentLineY = yMm
             lines.forEachIndexed { index, line ->
@@ -283,7 +300,6 @@ class ResultadosAnalisisPdfGenerator {
                 isUnderlineText = segment.underline
             }
 
-        // Justifica párrafos con estilos mezclados sin perder color ni peso tipográfico.
         fun drawJustifiedStyledTextBlock(
             segments: List<StyledSegment>,
             xMm: Float,
@@ -291,7 +307,6 @@ class ResultadosAnalisisPdfGenerator {
             widthMm: Float,
             lineHeightMm: Float = 5f
         ): Float {
-            // Mantiene color y estilo por segmento mientras distribuye el texto por línea.
             val words = mutableListOf<StyledWord>()
             segments.forEach { segment ->
                 val paint = buildPaintForSegment(segment)
@@ -354,7 +369,6 @@ class ResultadosAnalisisPdfGenerator {
             paint.textAlign = previous
         }
 
-        // Centra cada línea manualmente para evitar el desplazamiento visual de StaticLayout en captions cortos.
         fun drawCenteredParagraph(
             text: String,
             yMm: Float,
@@ -488,15 +502,17 @@ class ResultadosAnalisisPdfGenerator {
 
         startPage(startYmm = 0f)
 
-        data.logo?.let { drawBitmapInBox(it, 25f, 25f, 53f) }
+        data.logo?.let { drawBitmapInBox(it, 25f, 25f, 53f, 24f) }
         data.isoLogo?.let { drawBitmapInBox(it, 18f, 9f, 20f) }
-        data.logoCliente?.let { drawBitmapInBox(it, 139f, 9f, 53f, 53f) }
 
-        drawSingleLine("F-PRS-02 - Resultados de análisis de riesgos", 110f, 53f, titlePaint, Paint.Align.CENTER)
+        // portada3 ahora se usa como logo del cliente, arriba a la derecha.
+        data.portada3?.let { drawBitmapRight(it, 195f, 25f, 53f, 24f) }
+
+        drawSingleLine("F-PRS-02 - Resultados de análisis de riesgos", 110f, 68f, titlePaint, Paint.Align.CENTER)
         drawSingleLine(
             "con termografía infrarroja",
             110f,
-            59f,
+            75f,
             titlePaint,
             Paint.Align.CENTER
         )
@@ -512,9 +528,6 @@ class ResultadosAnalisisPdfGenerator {
                 drawBitmapInBox(portada, startX, 80f, portadaWidthMm)
                 drawBitmapInBox(data.portada2, startX + portadaWidthMm + portadaGapMm, 80f, portadaWidthMm)
             }
-        }
-        data.portada3?.let { portada3 ->
-            drawBitmapInBox(portada3, 174f, 58f, 40f, 28f)
         }
 
         val portadaContactos = data.contactos.filter { it.nombre.isNotBlank() && it.puesto.isNotBlank() }
