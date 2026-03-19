@@ -1,14 +1,14 @@
 package com.example.etic.reports
 
 import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.Rect
-import android.graphics.pdf.PdfDocument
-import android.graphics.pdf.PdfRenderer
 import android.net.Uri
-import android.os.ParcelFileDescriptor
 import androidx.documentfile.provider.DocumentFile
+import com.itextpdf.text.Document
+import com.itextpdf.text.pdf.PdfCopy
+import com.itextpdf.text.pdf.PdfImportedPage
+import com.itextpdf.text.pdf.PdfReader
 import java.io.File
+import java.io.FileInputStream
 import java.io.FileOutputStream
 
 sealed interface PdfSource {
@@ -22,50 +22,41 @@ object PdfMergeUtil {
         outputFile: DocumentFile,
         sources: List<PdfSource>
     ): Result<String> = runCatching {
-        val output = context.contentResolver.openOutputStream(outputFile.uri)
-            ?: error("No se pudo abrir OutputStream del PDF final.")
-        output.use { stream ->
-            val merged = PdfDocument()
-            try {
-                var pageNumber = 1
-                sources.forEach { source ->
-                    val file = materializeSource(context, source)
-                    ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY).use { pfd ->
-                        PdfRenderer(pfd).use { renderer ->
-                            for (index in 0 until renderer.pageCount) {
-                                renderer.openPage(index).use { page ->
-                                    val info = PdfDocument.PageInfo.Builder(
-                                        page.width,
-                                        page.height,
-                                        pageNumber++
-                                    ).create()
-                                    val target = merged.startPage(info)
-                                    val bitmap = Bitmap.createBitmap(
-                                        page.width,
-                                        page.height,
-                                        Bitmap.Config.ARGB_8888
-                                    )
-                                    page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_PRINT)
-                                    target.canvas.drawBitmap(
-                                        bitmap,
-                                        null,
-                                        Rect(0, 0, page.width, page.height),
-                                        null
-                                    )
-                                    merged.finishPage(target)
-                                    bitmap.recycle()
-                                }
-                            }
-                        }
-                    }
-                    if (source is PdfSource.AssetSource && file.exists()) {
-                        file.delete()
-                    }
+        val tempFiles = mutableListOf<File>()
+        val document = Document()
+        val destinationFile = File.createTempFile("merged_result_", ".pdf", context.cacheDir)
+        val output = FileOutputStream(destinationFile)
+        val writer = PdfCopy(document, output)
+        try {
+            document.open()
+            sources.forEach { source ->
+                val file = materializeSource(context, source)
+                tempFiles += file
+
+                val reader = PdfReader(file.absolutePath)
+                val pageCount = reader.numberOfPages
+                for (i in 1..pageCount) {
+                    val page: PdfImportedPage = writer.getImportedPage(reader, i)
+                    writer.addPage(page)
                 }
-                merged.writeTo(stream)
-            } finally {
-                merged.close()
+                reader.close()
             }
+            document.close()
+
+            output.close()
+            val out = context.contentResolver.openOutputStream(outputFile.uri)
+                ?: error("No se pudo abrir OutputStream del PDF final.")
+            FileInputStream(destinationFile).use { input ->
+                input.copyTo(out)
+            }
+            out.close()
+        } finally {
+            tempFiles.forEach { file ->
+                if (file.exists()) file.delete()
+            }
+            if (document.isOpen()) document.close()
+            output.close()
+            if (destinationFile.exists()) destinationFile.delete()
         }
         outputFile.uri.toString()
     }
@@ -75,14 +66,14 @@ object PdfMergeUtil {
             is PdfSource.UriSource -> {
                 val temp = File.createTempFile("merge_", ".pdf", context.cacheDir)
                 context.contentResolver.openInputStream(source.uri)?.use { input ->
-                    FileOutputStream(temp).use { output -> input.copyTo(output) }
+                    temp.outputStream().use { output -> input.copyTo(output) }
                 } ?: error("No se pudo abrir fuente PDF.")
                 temp
             }
             is PdfSource.AssetSource -> {
                 val temp = File.createTempFile("asset_merge_", ".pdf", context.cacheDir)
                 context.assets.open(source.assetPath).use { input ->
-                    FileOutputStream(temp).use { output -> input.copyTo(output) }
+                    temp.outputStream().use { output -> input.copyTo(output) }
                 }
                 temp
             }
