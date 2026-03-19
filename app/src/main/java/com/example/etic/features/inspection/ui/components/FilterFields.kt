@@ -88,7 +88,8 @@ fun FilterDropdownField(
     modifier: Modifier = Modifier,
     minWidth: Dp = 150.dp,
     maxWidth: Dp = 220.dp,
-    placeholder: String = "Seleccionar"
+    placeholder: String = "Seleccionar",
+    enabled: Boolean = true
 ) {
     val (expanded, setExpanded) = remember { mutableStateOf(false) }
     val selectedLabel = options.firstOrNull { it.first == selectedId }?.second.orEmpty()
@@ -102,7 +103,9 @@ fun FilterDropdownField(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { setExpanded(true) },
+                    .clickable(
+                        enabled = enabled
+                    ) { setExpanded(true) },
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
@@ -121,15 +124,17 @@ fun FilterDropdownField(
         }
 
         DropdownMenu(
-            expanded = expanded,
+            expanded = expanded && enabled,
             onDismissRequest = { setExpanded(false) }
         ) {
             options.forEach { (id, text) ->
                 DropdownMenuItem(
                     text = { Text(text = text.ifBlank { id.orEmpty() }, style = MaterialTheme.typography.bodySmall) },
                     onClick = {
-                        setExpanded(false)
-                        onSelected(id)
+                        if (enabled) {
+                            setExpanded(false)
+                            onSelected(id)
+                        }
                     }
                 )
             }
@@ -147,7 +152,8 @@ fun FilterTextField(
     minWidth: Dp = 180.dp,
     maxWidth: Dp = 320.dp,
     placeholder: String = "Buscar",
-    searchIconTint: Color = MaterialTheme.colorScheme.onSurfaceVariant
+    searchIconTint: Color = MaterialTheme.colorScheme.onSurfaceVariant,
+    enabled: Boolean = true
 ) {
     FilterFieldContainer(
         label = label,
@@ -159,6 +165,7 @@ fun FilterTextField(
             value = value,
             onValueChange = onValueChange,
             singleLine = true,
+            enabled = enabled,
             textStyle = MaterialTheme.typography.bodySmall.copy(
                 color = MaterialTheme.colorScheme.onSurface
             ),
@@ -182,6 +189,7 @@ fun FilterTextField(
         Spacer(Modifier.width(2.dp))
         IconButton(
             onClick = onSearch,
+            enabled = enabled,
             modifier = Modifier
                 .width(28.dp)
                 .height(28.dp)

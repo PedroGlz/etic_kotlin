@@ -124,7 +124,13 @@ import kotlin.math.max
 import com.example.etic.core.saf.EticImageStore
 import com.example.etic.ui.inspection.ResultsAnalysisDialog
 
-private enum class HomeSection { Inspection, Reports, FolderImages, FolderReports }
+private enum class HomeSection {
+    Inspection,
+    Reports,
+    FolderClientImages,
+    FolderImages,
+    FolderReports
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -157,6 +163,7 @@ fun MainScreen(
     var fontsExpanded by rememberSaveable { mutableStateOf(false) }
     var showInitImagesDialog by rememberSaveable { mutableStateOf(false) }
     var showInspectionStatusDialog by rememberSaveable { mutableStateOf(false) }
+    var showImportInspectionAfterCloseDialog by rememberSaveable { mutableStateOf(false) }
     var initThermalPath by rememberSaveable { mutableStateOf("") }
     var initDigitalPath by rememberSaveable { mutableStateOf("") }
     var isSavingInitImages by rememberSaveable { mutableStateOf(false) }
@@ -222,8 +229,12 @@ fun MainScreen(
             currentInspectionSnapshot = CurrentInspectionProvider.get(appContext)
             isSavingInspectionStatus = false
             if (result.success) {
+                section = HomeSection.Inspection
                 showInspectionStatusDialog = false
                 showCloseInspectionConfirmDialog = false
+                if (result.inspectionCleared) {
+                    showImportInspectionAfterCloseDialog = true
+                }
             }
             Toast.makeText(appContext, result.message, Toast.LENGTH_LONG).show()
         }
@@ -933,24 +944,6 @@ fun MainScreen(
                         icon = { Icon(Icons.Filled.Check, contentDescription = null) },
                         colors = drawerItemColors
                     )
-                    NavigationDrawerItem(
-                        label = { Text("Importar inspección") },
-                        selected = false,
-                        onClick = {
-                            fontsExpanded = false
-                            scope.launch { drawerState.close() }
-                            importInspectionLauncher.launch(
-                                arrayOf(
-                                    "application/octet-stream",
-                                    "application/x-sqlite3",
-                                    "*/*"
-                                )
-                            )
-                        },
-                        icon = { Icon(Icons.Filled.ChecklistRtl, contentDescription = null) },
-                        colors = drawerItemColors
-                    )
-
                     HorizontalDivider(
                         modifier = Modifier.padding(bottom = 4.dp),
                         thickness = androidx.compose.material3.DividerDefaults.Thickness,
@@ -984,7 +977,18 @@ fun MainScreen(
                         color = Color.White.copy(alpha = 0.15f)
                     )
 
-                                        NavigationDrawerItem(
+                    NavigationDrawerItem(
+                        label = { Text("Carpeta img clientes") },
+                        selected = section == HomeSection.FolderClientImages,
+                        onClick = {
+                            section = HomeSection.FolderClientImages
+                            scope.launch { drawerState.close() }
+                        },
+                        icon = { Icon(Icons.Outlined.Folder, contentDescription = null) },
+                        colors = drawerItemColors
+                    )
+
+                    NavigationDrawerItem(
                         label = { Text("Carpeta Imágenes") },
                         selected = section == HomeSection.FolderImages,
                         onClick = {
@@ -1093,6 +1097,16 @@ fun MainScreen(
                     currentInspectionSnapshot = currentInspection
                 }
                 val inspectionNumero = currentInspection?.noInspeccion?.toString()
+                val canEditInspection = currentInspection?.idStatusInspeccion == INSPECTION_STATUS_EN_PROGRESO
+
+                LaunchedEffect(section, currentInspection?.idInspeccion, canEditInspection, showImportInspectionAfterCloseDialog) {
+                    if (section == HomeSection.Inspection && !canEditInspection) {
+                        showImportInspectionAfterCloseDialog = true
+                    }
+                    if (section != HomeSection.Inspection || canEditInspection) {
+                        showImportInspectionAfterCloseDialog = false
+                    }
+                }
 
                 LaunchedEffect(rootTreeUriStr, inspectionNumero) {
                     eticPrefs.setActiveInspectionNum(inspectionNumero)
@@ -1225,19 +1239,20 @@ fun MainScreen(
                             .padding(innerPadding)
                     ) {
 
-                        Box(
-                            modifier = if (section == HomeSection.Inspection) {
-                                Modifier.fillMaxSize()
-                            } else {
-                                Modifier.size(0.dp)
-                            }
-                        ) {
-                            InspectionScreen(
-                                onReady = {
-                                    scope.launch {
-                                        delay(900)
-                                        isLoading = false
-                                    }
+                            Box(
+                                modifier = if (section == HomeSection.Inspection) {
+                                    Modifier.fillMaxSize()
+                                } else {
+                                    Modifier.size(0.dp)
+                                }
+                            ) {
+                                InspectionScreen(
+                                    isInteractionEnabled = canEditInspection,
+                                    onReady = {
+                                        scope.launch {
+                                            delay(900)
+                                            isLoading = false
+                                        }
                                 }
                             )
                         }
@@ -1262,6 +1277,33 @@ fun MainScreen(
                         ) {
                             EticFolderShortcutScreen(
                                 folderType = EticFolderType.Images,
+                                rootTreeUri = rootTreeUri,
+                                inspectionNumero = inspectionNumero,
+                                onPickRoot = { uri ->
+                                    scope.launch {
+                                        eticPrefs.setRootTreeUri(uri)
+                                        withContext(Dispatchers.IO) {
+                                            safManager.ensureEticFolders(appContext, uri)
+                                            if (!inspectionNumero.isNullOrBlank()) {
+                                                safManager.ensureInspectionFolders(appContext, uri, inspectionNumero)
+                                            }
+                                        }
+                                    }
+                                },
+                                manager = safManager,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+
+                        Box(
+                            modifier = if (section == HomeSection.FolderClientImages) {
+                                Modifier.fillMaxSize()
+                            } else {
+                                Modifier.size(0.dp)
+                            }
+                        ) {
+                            EticFolderShortcutScreen(
+                                folderType = EticFolderType.ClientImages,
                                 rootTreeUri = rootTreeUri,
                                 inspectionNumero = inspectionNumero,
                                 onPickRoot = { uri ->
@@ -1560,6 +1602,35 @@ fun MainScreen(
                             ) {
                                 Text("Continuar")
                             }
+                        }
+                    )
+                }
+
+                if (showImportInspectionAfterCloseDialog) {
+                    AlertDialog(
+                        onDismissRequest = { showImportInspectionAfterCloseDialog = false },
+                        title = { Text("Seleccionar Base de Datos") },
+                        text = {
+                            Text("Seleccionar archivo .sql de la Inspeccion a realizar.")
+                        },
+                        dismissButton = {
+                            TextButton(
+                                onClick = { showImportInspectionAfterCloseDialog = false }
+                            ) { Text("Cancelar") }
+                        },
+                        confirmButton = {
+                            TextButton(
+                                onClick = {
+                                    showImportInspectionAfterCloseDialog = false
+                                    importInspectionLauncher.launch(
+                                        arrayOf(
+                                            "application/octet-stream",
+                                            "application/x-sqlite3",
+                                            "*/*"
+                                        )
+                                    )
+                                }
+                            ) { Text("Procesar") }
                         }
                     )
                 }

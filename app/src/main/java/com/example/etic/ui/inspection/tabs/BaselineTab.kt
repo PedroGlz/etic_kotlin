@@ -61,6 +61,7 @@ import kotlin.math.roundToInt
 @Composable
 fun BaselineTableFromDatabase(
     selectedId: String?,
+    isInteractive: Boolean = true,
     refreshTick: Int,
     onBaselineChanged: () -> Unit,
     modifier: Modifier = Modifier
@@ -287,6 +288,7 @@ fun BaselineTableFromDatabase(
     Box(modifier) {
         BaselineTable(
             baselines = uiBaselines,
+            isInteractive = isInteractive,
             onDelete = { baseline -> baselineToDelete = baseline },
             onDoubleTap = { baseline, list ->
                 baselineDrafts = emptyMap()

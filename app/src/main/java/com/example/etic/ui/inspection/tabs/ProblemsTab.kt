@@ -25,6 +25,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun ProblemsTableFromDatabase(
     selectedId: String?,
+    isInteractive: Boolean = true,
     refreshTick: Int,
     typeFilterId: String?,
     statusFilterId: String,
@@ -75,6 +76,7 @@ fun ProblemsTableFromDatabase(
     Box(modifier) {
         ProblemsTable(
             problems = uiProblems,
+            isInteractive = isInteractive,
             onDelete = { problem -> problemToDelete = problem },
             onDoubleTap = onProblemDoubleTap
         )

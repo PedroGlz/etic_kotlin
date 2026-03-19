@@ -3,6 +3,7 @@ package com.example.etic.reports
 import com.example.etic.data.local.entities.DatosReporte
 
 internal const val MAX_CONTACTOS = 7
+private const val PORTADA_IMAGES_COUNT = 3
 
 data class ResultadosAnalisisContacto(
     val nombre: String = "",
@@ -45,6 +46,16 @@ internal fun splitSerialized(raw: String?): List<String> =
         .map { it.trim() }
         .filter { it.isNotEmpty() }
 
+private fun splitPortadaSerialized(raw: String?): List<String> =
+    if (raw.isNullOrBlank()) {
+        emptyList()
+    } else {
+        raw.split("$").map { it.trim() }
+    }
+
+private fun normalizePortadaImagenes(values: List<String>): List<String> =
+    (values + List(PORTADA_IMAGES_COUNT) { "" }).take(PORTADA_IMAGES_COUNT)
+
 internal fun serializeStrings(values: List<String>): String =
     values.joinToString("$") { it.trim() }
 
@@ -57,9 +68,9 @@ fun ResultadosAnalisisDraft.toEntity(existingId: Int = 0): DatosReporte {
     val recomendacionesTexto = recomendaciones.map { it.texto }
     val recomendacionesImg1 = recomendaciones.map { it.imagen1 }
     val recomendacionesImg2 = recomendaciones.map { it.imagen2 }
-    val portadaImages = listOf(nombreImgPortada, nombreImgPortada2, nombreImgPortada3)
-        .map { it.trim() }
-        .filter { it.isNotEmpty() }
+    val portadaImages = normalizePortadaImagenes(
+        listOf(nombreImgPortada, nombreImgPortada2, nombreImgPortada3).map { it.trim() }
+    )
 
     return DatosReporte(
         idDatosReporte = existingId,
@@ -95,7 +106,7 @@ fun DatosReporte.toDraft(defaultInspectionId: String, defaultSiteId: String?): R
     val recomendacionesTexto = splitSerialized(recomendacionReporte)
     val recomendacionesImg1 = splitSerialized(imagenRecomendacion)
     val recomendacionesImg2 = splitSerialized(imagenRecomendacion2)
-    val portadaImages = splitSerialized(nombreImgPortada)
+    val portadaImages = normalizePortadaImagenes(splitPortadaSerialized(nombreImgPortada))
     val maxRecCount = maxOf(
         recomendacionesTexto.size,
         recomendacionesImg1.size,

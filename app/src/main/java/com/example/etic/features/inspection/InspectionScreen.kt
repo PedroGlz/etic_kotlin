@@ -313,13 +313,22 @@ private val TREE_INDENT: Dp = 12.dp        // Indentacion por nivel
 // Nota: la tabla de Progreso ocupa siempre todo el ancho del panel
 
 @Composable
-fun InspectionScreen(onReady: () -> Unit = {}) {
-    CurrentInspectionSplitView(onReady = onReady)
+fun InspectionScreen(
+    onReady: () -> Unit = {},
+    isInteractionEnabled: Boolean = true
+) {
+    CurrentInspectionSplitView(
+        onReady = onReady,
+        isInteractionEnabled = isInteractionEnabled
+    )
 }
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
-private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
+private fun CurrentInspectionSplitView(
+    onReady: () -> Unit = {},
+    isInteractionEnabled: Boolean = true
+) {
     // Usamos constantes para evitar numero magicos in-line
     var hFrac by rememberSaveable { mutableStateOf(H_INIT_FRAC) } // Fraccion alto del panel superior
     var vFrac by rememberSaveable { mutableStateOf(V_INIT_FRAC) } // Fraccion ancho del panel izquierdo
@@ -3385,13 +3394,16 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
             InspectionHeader(
                 barcode = barcode,
                 onBarcodeChange = { barcode = it },
-                onSearch = { triggerSearch() },
+                onSearch = { if (isInteractionEnabled) triggerSearch() },
                 selectedStatusId = selectedStatusId,
                 statusOptions = statusOptions,
                 onStatusSelected = { opt ->
-                    selectedStatusId = opt?.idStatusInspeccionDet
+                    if (isInteractionEnabled) {
+                        selectedStatusId = opt?.idStatusInspeccionDet
+                    }
                 },
                 onApplyStatus = {
+                    if (!isInteractionEnabled) return@InspectionHeader
                     val statusId = selectedStatusId
                     if (statusId.isNullOrBlank()) {
                         Toast.makeText(ctx, "Selecciona un estatus", Toast.LENGTH_SHORT).show()
@@ -3407,6 +3419,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                     }
                 },
                 onClickNewLocation = {
+                    if (!isInteractionEnabled) return@InspectionHeader
                     if (selectedId == null) {
                         showNoSelectionDialog = true
                     } else {
@@ -3419,6 +3432,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                         }
                     }
                 },
+                isEnabled = isInteractionEnabled,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 12.dp, vertical = 8.dp)
@@ -6010,6 +6024,7 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                 ) {
                     if (nodes.isNotEmpty()) {
                         SimpleTreeView(
+                            isInteractive = isInteractionEnabled,
                             nodes = nodes,
                             expanded = expanded.toSet(),
                             selectedId = selectedId,
@@ -6017,23 +6032,25 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                             scrollToId = scrollToNodeId,
                             onScrollHandled = { scrollToNodeId = null },
                             onToggle = { id ->
-                                val inspId = currentInspection?.idInspeccion
-                                if (!expanded.remove(id)) expanded.add(id) else Unit
-                                val isExpandedNow = expanded.contains(id)
-                                if (!inspId.isNullOrBlank() && !id.startsWith("root:")) {
-                                    treeScope.launch {
-                                        runCatching {
-                                            inspeccionDetDao.updateExpandedByUbicacion(
-                                                inspId,
-                                                id,
-                                                if (isExpandedNow) "1" else "0"
-                                            )
+                                if (isInteractionEnabled) {
+                                    val inspId = currentInspection?.idInspeccion
+                                    if (!expanded.remove(id)) expanded.add(id) else Unit
+                                    val isExpandedNow = expanded.contains(id)
+                                    if (!inspId.isNullOrBlank() && !id.startsWith("root:")) {
+                                        treeScope.launch {
+                                            runCatching {
+                                                inspeccionDetDao.updateExpandedByUbicacion(
+                                                    inspId,
+                                                    id,
+                                                    if (isExpandedNow) "1" else "0"
+                                                )
+                                            }
                                         }
                                     }
                                 }
                             },
-                            onSelect = onSelectNode,
-                            onDoubleTap = { node -> startEditUb(node) },
+                            onSelect = { if (isInteractionEnabled) onSelectNode(it) else Unit },
+                            onDoubleTap = { node -> if (isInteractionEnabled) startEditUb(node) },
                             modifier = Modifier.fillMaxSize() // ocupa todo el panel
                         )
                     } else {
@@ -6075,10 +6092,12 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                         .fillMaxHeight(),
                 ) {
                     DetailsTable(
+                        isInteractive = isInteractionEnabled,
                         children = children,
                         modifier = Modifier.fillMaxSize(),
                         selectedForStatus = checkedStatusLocationIds.toSet(),
                         onStatusCheckChanged = { node, checked ->
+                            if (isInteractionEnabled) {
                             if (checked) {
                                 if (!checkedStatusLocationIds.contains(node.id)) {
                                     checkedStatusLocationIds.add(node.id)
@@ -6086,64 +6105,69 @@ private fun CurrentInspectionSplitView(onReady: () -> Unit = {}) {
                             } else {
                                 checkedStatusLocationIds.remove(node.id)
                             }
+                            }
                         },
                         onDelete = { node ->
-                            scope.launch {
-                                val ubId = node.id
-                                val inspId = currentInspection?.idInspeccion
+                            if (isInteractionEnabled) {
+                                scope.launch {
+                                    val ubId = node.id
+                                    val inspId = currentInspection?.idInspeccion
 
-                                // 1) Validar si tiene ubicaciones hijas activas
-                                val hasChildren = runCatching {
-                                    ubicacionDao.getAllActivas().any { it.idUbicacionPadre == ubId }
-                                }.getOrDefault(false)
-                                if (hasChildren) {
-                                    deleteUbInfoMessage = "No se puede eliminar la ubicación porque tiene ubicaciones hijas."
-                                    return@launch
-                                }
+                                    // 1) Validar si tiene ubicaciones hijas activas
+                                    val hasChildren = runCatching {
+                                        ubicacionDao.getAllActivas().any { it.idUbicacionPadre == ubId }
+                                    }.getOrDefault(false)
+                                    if (hasChildren) {
+                                        deleteUbInfoMessage = "No se puede eliminar la ubicacion porque tiene ubicaciones hijas."
+                                        return@launch
+                                    }
 
-                                // 2) Validar si tiene baseline activo
-                                val hasBaseline = runCatching {
-                                    lineaBaseDaoGlobal.existsActiveByUbicacionOrDet(ubId, null)
-                                }.getOrDefault(false)
+                                    // 2) Validar si tiene baseline activo
+                                    val hasBaseline = runCatching {
+                                        lineaBaseDaoGlobal.existsActiveByUbicacionOrDet(ubId, null)
+                                    }.getOrDefault(false)
 
-                                // 3) Validar si tiene problemas activos
-                                val hasProblems = runCatching {
-                                    val problemas = if (!inspId.isNullOrBlank()) {
-                                        problemaDao.getByInspeccionActivos(inspId)
-                                    } else {
-                                        val siteId = currentInspection?.idSitio
-                                        if (!siteId.isNullOrBlank()) {
-                                            problemaDao.getActivosPorSitio(siteId)
+                                    // 3) Validar si tiene problemas activos
+                                    val hasProblems = runCatching {
+                                        val problemas = if (!inspId.isNullOrBlank()) {
+                                            problemaDao.getByInspeccionActivos(inspId)
                                         } else {
-                                            problemaDao.getAllActivos()
+                                            val siteId = currentInspection?.idSitio
+                                            if (!siteId.isNullOrBlank()) {
+                                                problemaDao.getActivosPorSitio(siteId)
+                                            } else {
+                                                problemaDao.getAllActivos()
+                                            }
                                         }
-                                    }
-                                    problemas.any { it.idUbicacion == ubId && (it.estatus ?: "Activo") == "Activo" }
-                                }.getOrDefault(false)
+                                        problemas.any { it.idUbicacion == ubId && (it.estatus ?: "Activo") == "Activo" }
+                                    }.getOrDefault(false)
 
-                                when {
-                                    hasBaseline && hasProblems -> {
-                                        deleteUbInfoMessage =
-                                            "No se puede eliminar la ubicación porque tiene baseline y problemas registrados."
-                                    }
-                                    hasBaseline -> {
-                                        deleteUbInfoMessage =
-                                            "No se puede eliminar la ubicación porque tiene baseline registrado."
-                                    }
-                                    hasProblems -> {
-                                        deleteUbInfoMessage =
-                                            "No se puede eliminar la ubicación porque tiene problemas registrados."
-                                    }
-                                    else -> {
-                                        // Sin hijos, sin baseline y sin problemas: pedir confirmación
-                                        // Sin hijos, sin baseline y sin problemas: marcar para confirmar
-                                        deleteUbConfirmNode = node
+                                    when {
+                                        hasBaseline && hasProblems -> {
+                                            deleteUbInfoMessage =
+                                                "No se puede eliminar la ubicacion porque tiene baseline y problemas registrados."
+                                        }
+                                        hasBaseline -> {
+                                            deleteUbInfoMessage =
+                                                "No se puede eliminar la ubicacion porque tiene baseline registrado."
+                                        }
+                                        hasProblems -> {
+                                            deleteUbInfoMessage =
+                                                "No se puede eliminar la ubicacion porque tiene problemas registrados."
+                                        }
+                                        else -> {
+                                            // Sin hijos, sin baseline y sin problemas: pedir confirmacion
+                                            // Sin hijos, sin baseline y sin problemas: marcar para confirmar
+                                            deleteUbConfirmNode = node
+                                        }
                                     }
                                 }
                             }
                         },
                         onEdit = { node ->
-                            startEditUb(node)
+                            if (isInteractionEnabled) {
+                                startEditUb(node)
+                            }
                         },
                         statusNameForId = { id -> id?.let { statusLabelMap[it] } }
                     )
@@ -6303,6 +6327,7 @@ private fun SimpleTreeView(
     onToggle: (String) -> Unit,
     onSelect: (String) -> Unit,
     onDoubleTap: (TreeNode) -> Unit,
+    isInteractive: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     fun flatten(list: List<TreeNode>, depth: Int, out: MutableList<FlatNode>) {
@@ -6351,10 +6376,12 @@ private fun SimpleTreeView(
                         .fillMaxWidth()
                         .background(rowBackground)
                         .pointerInput(n.id) {
-                            detectTapGestures(
-                                onTap = { onSelect(n.id) },
-                                onDoubleTap = { onDoubleTap(n) }
-                            )
+                            if (isInteractive) {
+                                detectTapGestures(
+                                    onTap = { onSelect(n.id) },
+                                    onDoubleTap = { onDoubleTap(n) }
+                                )
+                            }
                         }
                 ) {
                     Row(
@@ -6369,7 +6396,7 @@ private fun SimpleTreeView(
                                 contentDescription = null,
                                 modifier = Modifier
                                     .size(TREE_TOGGLE_SIZE)
-                                    .clickable { onToggle(n.id) }
+                                    .clickable(enabled = isInteractive) { onToggle(n.id) }
                             )
                         } else {
                             Spacer(Modifier.width(TREE_TOGGLE_SIZE))
@@ -6512,6 +6539,7 @@ private fun copyProblemImageFromUri(
 private fun DetailsTable(
     children: List<TreeNode>,
     selectedForStatus: Set<String>,
+    isInteractive: Boolean = true,
     onStatusCheckChanged: (TreeNode, Boolean) -> Unit,
     modifier: Modifier = Modifier,
     onDelete: (TreeNode) -> Unit,
@@ -6561,7 +6589,9 @@ private fun DetailsTable(
                             .background(rowColor)
                             .padding(vertical = 0.dp, horizontal = 4.dp)
                             .pointerInput(n.id) {
-                                detectTapGestures(onDoubleTap = { onEdit(n) })
+                                if (isInteractive) {
+                                    detectTapGestures(onDoubleTap = { onEdit(n) })
+                                }
                             },
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -6572,6 +6602,7 @@ private fun DetailsTable(
                                 ) {
                                     Checkbox(
                                         checked = selectedForStatus.contains(n.id),
+                                        enabled = isInteractive,
                                         onCheckedChange = { onStatusCheckChanged(n, it) },
                                         modifier = Modifier
                                             .size(16.dp)
@@ -6590,7 +6621,11 @@ private fun DetailsTable(
                                 androidx.compose.runtime.CompositionLocalProvider(
                                     androidx.compose.material3.LocalMinimumInteractiveComponentEnforcement provides false
                                 ) {
-                                    IconButton(onClick = { onDelete(n) }, modifier = Modifier.size(28.dp)) {
+                                    IconButton(
+                                        enabled = isInteractive,
+                                        onClick = { onDelete(n) },
+                                        modifier = Modifier.size(28.dp)
+                                    ) {
                                         Icon(
                                             Icons.Outlined.Delete,
                                             contentDescription = "Eliminar",
@@ -6632,6 +6667,7 @@ private fun DetailsTable(
 @Composable
 private fun ListTabs(
     node: TreeNode?,
+    isInteractive: Boolean = true,
     onDeleteProblem: (Problem) -> Unit,
     onDeleteBaseline: (Baseline) -> Unit,
     onProblemDeleted: (() -> Unit)? = null,
@@ -6647,11 +6683,11 @@ private fun ListTabs(
 
     Column(Modifier.fillMaxSize()) {
         TabRow(selectedTabIndex = tab) {
-            Tab(selected = tab == 0, onClick = { tab = 0 }, text = { Text(stringResource(com.example.etic.R.string.tab_problemas)) })
-            Tab(selected = tab == 1, onClick = { tab = 1 }, text = { Text(stringResource(com.example.etic.R.string.tab_baseline)) })
+            Tab(selected = tab == 0, onClick = { tab = 0 }, enabled = isInteractive, text = { Text(stringResource(com.example.etic.R.string.tab_problemas)) })
+            Tab(selected = tab == 1, onClick = { tab = 1 }, enabled = isInteractive, text = { Text(stringResource(com.example.etic.R.string.tab_baseline)) })
         }
         Divider(thickness = DIVIDER_THICKNESS)
-        val showProblems = tab == 0
+    val showProblems = tab == 0
         var typeFilterId by rememberSaveable {
             mutableStateOf(PROBLEM_TYPE_FILTER_OPTIONS.firstOrNull()?.first.orEmpty())
         }
@@ -6676,6 +6712,7 @@ private fun ListTabs(
                         label = "Tipo",
                         options = PROBLEM_TYPE_FILTER_OPTIONS.map { it.first as String? to it.second },
                         selectedId = typeFilterId,
+                        enabled = isInteractive,
                         onSelected = { typeFilterId = it ?: "" }
                     )
 
@@ -6683,6 +6720,7 @@ private fun ListTabs(
                         label = "Estatus",
                         options = PROBLEM_STATUS_FILTER_OPTIONS.map { it.first as String? to it.second },
                         selectedId = statusFilterId,
+                        enabled = isInteractive,
                         onSelected = { statusFilterId = it ?: PROBLEM_STATUS_ALL }
                     )
                 }
@@ -6691,7 +6729,7 @@ private fun ListTabs(
 
                 Button(
                     onClick = { onNewProblem?.invoke() },
-                    enabled = onNewProblem != null,
+                    enabled = isInteractive && onNewProblem != null,
                     shape = RoundedCornerShape(4.dp),
                     contentPadding = PaddingValues(
                         horizontal = 10.dp,
@@ -6718,6 +6756,7 @@ private fun ListTabs(
         Box(Modifier.fillMaxSize()) {
             ProblemsTableFromDatabase(
                 selectedId = node?.id,
+                isInteractive = isInteractive,
                 refreshTick = problemsRefreshTick,
                 typeFilterId = typeFilterId,
                 statusFilterId = statusFilterId,
@@ -6730,6 +6769,7 @@ private fun ListTabs(
             )
         BaselineTableFromDatabase(
             selectedId = node?.id,
+            isInteractive = isInteractive,
             refreshTick = baselineRefreshTick,
             onBaselineChanged = onBaselineChanged,
             modifier = Modifier
@@ -6744,6 +6784,7 @@ private fun ListTabs(
 @Composable
 internal fun ProblemsTable(
     problems: List<Problem>,
+    isInteractive: Boolean = true,
     onDelete: (Problem) -> Unit,
     onDoubleTap: ((Problem, List<Problem>) -> Unit)? = null
 ) {
@@ -6849,7 +6890,7 @@ internal fun ProblemsTable(
 
                 // ------------------------------ HEADER ------------------------------
                 Row(Modifier.fillMaxWidth()) {
-                    headerCell(wNo, headerBackground, Modifier.clickable { toggleSort(ProblemColumn.NUMERO) }) {
+                    headerCell(wNo, headerBackground, Modifier.clickable(enabled = isInteractive) { toggleSort(ProblemColumn.NUMERO) }) {
                         SortHeader(
                             label = "No.",
                             column = ProblemColumn.NUMERO,
@@ -6858,7 +6899,7 @@ internal fun ProblemsTable(
                         )
                     }
 
-                    headerCell(wFecha, headerBackground, Modifier.clickable { toggleSort(ProblemColumn.FECHA) }) {
+                    headerCell(wFecha, headerBackground, Modifier.clickable(enabled = isInteractive) { toggleSort(ProblemColumn.FECHA) }) {
                         SortHeader(
                             label = stringResource(com.example.etic.R.string.col_fecha),
                             column = ProblemColumn.FECHA,
@@ -6867,7 +6908,7 @@ internal fun ProblemsTable(
                         )
                     }
 
-                    headerCell(wInspeccion, headerBackground, Modifier.clickable { toggleSort(ProblemColumn.INSPECCION) }) {
+                    headerCell(wInspeccion, headerBackground, Modifier.clickable(enabled = isInteractive) { toggleSort(ProblemColumn.INSPECCION) }) {
                         SortHeader(
                             label = stringResource(com.example.etic.R.string.col_num_inspeccion),
                             column = ProblemColumn.INSPECCION,
@@ -6876,7 +6917,7 @@ internal fun ProblemsTable(
                         )
                     }
 
-                    headerCell(wTipo, headerBackground, Modifier.clickable { toggleSort(ProblemColumn.TIPO) }) {
+                    headerCell(wTipo, headerBackground, Modifier.clickable(enabled = isInteractive) { toggleSort(ProblemColumn.TIPO) }) {
                         SortHeader(
                             label = stringResource(com.example.etic.R.string.col_tipo),
                             column = ProblemColumn.TIPO,
@@ -6885,7 +6926,7 @@ internal fun ProblemsTable(
                         )
                     }
 
-                    headerCell(wEstatus, headerBackground, Modifier.clickable { toggleSort(ProblemColumn.ESTATUS) }) {
+                    headerCell(wEstatus, headerBackground, Modifier.clickable(enabled = isInteractive) { toggleSort(ProblemColumn.ESTATUS) }) {
                         SortHeader(
                             label = stringResource(com.example.etic.R.string.col_estatus),
                             column = ProblemColumn.ESTATUS,
@@ -6894,7 +6935,7 @@ internal fun ProblemsTable(
                         )
                     }
 
-                    headerCell(wCronico, headerBackground, Modifier.clickable { toggleSort(ProblemColumn.CRONICO) }) {
+                    headerCell(wCronico, headerBackground, Modifier.clickable(enabled = isInteractive) { toggleSort(ProblemColumn.CRONICO) }) {
                         SortHeader(
                             label = stringResource(com.example.etic.R.string.col_cronico),
                             column = ProblemColumn.CRONICO,
@@ -6903,7 +6944,7 @@ internal fun ProblemsTable(
                         )
                     }
 
-                    headerCell(wTempC, headerBackground, Modifier.clickable { toggleSort(ProblemColumn.TEMP_C) }) {
+                    headerCell(wTempC, headerBackground, Modifier.clickable(enabled = isInteractive) { toggleSort(ProblemColumn.TEMP_C) }) {
                         SortHeader(
                             label = stringResource(com.example.etic.R.string.col_temp_c),
                             column = ProblemColumn.TEMP_C,
@@ -6912,7 +6953,7 @@ internal fun ProblemsTable(
                         )
                     }
 
-                    headerCell(wDeltaT, headerBackground, Modifier.clickable { toggleSort(ProblemColumn.DELTA_T) }) {
+                    headerCell(wDeltaT, headerBackground, Modifier.clickable(enabled = isInteractive) { toggleSort(ProblemColumn.DELTA_T) }) {
                         SortHeader(
                             label = stringResource(com.example.etic.R.string.col_delta_t_c),
                             column = ProblemColumn.DELTA_T,
@@ -6921,7 +6962,7 @@ internal fun ProblemsTable(
                         )
                     }
 
-                    headerCell(wSeveridad, headerBackground, Modifier.clickable { toggleSort(ProblemColumn.SEVERIDAD) }) {
+                    headerCell(wSeveridad, headerBackground, Modifier.clickable(enabled = isInteractive) { toggleSort(ProblemColumn.SEVERIDAD) }) {
                         SortHeader(
                             label = stringResource(com.example.etic.R.string.col_severidad),
                             column = ProblemColumn.SEVERIDAD,
@@ -6930,7 +6971,7 @@ internal fun ProblemsTable(
                         )
                     }
 
-                    headerCell(wEquipo, headerBackground, Modifier.clickable { toggleSort(ProblemColumn.EQUIPO) }) {
+                    headerCell(wEquipo, headerBackground, Modifier.clickable(enabled = isInteractive) { toggleSort(ProblemColumn.EQUIPO) }) {
                         SortHeader(
                             label = stringResource(com.example.etic.R.string.col_equipo),
                             column = ProblemColumn.EQUIPO,
@@ -6982,7 +7023,9 @@ internal fun ProblemsTable(
                                     .background(rowColor)
                                     .padding(vertical = 6.dp)
                                     .pointerInput(p.id) {
-                                        detectTapGestures(onDoubleTap = { onDoubleTap?.invoke(p, sortedProblems) })
+                                        if (isInteractive) {
+                                            detectTapGestures(onDoubleTap = { onDoubleTap?.invoke(p, sortedProblems) })
+                                        }
                                     }
                             ) {
                                 cellFixed(wNo) { Text("${p.no}") }
@@ -7000,7 +7043,10 @@ internal fun ProblemsTable(
                                     val isOpen = p.estatus.equals("Abierto", ignoreCase = true)
                                     val belongsToCurrentInspection = p.inspectionId?.equals(currentInspectionId, ignoreCase = true) == true
                                     if (isOpen && belongsToCurrentInspection) {
-                                        IconButton(onClick = { onDelete(p) }) {
+                                        IconButton(
+                                            enabled = isInteractive,
+                                            onClick = { onDelete(p) }
+                                        ) {
                                             Icon(
                                                 Icons.Outlined.Delete,
                                                 contentDescription = "Eliminar",
@@ -7085,6 +7131,7 @@ private fun BaselineSortHeader(
 @Composable
 internal fun BaselineTable(
     baselines: List<Baseline>,
+    isInteractive: Boolean = true,
     onDelete: (Baseline) -> Unit,
     onDoubleTap: ((Baseline, List<Baseline>) -> Unit)? = null
 ) {
@@ -7175,31 +7222,31 @@ internal fun BaselineTable(
                 .background(MaterialTheme.colorScheme.surface)
                 .padding(vertical = 8.dp, horizontal = 8.dp)
         ) {
-            headerCellFixed(wInspeccion, headerBackground, Modifier.clickable { toggleSort(BaselineColumn.INSPECCION) }) {
+            headerCellFixed(wInspeccion, headerBackground, Modifier.clickable(enabled = isInteractive) { toggleSort(BaselineColumn.INSPECCION) }) {
                 BaselineSortHeader(label = stringResource(com.example.etic.R.string.col_no_inspeccion), column = BaselineColumn.INSPECCION, sortColumn = sortColumn, sortAsc = sortAsc)
             }
-            headerCellFixed(wEquipo, headerBackground, Modifier.clickable { toggleSort(BaselineColumn.EQUIPO) }) {
+            headerCellFixed(wEquipo, headerBackground, Modifier.clickable(enabled = isInteractive) { toggleSort(BaselineColumn.EQUIPO) }) {
                 BaselineSortHeader(label = stringResource(com.example.etic.R.string.col_equipo), column = BaselineColumn.EQUIPO, sortColumn = sortColumn, sortAsc = sortAsc)
             }
-            headerCellFixed(wFecha, headerBackground, Modifier.clickable { toggleSort(BaselineColumn.FECHA) }) {
+            headerCellFixed(wFecha, headerBackground, Modifier.clickable(enabled = isInteractive) { toggleSort(BaselineColumn.FECHA) }) {
                 BaselineSortHeader(label = stringResource(com.example.etic.R.string.col_fecha), column = BaselineColumn.FECHA, sortColumn = sortColumn, sortAsc = sortAsc)
             }
-            headerCellFixed(wMta, headerBackground, Modifier.clickable { toggleSort(BaselineColumn.MTA) }) {
+            headerCellFixed(wMta, headerBackground, Modifier.clickable(enabled = isInteractive) { toggleSort(BaselineColumn.MTA) }) {
                 BaselineSortHeader(label = stringResource(com.example.etic.R.string.col_mta_c), column = BaselineColumn.MTA, sortColumn = sortColumn, sortAsc = sortAsc)
             }
-            headerCellFixed(wTemp, headerBackground, Modifier.clickable { toggleSort(BaselineColumn.TEMP) }) {
+            headerCellFixed(wTemp, headerBackground, Modifier.clickable(enabled = isInteractive) { toggleSort(BaselineColumn.TEMP) }) {
                 BaselineSortHeader(label = stringResource(com.example.etic.R.string.col_temp_c), column = BaselineColumn.TEMP, sortColumn = sortColumn, sortAsc = sortAsc)
             }
-            headerCellFixed(wAmb, headerBackground, Modifier.clickable { toggleSort(BaselineColumn.AMB) }) {
+            headerCellFixed(wAmb, headerBackground, Modifier.clickable(enabled = isInteractive) { toggleSort(BaselineColumn.AMB) }) {
                 BaselineSortHeader(label = stringResource(com.example.etic.R.string.col_amb_c), column = BaselineColumn.AMB, sortColumn = sortColumn, sortAsc = sortAsc)
             }
-            headerCellFixed(wIr, headerBackground, Modifier.clickable { toggleSort(BaselineColumn.IR) }) {
+            headerCellFixed(wIr, headerBackground, Modifier.clickable(enabled = isInteractive) { toggleSort(BaselineColumn.IR) }) {
                 BaselineSortHeader(label = "IR", column = BaselineColumn.IR, sortColumn = sortColumn, sortAsc = sortAsc)
             }
-            headerCellFixed(wId, headerBackground, Modifier.clickable { toggleSort(BaselineColumn.ID) }) {
+            headerCellFixed(wId, headerBackground, Modifier.clickable(enabled = isInteractive) { toggleSort(BaselineColumn.ID) }) {
                 BaselineSortHeader(label = "ID", column = BaselineColumn.ID, sortColumn = sortColumn, sortAsc = sortAsc)
             }
-            headerCellFixed(wNotas, headerBackground, Modifier.clickable { toggleSort(BaselineColumn.NOTAS) }) {
+            headerCellFixed(wNotas, headerBackground, Modifier.clickable(enabled = isInteractive) { toggleSort(BaselineColumn.NOTAS) }) {
                 BaselineSortHeader(label = "Notas", column = BaselineColumn.NOTAS, sortColumn = sortColumn, sortAsc = sortAsc)
             }
             headerCellFixed(wOp, headerBackground) { Text("") }
@@ -7211,17 +7258,19 @@ internal fun BaselineTable(
             LazyColumn(Modifier.fillMaxSize(), state = listState) {
                 itemsIndexed(sortedBaselines, key = { _, item -> item.id }) { index, b ->
                     val rowColor = if (index % 2 == 1) zebraColor else Color.Transparent
-                    Row(
-                        Modifier
-                            .fillMaxWidth()
-                            .background(rowColor)
-                            .padding(vertical = 6.dp, horizontal = 8.dp)
-                            .pointerInput(b.id) {
-                                detectTapGestures(onDoubleTap = {
-                                    onDoubleTap?.invoke(b, sortedBaselines)
-                                })
-                            }
-                    ) {
+                            Row(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .background(rowColor)
+                                    .padding(vertical = 6.dp, horizontal = 8.dp)
+                                    .pointerInput(b.id) {
+                                        if (isInteractive) {
+                                            detectTapGestures(onDoubleTap = {
+                                                onDoubleTap?.invoke(b, sortedBaselines)
+                                            })
+                                        }
+                                    }
+                            ) {
                         cellFixed(wInspeccion) { Text(b.numInspeccion) }
                         cellFixed(wEquipo) { Text(b.equipo) }
                         cellFixed(wFecha) { Text(b.fecha.format(PROBLEM_DATE_FORMATTER)) }
@@ -7232,7 +7281,10 @@ internal fun BaselineTable(
                         cellFixed(wId) { Text(b.imgD ?: "") }
                         cellFixed(wNotas) { Text(b.notas) }
                         cellFixed(wOp) {
-                            IconButton(onClick = { onDelete(b) }) {
+                            IconButton(
+                                enabled = isInteractive,
+                                onClick = { onDelete(b) }
+                            ) {
                                 Icon(
                                     Icons.Outlined.Delete,
                                     contentDescription = "Eliminar",

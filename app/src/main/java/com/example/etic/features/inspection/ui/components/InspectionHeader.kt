@@ -37,6 +37,7 @@ fun InspectionHeader(
     onStatusSelected: (EstatusInspeccionDet?) -> Unit,
     onApplyStatus: () -> Unit,
     onClickNewLocation: () -> Unit,
+    isEnabled: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     val statusItems = remember(statusOptions) {
@@ -60,6 +61,7 @@ fun InspectionHeader(
             value = barcode,
             onValueChange = onBarcodeChange,
             onSearch = onSearch,
+            enabled = isEnabled,
             placeholder = stringResource(R.string.label_codigo_barras),
             minWidth = 180.dp,
             maxWidth = 320.dp
@@ -74,11 +76,13 @@ fun InspectionHeader(
                 onStatusSelected(selected)
             },
             minWidth = 160.dp,
-            maxWidth = 240.dp
+            maxWidth = 240.dp,
+            enabled = isEnabled
         )
         Spacer(Modifier.width(HEADER_ACTION_SPACING))
         Button(
             onClick = onApplyStatus,
+            enabled = isEnabled,
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1F7A8C)),
             shape = RoundedCornerShape(4.dp),
             contentPadding = PaddingValues(
@@ -92,6 +96,7 @@ fun InspectionHeader(
 
         Button(
             onClick = onClickNewLocation,
+            enabled = isEnabled,
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),
             shape = RoundedCornerShape(4.dp),
             contentPadding = PaddingValues(

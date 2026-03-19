@@ -1,4 +1,4 @@
-package com.example.etic.features.saf
+﻿package com.example.etic.features.saf
 
 import android.content.Intent
 import android.net.Uri
@@ -56,7 +56,8 @@ import com.example.etic.core.saf.SafEticManager
 import kotlinx.coroutines.launch
 
 enum class EticFolderType(val label: String) {
-    Images("Carpeta Imágenes"),
+    ClientImages("Carpeta img clientes"),
+    Images("Carpeta Imagenes"),
     Reports("Carpeta Archivos")
 }
 
@@ -112,15 +113,16 @@ fun EticFolderShortcutScreen(
     var renameTarget by remember { mutableStateOf<DocumentFile?>(null) }
     var deleteTarget by remember { mutableStateOf<DocumentFile?>(null) }
     var newName by remember { mutableStateOf("") }
+    val inspectionNumber = inspectionNumero.orEmpty()
 
     if (rootTreeUri == null) {
         FolderPickerScreen(onTreeUriPicked = onPickRoot, modifier = modifier)
         return
     }
 
-    if (inspectionNumero.isNullOrBlank()) {
+    if (folderType != EticFolderType.ClientImages && inspectionNumber.isBlank()) {
         Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("No hay inspección activa.")
+            Text("No hay inspeccion activa.")
         }
         return
     }
@@ -128,13 +130,14 @@ fun EticFolderShortcutScreen(
     val files by produceState(
         initialValue = emptyList<DocumentFile>(),
         rootTreeUri,
-        inspectionNumero,
+        inspectionNumber,
         folderType,
         refreshTick
     ) {
         val dir = when (folderType) {
-            EticFolderType.Images -> manager.getImagesDir(context, rootTreeUri, inspectionNumero)
-            EticFolderType.Reports -> manager.getReportsDir(context, rootTreeUri, inspectionNumero)
+            EticFolderType.ClientImages -> manager.getClientesDir(context, rootTreeUri)
+            EticFolderType.Images -> manager.getImagesDir(context, rootTreeUri, inspectionNumber)
+            EticFolderType.Reports -> manager.getReportsDir(context, rootTreeUri, inspectionNumber)
         }
         value = manager.listFiles(dir)
     }
@@ -159,8 +162,9 @@ fun EticFolderShortcutScreen(
                 IconButton(
                     onClick = {
                         val dir = when (folderType) {
-                            EticFolderType.Images -> manager.getImagesDir(context, rootTreeUri, inspectionNumero)
-                            EticFolderType.Reports -> manager.getReportsDir(context, rootTreeUri, inspectionNumero)
+                            EticFolderType.ClientImages -> manager.getClientesDir(context, rootTreeUri)
+                            EticFolderType.Images -> manager.getImagesDir(context, rootTreeUri, inspectionNumber)
+                            EticFolderType.Reports -> manager.getReportsDir(context, rootTreeUri, inspectionNumber)
                         }
                         val uri = dir?.uri
                         if (uri != null) {
@@ -306,3 +310,5 @@ fun EticFolderShortcutScreen(
         )
     }
 }
+
+

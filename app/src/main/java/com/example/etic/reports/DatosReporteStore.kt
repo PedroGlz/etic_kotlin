@@ -24,6 +24,18 @@ private data class StoredDatosReporte(
     val arrayProblemasSeleccionados: String?
 )
 
+private const val PORTADA_IMAGES_COUNT = 3
+
+private fun splitPortadaSerialized(raw: String?): List<String> =
+    if (raw.isNullOrBlank()) {
+        emptyList()
+    } else {
+        raw.split("$").map { it.trim() }
+    }
+
+private fun normalizePortadaImagenes(values: List<String>): List<String> =
+    (values + List(PORTADA_IMAGES_COUNT) { "" }).take(PORTADA_IMAGES_COUNT)
+
 internal object DatosReporteStore {
     fun loadLatestByInspection(context: Context, inspectionId: String): Result<ResultadosAnalisisDraft?> =
         runCatching {
@@ -105,9 +117,9 @@ internal object DatosReporteStore {
             put(
                 "nombre_img_portada",
                 serializeStrings(
-                    listOf(draft.nombreImgPortada, draft.nombreImgPortada2, draft.nombreImgPortada3)
-                        .map { it.trim() }
-                        .filter { it.isNotEmpty() }
+                    normalizePortadaImagenes(
+                        listOf(draft.nombreImgPortada, draft.nombreImgPortada2, draft.nombreImgPortada3).map { it.trim() }
+                    )
                 ).ifBlank { null }
             )
             put("descripcion_reporte", serializeStrings(draft.descripciones))
@@ -140,7 +152,7 @@ internal object DatosReporteStore {
         val recomendacionesTexto = splitSerialized(recomendacionReporte)
         val recomendacionesImg1 = splitSerialized(imagenRecomendacion)
         val recomendacionesImg2 = splitSerialized(imagenRecomendacion2)
-        val portadaImages = splitSerialized(nombreImgPortada)
+        val portadaImages = normalizePortadaImagenes(splitPortadaSerialized(nombreImgPortada))
         val maxRecCount = maxOf(
             recomendacionesTexto.size,
             recomendacionesImg1.size,
