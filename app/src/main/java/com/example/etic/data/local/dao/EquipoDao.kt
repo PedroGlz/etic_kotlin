@@ -9,10 +9,9 @@ interface EquipoDao {
     @Query("SELECT * FROM equipos WHERE Estatus = 'Activo'")
     suspend fun getAllActivos(): List<Equipo>
 
-    @Query("SELECT * FROM equipos")
+    @Query("SELECT * FROM equipos WHERE Estatus = 'Activo'")
     suspend fun getAll(): List<Equipo>
 
-    @Query("SELECT * FROM equipos WHERE Id_Equipo = :id LIMIT 1")
+    @Query("SELECT * FROM equipos WHERE Id_Equipo = :id AND Estatus = 'Activo' LIMIT 1")
     suspend fun getById(id: String): Equipo?
 }
-

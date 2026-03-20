@@ -15,10 +15,10 @@ interface ProblemaDao {
     @Update
     suspend fun update(problema: Problema)
 
-    @Query("SELECT * FROM problemas WHERE Id_Problema = :problemId LIMIT 1")
+    @Query("SELECT * FROM problemas WHERE Id_Problema = :problemId AND Estatus = 'Activo' LIMIT 1")
     suspend fun getById(problemId: String): Problema?
 
-    @Query("SELECT * FROM problemas")
+    @Query("SELECT * FROM problemas WHERE Estatus = 'Activo'")
     suspend fun getAll(): List<Problema>
 
     @Query("SELECT * FROM problemas WHERE Estatus = 'Activo'")
@@ -40,7 +40,7 @@ interface ProblemaDao {
     )
     suspend fun getActivosPorSitio(siteId: String): List<Problema>
 
-    @Query("SELECT * FROM problemas WHERE Id_Inspeccion = :idInspeccion")
+    @Query("SELECT * FROM problemas WHERE Id_Inspeccion = :idInspeccion AND Estatus = 'Activo'")
     suspend fun getByInspeccion(idInspeccion: String): List<Problema>
 
     @Query("SELECT * FROM problemas WHERE Id_Inspeccion = :idInspeccion AND Estatus = 'Activo'")
@@ -156,6 +156,7 @@ interface ProblemaDao {
           AND Id_Tipo_Inspeccion = :idTipoInspeccion
           AND Ir_File IS NOT NULL
           AND Ir_File != ''
+          AND Estatus = 'Activo'
         ORDER BY Fecha_Creacion DESC
         LIMIT 1
         """
@@ -172,6 +173,7 @@ interface ProblemaDao {
           AND Id_Tipo_Inspeccion = :idTipoInspeccion
           AND Photo_File IS NOT NULL
           AND Photo_File != ''
+          AND Estatus = 'Activo'
         ORDER BY Fecha_Creacion DESC
         LIMIT 1
         """

@@ -7,10 +7,10 @@ import com.example.etic.data.local.entities.Usuario
 @Dao
 interface UsuarioDao {
 
-    @Query("SELECT * FROM usuarios WHERE Id_Usuario = :idUsuario LIMIT 1")
+    @Query("SELECT * FROM usuarios WHERE Id_Usuario = :idUsuario AND Estatus = 'Activo' LIMIT 1")
     suspend fun getById(idUsuario: String): Usuario?
 
-    @Query("SELECT * FROM usuarios WHERE Usuario = :usuario LIMIT 1")
+    @Query("SELECT * FROM usuarios WHERE Usuario = :usuario AND Estatus = 'Activo' LIMIT 1")
     suspend fun getByUsuario(usuario: String): Usuario?
 
     /*

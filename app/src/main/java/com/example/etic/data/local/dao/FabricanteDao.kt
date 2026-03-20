@@ -11,10 +11,10 @@ interface FabricanteDao {
     @Query("SELECT * FROM fabricantes WHERE Estatus = 'Activo'")
     suspend fun getAllActivos(): List<Fabricante>
 
-    @Query("SELECT * FROM fabricantes")
+    @Query("SELECT * FROM fabricantes WHERE Estatus = 'Activo'")
     suspend fun getAll(): List<Fabricante>
 
-    @Query("SELECT * FROM fabricantes WHERE lower(trim(Fabricante)) = lower(trim(:name)) LIMIT 1")
+    @Query("SELECT * FROM fabricantes WHERE lower(trim(Fabricante)) = lower(trim(:name)) AND Estatus = 'Activo' LIMIT 1")
     suspend fun findByName(name: String): Fabricante?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

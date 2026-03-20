@@ -9,7 +9,6 @@ interface TipoPrioridadDao {
     @Query("SELECT * FROM tipo_prioridades WHERE Estatus = 'Activo'")
     suspend fun getAllActivas(): List<TipoPrioridad>
 
-    @Query("SELECT * FROM tipo_prioridades")
+    @Query("SELECT * FROM tipo_prioridades WHERE Estatus = 'Activo'")
     suspend fun getAll(): List<TipoPrioridad>
 }
-

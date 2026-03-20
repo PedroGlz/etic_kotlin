@@ -9,13 +9,13 @@ import com.example.etic.data.local.entities.InspeccionDet
 
 @Dao
 interface InspeccionDetDao {
-    @Query("SELECT * FROM inspecciones_det")
+    @Query("SELECT * FROM inspecciones_det WHERE Estatus = 'Activo'")
     suspend fun getAll(): List<InspeccionDet>
 
-    @Query("SELECT * FROM inspecciones_det WHERE Id_Inspeccion = :inspectionId")
+    @Query("SELECT * FROM inspecciones_det WHERE Id_Inspeccion = :inspectionId AND Estatus = 'Activo'")
     suspend fun getByInspeccion(inspectionId: String): List<InspeccionDet>
 
-    @Query("SELECT * FROM inspecciones_det WHERE Id_Ubicacion = :ubicacionId")
+    @Query("SELECT * FROM inspecciones_det WHERE Id_Ubicacion = :ubicacionId AND Estatus = 'Activo'")
     suspend fun getByUbicacion(ubicacionId: String): List<InspeccionDet>
 
     @Update
@@ -75,6 +75,7 @@ interface InspeccionDetDao {
         LEFT JOIN estatus_inspeccion_det AS eid
             ON insdet.Id_Status_Inspeccion_Det = eid.Id_Status_Inspeccion_Det
         WHERE insdet.Id_Ubicacion = :ubicacionId
+          AND insdet.Estatus = 'Activo'
         ORDER BY insp.No_Inspeccion DESC
         """
     )

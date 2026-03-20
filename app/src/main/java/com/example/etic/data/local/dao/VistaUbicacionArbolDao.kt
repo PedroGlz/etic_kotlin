@@ -15,12 +15,16 @@ interface VistaUbicacionArbolDao {
     fun getByInspeccionInternal(query: SupportSQLiteQuery): List<VistaUbicacionArbol>
 
     fun getAll(): List<VistaUbicacionArbol> =
-        getAllInternal(SimpleSQLiteQuery("SELECT * FROM vista_ubicaciones_arbol"))
+        getAllInternal(
+            SimpleSQLiteQuery(
+                "SELECT * FROM vista_ubicaciones_arbol WHERE Estatus = 'Activo'"
+            )
+        )
 
     fun getByInspeccion(inspId: String): List<VistaUbicacionArbol> =
         getByInspeccionInternal(
             SimpleSQLiteQuery(
-                "SELECT * FROM vista_ubicaciones_arbol WHERE Id_Inspeccion = ?",
+                "SELECT * FROM vista_ubicaciones_arbol WHERE Id_Inspeccion = ? AND Estatus = 'Activo'",
                 arrayOf(inspId)
             )
         )

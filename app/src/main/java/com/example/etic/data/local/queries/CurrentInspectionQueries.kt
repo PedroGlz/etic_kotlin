@@ -31,6 +31,7 @@ fun getCurrentInspectionInfo(db: AppDatabase): CurrentInspectionInfo? {
         LEFT JOIN sitios         s ON s.Id_Sitio   = i.Id_Sitio
         LEFT JOIN grupos_sitios  g ON g.Id_Grupo_Sitios = i.Id_Grupo_Sitios
         WHERE i.No_Inspeccion IS NOT NULL
+          AND i.Estatus = 'Activo'
         ORDER BY i.No_Inspeccion DESC
         LIMIT 1
     """.trimIndent()
@@ -62,4 +63,3 @@ fun getCurrentInspectionInfo(db: AppDatabase): CurrentInspectionInfo? {
         )
     }
 }
-

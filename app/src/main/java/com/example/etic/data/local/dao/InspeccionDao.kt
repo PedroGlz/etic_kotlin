@@ -7,10 +7,10 @@ import com.example.etic.data.local.entities.Inspeccion
 
 @Dao
 interface InspeccionDao {
-    @Query("SELECT * FROM inspecciones")
+    @Query("SELECT * FROM inspecciones WHERE Estatus = 'Activo'")
     suspend fun getAll(): List<Inspeccion>
 
-    @Query("SELECT * FROM inspecciones WHERE Id_Inspeccion = :id LIMIT 1")
+    @Query("SELECT * FROM inspecciones WHERE Id_Inspeccion = :id AND Estatus = 'Activo' LIMIT 1")
     suspend fun getById(id: String): Inspeccion?
 
     @Update
