@@ -52,7 +52,6 @@ import androidx.compose.ui.window.DialogProperties
 import com.example.etic.R
 import com.example.etic.data.local.entities.EstatusInspeccionDet
 import com.example.etic.data.local.entities.Fabricante
-import com.example.etic.data.local.entities.TipoPrioridad
 import com.example.etic.features.inspection.ui.state.LocationFormState
 import kotlin.math.roundToInt
 
@@ -61,7 +60,6 @@ fun NewLocationDialog(
     show: Boolean,
     formState: LocationFormState,
     statusOptions: List<EstatusInspeccionDet>,
-    prioridadOptions: List<TipoPrioridad>,
     fabricanteOptions: List<Fabricante>,
     previewRoute: String,
     isSaving: Boolean,
@@ -141,21 +139,6 @@ fun NewLocationDialog(
                             formState.statusId = id
                             formState.statusLabel = label
                             formState.statusExpanded = false
-                        }
-                    )
-
-                    DropdownSelector(
-                        label = "Tipo de prioridad",
-                        options = prioridadOptions.map { it.idTipoPrioridad to (it.tipoPrioridad ?: it.idTipoPrioridad) },
-                        selectedId = formState.prioridadId,
-                        selectedLabelOverride = formState.prioridadLabel,
-                        placeholder = "Seleccionar prioridad",
-                        onExpandedChange = { formState.prioridadExpanded = it },
-                        expanded = formState.prioridadExpanded,
-                        onSelected = { id, label ->
-                            formState.prioridadId = id
-                            formState.prioridadLabel = label
-                            formState.prioridadExpanded = false
                         }
                     )
 

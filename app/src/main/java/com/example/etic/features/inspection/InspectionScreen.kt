@@ -3351,6 +3351,9 @@ private fun CurrentInspectionSplitView(
                 if (priorityMatch != null) {
                     locationForm.prioridadId = priorityMatch.idTipoPrioridad
                     locationForm.prioridadLabel = priorityMatch.tipoPrioridad ?: priorityMatch.idTipoPrioridad
+                } else {
+                    locationForm.prioridadId = DEFAULT_PRIORIDAD_ID
+                    locationForm.prioridadLabel = "CTO"
                 }
             }
             LaunchedEffect(showNewUbDialog, prioridadOptions) {
@@ -3362,6 +3365,9 @@ private fun CurrentInspectionSplitView(
                     if (match != null) {
                         locationForm.prioridadId = match.idTipoPrioridad
                         locationForm.prioridadLabel = match.tipoPrioridad ?: match.idTipoPrioridad
+                    } else {
+                        locationForm.prioridadId = DEFAULT_PRIORIDAD_ID
+                        locationForm.prioridadLabel = "CTO"
                     }
                 }
             }
@@ -4495,7 +4501,6 @@ private fun CurrentInspectionSplitView(
                 show = showNewUbDialog,
                 formState = locationForm,
                 statusOptions = statusOptions,
-                prioridadOptions = prioridadOptions,
                 fabricanteOptions = fabricanteOptions,
                 previewRoute = previewRoute,
                 isSaving = isSavingNewUb,
@@ -4566,7 +4571,7 @@ private fun CurrentInspectionSplitView(
                                 fechaCreacion = existing?.fechaCreacion ?: nowTs,
                                 modificadoPor = if (isEdit) currentUserId else null,
                                 fechaMod = if (isEdit) nowTs else null,
-                                idTipoPrioridad = locationForm.prioridadId,
+                                idTipoPrioridad = locationForm.prioridadId ?: DEFAULT_PRIORIDAD_ID,
                                 idInspeccion = currentInspection?.idInspeccion
                             )
 
