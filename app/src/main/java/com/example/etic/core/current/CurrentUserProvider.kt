@@ -24,6 +24,10 @@ data class CurrentUserInfo(
 object CurrentUserProvider {
     @Volatile private var cached: CurrentUserInfo? = null
 
+    fun invalidate() {
+        cached = null
+    }
+
     suspend fun load(context: Context): CurrentUserInfo? {
         val existing = cached
         if (existing != null) return existing
@@ -53,4 +57,3 @@ fun ProvideCurrentUser(content: @Composable () -> Unit) {
         content()
     }
 }
-

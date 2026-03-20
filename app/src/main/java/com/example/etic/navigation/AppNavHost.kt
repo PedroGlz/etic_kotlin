@@ -5,6 +5,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.example.etic.core.current.CurrentInspectionProvider
+import com.example.etic.core.current.CurrentUserProvider
 import com.example.etic.core.session.SessionManager
 import com.example.etic.core.session.sessionDataStore
 import com.example.etic.features.auth.LoginScreen
@@ -24,6 +26,8 @@ fun AppNavHost() {
 
     LaunchedEffect(Unit) {
         val loggedIn = session.isLoggedIn.firstOrNull() ?: false
+        CurrentInspectionProvider.invalidate()
+        CurrentUserProvider.invalidate()
         startDestination = if (loggedIn) "home" else "login"
     }
 
@@ -37,6 +41,8 @@ fun AppNavHost() {
         composable("login") {
             LoginScreen(
                 onLogin = { _ ->
+                    CurrentInspectionProvider.invalidate()
+                    CurrentUserProvider.invalidate()
                     navController.navigate("home") {
                         popUpTo("login") { inclusive = true }
                     }
@@ -50,6 +56,8 @@ fun AppNavHost() {
                     // Limpiar sesión y volver a login
                     scope.launch {
                         session.clear()
+                        CurrentInspectionProvider.invalidate()
+                        CurrentUserProvider.invalidate()
                         navController.navigate("login") {
                             popUpTo("home") { inclusive = true }
                         }
