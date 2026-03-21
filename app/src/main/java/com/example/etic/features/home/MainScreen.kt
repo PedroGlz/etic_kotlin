@@ -91,6 +91,7 @@ import com.example.etic.core.settings.settingsDataStore
 import com.example.etic.data.local.DbProvider
 import com.example.etic.data.local.entities.EstatusInspeccion
 import com.example.etic.features.components.ImageInputButtonGroup
+import com.example.etic.features.components.SequenceInputButtonGroup
 import com.example.etic.features.inspection.data.InspectionRepository
 import com.example.etic.features.inspection.ui.home.InspectionScreen
 import com.example.etic.features.saf.EticFolderShortcutScreen
@@ -162,11 +163,14 @@ fun MainScreen(
     var isLoading by rememberSaveable { mutableStateOf(true) }
     var fontsExpanded by rememberSaveable { mutableStateOf(false) }
     var showInitImagesDialog by rememberSaveable { mutableStateOf(false) }
+    var showInitBarcodeDialog by rememberSaveable { mutableStateOf(false) }
     var showInspectionStatusDialog by rememberSaveable { mutableStateOf(false) }
     var showImportInspectionAfterCloseDialog by rememberSaveable { mutableStateOf(false) }
     var initThermalPath by rememberSaveable { mutableStateOf("") }
     var initDigitalPath by rememberSaveable { mutableStateOf("") }
+    var initBarcodeValue by rememberSaveable { mutableStateOf("") }
     var isSavingInitImages by rememberSaveable { mutableStateOf(false) }
+    var isSavingInitBarcode by rememberSaveable { mutableStateOf(false) }
     var isSavingInspectionStatus by rememberSaveable { mutableStateOf(false) }
     var isImportingInspection by rememberSaveable { mutableStateOf(false) }
     var isGeneratingReport by rememberSaveable { mutableStateOf(false) }
@@ -971,6 +975,32 @@ fun MainScreen(
                         icon = { Icon(Icons.Filled.Image, contentDescription = null) },
                         colors = drawerItemColors
                     )
+                    NavigationDrawerItem(
+                        label = { Text("Inicializar codigo de barras") },
+                        selected = false,
+                        onClick = {
+                            initBarcodeValue = ""
+                            val currentInspectionForBarcode = currentInspectionSnapshot
+                            if (currentInspectionForBarcode?.idInspeccion.isNullOrBlank()) {
+                                Toast.makeText(appContext, "No hay inspección activa.", Toast.LENGTH_SHORT).show()
+                            } else {
+                                scope.launch {
+                                    val value = withContext(Dispatchers.IO) {
+                                        runCatching {
+                                            inspeccionDao.getById(currentInspectionForBarcode?.idInspeccion.orEmpty())
+                                                ?.codigoBarrasInicial
+                                        }.getOrNull()
+                                    }
+                                    initBarcodeValue = value.orEmpty()
+                                    showInitBarcodeDialog = true
+                                }
+                            }
+                            fontsExpanded = false
+                            scope.launch { drawerState.close() }
+                        },
+                        icon = { Icon(Icons.Filled.Image, contentDescription = null) },
+                        colors = drawerItemColors
+                    )
 
                     HorizontalDivider(
                         thickness = androidx.compose.material3.DividerDefaults.Thickness,
@@ -1157,6 +1187,21 @@ fun MainScreen(
                                 Toast.LENGTH_SHORT
                             ).show()
                         }
+                    }
+                }
+                fun loadInitialBarcodeFromDb(onResult: (String) -> Unit) {
+                    val inspId = currentInspection?.idInspeccion
+                    if (inspId.isNullOrBlank()) {
+                        Toast.makeText(appContext, "No hay inspección activa.", Toast.LENGTH_SHORT).show()
+                        return
+                    }
+                    scope.launch {
+                        val value = withContext(Dispatchers.IO) {
+                            runCatching { inspeccionDao.getById(inspId) }
+                                .getOrNull()
+                                ?.codigoBarrasInicial
+                        }
+                        onResult(value.orEmpty())
                     }
                 }
                 val thermalCameraLauncher = rememberLauncherForActivityResult(
@@ -1480,6 +1525,84 @@ fun MainScreen(
                                                     showInitImagesDialog = false
                                                 } else {
                                                     Toast.makeText(appContext, "No se pudo actualizar la inspección.", Toast.LENGTH_SHORT).show()
+                                                }
+                                            }
+                                        }
+                                    ) {
+                                        Text("Guardar")
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                if (showInitBarcodeDialog) {
+                    Dialog(
+                        onDismissRequest = { /* bloqueo: solo botones cierran */ },
+                        properties = DialogProperties(
+                            dismissOnClickOutside = false,
+                            dismissOnBackPress = false
+                        )
+                    ) {
+                        Card(
+                            colors = CardDefaults.cardColors()
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .widthIn(max = 470.dp)
+                                    .padding(24.dp),
+                                verticalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Text(text = "Inicializar codigo de barras")
+                                SequenceInputButtonGroup(
+                                    label = "Codigo de barras inicial",
+                                    value = initBarcodeValue,
+                                    onValueChange = { initBarcodeValue = it },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    isRequired = true,
+                                    onMoveUp = { initBarcodeValue = adjustBarcodeSequence(initBarcodeValue, +1) },
+                                    onMoveDown = { initBarcodeValue = adjustBarcodeSequence(initBarcodeValue, -1) },
+                                    onCurrentValueClick = { loadInitialBarcodeFromDb { initBarcodeValue = it } }
+                                )
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    TextButton(
+                                        enabled = !isSavingInitBarcode,
+                                        onClick = {
+                                            if (!isSavingInitBarcode) {
+                                                showInitBarcodeDialog = false
+                                            }
+                                        }
+                                    ) {
+                                        Text("Cancelar")
+                                    }
+                                    val barcodeTrimmed = initBarcodeValue.trim()
+                                    val canSave = isBarcodeIncrementable(barcodeTrimmed) && !isSavingInitBarcode
+                                    Button(
+                                        enabled = canSave,
+                                        onClick = {
+                                            if (isSavingInitBarcode) return@Button
+                                            val inspId = currentInspection?.idInspeccion
+                                            if (inspId.isNullOrBlank()) {
+                                                Toast.makeText(appContext, "No hay inspección activa.", Toast.LENGTH_SHORT).show()
+                                                return@Button
+                                            }
+                                            val valueToSave = barcodeTrimmed
+                                            scope.launch {
+                                                isSavingInitBarcode = true
+                                                val result = withContext(Dispatchers.IO) {
+                                                    runCatching {
+                                                        inspeccionDao.updateInitialBarcode(inspId, valueToSave)
+                                                    }.isSuccess
+                                                }
+                                                isSavingInitBarcode = false
+                                                if (result) {
+                                                    Toast.makeText(appContext, "Codigo de barras inicial actualizado.", Toast.LENGTH_SHORT).show()
+                                                    showInitBarcodeDialog = false
+                                                } else {
+                                                    Toast.makeText(appContext, "No se pudo actualizar el codigo de barras inicial.", Toast.LENGTH_SHORT).show()
                                                 }
                                             }
                                         }
@@ -1935,5 +2058,38 @@ private fun adjustImageSequence(current: String, delta: Int): String {
     )
     val digits = if (parts.digits > 0) parts.digits else fallbackDigits
     return composeImageName(parts.copy(number = newNumber, digits = digits))
+}
+
+private fun adjustBarcodeSequence(current: String, delta: Int): String {
+    if (delta == 0) return current
+    val value = current.trim()
+    val parts = BarcodeSuffix.parse(value) ?: return current
+    val next = (parts.number + delta.toLong()).coerceAtLeast(0L)
+    val nextDigits = max(parts.number.toString().length, next.toString().length).coerceAtLeast(parts.digits)
+    val nextFormatted = next.toString().padStart(nextDigits, '0')
+    return parts.prefix + nextFormatted
+}
+
+private fun isBarcodeIncrementable(value: String): Boolean = BarcodeSuffix.parse(value) != null
+
+private data class BarcodeSuffix(
+    val prefix: String,
+    val number: Long,
+    val digits: Int
+) {
+    companion object {
+        fun parse(raw: String): BarcodeSuffix? {
+            val trimmed = raw.trim()
+            if (trimmed.isBlank()) return null
+            val match = Regex("^(.*?)(\\d+)$").find(trimmed) ?: return null
+            val numberText = match.groupValues[2]
+            val number = numberText.toLongOrNull() ?: return null
+            return BarcodeSuffix(
+                prefix = match.groupValues[1],
+                number = number,
+                digits = numberText.length
+            )
+        }
+    }
 }
 

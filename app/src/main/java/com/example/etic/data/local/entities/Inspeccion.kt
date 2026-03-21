@@ -49,6 +49,9 @@ data class Inspeccion(
     @ColumnInfo(name = "No_Inspeccion_Ant")
     val noInspeccionAnt: Int? = null,
 
+    @ColumnInfo(name = "Codigo_Barras_Inicial")
+    val codigoBarrasInicial: String? = null,
+
     @ColumnInfo(name = "Estatus")
     val estatus: String? = "Activo",
 

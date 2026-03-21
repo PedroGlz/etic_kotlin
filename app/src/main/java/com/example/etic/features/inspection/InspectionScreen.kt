@@ -3316,6 +3316,15 @@ private fun CurrentInspectionSplitView(
 
                     // Limpiar todos los campos del formulario
                     locationForm.resetForNew()
+                    val inspId = currentInspection?.idInspeccion
+                    if (!inspId.isNullOrBlank()) {
+                        val currentInspectionEntity = runCatching {
+                            withContext(Dispatchers.IO) { inspeccionDao.getById(inspId) }
+                        }.getOrNull()
+                        locationForm.barcode = currentInspectionEntity?.codigoBarrasInicial.orEmpty()
+                    } else {
+                        locationForm.barcode = ""
+                    }
 
                     val defaultId = "568798D1-76BB-11D3-82BF-00104BC75DC2"
                     val match = statusOptions.firstOrNull { it.idStatusInspeccionDet.equals(defaultId, true) }
@@ -3333,7 +3342,7 @@ private fun CurrentInspectionSplitView(
                     locationForm.error = null
                 }
             }
-            fun applyNewUbDefaults() {
+            fun applyNewUbDefaults(nextBarcode: String = "") {
                 locationForm.resetForNew()
                 val defaultId = "568798D1-76BB-11D3-82BF-00104BC75DC2"
                 val match = statusOptions.firstOrNull { it.idStatusInspeccionDet.equals(defaultId, true) }
@@ -3355,6 +3364,44 @@ private fun CurrentInspectionSplitView(
                     locationForm.prioridadId = DEFAULT_PRIORIDAD_ID
                     locationForm.prioridadLabel = "CTO"
                 }
+                locationForm.barcode = nextBarcode
+            }
+
+            fun getNextConsecutiveNumber(current: String): String? {
+                val trimmed = current.trim()
+                if (trimmed.isBlank()) return null
+                val match = Regex("^(.*?)(\\d+)$").find(trimmed) ?: return null
+                val prefix = match.groupValues[1]
+                val numberText = match.groupValues[2]
+                val number = numberText.toLongOrNull() ?: return null
+                val nextNumber = (number + 1).coerceAtLeast(0L)
+                val nextDigits = if (nextNumber > 0) {
+                    maxOf(numberText.length, nextNumber.toString().length)
+                } else {
+                    numberText.length
+                }
+                val next = nextNumber.toString().padStart(nextDigits, '0')
+                return "$prefix$next"
+            }
+
+            fun adjustBarcodeSequence(current: String, delta: Int): String {
+                if (delta == 0) return current
+                val trimmed = current.trim()
+                val match = Regex("^(.*?)(\\d+)$").find(trimmed) ?: return current
+                val prefix = match.groupValues[1]
+                val numberText = match.groupValues[2]
+                val number = numberText.toLongOrNull() ?: return current
+                val next = (number + delta.toLong()).coerceAtLeast(0L)
+                val nextDigits = maxOf(
+                    number.toString().length,
+                    next.toString().length,
+                    numberText.length
+                )
+                return "$prefix${next.toString().padStart(nextDigits, '0')}"
+            }
+
+            fun isBarcodeIncrementable(raw: String): Boolean {
+                return Regex("^(.*?)(\\d+)$").matches(raw.trim())
             }
             LaunchedEffect(showNewUbDialog, prioridadOptions) {
                 if (showNewUbDialog && locationForm.prioridadId == null) {
@@ -4504,6 +4551,12 @@ private fun CurrentInspectionSplitView(
                 fabricanteOptions = fabricanteOptions,
                 previewRoute = previewRoute,
                 isSaving = isSavingNewUb,
+                onBarcodeMoveUp = {
+                    locationForm.barcode = adjustBarcodeSequence(locationForm.barcode, +1)
+                },
+                onBarcodeMoveDown = {
+                    locationForm.barcode = adjustBarcodeSequence(locationForm.barcode, -1)
+                },
                 onDismiss = {
                     if (isSavingNewUb) return@NewLocationDialog
                     showNewUbDialog = false
@@ -4515,6 +4568,11 @@ private fun CurrentInspectionSplitView(
                     val name = locationForm.name.trim()
                     if (name.isEmpty()) {
                         locationForm.error = "El nombre es obligatorio"
+                        return@confirm
+                    }
+                    val barcodeValue = locationForm.barcode.trim()
+                    if (barcodeValue.isNotBlank() && !isBarcodeIncrementable(barcodeValue)) {
+                        locationForm.error = "El codigo de barras debe terminar en numeros para guardar"
                         return@confirm
                     }
                     val isEdit = editingUbId != null
@@ -4554,6 +4612,7 @@ private fun CurrentInspectionSplitView(
                                 inputText = locationForm.fabricanteLabel,
                                 tipoInspeccionId = null
                             )
+                            val createdBarcode = barcodeValue
 
                             val nueva = com.example.etic.data.local.entities.Ubicacion(
                                 idUbicacion = id,
@@ -4614,7 +4673,14 @@ private fun CurrentInspectionSplitView(
                                     locationForm.resetForNew()
                                 } else {
                                     Toast.makeText(ctx, "Ubicación creada correctamente.", Toast.LENGTH_SHORT).show()
-                                    applyNewUbDefaults()
+                                    val nextBarcode = getNextConsecutiveNumber(createdBarcode)
+                                    val inspectionId = currentInspection?.idInspeccion
+                                    if (!nextBarcode.isNullOrBlank() && !inspectionId.isNullOrBlank()) {
+                                        runCatching {
+                                            inspeccionDao.updateInitialBarcode(inspectionId, nextBarcode)
+                                        }
+                                    }
+                                    applyNewUbDefaults(nextBarcode.orEmpty())
                                 }
                                 isSavingNewUb = false
                             } else {
@@ -4823,11 +4889,18 @@ private fun CurrentInspectionSplitView(
                                             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp)
                                         )
 
-                                        LabeledInputField(
+                                        com.example.etic.features.components.SequenceInputButtonGroup(
+                                            label = stringResource(com.example.etic.R.string.label_codigo_barras),
                                             value = locationForm.barcode,
                                             onValueChange = { locationForm.barcode = it },
-                                            label = stringResource(com.example.etic.R.string.label_codigo_barras),
-                                            singleLine = true,
+                                            onMoveUp = {
+                                                locationForm.barcode = adjustBarcodeSequence(locationForm.barcode, +1)
+                                            },
+                                            onMoveDown = {
+                                                locationForm.barcode = adjustBarcodeSequence(locationForm.barcode, -1)
+                                            },
+                                            enabled = !isSavingEditUb,
+                                            modifier = Modifier.fillMaxWidth()
                                         )
 
                                         if (locationForm.error != null) {
@@ -4846,6 +4919,11 @@ private fun CurrentInspectionSplitView(
                                                     val name = locationForm.name.trim()
                                                     if (name.isEmpty()) {
                                                         locationForm.error = "El nombre es obligatorio"
+                                                        return@Button
+                                                    }
+                                                    val barcodeValue = locationForm.barcode.trim()
+                                                    if (barcodeValue.isNotBlank() && !isBarcodeIncrementable(barcodeValue)) {
+                                                        locationForm.error = "El codigo de barras debe terminar en numeros para guardar"
                                                         return@Button
                                                     }
                                                     val id = editingUbId ?: return@Button
@@ -4878,7 +4956,7 @@ private fun CurrentInspectionSplitView(
                                                                 ubicacion = name,
                                                                 descripcion = locationForm.description.trim().ifBlank { null },
                                                                 esEquipo = if (locationForm.isEquipment) "SI" else "NO",
-                                                                codigoBarras = locationForm.barcode.trim().ifBlank { null },
+                                                                codigoBarras = barcodeValue.ifBlank { null },
                                                                 fabricante = resolvedFabricanteId,
                                                                 ruta = ruta,
                                                                 estatus = "Activo",

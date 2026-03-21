@@ -64,7 +64,9 @@ fun NewLocationDialog(
     previewRoute: String,
     isSaving: Boolean,
     onDismiss: () -> Unit,
-    onConfirm: () -> Unit
+    onConfirm: () -> Unit,
+    onBarcodeMoveUp: () -> Unit = {},
+    onBarcodeMoveDown: () -> Unit = {}
 ) {
     if (!show) return
 
@@ -189,11 +191,14 @@ fun NewLocationDialog(
                         contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp)
                     )
 
-                    LabeledInputField(
+                    com.example.etic.features.components.SequenceInputButtonGroup(
+                        label = stringResource(R.string.label_codigo_barras),
                         value = formState.barcode,
                         onValueChange = { formState.barcode = it },
-                        label = stringResource(R.string.label_codigo_barras),
-                        singleLine = true
+                        onMoveUp = onBarcodeMoveUp,
+                        onMoveDown = onBarcodeMoveDown,
+                        enabled = !isSaving,
+                        modifier = Modifier.fillMaxWidth()
                     )
 
                     LabeledInputField(
