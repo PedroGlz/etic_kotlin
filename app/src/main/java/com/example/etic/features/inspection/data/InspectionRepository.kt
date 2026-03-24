@@ -25,9 +25,16 @@ class InspectionRepository(
     private val inspeccionDetDao: InspeccionDetDao,
     private val vistaUbicacionArbolDao: VistaUbicacionArbolDao
 ) {
-    suspend fun loadTree(rootId: String, rootTitle: String): List<TreeNode> =
+    suspend fun loadTree(
+        rootId: String,
+        rootTitle: String,
+        inspectionId: String? = null
+    ): List<TreeNode> =
         withContext(Dispatchers.IO) {
-            val rowsVista = runCatching { vistaUbicacionArbolDao.getAll() }.getOrElse { emptyList() }
+            val rowsVista = runCatching {
+                if (inspectionId.isNullOrBlank()) vistaUbicacionArbolDao.getAll()
+                else vistaUbicacionArbolDao.getByInspeccion(inspectionId)
+            }.getOrElse { emptyList() }
             val roots = buildTreeFromVista(rowsVista)
             val siteRoot = TreeNode(id = rootId, title = rootTitle)
             siteRoot.children.addAll(roots)

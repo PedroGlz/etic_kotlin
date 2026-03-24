@@ -479,8 +479,12 @@ private fun CurrentInspectionSplitView(
     }
     // Reconstruir el árbol cuando llegue o cambie la inspección actual
     LaunchedEffect(rootId, rootTitle, currentInspection?.idInspeccion) {
+        val inspectionId = currentInspection?.idInspeccion
         val rowsVista = try {
-            withContext(Dispatchers.IO) { vistaUbicacionArbolDao.getAll() }
+            withContext(Dispatchers.IO) {
+                if (inspectionId.isNullOrBlank()) emptyList()
+                else vistaUbicacionArbolDao.getByInspeccion(inspectionId)
+            }
         } catch (e: Exception) {
             android.util.Log.e("VistaUbicacionArbol", "Error al cargar vista_ubicaciones_arbol", e)
             emptyList()
@@ -491,24 +495,26 @@ private fun CurrentInspectionSplitView(
         val siteRoot = TreeNode(id = rootId, title = rootTitle)
         siteRoot.children.addAll(roots)
         nodes = listOf(siteRoot)
-        if (!expanded.contains(rootId)) expanded.add(rootId)
-        onSelectNode(rootId)
-        // seleccion programatica equivalente a un tap sobre el sitio
-        kotlinx.coroutines.delay(0)
-        onSelectNode(rootId)
-        // Seleccionar por defecto el nodo padre (sitio)
-        if (selectedId == null) selectedId = rootId
         val defaultExpanded = rowsVista.filter { it.expanded == "1" }.map { it.idUbicacion }
+        val selectedRowId = rowsVista.firstOrNull { it.selected == "1" }?.idUbicacion
+        val selectedAncestors = ancestorIdsForSelectedRow(rowsVista, selectedRowId)
+        expanded.clear()
+        expanded.add(rootId)
         defaultExpanded.forEach { if (!expanded.contains(it)) expanded.add(it) }
-        rowsVista.firstOrNull { it.selected == "1" }?.idUbicacion?.let { onSelectNode(it) }
+        selectedAncestors.forEach { if (!expanded.contains(it)) expanded.add(it) }
+        onSelectNode(selectedRowId ?: rootId)
         if (!hasSignaledReady) { hasSignaledReady = true; onReady() }
     }
 
     // Refrescar arbol cuando cambie el baseline (para actualizar colores)
     LaunchedEffect(baselineRefreshTick, currentInspection?.idInspeccion, rootId, rootTitle) {
         if (baselineRefreshTick == 0) return@LaunchedEffect
+        val inspectionId = currentInspection?.idInspeccion
         val rowsVista = try {
-            withContext(Dispatchers.IO) { vistaUbicacionArbolDao.getAll() }
+            withContext(Dispatchers.IO) {
+                if (inspectionId.isNullOrBlank()) emptyList()
+                else vistaUbicacionArbolDao.getByInspeccion(inspectionId)
+            }
         } catch (_: Exception) {
             emptyList()
         }
@@ -1662,7 +1668,7 @@ private fun CurrentInspectionSplitView(
         preserveSelection: String? = selectedId,
         extraExpanded: Collection<String?> = emptyList()
     ) {
-        val newNodes = inspectionRepository.loadTree(rootId, rootTitle)
+        val newNodes = inspectionRepository.loadTree(rootId, rootTitle, currentInspection?.idInspeccion)
         nodes = newNodes
 
         fun nodeExists(id: String?): Boolean = !id.isNullOrBlank() && findById(id, newNodes) != null
@@ -3430,8 +3436,20 @@ private fun CurrentInspectionSplitView(
                 } else {
                     // Expandir ancestros y seleccionar objetivo
                     path.dropLast(1).forEach { id -> if (!expanded.contains(id)) expanded.add(id) }
+                    val inspId = currentInspection?.idInspeccion
+                    if (!inspId.isNullOrBlank()) {
+                        path.dropLast(1)
+                            .filterNot { it.startsWith("root:") }
+                            .forEach { id ->
+                                scope.launch(Dispatchers.IO) {
+                                    runCatching {
+                                        inspeccionDetDao.updateExpandedByUbicacion(inspId, id, "1")
+                                    }
+                                }
+                            }
+                    }
                     val targetId = path.last()
-                    selectedId = targetId
+                    onSelectNode(targetId)
                     highlightedId = targetId
                     scrollToNodeId = targetId
                     scope.launch {
@@ -7431,6 +7449,22 @@ private fun PreviewInspection() { EticTheme { InspectionScreen() } }
 // -------------------------
 // DB-backed Problems table
 // -------------------------
+
+private fun ancestorIdsForSelectedRow(
+    rows: List<com.example.etic.data.local.views.VistaUbicacionArbol>,
+    targetId: String?
+): List<String> {
+    if (targetId.isNullOrBlank()) return emptyList()
+    val parentById = rows.associate { it.idUbicacion to it.idUbicacionPadre }
+    val out = mutableListOf<String>()
+    var currentId = targetId
+    while (true) {
+        val parentId = parentById[currentId]?.takeIf { it.isNotBlank() && it != "0" } ?: break
+        out += parentId
+        currentId = parentId
+    }
+    return out.asReversed()
+}
 
 
 private fun buildTreeFromVista(rows: List<com.example.etic.data.local.views.VistaUbicacionArbol>): MutableList<TreeNode> {

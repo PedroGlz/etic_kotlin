@@ -292,7 +292,7 @@ fun MainScreen(
             try {
                 val rootId = insp.idSitio?.let { "root:$it" } ?: "root:site"
                 val rootTitle = insp.nombreSitio ?: "Sitio"
-                val roots = inspectionRepo.loadTree(rootId, rootTitle)
+                val roots = inspectionRepo.loadTree(rootId, rootTitle, insp.idInspeccion)
                 val locationRoots = roots.firstOrNull()?.children.orEmpty()
                 resultsLocationOptions = locationRoots
 
@@ -785,7 +785,7 @@ fun MainScreen(
                         val rootId = insp.idSitio?.let { "root:$it" } ?: "root:site"
                         val rootTitle = insp.nombreSitio ?: "Sitio"
                         scope.launch {
-                            val roots = inspectionRepo.loadTree(rootId, rootTitle)
+                            val roots = inspectionRepo.loadTree(rootId, rootTitle, insp.idInspeccion)
                             val children = roots.firstOrNull()?.children.orEmpty()
                             inventoryOptions = children
                             inventorySelection = children.associate { it.id to false }
