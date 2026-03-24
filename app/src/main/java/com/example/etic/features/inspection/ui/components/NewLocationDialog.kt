@@ -66,7 +66,8 @@ fun NewLocationDialog(
     onDismiss: () -> Unit,
     onConfirm: () -> Unit,
     onBarcodeMoveUp: () -> Unit = {},
-    onBarcodeMoveDown: () -> Unit = {}
+    onBarcodeMoveDown: () -> Unit = {},
+    onBarcodeSuggestNext: () -> Unit = {}
 ) {
     if (!show) return
 
@@ -197,6 +198,7 @@ fun NewLocationDialog(
                         onValueChange = { formState.barcode = it },
                         onMoveUp = onBarcodeMoveUp,
                         onMoveDown = onBarcodeMoveDown,
+                        onCurrentValueClick = onBarcodeSuggestNext,
                         enabled = !isSaving,
                         modifier = Modifier.fillMaxWidth()
                     )

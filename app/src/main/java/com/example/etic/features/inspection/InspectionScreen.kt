@@ -861,6 +861,33 @@ private fun CurrentInspectionSplitView(
                     runCatching { inspeccionDao.updateInitialImages(inspId, irName, digName) }
                 }
             }
+            fun loadNextBarcodeFromInspection(onResult: (String) -> Unit) {
+                val inspId = currentInspection?.idInspeccion
+                if (inspId.isNullOrBlank()) {
+                    Toast.makeText(ctx, "No hay inspecciÃ³n activa.", Toast.LENGTH_SHORT).show()
+                    return
+                }
+                loadInitialImageScope.launch {
+                    val initial = withContext(Dispatchers.IO) {
+                        runCatching { inspeccionDao.getById(inspId) }.getOrNull()?.codigoBarrasInicial
+                    }
+                    val suggestion = run {
+                        val current = initial.orEmpty().trim()
+                        val match = Regex("^(.*?)(\\d+)$").find(current)
+                        if (match == null) current else {
+                            val prefix = match.groupValues[1]
+                            val numberText = match.groupValues[2]
+                            val number = numberText.toLongOrNull()
+                            if (number == null) current else {
+                                val nextNumber = (number + 1).coerceAtLeast(0L)
+                                val nextDigits = maxOf(numberText.length, nextNumber.toString().length)
+                                "$prefix${nextNumber.toString().padStart(nextDigits, '0')}"
+                            }
+                        }
+                    }
+                    onResult(suggestion.ifBlank { initial.orEmpty() })
+                }
+            }
             LaunchedEffect(showVisualInspectionDialog, pendingProblemUbicacionId, editingProblemId) {
                 if (showVisualInspectionDialog) {
                     if (editingProblemId == null) {
@@ -2702,7 +2729,10 @@ private fun CurrentInspectionSplitView(
                             if (isEditingElectricProblem) runCatching { problemaDao.update(problema) }
                             else runCatching { problemaDao.insert(problema) }
                         }
-                        if (result.isSuccess) {
+                            if (result.isSuccess) {
+                            if (!isEditingElectricProblem) {
+                                updateInspectionInitialImages(pendingThermalImage, pendingDigitalImage)
+                            }
                             val refreshedFabricantes = withContext(Dispatchers.IO) {
                                 runCatching { fabricanteDao.getAllActivos() }.getOrElse { emptyList() }
                                     .sortedBy { it.fabricante?.lowercase(Locale.getDefault()) ?: "" }
@@ -2977,6 +3007,9 @@ private fun CurrentInspectionSplitView(
                             else runCatching { problemaDao.insert(problema) }
                         }
                         if (result.isSuccess) {
+                            if (!isEditingMechanicalProblem) {
+                                updateInspectionInitialImages(pendingThermalImage, pendingDigitalImage)
+                            }
                             val refreshedFabricantes = withContext(Dispatchers.IO) {
                                 runCatching { fabricanteDao.getAllActivos() }.getOrElse { emptyList() }
                                     .sortedBy { it.fabricante?.lowercase(Locale.getDefault()) ?: "" }
@@ -3253,6 +3286,9 @@ private fun CurrentInspectionSplitView(
                             else runCatching { problemaDao.insert(problema) }
                         }
                         if (result.isSuccess) {
+                            if (!isEditingProblem) {
+                                updateInspectionInitialImages(pendingThermalImage, pendingDigitalImage)
+                            }
                             val refreshedFabricantes = withContext(Dispatchers.IO) {
                                 runCatching { fabricanteDao.getAllActivos() }.getOrElse { emptyList() }
                                     .sortedBy { it.fabricante?.lowercase(Locale.getDefault()) ?: "" }
@@ -4192,7 +4228,9 @@ private fun CurrentInspectionSplitView(
                                             nowTs = nowTs
                                         )
                                     }
-                                    updateInspectionInitialImages(thermal, digital)
+                                    if (editingId == null) {
+                                        updateInspectionInitialImages(thermal, digital)
+                                    }
                                     showVisualInspectionDialog = false
                                     pendingProblemNumber = fetchNextProblemNumber(VISUAL_PROBLEM_TYPE_ID)
                                     problemsRefreshTick++
@@ -4575,6 +4613,9 @@ private fun CurrentInspectionSplitView(
                 onBarcodeMoveDown = {
                     locationForm.barcode = adjustBarcodeSequence(locationForm.barcode, -1)
                 },
+                onBarcodeSuggestNext = {
+                    loadNextBarcodeFromInspection { locationForm.barcode = it }
+                },
                 onDismiss = {
                     if (isSavingNewUb) return@NewLocationDialog
                     showNewUbDialog = false
@@ -4916,6 +4957,9 @@ private fun CurrentInspectionSplitView(
                                             },
                                             onMoveDown = {
                                                 locationForm.barcode = adjustBarcodeSequence(locationForm.barcode, -1)
+                                            },
+                                            onCurrentValueClick = {
+                                                loadNextBarcodeFromInspection { locationForm.barcode = it }
                                             },
                                             enabled = !isSavingEditUb,
                                             modifier = Modifier.fillMaxWidth()
@@ -5723,7 +5767,7 @@ private fun CurrentInspectionSplitView(
                                                                             enabled = true,
                                                                             onMoveUp = { imgIr = adjustImageSequence(imgIr, +1) },
                                                                             onMoveDown = { imgIr = adjustImageSequence(imgIr, -1) },
-                                                                            onDotsClick = { imgIr = nextImageName(imgIr, "IR") },
+                                                                            onDotsClick = { loadInitialImageFromInspection(true) { imgIr = it } },
                                                                             onFolderClick = { irFolderLauncher.launch("image/*") },
                                                                             onCameraClick = { irCameraLauncher.launch(null) }
                                                                         )
@@ -5769,7 +5813,7 @@ private fun CurrentInspectionSplitView(
                                                                             enabled = true,
                                                                             onMoveUp = { imgId = adjustImageSequence(imgId, +1) },
                                                                             onMoveDown = { imgId = adjustImageSequence(imgId, -1) },
-                                                                            onDotsClick = { imgId = nextImageName(imgId, "ID") },
+                                                                            onDotsClick = { loadInitialImageFromInspection(false) { imgId = it } },
                                                                             onFolderClick = { idFolderLauncher.launch("image/*") },
                                                                             onCameraClick = { idCameraLauncher.launch(null) }
                                                                         )
@@ -5895,6 +5939,12 @@ private fun CurrentInspectionSplitView(
                                                                                         runCatching { lineaBaseDao.update(item) }.isSuccess
                                                                                     }
                                                                                     if (ok) {
+                                                                                        if (baselineToEdit == null) {
+                                                                                            updateInspectionInitialImages(
+                                                                                                imgIr.ifBlank { null },
+                                                                                                imgId.ifBlank { null }
+                                                                                            )
+                                                                                        }
                                                                                         if (detRow != null) {
                                                                                             val updatedDet = detRow.copy(
                                                                                                 idStatusInspeccionDet = "568798D2-76BB-11D3-82BF-00104BC75DC2",
