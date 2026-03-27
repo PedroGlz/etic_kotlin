@@ -6266,6 +6266,11 @@ private fun CurrentInspectionSplitView(
                             },
                             onDragCopyDrop = { sourceId, targetId ->
                                 if (!isInteractionEnabled || isCloningTreeBranch) return@SimpleTreeView
+                                if (sourceId == targetId) {
+                                    dragCopySourceId = null
+                                    dragCopyTargetId = null
+                                    return@SimpleTreeView
+                                }
                                 scope.launch {
                                     isCloningTreeBranch = true
                                     try {
