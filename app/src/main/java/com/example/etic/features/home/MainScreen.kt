@@ -146,16 +146,18 @@ fun MainScreen(
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
     val appContext = LocalContext.current
-    val inspeccionDao = remember { DbProvider.get(appContext).inspeccionDao() }
-    val sitioDao = remember { DbProvider.get(appContext).sitioDao() }
-    val problemaDao = remember { DbProvider.get(appContext).problemaDao() }
+    val db = remember { DbProvider.get(appContext) }
+    val inspeccionDao = remember { db.inspeccionDao() }
+    val sitioDao = remember { db.sitioDao() }
+    val problemaDao = remember { db.problemaDao() }
     val eticPrefs = remember { EticPrefs(appContext.settingsDataStore) }
     val safManager = remember { SafEticManager() }
     val inspectionRepo = remember {
         InspectionRepository(
-            ubicacionDao = DbProvider.get(appContext).ubicacionDao(),
-            inspeccionDetDao = DbProvider.get(appContext).inspeccionDetDao(),
-            vistaUbicacionArbolDao = DbProvider.get(appContext).vistaUbicacionArbolDao()
+            db = db,
+            ubicacionDao = db.ubicacionDao(),
+            inspeccionDetDao = db.inspeccionDetDao(),
+            vistaUbicacionArbolDao = db.vistaUbicacionArbolDao()
         )
     }
     var showLogoutDialog by rememberSaveable { mutableStateOf(false) }
@@ -1734,7 +1736,7 @@ fun MainScreen(
                         onDismissRequest = { showImportInspectionAfterCloseDialog = false },
                         title = { Text("Seleccionar Base de Datos") },
                         text = {
-                            Text("Seleccionar archivo .sql de la Inspeccion a realizar.")
+                            Text("Seleccionar archivo de la inspección a realizar.")
                         },
                         dismissButton = {
                             TextButton(
