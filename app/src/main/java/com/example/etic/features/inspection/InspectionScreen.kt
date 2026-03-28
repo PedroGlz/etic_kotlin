@@ -4643,6 +4643,15 @@ private fun CurrentInspectionSplitView(
                             val request = pendingClonePasteConfirmation
                             pendingClonePasteConfirmation = null
                             if (request != null) {
+                                val targetNode = if (request.targetId == rootId) null else findById(request.targetId, nodes)
+                                if (request.targetId != rootId && targetNode?.verified == true) {
+                                    Toast.makeText(
+                                        ctx,
+                                        "La ubicacion destino no puede ser un equipo.",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                    return@Button
+                                }
                                 scope.launch {
                                     isCloningTreeBranch = true
                                     try {
@@ -4677,14 +4686,53 @@ private fun CurrentInspectionSplitView(
                     },
                     title = { Text("Confirmar pegado") },
                     text = {
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text("Se va a duplicar una ubicacion en un nuevo destino.")
-                            Text("Origen: ${pendingPaste.sourceTitle}")
-                            Text("Ruta origen: ${pendingPaste.sourcePath}")
-                            Text("Destino: ${pendingPaste.targetTitle}")
-                            Text("Ruta destino: ${pendingPaste.targetPath}")
-                            Text("Hijos directos a copiar: ${pendingPaste.directChildrenCount}")
-                            Text("Total de ubicaciones nuevas: ${pendingPaste.directChildrenCount + 1}")
+                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Text(
+                                "Se va a duplicar una estructura de ubicaciones en un nuevo destino.",
+                                style = MaterialTheme.typography.bodyMedium
+                            )
+
+                            Box(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .background(
+                                        MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.55f),
+                                        RoundedCornerShape(12.dp)
+                                    )
+                                    .border(
+                                        1.dp,
+                                        MaterialTheme.colorScheme.secondary.copy(alpha = 0.25f),
+                                        RoundedCornerShape(12.dp)
+                                    )
+                                    .padding(12.dp)
+                            ) {
+                                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Text("Origen", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.secondary)
+                                    Text(pendingPaste.sourceTitle, style = MaterialTheme.typography.titleSmall)
+                                    Text(pendingPaste.sourcePath, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }
+
+                            Box(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .background(
+                                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.50f),
+                                        RoundedCornerShape(12.dp)
+                                    )
+                                    .border(
+                                        1.dp,
+                                        MaterialTheme.colorScheme.primary.copy(alpha = 0.25f),
+                                        RoundedCornerShape(12.dp)
+                                    )
+                                    .padding(12.dp)
+                            ) {
+                                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Text("Destino", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
+                                    Text(pendingPaste.targetTitle, style = MaterialTheme.typography.titleSmall)
+                                    Text(pendingPaste.targetPath, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                            }                            
                         }
                     }
                 )
@@ -6335,6 +6383,16 @@ private fun CurrentInspectionSplitView(
                                 val sourceNode = findById(sourceId, nodes)
                                 val targetNode = findById(targetId, nodes)
                                 if (sourceNode == null) {
+                                    dragCopySourceId = null
+                                    dragCopyTargetId = null
+                                    return@SimpleTreeView
+                                }
+                                if (targetId != rootId && targetNode?.verified == true) {
+                                    Toast.makeText(
+                                        ctx,
+                                        "La ubicacion destino no puede ser un equipo.",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
                                     dragCopySourceId = null
                                     dragCopyTargetId = null
                                     return@SimpleTreeView
