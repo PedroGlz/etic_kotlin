@@ -9,6 +9,7 @@ import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.foundation.gestures.scrollBy
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.clickable
@@ -86,8 +87,11 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupProperties
 import com.example.etic.ui.theme.EticTheme
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
@@ -1698,6 +1702,7 @@ private fun CurrentInspectionSplitView(
                 openProblemForNavigation(problemNavList[nextIndex])
             }
     var deleteUbConfirmNode by remember { mutableStateOf<TreeNode?>(null) }
+    var pendingClonePasteConfirmation by remember { mutableStateOf<PendingClonePasteConfirmation?>(null) }
 
     suspend fun refreshTree(
         selectIfAvailable: String? = null,
@@ -4629,6 +4634,62 @@ private fun CurrentInspectionSplitView(
 
 
             // ------------------ DIÁLOGO: NUEVA UBICACIÓN ------------------
+            if (pendingClonePasteConfirmation != null) {
+                val pendingPaste = pendingClonePasteConfirmation!!
+                AlertDialog(
+                    onDismissRequest = { pendingClonePasteConfirmation = null },
+                    confirmButton = {
+                        Button(onClick = {
+                            val request = pendingClonePasteConfirmation
+                            pendingClonePasteConfirmation = null
+                            if (request != null) {
+                                scope.launch {
+                                    isCloningTreeBranch = true
+                                    try {
+                                        val cloned = cloneNodeIntoTarget(
+                                            sourceId = request.sourceId,
+                                            targetId = request.targetId
+                                        )
+                                        if (cloned) {
+                                            Toast.makeText(
+                                                ctx,
+                                                "Ubicacion duplicada con sus hijos directos.",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        } else {
+                                            Toast.makeText(
+                                                ctx,
+                                                "No se pudo duplicar la ubicacion.",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
+                                        }
+                                    } finally {
+                                        isCloningTreeBranch = false
+                                    }
+                                }
+                            }
+                        }) { Text("Continuar") }
+                    },
+                    dismissButton = {
+                        Button(onClick = { pendingClonePasteConfirmation = null }) {
+                            Text("Cancelar")
+                        }
+                    },
+                    title = { Text("Confirmar pegado") },
+                    text = {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("Se va a duplicar una ubicacion en un nuevo destino.")
+                            Text("Origen: ${pendingPaste.sourceTitle}")
+                            Text("Ruta origen: ${pendingPaste.sourcePath}")
+                            Text("Destino: ${pendingPaste.targetTitle}")
+                            Text("Ruta destino: ${pendingPaste.targetPath}")
+                            Text("Hijos directos a copiar: ${pendingPaste.directChildrenCount}")
+                            Text("Total de ubicaciones nuevas: ${pendingPaste.directChildrenCount + 1}")
+                        }
+                    }
+                )
+            }
+
             val previewRoute = run {
                 val parentForPreview = when {
                     editingUbId != null -> editingParentId
@@ -6271,29 +6332,28 @@ private fun CurrentInspectionSplitView(
                                     dragCopyTargetId = null
                                     return@SimpleTreeView
                                 }
-                                scope.launch {
-                                    isCloningTreeBranch = true
-                                    try {
-                                        val cloned = cloneNodeIntoTarget(sourceId, targetId)
-                                        if (cloned) {
-                                            Toast.makeText(
-                                                ctx,
-                                                "Ubicacion duplicada con sus hijos directos.",
-                                                Toast.LENGTH_SHORT
-                                            ).show()
-                                        } else {
-                                            Toast.makeText(
-                                                ctx,
-                                                "No se pudo duplicar la ubicacion.",
-                                                Toast.LENGTH_SHORT
-                                            ).show()
-                                        }
-                                    } finally {
-                                        dragCopySourceId = null
-                                        dragCopyTargetId = null
-                                        isCloningTreeBranch = false
-                                    }
+                                val sourceNode = findById(sourceId, nodes)
+                                val targetNode = findById(targetId, nodes)
+                                if (sourceNode == null) {
+                                    dragCopySourceId = null
+                                    dragCopyTargetId = null
+                                    return@SimpleTreeView
                                 }
+                                pendingClonePasteConfirmation = PendingClonePasteConfirmation(
+                                    sourceId = sourceId,
+                                    targetId = targetId,
+                                    sourceTitle = sourceNode.title,
+                                    sourcePath = titlePathForId(nodes, sourceId).joinToString(" / ").ifBlank { sourceNode.title },
+                                    targetTitle = targetNode?.title ?: rootTitle,
+                                    targetPath = if (targetId == rootId) {
+                                        rootTitle
+                                    } else {
+                                        titlePathForId(nodes, targetId).joinToString(" / ").ifBlank { targetNode?.title ?: rootTitle }
+                                    },
+                                    directChildrenCount = sourceNode.children.size
+                                )
+                                dragCopySourceId = null
+                                dragCopyTargetId = null
                             },
                             modifier = Modifier.fillMaxSize() // ocupa todo el panel
                         )
@@ -6568,6 +6628,16 @@ private data class TreeDragState(
     val targetId: String?
 )
 
+private data class PendingClonePasteConfirmation(
+    val sourceId: String,
+    val targetId: String,
+    val sourceTitle: String,
+    val sourcePath: String,
+    val targetTitle: String,
+    val targetPath: String,
+    val directChildrenCount: Int
+)
+
 @Composable
 private fun SimpleTreeView(
     nodes: List<TreeNode>,
@@ -6597,40 +6667,61 @@ private fun SimpleTreeView(
             if (has && isExp) flatten(n.children, depth + 1, out)
         }
     }
-    val flat = remember(nodes, expanded) { mutableListOf<FlatNode>().also { flatten(nodes, 0, it) } }
-    val selColor = Color(0xFFE1BEE7) // violeta suave
+
+    val flat = remember(nodes, expanded) {
+        mutableListOf<FlatNode>().also { flatten(nodes, 0, it) }
+    }
+
+    val selColor = Color(0xFFE1BEE7)
     val zebraColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.12f)
     val dragSourceColor = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.40f)
     val dragTargetColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.16f)
-    val treeListState = rememberSaveable("tree_list_state", saver = LazyListState.Saver) { LazyListState() }
+
+    val treeListState = rememberSaveable("tree_list_state", saver = LazyListState.Saver) {
+        LazyListState()
+    }
+
+    fun hoveredFlatNode(pointerYInViewport: Float, flatNodes: List<FlatNode>): FlatNode? {
+        val hoveredIndex = treeListState.layoutInfo.visibleItemsInfo
+            .firstOrNull { info ->
+                pointerYInViewport >= info.offset.toFloat() &&
+                    pointerYInViewport <= (info.offset + info.size).toFloat()
+            }
+            ?.index
+            ?: return null
+
+        return flatNodes.getOrNull(hoveredIndex)
+    }
+
+    fun hoveredNodeId(pointerYInViewport: Float, flatNodes: List<FlatNode>): String? =
+        hoveredFlatNode(pointerYInViewport, flatNodes)?.node?.id
+
     val rootNodeId = nodes.firstOrNull()?.id
     val hasValidSelection = selectedId != null && flat.any { it.node.id == selectedId }
     val effectiveSelectedId = if (hasValidSelection) selectedId else rootNodeId
+
     var viewportHeightPx by remember { mutableStateOf(0f) }
     var dragState by remember { mutableStateOf<TreeDragState?>(null) }
+    var dragPopupSize by remember { mutableStateOf(IntSize.Zero) }
+
     val ghostAlpha by animateFloatAsState(
         targetValue = if (dragState != null) 0.96f else 0f,
         animationSpec = spring(stiffness = 420f),
         label = "treeGhostAlpha"
     )
+
     val ghostScale by animateFloatAsState(
         targetValue = if (dragState != null) 1f else 0.92f,
         animationSpec = spring(stiffness = 380f),
         label = "treeGhostScale"
     )
-    fun hoveredNodeId(pointerYInViewport: Float, flatNodes: List<FlatNode>): String? {
-        return treeListState.layoutInfo.visibleItemsInfo
-            .firstOrNull { info ->
-                pointerYInViewport >= info.offset.toFloat() &&
-                    pointerYInViewport <= (info.offset + info.size).toFloat()
-            }
-            ?.let { hoveredInfo -> flatNodes.getOrNull(hoveredInfo.index)?.node?.id }
-    }
+
     LaunchedEffect(hasValidSelection, rootNodeId) {
         if (!hasValidSelection && rootNodeId != null) {
             onSelect(rootNodeId)
         }
     }
+
     LaunchedEffect(scrollToId, flat.size) {
         val targetId = scrollToId ?: return@LaunchedEffect
         val targetIndex = flat.indexOfFirst { it.node.id == targetId }
@@ -6642,40 +6733,127 @@ private fun SimpleTreeView(
         }
         onScrollHandled()
     }
+
     LaunchedEffect(dragState?.sourceId, viewportHeightPx) {
         while (dragState != null) {
             val active = dragState ?: break
+
             if (viewportHeightPx <= 0f) {
                 delay(16)
                 continue
             }
+
             val edgeThreshold = 88f
             val scrollDelta = when {
-                active.pointerYInViewport < edgeThreshold -> -26f
-                active.pointerYInViewport > viewportHeightPx - edgeThreshold -> 26f
+                active.pointerYInViewport < edgeThreshold -> {
+                    val intensity = ((edgeThreshold - active.pointerYInViewport) / edgeThreshold)
+                        .coerceIn(0f, 1f)
+                    -(6f + intensity * 18f)
+                }
+                active.pointerYInViewport > viewportHeightPx - edgeThreshold -> {
+                    val intensity = ((active.pointerYInViewport - (viewportHeightPx - edgeThreshold)) / edgeThreshold)
+                        .coerceIn(0f, 1f)
+                    6f + intensity * 18f
+                }
                 else -> 0f
             }
+
             if (scrollDelta != 0f) {
-                val firstIndex = treeListState.firstVisibleItemIndex
-                val firstOffset = treeListState.firstVisibleItemScrollOffset
-                val nextOffset = (firstOffset + scrollDelta.toInt()).coerceAtLeast(0)
-                treeListState.scrollToItem(firstIndex, nextOffset)
+                val visibleItems = treeListState.layoutInfo.visibleItemsInfo
+                val canScrollUp = scrollDelta < 0f &&
+                    (treeListState.firstVisibleItemIndex > 0 || treeListState.firstVisibleItemScrollOffset > 0)
+                val canScrollDown = scrollDelta > 0f &&
+                    visibleItems.lastOrNull()?.index != flat.lastIndex
+
+                if (canScrollUp || canScrollDown) {
+                    treeListState.scrollBy(scrollDelta)
+                }
+
                 val hoveredId = hoveredNodeId(
                     pointerYInViewport = active.pointerYInViewport,
                     flatNodes = flat
                 )
+
                 dragState = dragState?.copy(targetId = hoveredId)
                 onDragCopyTargetChange(hoveredId)
             }
+
             delay(16)
         }
     }
+
     Box(
         modifier
             .fillMaxSize()
             .onSizeChanged { viewportHeightPx = it.height.toFloat() }
+            .pointerInput(flat, canDragCopy, isInteractive) {
+                if (!canDragCopy || !isInteractive) return@pointerInput
+
+                detectDragGesturesAfterLongPress(
+                    onDragStart = { offset ->
+                        val source = hoveredFlatNode(offset.y, flat)
+                            ?: return@detectDragGesturesAfterLongPress
+
+                        if (source.node.id.startsWith("root:")) {
+                            return@detectDragGesturesAfterLongPress
+                        }
+
+                        onSelect(source.node.id)
+                        onDragCopyStart(source.node.id)
+
+                        val startedState = TreeDragState(
+                            sourceId = source.node.id,
+                            sourceTitle = source.node.title,
+                            pointerOffset = offset,
+                            pointerYInViewport = offset.y,
+                            targetId = source.node.id
+                        )
+
+                        dragState = startedState
+                        onDragCopyTargetChange(startedState.targetId)
+                    },
+                    onDragCancel = {
+                        dragState = null
+                        onDragCopyCancel()
+                    },
+                    onDragEnd = {
+                        val sourceId = dragState?.sourceId
+                        val targetId = dragState?.targetId
+                        dragState = null
+
+                        if (!sourceId.isNullOrBlank() && !targetId.isNullOrBlank()) {
+                            onDragCopyDrop(sourceId, targetId)
+                        } else {
+                            onDragCopyCancel()
+                        }
+                    },
+                    onDrag = { change, _ ->
+                        change.consume()
+
+                        val nextState = dragState?.let { current ->
+                            val nextViewportY = change.position.y
+                                .coerceIn(0f, viewportHeightPx.coerceAtLeast(1f))
+
+                            current.copy(
+                                pointerOffset = Offset(
+                                    x = change.position.x,
+                                    y = nextViewportY
+                                ),
+                                pointerYInViewport = nextViewportY,
+                                targetId = hoveredNodeId(nextViewportY, flat)
+                            )
+                        }
+
+                        dragState = nextState
+                        onDragCopyTargetChange(nextState?.targetId)
+                    }
+                )
+            }
     ) {
-        LazyColumn(Modifier.fillMaxWidth(), state = treeListState) {
+        LazyColumn(
+            modifier = Modifier.fillMaxWidth(),
+            state = treeListState
+        ) {
             itemsIndexed(flat, key = { _, item -> item.node.id }) { index, item ->
                 val n = item.node
                 val isSelected = effectiveSelectedId == n.id
@@ -6683,6 +6861,7 @@ private fun SimpleTreeView(
                 val activeDragTargetId = dragState?.targetId ?: dragCopyTargetId
                 val isDragSource = activeDragSourceId == n.id
                 val isDragTarget = activeDragTargetId == n.id && activeDragSourceId != n.id
+
                 val rowBackground = when {
                     isDragTarget -> dragTargetColor
                     isDragSource -> dragSourceColor
@@ -6690,6 +6869,7 @@ private fun SimpleTreeView(
                     index % 2 == 1 -> zebraColor
                     else -> Color.Transparent
                 }
+
                 Column(
                     Modifier
                         .fillMaxWidth()
@@ -6703,72 +6883,23 @@ private fun SimpleTreeView(
                                 )
                             }
                         }
-                        .pointerInput(n.id, flat, canDragCopy) {
-                            if (!canDragCopy || n.id.startsWith("root:")) return@pointerInput
-                            detectDragGesturesAfterLongPress(
-                                onDragStart = { offset ->
-                                    val itemOffset = treeListState.layoutInfo.visibleItemsInfo
-                                        .firstOrNull { it.index == index }
-                                        ?.offset
-                                        ?: 0
-                                    onSelect(n.id)
-                                    onDragCopyStart(n.id)
-                                    dragState = TreeDragState(
-                                        sourceId = n.id,
-                                        sourceTitle = n.title,
-                                        pointerOffset = Offset(
-                                            x = offset.x + 20f,
-                                            y = itemOffset + offset.y - 14f
-                                        ),
-                                        pointerYInViewport = itemOffset + offset.y,
-                                        targetId = hoveredNodeId(
-                                            pointerYInViewport = itemOffset + offset.y,
-                                            flatNodes = flat
-                                        )
-                                    )
-                                    onDragCopyTargetChange(dragState?.targetId)
-                                },
-                                onDragCancel = {
-                                    dragState = null
-                                    onDragCopyCancel()
-                                },
-                                onDragEnd = {
-                                    val sourceId = dragState?.sourceId
-                                    val targetId = dragState?.targetId
-                                    dragState = null
-                                    if (!sourceId.isNullOrBlank() && !targetId.isNullOrBlank()) {
-                                        onDragCopyDrop(sourceId, targetId)
-                                    } else {
-                                        onDragCopyCancel()
-                                    }
-                                },
-                                onDrag = { change, dragAmount ->
-                                    change.consume()
-                                    val nextState = dragState?.let { current ->
-                                        val nextPointer = current.pointerOffset + Offset(dragAmount.x, dragAmount.y)
-                                        val nextViewportY = current.pointerYInViewport + dragAmount.y
-                                        current.copy(
-                                            pointerOffset = nextPointer,
-                                            pointerYInViewport = nextViewportY,
-                                            targetId = hoveredNodeId(nextViewportY, flat)
-                                        )
-                                    }
-                                    dragState = nextState
-                                    val hoveredId = nextState?.targetId
-                                    onDragCopyTargetChange(hoveredId)
-                                }
-                            )
-                        }
                 ) {
                     Row(
                         Modifier
                             .fillMaxWidth()
-                            .padding(start = (item.depth * TREE_INDENT.value).dp, end = TREE_SPACING),
+                            .padding(
+                                start = (item.depth * TREE_INDENT.value).dp,
+                                end = TREE_SPACING
+                            ),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         if (item.hasChildren) {
                             Icon(
-                                imageVector = if (item.expanded) Icons.Filled.ExpandMore else Icons.Filled.ChevronRight,
+                                imageVector = if (item.expanded) {
+                                    Icons.Filled.ExpandMore
+                                } else {
+                                    Icons.Filled.ChevronRight
+                                },
                                 contentDescription = null,
                                 modifier = Modifier
                                     .size(TREE_TOGGLE_SIZE)
@@ -6777,17 +6908,30 @@ private fun SimpleTreeView(
                         } else {
                             Spacer(Modifier.width(TREE_TOGGLE_SIZE))
                         }
-                        // Icono: nodo raiz (sitio) usa Factory; demas segun esEquipo
+
                         val nodeIcon = when {
                             item.depth == 0 -> Icons.Outlined.Factory
                             n.verified -> Icons.Outlined.Traffic
                             else -> Icons.Filled.DragIndicator
                         }
-                        val tintColor = if (item.depth == 0) ICON_NO_EQUIPO_COLOR else if (n.verified) ICON_EQUIPO_COLOR else ICON_NO_EQUIPO_COLOR
-                        Icon(nodeIcon, contentDescription = null, tint = tintColor, modifier = Modifier.size(TREE_ICON_SIZE))
+
+                        val tintColor = if (item.depth == 0) {
+                            ICON_NO_EQUIPO_COLOR
+                        } else if (n.verified) {
+                            ICON_EQUIPO_COLOR
+                        } else {
+                            ICON_NO_EQUIPO_COLOR
+                        }
+
+                        Icon(
+                            imageVector = nodeIcon,
+                            contentDescription = null,
+                            tint = tintColor,
+                            modifier = Modifier.size(TREE_ICON_SIZE)
+                        )
+
                         Spacer(Modifier.width(TREE_SPACING))
-                        // Si el nodo corresponde a estatus de texto 1 (no inspeccionado),
-                        // no usamos color fijo y dejamos que el tema defina el color.
+
                         val baseColor = if (n.idStatusInspeccionDet == "568798D1-76BB-11D3-82BF-00104BC75DC2") {
                             MaterialTheme.colorScheme.onSurface
                         } else {
@@ -6795,11 +6939,17 @@ private fun SimpleTreeView(
                                 val hex = raw.trim()
                                 when {
                                     hex.startsWith("#") -> {
-                                        runCatching { Color(android.graphics.Color.parseColor(hex)) }.getOrNull()
+                                        runCatching {
+                                            Color(android.graphics.Color.parseColor(hex))
+                                        }.getOrNull()
                                     }
                                     hex.startsWith("0x", ignoreCase = true) -> {
                                         runCatching {
-                                            val intValue = hex.removePrefix("0x").removePrefix("0X").toLong(16).toInt()
+                                            val intValue = hex
+                                                .removePrefix("0x")
+                                                .removePrefix("0X")
+                                                .toLong(16)
+                                                .toInt()
                                             Color(intValue)
                                         }.getOrNull()
                                     }
@@ -6807,85 +6957,82 @@ private fun SimpleTreeView(
                                 }
                             } ?: MaterialTheme.colorScheme.onSurface
                         }
-                        val textColor = if (n.id == highlightedId) MaterialTheme.colorScheme.error else baseColor
+
+                        val textColor = if (n.id == highlightedId) {
+                            MaterialTheme.colorScheme.error
+                        } else {
+                            baseColor
+                        }
+
                         Text(
-                            n.title,
+                            text = n.title,
                             color = textColor,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f)
                         )
                     }
+
                     Divider(thickness = DIVIDER_THICKNESS)
                 }
             }
         }
+
         val activeDrag = dragState
         if (activeDrag != null) {
             val targetTitle = flat.firstOrNull { it.node.id == activeDrag.targetId }?.node?.title
-            Box(
-                modifier = Modifier
-                    .offset {
-                        IntOffset(
-                            activeDrag.pointerOffset.x.roundToInt(),
-                            activeDrag.pointerOffset.y.roundToInt()
-                        )
-                    }
-                    .alpha(ghostAlpha)
-                    .scale(ghostScale)
-                    .zIndex(2f)
-                    .background(
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.18f),
-                        shape = RoundedCornerShape(14.dp)
-                    )
-                    .border(
-                        width = 1.dp,
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.75f),
-                        shape = RoundedCornerShape(14.dp)
-                    )
-                    .padding(horizontal = 14.dp, vertical = 10.dp)
+            val popupWidth = dragPopupSize.width.takeIf { it > 0 } ?: 240
+            val popupHeight = dragPopupSize.height.takeIf { it > 0 } ?: 84
+            val popupOffset = IntOffset(
+                x = (activeDrag.pointerOffset.x.roundToInt() - popupWidth - 16).coerceAtLeast(8),
+                y = (activeDrag.pointerOffset.y.roundToInt() - (popupHeight / 2) - 12).coerceAtLeast(8)
+            )
+
+            Popup(
+                alignment = Alignment.TopStart,
+                offset = popupOffset,
+                properties = PopupProperties(clippingEnabled = false)
             ) {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(
-                        text = "Duplicando ubicación",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Text(
-                        text = activeDrag.sourceTitle,
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = if (targetTitle.isNullOrBlank()) {
-                            "Suelta sobre una ubicación destino"
-                        } else {
-                            "Destino: $targetTitle"
-                        },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                Box(
+                    modifier = Modifier
+                        .alpha(ghostAlpha)
+                        .scale(ghostScale)
+                        .onSizeChanged { dragPopupSize = it }
+                        .background(
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.18f),
+                            shape = RoundedCornerShape(14.dp)
+                        )
+                        .border(
+                            width = 1.dp,
+                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.75f),
+                            shape = RoundedCornerShape(14.dp)
+                        )
+                        .widthIn(max = 240.dp)
+                        .padding(horizontal = 14.dp, vertical = 10.dp)
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            text = "Duplicando ubicacion",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+
+                        Text(
+                            text = activeDrag.sourceTitle,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+
+                        if (!targetTitle.isNullOrBlank()) {
+                            Text(
+                                text = "Destino: $targetTitle",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
                 }
             }
-            Text(
-                text = "Arrastra para duplicar con hijos directos",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .padding(8.dp)
-                    .background(
-                        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.92f),
-                        shape = RoundedCornerShape(12.dp)
-                    )
-                    .border(
-                        width = 1.dp,
-                        color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.45f),
-                        shape = RoundedCornerShape(12.dp)
-                    )
-                    .padding(horizontal = 12.dp, vertical = 8.dp)
-                    .zIndex(1f)
-            )
         }
     }
 }
@@ -7847,7 +7994,3 @@ private fun buildTreeFromVista(rows: List<com.example.etic.data.local.views.Vist
 
     return roots
 }
-
-
-
-
