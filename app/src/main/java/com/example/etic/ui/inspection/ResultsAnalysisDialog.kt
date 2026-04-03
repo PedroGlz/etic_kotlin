@@ -153,12 +153,12 @@ fun ResultsAnalysisDialog(
     }
 
     val steps = listOf(
-        WizardStep("Portada", "Información principal"),
-        WizardStep("Descripción", "Objetivos y alcance"),
-        WizardStep("Recomendaciones", "Hallazgos y seguimiento"),
-        WizardStep("Referencias", "Normas y observaciones"),
-        WizardStep("Inventario", "Seleccionar equipos inspeccionados"),
-        WizardStep("Problemas", "Seleccionar observaciones")
+        WizardStep("Paso 1: Portada",""),
+        WizardStep("Paso 2: Descripción y Áreas inspeccionadas",""),
+        WizardStep("Paso 3: Recomendaciones",""),
+        WizardStep("Paso 4: Referencias",""),
+        WizardStep("Paso 5: Inventario",""),
+        WizardStep("Paso 6: Problemas","")
     )
 
     val context = LocalContext.current
@@ -536,7 +536,6 @@ fun ResultsAnalysisDialog(
                             ) {
                                 when (currentStep) {
                                     0 -> {
-                                        Text("Paso 1: Portada", style = MaterialTheme.typography.titleMedium)
                                         ContactosEditor(
                                             contactos = contactos,
                                             maxContacts = MAX_CONTACTOS
@@ -681,7 +680,6 @@ fun ResultsAnalysisDialog(
                                         )
                                     }
                                     1 -> {
-                                        Text("Paso 2: Descripción", style = MaterialTheme.typography.titleMedium)
                                         EditableStringList(
                                             title = "Descripciones",
                                             values = descripciones,
@@ -694,15 +692,20 @@ fun ResultsAnalysisDialog(
                                         )
                                     }
                                     2 -> {
-                                        Text("Paso 3: Recomendaciones", style = MaterialTheme.typography.titleMedium)
-                                        recomendaciones.forEachIndexed { index, rec ->
+                                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                            recomendaciones.forEachIndexed { index, rec ->
                                             Card(
                                                 colors = CardDefaults.cardColors(
                                                     containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
                                                 )
                                             ) {
                                                 Column(
-                                                    modifier = Modifier.padding(5.dp),
+                                                    modifier = Modifier.padding(
+                                                        start = DIALOG_SIDE_PADDING,
+                                                        end = DIALOG_SIDE_PADDING,
+                                                        top = 5.dp,
+                                                        bottom = 5.dp
+                                                    ),
                                                     verticalArrangement = Arrangement.spacedBy(5.dp)
                                                 ) {
                                                     Row(
@@ -725,7 +728,7 @@ fun ResultsAnalysisDialog(
                                                         value = rec.texto,
                                                         onValueChange = { recomendaciones[index] = rec.copy(texto = it) },
                                                         modifier = Modifier.fillMaxWidth(),
-                                                        label = "Texto"
+                                                        label = ""
                                                     )
                                                     Row(
                                                         modifier = Modifier.fillMaxWidth(),
@@ -819,6 +822,7 @@ fun ResultsAnalysisDialog(
                                                 }
                                             }
                                         }
+                                        }
                                         TextButton(
                                             enabled = !isBusy,
                                             onClick = { recomendaciones.add(ResultadosAnalisisRecomendacion()) }
@@ -829,26 +833,24 @@ fun ResultsAnalysisDialog(
                                         }
                                     }
                                     3 -> {
-                                        Text("Paso 4: Referencias", style = MaterialTheme.typography.titleMedium)
                                         EditableStringList(
-                                            title = "Referencias",
+                                            title = "",
                                             values = referencias,
-                                            minRows = 1
+                                            minRows = 1,
+                                            itemLabelPrefix = ""
                                         )
                                     }
                                     4 -> {
-                                        Text("Paso 5: Inventario", style = MaterialTheme.typography.titleMedium)
                                         SelectionList(
-                                            title = "Elementos para inventario",
+                                            title = "Seleccionar elementos para inventario",
                                             selectedIds = selectedLocationIds,
                                             options = locationOptions.map { it.id to it.title },
                                             enabled = !isBusy
                                         )
                                     }
                                     5 -> {
-                                        Text("Paso 6: Problemas", style = MaterialTheme.typography.titleMedium)
                                         SelectionList(
-                                            title = "Problemas para reporte",
+                                            title = "Seleccionar problemas para reporte",
                                             selectedIds = selectedProblemIds,
                                             options = problemOptions.map { it.id to it.label },
                                             enabled = !isBusy
@@ -1142,16 +1144,24 @@ private fun DateField(
 private fun EditableStringList(
     title: String,
     values: androidx.compose.runtime.snapshots.SnapshotStateList<String>,
-    minRows: Int
+    minRows: Int,
+    itemLabelPrefix: String? = null
 ) {
-    Text(title, style = MaterialTheme.typography.titleSmall)
+    if (title.isNotBlank()) {
+        Text(title, style = MaterialTheme.typography.titleSmall)
+    }
     values.forEachIndexed { index, value ->
         Row(verticalAlignment = Alignment.Top) {
             MultilineField(
                 value = value,
                 onValueChange = { values[index] = it },
                 modifier = Modifier.weight(1f),
-                label = "${title.dropLastWhile { it == 's' }} ${index + 1}",
+                label = when {
+                    itemLabelPrefix != null -> {
+                        if (itemLabelPrefix.isBlank()) "" else "$itemLabelPrefix ${index + 1}"
+                    }
+                    else -> "${title.dropLastWhile { it == 's' }} ${index + 1}"
+                },
                 minLines = 2,
                 maxLines = 8
             )
@@ -1288,7 +1298,9 @@ private fun MultilineField(
     maxLines: Int = 6
 ) {
     Column(modifier = modifier) {
-        Text(text = label, style = MaterialTheme.typography.labelSmall)
+        if (label.isNotBlank()) {
+            Text(text = label, style = MaterialTheme.typography.labelSmall)
+        }
         OutlinedFieldBox(
             height = 48.dp
         ) {
