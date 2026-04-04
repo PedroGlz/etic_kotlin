@@ -2,6 +2,7 @@ package com.example.etic.core.inspection
 
 import android.content.Context
 import android.net.Uri
+import android.database.sqlite.SQLiteDatabase
 import com.example.etic.core.current.CurrentInspectionProvider
 import com.example.etic.data.local.DbProvider
 import kotlinx.coroutines.Dispatchers
@@ -19,19 +20,33 @@ private fun Uri.displayNameFallback(): String {
     return raw.substringAfterLast('/').substringAfterLast(':')
 }
 
+private fun isValidSqliteFile(file: File): Boolean {
+    if (!file.exists() || file.length() <= 0L) return false
+
+    val headerOk = runCatching {
+        file.inputStream().use { input ->
+            val header = ByteArray(16)
+            val read = input.read(header)
+            read == 16 && String(header, Charsets.US_ASCII) == "SQLite format 3\u0000"
+        }
+    }.getOrDefault(false)
+    if (!headerOk) return false
+
+    return runCatching {
+        SQLiteDatabase.openDatabase(file.absolutePath, null, SQLiteDatabase.OPEN_READONLY).use { db ->
+            val integrity = db.rawQuery("PRAGMA integrity_check(1)", null).use { cursor ->
+                if (cursor.moveToFirst()) cursor.getString(0) else null
+            }
+            integrity.equals("ok", ignoreCase = true)
+        }
+    }.getOrDefault(false)
+}
+
 suspend fun importInspectionDatabase(
     context: Context,
     sourceUri: Uri
 ): InspectionImportResult {
     return withContext(Dispatchers.IO) {
-        val sourceName = sourceUri.displayNameFallback().lowercase()
-        if (!sourceName.endsWith(".db")) {
-            return@withContext InspectionImportResult(
-                success = false,
-                message = "Archivo no valido. Selecciona un respaldo .db"
-            )
-        }
-
         val input = runCatching {
             context.contentResolver.openInputStream(sourceUri)
         }.getOrNull() ?: return@withContext InspectionImportResult(
@@ -56,6 +71,14 @@ suspend fun importInspectionDatabase(
                 FileOutputStream(tempFile).use { output ->
                     source.copyTo(output)
                 }
+            }
+
+            if (!isValidSqliteFile(tempFile)) {
+                tempFile.delete()
+                return@withContext InspectionImportResult(
+                    success = false,
+                    message = "El archivo seleccionado no es una base de datos SQLite valida."
+                )
             }
 
             tempFile.copyTo(dbFile, overwrite = true)

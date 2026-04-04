@@ -13,8 +13,19 @@ class LoadResultadosAnalisisDraftUseCase(private val context: Context) {
         DatosReporteStore
             .loadLatestByInspection(context, inspectionId)
             .mapCatching { loadedDraft ->
-                loadedDraft?.copy(siteId = loadedDraft.siteId ?: siteId)
-                ?: defaultDraft
+                loadedDraft
+                    ?.copy(
+                        siteId = loadedDraft.siteId ?: siteId,
+                        contactos = if (loadedDraft.contactos.any { contacto ->
+                                contacto.nombre.isNotBlank() || contacto.puesto.isNotBlank()
+                            }
+                        ) {
+                            loadedDraft.contactos
+                        } else {
+                            defaultDraft.contactos
+                        }
+                    )
+                    ?: defaultDraft
             }
     }
 }

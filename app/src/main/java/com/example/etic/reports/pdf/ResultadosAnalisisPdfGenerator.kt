@@ -677,7 +677,7 @@ class ResultadosAnalisisPdfGenerator {
             bulletLabel = "e."
         )
         drawBulletJustified("Lista de todos los problemas abiertos.")
-        drawBulletJustified("Lista de todos los problemas cerrados.")
+        drawBulletJustified("Lista de todos los problemas cerrados en esta inspección.")
         data.descripciones.filter { it.isNotBlank() }.forEach { drawBulletJustified(it) }
 
         startPage()
