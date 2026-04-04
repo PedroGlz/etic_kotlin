@@ -54,6 +54,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import com.example.etic.core.saf.EticImageStore
+import com.example.etic.core.saf.SafEticManager
 import com.example.etic.core.settings.EticPrefs
 import com.example.etic.core.settings.settingsDataStore
 import kotlin.math.roundToInt
@@ -71,6 +72,7 @@ fun BaselineTableFromDatabase(
     val currentUser = LocalCurrentUser.current
     val scope = rememberCoroutineScope()
     val eticPrefs = remember { EticPrefs(ctx.settingsDataStore) }
+    val safManager = remember { SafEticManager() }
     val rootTreeUriStr by eticPrefs.rootTreeUriFlow.collectAsState(initial = null)
     val rootTreeUri = remember(rootTreeUriStr) { rootTreeUriStr?.let { Uri.parse(it) } }
 
@@ -446,6 +448,35 @@ fun BaselineTableFromDatabase(
                 }
             }
 
+            fun openInspectionImagesFolder() {
+                val inspectionNumber = currentInspection?.noInspeccion?.toString()
+                if (rootTreeUri == null || inspectionNumber.isNullOrBlank()) {
+                    android.widget.Toast.makeText(
+                        ctx,
+                        "No hay acceso a la carpeta Imágenes de la inspección.",
+                        android.widget.Toast.LENGTH_SHORT
+                    ).show()
+                    return
+                }
+                val folderUri = safManager.getImagesDir(ctx, rootTreeUri, inspectionNumber)?.uri
+                if (folderUri == null) {
+                    android.widget.Toast.makeText(
+                        ctx,
+                        "No se pudo abrir la carpeta Imágenes.",
+                        android.widget.Toast.LENGTH_SHORT
+                    ).show()
+                    return
+                }
+                runCatching { ctx.startActivity(safManager.openFolderIntent(folderUri)) }
+                    .onFailure {
+                        android.widget.Toast.makeText(
+                            ctx,
+                            "No se pudo abrir la carpeta.",
+                            android.widget.Toast.LENGTH_SHORT
+                        ).show()
+                    }
+            }
+
             val ubId = baselineEditEntity?.idUbicacion
             val rutaEquipo by produceState(initialValue = "", ubId) {
                 value = if (!ubId.isNullOrBlank()) {
@@ -572,7 +603,7 @@ fun BaselineTableFromDatabase(
                                     onMoveUp = { imgIr = adjustImageSequence(imgIr, +1, "IR") },
                                     onMoveDown = { imgIr = adjustImageSequence(imgIr, -1, "IR") },
                                     onDotsClick = { imgIr = nextImageName(imgIr, "IR") },
-                                    onFolderClick = { irFolderLauncher.launch("image/*") },
+                                    onFolderClick = { openInspectionImagesFolder() },
                                     onCameraClick = { irCameraLauncher.launch(null) }
                                 )
                                 Spacer(Modifier.height(4.dp))
@@ -618,7 +649,7 @@ fun BaselineTableFromDatabase(
                                     onMoveUp = { imgId = adjustImageSequence(imgId, +1, "ID") },
                                     onMoveDown = { imgId = adjustImageSequence(imgId, -1, "ID") },
                                     onDotsClick = { imgId = nextImageName(imgId, "ID") },
-                                    onFolderClick = { idFolderLauncher.launch("image/*") },
+                                    onFolderClick = { openInspectionImagesFolder() },
                                     onCameraClick = { idCameraLauncher.launch(null) }
                                 )
                                 Spacer(Modifier.height(4.dp))

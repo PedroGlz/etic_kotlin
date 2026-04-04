@@ -9,14 +9,14 @@ import androidx.documentfile.provider.DocumentFile
 class SafEticManager {
     fun ensureEticFolders(context: Context, rootTreeUri: Uri): DocumentFile? {
         val root = DocumentFile.fromTreeUri(context, rootTreeUri) ?: return null
-        val etic = findOrCreateDir(root, "ETIC") ?: return null
+        val etic = resolveEticDir(root) ?: return null
         findOrCreateDir(etic, "IMG_CLIENTES")
         return findOrCreateDir(etic, "Inspecciones")
     }
 
     fun getEticDir(context: Context, rootTreeUri: Uri): DocumentFile? {
         val root = DocumentFile.fromTreeUri(context, rootTreeUri) ?: return null
-        return findOrCreateDir(root, "ETIC")
+        return resolveEticDir(root)
     }
 
     fun ensureInspectionFolders(
@@ -24,8 +24,8 @@ class SafEticManager {
         rootTreeUri: Uri,
         inspectionNumero: String
     ): Pair<DocumentFile?, DocumentFile?> {
-        val inspectionsRoot = ensureEticFolders(context, rootTreeUri) ?: return null to null
-        val inspectionDir = findOrCreateDir(inspectionsRoot, inspectionNumero) ?: return null to null
+        val root = DocumentFile.fromTreeUri(context, rootTreeUri) ?: return null to null
+        val inspectionDir = resolveInspectionDir(root, inspectionNumero) ?: return null to null
         val images = findOrCreateDir(inspectionDir, "Imagenes")
         val reports = findOrCreateDir(inspectionDir, "Reportes")
         return images to reports
@@ -83,9 +83,32 @@ class SafEticManager {
             )
         }
 
+    private fun resolveEticDir(root: DocumentFile): DocumentFile? {
+        if (root.isDirectory && root.name.equals("ETIC", ignoreCase = true)) {
+            return root
+        }
+        return findOrCreateDir(root, "ETIC")
+    }
+
+    private fun resolveInspectionsRoot(root: DocumentFile): DocumentFile? {
+        if (root.isDirectory && root.name.equals("Inspecciones", ignoreCase = true)) {
+            return root
+        }
+        val etic = resolveEticDir(root) ?: return null
+        return findOrCreateDir(etic, "Inspecciones")
+    }
+
+    private fun resolveInspectionDir(root: DocumentFile, inspectionNumero: String): DocumentFile? {
+        if (root.isDirectory && root.name.equals(inspectionNumero, ignoreCase = true)) {
+            return root
+        }
+        val inspectionsRoot = resolveInspectionsRoot(root) ?: return null
+        return findOrCreateDir(inspectionsRoot, inspectionNumero)
+    }
+
     private fun findOrCreateDir(parent: DocumentFile, name: String): DocumentFile? {
         parent.listFiles()
-            .firstOrNull { it.isDirectory && it.name == name }
+            .firstOrNull { it.isDirectory && it.name?.trim()?.equals(name.trim(), ignoreCase = true) == true }
             ?.let { return it }
         return parent.createDirectory(name)
     }

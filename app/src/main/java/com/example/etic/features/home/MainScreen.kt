@@ -1535,17 +1535,7 @@ fun MainScreen(
                                 folderType = EticFolderType.Images,
                                 rootTreeUri = rootTreeUri,
                                 inspectionNumero = inspectionNumero,
-                                onPickRoot = { uri ->
-                                    scope.launch {
-                                        eticPrefs.setRootTreeUri(uri)
-                                        withContext(Dispatchers.IO) {
-                                            safManager.ensureEticFolders(appContext, uri)
-                                            if (!inspectionNumero.isNullOrBlank()) {
-                                                safManager.ensureInspectionFolders(appContext, uri, inspectionNumero)
-                                            }
-                                        }
-                                    }
-                                },
+                                onRequestRoot = { requestFolderAccess?.invoke() },
                                 manager = safManager,
                                 modifier = Modifier.fillMaxSize()
                             )
@@ -1562,17 +1552,7 @@ fun MainScreen(
                                 folderType = EticFolderType.ClientImages,
                                 rootTreeUri = rootTreeUri,
                                 inspectionNumero = inspectionNumero,
-                                onPickRoot = { uri ->
-                                    scope.launch {
-                                        eticPrefs.setRootTreeUri(uri)
-                                        withContext(Dispatchers.IO) {
-                                            safManager.ensureEticFolders(appContext, uri)
-                                            if (!inspectionNumero.isNullOrBlank()) {
-                                                safManager.ensureInspectionFolders(appContext, uri, inspectionNumero)
-                                            }
-                                        }
-                                    }
-                                },
+                                onRequestRoot = { requestFolderAccess?.invoke() },
                                 manager = safManager,
                                 modifier = Modifier.fillMaxSize()
                             )
@@ -1589,17 +1569,7 @@ fun MainScreen(
                                 folderType = EticFolderType.Reports,
                                 rootTreeUri = rootTreeUri,
                                 inspectionNumero = inspectionNumero,
-                                onPickRoot = { uri ->
-                                    scope.launch {
-                                        eticPrefs.setRootTreeUri(uri)
-                                        withContext(Dispatchers.IO) {
-                                            safManager.ensureEticFolders(appContext, uri)
-                                            if (!inspectionNumero.isNullOrBlank()) {
-                                                safManager.ensureInspectionFolders(appContext, uri, inspectionNumero)
-                                            }
-                                        }
-                                    }
-                                },
+                                onRequestRoot = { requestFolderAccess?.invoke() },
                                 manager = safManager,
                                 modifier = Modifier.fillMaxSize()
                             )

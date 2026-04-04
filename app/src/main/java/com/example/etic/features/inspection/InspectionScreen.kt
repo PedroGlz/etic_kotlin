@@ -103,6 +103,7 @@ import com.example.etic.core.session.sessionDataStore
 import com.example.etic.core.current.LocalCurrentInspection
 import com.example.etic.core.current.LocalCurrentUser
 import com.example.etic.core.saf.EticImageStore
+import com.example.etic.core.saf.SafEticManager
 import com.example.etic.core.settings.EticPrefs
 import com.example.etic.core.settings.settingsDataStore
 import androidx.compose.foundation.rememberScrollState
@@ -673,6 +674,7 @@ private fun CurrentInspectionSplitView(
             var editingAislamientoTermicoProblemId by rememberSaveable { mutableStateOf<String?>(null) }
             var editingAislamientoTermicoProblemOriginal by remember { mutableStateOf<Problema?>(null) }
             var aislamientoTermicoProblemClosed by rememberSaveable { mutableStateOf(false) }
+            val safManager = remember { SafEticManager() }
             fun resetMechanicalProblemState() {
                 editingMechanicalProblemId = null
                 editingMechanicalProblemOriginal = null
@@ -733,6 +735,27 @@ private fun CurrentInspectionSplitView(
                         Toast.makeText(ctx, "No se pudo importar la imagen digital.", Toast.LENGTH_SHORT).show()
                     }
                 }
+            }
+
+            fun openInspectionImagesFolder() {
+                val inspectionNumber = inspectionNumero?.takeIf { it.isNotBlank() }
+                if (rootTreeUri == null || inspectionNumber == null) {
+                    Toast.makeText(
+                        ctx,
+                        "No hay acceso a la carpeta Imágenes de la inspección.",
+                        Toast.LENGTH_SHORT
+                    ).show()
+                    return
+                }
+                val folderUri = safManager.getImagesDir(ctx, rootTreeUri, inspectionNumber)?.uri
+                if (folderUri == null) {
+                    Toast.makeText(ctx, "No se pudo abrir la carpeta Imágenes.", Toast.LENGTH_SHORT).show()
+                    return
+                }
+                runCatching { ctx.startActivity(safManager.openFolderIntent(folderUri)) }
+                    .onFailure {
+                        Toast.makeText(ctx, "No se pudo abrir la carpeta.", Toast.LENGTH_SHORT).show()
+                    }
             }
 
             LaunchedEffect(showEditUbDialog) {
@@ -3964,8 +3987,8 @@ private fun CurrentInspectionSplitView(
                     onDigitalSequenceDown = { pendingDigitalImage = adjustImageSequence(pendingDigitalImage, -1) },
                     onThermalPickInitial = { loadInitialImageFromInspection(true) { pendingThermalImage = it } },
                     onDigitalPickInitial = { loadInitialImageFromInspection(false) { pendingDigitalImage = it } },
-                    onThermalFolder = { thermalFolderLauncher.launch("image/*") },
-                    onDigitalFolder = { digitalFolderLauncher.launch("image/*") },
+                    onThermalFolder = { openInspectionImagesFolder() },
+                    onDigitalFolder = { openInspectionImagesFolder() },
                     onThermalCamera = { thermalCameraLauncher.launch(null) },
                     onDigitalCamera = { digitalCameraLauncher.launch(null) },
                     onCronicoClick = {
@@ -4347,8 +4370,8 @@ private fun CurrentInspectionSplitView(
                     onDigitalSequenceDown = { pendingDigitalImage = adjustImageSequence(pendingDigitalImage, -1) },
                     onThermalPickInitial = { loadInitialImageFromInspection(true) { pendingThermalImage = it } },
                     onDigitalPickInitial = { loadInitialImageFromInspection(false) { pendingDigitalImage = it } },
-                    onThermalFolder = { thermalFolderLauncher.launch("image/*") },
-                    onDigitalFolder = { digitalFolderLauncher.launch("image/*") },
+                    onThermalFolder = { openInspectionImagesFolder() },
+                    onDigitalFolder = { openInspectionImagesFolder() },
                     onThermalCamera = { thermalCameraLauncher.launch(null) },
                     onDigitalCamera = { digitalCameraLauncher.launch(null) },
                     onCronicoClick = {
@@ -4416,8 +4439,8 @@ private fun CurrentInspectionSplitView(
                     onDigitalSequenceDown = { pendingDigitalImage = adjustImageSequence(pendingDigitalImage, -1) },
                     onThermalPickInitial = { loadInitialImageFromInspection(true) { pendingThermalImage = it } },
                     onDigitalPickInitial = { loadInitialImageFromInspection(false) { pendingDigitalImage = it } },
-                    onThermalFolder = { thermalFolderLauncher.launch("image/*") },
-                    onDigitalFolder = { digitalFolderLauncher.launch("image/*") },
+                    onThermalFolder = { openInspectionImagesFolder() },
+                    onDigitalFolder = { openInspectionImagesFolder() },
                     onThermalCamera = { thermalCameraLauncher.launch(null) },
                     onDigitalCamera = { digitalCameraLauncher.launch(null) },
                     onCronicoClick = {
@@ -4485,8 +4508,8 @@ private fun CurrentInspectionSplitView(
                     onDigitalSequenceDown = { pendingDigitalImage = adjustImageSequence(pendingDigitalImage, -1) },
                     onThermalPickInitial = { loadInitialImageFromInspection(true) { pendingThermalImage = it } },
                     onDigitalPickInitial = { loadInitialImageFromInspection(false) { pendingDigitalImage = it } },
-                    onThermalFolder = { thermalFolderLauncher.launch("image/*") },
-                    onDigitalFolder = { digitalFolderLauncher.launch("image/*") },
+                    onThermalFolder = { openInspectionImagesFolder() },
+                    onDigitalFolder = { openInspectionImagesFolder() },
                     onThermalCamera = { thermalCameraLauncher.launch(null) },
                     onDigitalCamera = { digitalCameraLauncher.launch(null) },
                     onCronicoClick = {
@@ -5925,7 +5948,7 @@ private fun CurrentInspectionSplitView(
                                                                             onMoveUp = { imgIr = adjustImageSequence(imgIr, +1) },
                                                                             onMoveDown = { imgIr = adjustImageSequence(imgIr, -1) },
                                                                             onDotsClick = { loadInitialImageFromInspection(true) { imgIr = it } },
-                                                                            onFolderClick = { irFolderLauncher.launch("image/*") },
+                                                                            onFolderClick = { openInspectionImagesFolder() },
                                                                             onCameraClick = { irCameraLauncher.launch(null) }
                                                                         )
                                                                         Spacer(Modifier.height(4.dp))
@@ -5971,7 +5994,7 @@ private fun CurrentInspectionSplitView(
                                                                             onMoveUp = { imgId = adjustImageSequence(imgId, +1) },
                                                                             onMoveDown = { imgId = adjustImageSequence(imgId, -1) },
                                                                             onDotsClick = { loadInitialImageFromInspection(false) { imgId = it } },
-                                                                            onFolderClick = { idFolderLauncher.launch("image/*") },
+                                                                            onFolderClick = { openInspectionImagesFolder() },
                                                                             onCameraClick = { idCameraLauncher.launch(null) }
                                                                         )
                                                                         Spacer(Modifier.height(4.dp))

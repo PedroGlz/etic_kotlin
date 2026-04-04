@@ -76,6 +76,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.DialogWindowProvider
 import com.example.etic.core.saf.EticImageStore
+import com.example.etic.core.saf.SafEticManager
 import com.example.etic.features.components.ImageInputButtonGroup
 import com.example.etic.features.inspection.tree.TreeNode
 import com.example.etic.features.inspection.ui.problem.ProblemDialogDraggableHeader
@@ -163,6 +164,7 @@ fun ResultsAnalysisDialog(
 
     val context = LocalContext.current
     val dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
+    val safManager = remember { SafEticManager() }
     fun normalizeDate(value: String?, formatter: DateTimeFormatter): String {
         val raw = value.orEmpty().trim()
         if (raw.isBlank()) return ""
@@ -416,20 +418,6 @@ fun ResultsAnalysisDialog(
             uri = uri
         )
 
-    val imageFolderLauncher = rememberLauncherForActivityResult(
-        ActivityResultContracts.GetContent()
-    ) { uri ->
-        val target = activeImportTarget
-        activeImportTarget = null
-        if (uri == null || target == null) return@rememberLauncherForActivityResult
-        val saved = copyImageFromUri(uri, "RA")
-        if (saved != null) {
-            updateImageValue(target, saved)
-        } else {
-            Toast.makeText(context, "No se pudo importar la imagen.", Toast.LENGTH_SHORT).show()
-        }
-    }
-
     val imageCameraLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.TakePicturePreview()
     ) { bmp ->
@@ -449,7 +437,35 @@ fun ResultsAnalysisDialog(
         }
     }
 
-    fun beginImageImport(target: ImagePickerTarget, fromCamera: Boolean) {
+    fun openImagesFolder(target: ImagePickerTarget) {
+        if (rootTreeUri == null || inspectionNumber.isNullOrBlank()) {
+            Toast.makeText(
+                context,
+                "No hay acceso a la carpeta Imágenes de la inspección.",
+                Toast.LENGTH_SHORT
+            ).show()
+            return
+        }
+        val folderUri = when (target.imageSlot) {
+            3 -> safManager.getClientesDir(context, rootTreeUri)?.uri
+            else -> safManager.getImagesDir(context, rootTreeUri, inspectionNumber)?.uri
+        }
+        if (folderUri == null) {
+            val message = if (target.imageSlot == 3) {
+                "No se pudo abrir la carpeta IMG_CLIENTES."
+            } else {
+                "No se pudo abrir la carpeta Imágenes."
+            }
+            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+            return
+        }
+        runCatching { context.startActivity(safManager.openFolderIntent(folderUri)) }
+            .onFailure {
+                Toast.makeText(context, "No se pudo abrir la carpeta.", Toast.LENGTH_SHORT).show()
+            }
+    }
+
+    fun beginImageCapture(target: ImagePickerTarget) {
         if (rootTreeUri == null || inspectionNumber.isNullOrBlank()) {
             Toast.makeText(
                 context,
@@ -459,11 +475,7 @@ fun ResultsAnalysisDialog(
             return
         }
         activeImportTarget = target
-        if (fromCamera) {
-            imageCameraLauncher.launch(null)
-        } else {
-            imageFolderLauncher.launch("image/*")
-        }
+        imageCameraLauncher.launch(null)
     }
 
     Dialog(
@@ -582,21 +594,19 @@ fun ResultsAnalysisDialog(
                                                     )
                                                 },
                                                 onFolderClick = {
-                                                    beginImageImport(
+                                                    openImagesFolder(
                                                         ImagePickerTarget(
                                                             recommendationIndex = null,
                                                             imageSlot = 1
-                                                        ),
-                                                        fromCamera = false
+                                                        )
                                                     )
                                                 },
                                                 onCameraClick = {
-                                                    beginImageImport(
+                                                    beginImageCapture(
                                                         ImagePickerTarget(
                                                             recommendationIndex = null,
                                                             imageSlot = 1
-                                                        ),
-                                                        fromCamera = true
+                                                        )
                                                     )
                                                 }
                                             )
@@ -619,21 +629,19 @@ fun ResultsAnalysisDialog(
                                                     )
                                                 },
                                                 onFolderClick = {
-                                                    beginImageImport(
+                                                    openImagesFolder(
                                                         ImagePickerTarget(
                                                             recommendationIndex = null,
                                                             imageSlot = 2
-                                                        ),
-                                                        fromCamera = false
+                                                        )
                                                     )
                                                 },
                                                 onCameraClick = {
-                                                    beginImageImport(
+                                                    beginImageCapture(
                                                         ImagePickerTarget(
                                                             recommendationIndex = null,
                                                             imageSlot = 2
-                                                        ),
-                                                        fromCamera = true
+                                                        )
                                                     )
                                                 }
                                             )
@@ -668,7 +676,14 @@ fun ResultsAnalysisDialog(
                                                         imageSlot = 3
                                                     )
                                                 },
-                                                onFolderClick = null,
+                                                onFolderClick = {
+                                                    openImagesFolder(
+                                                        ImagePickerTarget(
+                                                            recommendationIndex = null,
+                                                            imageSlot = 3
+                                                        )
+                                                    )
+                                                },
                                                 onCameraClick = null
                                             )
                                         }
@@ -758,21 +773,19 @@ fun ResultsAnalysisDialog(
                                                                 )
                                                             },
                                                             onFolderClick = {
-                                                                beginImageImport(
+                                                                openImagesFolder(
                                                                     ImagePickerTarget(
                                                                         recommendationIndex = index,
                                                                         imageSlot = 1
-                                                                    ),
-                                                                    fromCamera = false
+                                                                    )
                                                                 )
                                                             },
                                                             onCameraClick = {
-                                                                beginImageImport(
+                                                                beginImageCapture(
                                                                     ImagePickerTarget(
                                                                         recommendationIndex = index,
                                                                         imageSlot = 1
-                                                                    ),
-                                                                    fromCamera = true
+                                                                    )
                                                                 )
                                                             }
                                                         )
@@ -800,21 +813,19 @@ fun ResultsAnalysisDialog(
                                                                 )
                                                             },
                                                             onFolderClick = {
-                                                                beginImageImport(
+                                                                openImagesFolder(
                                                                     ImagePickerTarget(
                                                                         recommendationIndex = index,
                                                                         imageSlot = 2
-                                                                    ),
-                                                                    fromCamera = false
+                                                                    )
                                                                 )
                                                             },
                                                             onCameraClick = {
-                                                                beginImageImport(
+                                                                beginImageCapture(
                                                                     ImagePickerTarget(
                                                                         recommendationIndex = index,
                                                                         imageSlot = 2
-                                                                    ),
-                                                                    fromCamera = true
+                                                                    )
                                                                 )
                                                             }
                                                         )

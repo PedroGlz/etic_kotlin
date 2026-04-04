@@ -1,10 +1,7 @@
 ﻿package com.example.etic.features.saf
 
-import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -42,7 +39,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -55,7 +51,6 @@ import coil.compose.AsyncImage
 import com.example.etic.core.saf.ReportsRefreshBus
 import com.example.etic.core.saf.SafEticManager
 import androidx.compose.runtime.collectAsState
-import kotlinx.coroutines.launch
 
 enum class EticFolderType(val label: String) {
     ClientImages("Carpeta img clientes"),
@@ -64,49 +59,11 @@ enum class EticFolderType(val label: String) {
 }
 
 @Composable
-fun FolderPickerScreen(
-    onTreeUriPicked: (Uri) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    val launcher = rememberLauncherForActivityResult(
-        ActivityResultContracts.OpenDocumentTree()
-    ) { uri ->
-        if (uri == null) return@rememberLauncherForActivityResult
-        val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-        runCatching { context.contentResolver.takePersistableUriPermission(uri, flags) }
-        scope.launch { onTreeUriPicked(uri) }
-    }
-
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .padding(
-            start = 16.dp,
-            end = 16.dp,
-            top = 11.dp,
-            bottom = 9.dp
-        ),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        Text("Seleccionar carpeta ETIC", style = MaterialTheme.typography.titleMedium)
-        Text(
-            "Selecciona una carpeta raíz para crear ETIC/Inspecciones y mantener la estructura SAF.",
-            style = MaterialTheme.typography.bodyMedium
-        )
-        Button(onClick = { launcher.launch(null) }) {
-            Text("Seleccionar carpeta ETIC")
-        }
-    }
-}
-
-@Composable
 fun EticFolderShortcutScreen(
     folderType: EticFolderType,
     rootTreeUri: Uri?,
     inspectionNumero: String?,
-    onPickRoot: (Uri) -> Unit,
+    onRequestRoot: () -> Unit,
     manager: SafEticManager,
     modifier: Modifier = Modifier
 ) {
@@ -119,7 +76,21 @@ fun EticFolderShortcutScreen(
     val inspectionNumber = inspectionNumero.orEmpty()
 
     if (rootTreeUri == null) {
-        FolderPickerScreen(onTreeUriPicked = onPickRoot, modifier = modifier)
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .padding(start = 16.dp, end = 16.dp, top = 11.dp, bottom = 9.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Text("Seleccionar carpeta ETIC", style = MaterialTheme.typography.titleMedium)
+            Text(
+                "Selecciona una carpeta raíz para crear ETIC/Inspecciones y mantener la estructura SAF.",
+                style = MaterialTheme.typography.bodyMedium
+            )
+            Button(onClick = onRequestRoot) {
+                Text("Seleccionar carpeta ETIC")
+            }
+        }
         return
     }
 
