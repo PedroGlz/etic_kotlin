@@ -150,7 +150,7 @@ private fun validateSnapshot(snapshot: File) {
             if (cursor.moveToFirst()) cursor.getString(0) else null
         }
         require(integrity.equals("ok", ignoreCase = true)) {
-            "La copia exportada no paso integrity_check: ${integrity ?: "sin resultado"}"
+            "La copia exportada no pasó integrity_check: ${integrity ?: "sin resultado"}"
         }
 
         val objectCount = exportedDb.rawQuery(
@@ -159,7 +159,7 @@ private fun validateSnapshot(snapshot: File) {
         ).use { cursor ->
             if (cursor.moveToFirst()) cursor.getInt(0) else 0
         }
-        require(objectCount > 0) { "La copia exportada no contiene objetos SQLite validos." }
+        require(objectCount > 0) { "La copia exportada no contiene objetos SQLite válidos." }
     } finally {
         exportedDb.close()
     }

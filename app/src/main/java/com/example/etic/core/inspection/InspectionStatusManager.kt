@@ -95,7 +95,7 @@ suspend fun changeInspectionStatus(
         val inspection = dao.getById(inspectionId)
             ?: return@withContext InspectionStatusChangeResult(
                 success = false,
-                message = "No se encontro la inspeccion actual."
+                message = "No se encontró la inspección actual."
             )
 
         val now = LocalDateTime.now()

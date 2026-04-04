@@ -1557,7 +1557,7 @@ fun MainScreen(
                             ) {
                                 Text(text = "Inicializar codigo de barras")
                                 SequenceInputButtonGroup(
-                                    label = "Codigo de barras inicial",
+                                    label = "Código de barras inicial",
                                     value = initBarcodeValue,
                                     onValueChange = { initBarcodeValue = it },
                                     modifier = Modifier.fillMaxWidth(),
@@ -1601,7 +1601,7 @@ fun MainScreen(
                                                 }
                                                 isSavingInitBarcode = false
                                                 if (result) {
-                                                    Toast.makeText(appContext, "Codigo de barras inicial actualizado.", Toast.LENGTH_SHORT).show()
+                                                    Toast.makeText(appContext, "Código de barras inicial actualizado.", Toast.LENGTH_SHORT).show()
                                                     showInitBarcodeDialog = false
                                                 } else {
                                                     Toast.makeText(appContext, "No se pudo actualizar el codigo de barras inicial.", Toast.LENGTH_SHORT).show()

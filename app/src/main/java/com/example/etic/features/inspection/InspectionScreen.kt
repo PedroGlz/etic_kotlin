@@ -877,7 +877,7 @@ private fun CurrentInspectionSplitView(
             fun loadNextBarcodeFromInspection(onResult: (String) -> Unit) {
                 val inspId = currentInspection?.idInspeccion
                 if (inspId.isNullOrBlank()) {
-                    Toast.makeText(ctx, "No hay inspecciÃ³n activa.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(ctx, "No hay inspección activa.", Toast.LENGTH_SHORT).show()
                     return
                 }
                 loadInitialImageScope.launch {
@@ -1438,7 +1438,7 @@ private fun CurrentInspectionSplitView(
                     }
                     val ubicacionId = entity.idUbicacion
                     if (ubicacionId.isNullOrBlank()) {
-                        Toast.makeText(ctx, "El problema no tiene una ubicacion asociada.", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(ctx, "El problema no tiene una ubicación asociada.", Toast.LENGTH_SHORT).show()
                         return@launch
                     }
                     resetElectricProblemState()
@@ -1487,7 +1487,7 @@ private fun CurrentInspectionSplitView(
                     }
                     val ubicacionId = entity.idUbicacion
                     if (ubicacionId.isNullOrBlank()) {
-                        Toast.makeText(ctx, "El problema no tiene una ubicacion asociada.", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(ctx, "El problema no tiene una ubicación asociada.", Toast.LENGTH_SHORT).show()
                         return@launch
                     }
                     resetMechanicalProblemState()
@@ -1542,7 +1542,7 @@ private fun CurrentInspectionSplitView(
                     }
                     val ubicacionId = entity.idUbicacion
                     if (ubicacionId.isNullOrBlank()) {
-                        Toast.makeText(ctx, "El problema no tiene una ubicacion asociada.", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(ctx, "El problema no tiene una ubicación asociada.", Toast.LENGTH_SHORT).show()
                         return@launch
                     }
                     resetAislamientoTermicoProblemState()
@@ -1918,7 +1918,7 @@ private fun CurrentInspectionSplitView(
             ): Boolean {
                 val inspection = currentInspection
                 if (inspection == null) {
-                    Toast.makeText(ctx, "No hay inspeccion activa.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(ctx, "No hay inspección activa.", Toast.LENGTH_SHORT).show()
                     return false
                 }
                 problemDrafts = problemDrafts + (currentId to currentDraft)
@@ -2269,7 +2269,7 @@ private fun CurrentInspectionSplitView(
             ) {
                 val inspection = currentInspection
                 if (inspection == null || inspection.idInspeccion.isNullOrBlank()) {
-                    Toast.makeText(ctx, "No hay inspeccion activa.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(ctx, "No hay inspección activa.", Toast.LENGTH_SHORT).show()
                     return
                 }
                 val isOpen = entity.estatusProblema?.equals("Abierto", ignoreCase = true) == true
@@ -2280,7 +2280,7 @@ private fun CurrentInspectionSplitView(
                 }
                 val ubicacionId = entity.idUbicacion
                 if (ubicacionId.isNullOrBlank()) {
-                    Toast.makeText(ctx, "El problema no tiene una ubicacion asociada.", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(ctx, "El problema no tiene una ubicación asociada.", Toast.LENGTH_SHORT).show()
                     return
                 }
                 val tipoId = entity.idTipoInspeccion
@@ -4647,7 +4647,7 @@ private fun CurrentInspectionSplitView(
                                 if (request.targetId != rootId && targetNode?.verified == true) {
                                     Toast.makeText(
                                         ctx,
-                                        "La ubicacion destino no puede ser un equipo.",
+                                        "La ubicación destino no puede ser un equipo.",
                                         Toast.LENGTH_SHORT
                                     ).show()
                                     return@Button
@@ -4668,7 +4668,7 @@ private fun CurrentInspectionSplitView(
                                         } else {
                                             Toast.makeText(
                                                 ctx,
-                                                "No se pudo duplicar la ubicacion.",
+                                                "No se pudo duplicar la ubicación.",
                                                 Toast.LENGTH_SHORT
                                             ).show()
                                         }
@@ -5219,11 +5219,11 @@ private fun CurrentInspectionSplitView(
                                                                 showEditUbDialog = false
                                                                 isSavingEditUb = false
                                                             } else {
-                                                                locationForm.error = "No se pudo guardar la ubicacion"
+                                                                locationForm.error = "No se pudo guardar la ubicación"
                                                                 isSavingEditUb = false
                                                             }
                                                         } catch (_: Exception) {
-                                                            locationForm.error = "No se pudo guardar la ubicacion"
+                                                            locationForm.error = "No se pudo guardar la ubicación"
                                                             isSavingEditUb = false
                                                         }
                                                     }
@@ -6390,7 +6390,7 @@ private fun CurrentInspectionSplitView(
                                 if (targetId != rootId && targetNode?.verified == true) {
                                     Toast.makeText(
                                         ctx,
-                                        "La ubicacion destino no puede ser un equipo.",
+                                        "La ubicación destino no puede ser un equipo.",
                                         Toast.LENGTH_SHORT
                                     ).show()
                                     dragCopySourceId = null
@@ -6480,7 +6480,7 @@ private fun CurrentInspectionSplitView(
                                         ubicacionDao.getAllActivas().any { it.idUbicacionPadre == ubId }
                                     }.getOrDefault(false)
                                     if (hasChildren) {
-                                        deleteUbInfoMessage = "No se puede eliminar la ubicacion porque tiene ubicaciones hijas."
+                                        deleteUbInfoMessage = "No se puede eliminar la ubicación porque tiene ubicaciones hijas."
                                         return@launch
                                     }
 
@@ -6507,15 +6507,15 @@ private fun CurrentInspectionSplitView(
                                     when {
                                         hasBaseline && hasProblems -> {
                                             deleteUbInfoMessage =
-                                                "No se puede eliminar la ubicacion porque tiene baseline y problemas registrados."
+                                                "No se puede eliminar la ubicación porque tiene baseline y problemas registrados."
                                         }
                                         hasBaseline -> {
                                             deleteUbInfoMessage =
-                                                "No se puede eliminar la ubicacion porque tiene baseline registrado."
+                                                "No se puede eliminar la ubicación porque tiene baseline registrado."
                                         }
                                         hasProblems -> {
                                             deleteUbInfoMessage =
-                                                "No se puede eliminar la ubicacion porque tiene problemas registrados."
+                                                "No se puede eliminar la ubicación porque tiene problemas registrados."
                                         }
                                         else -> {
                                             // Sin hijos, sin baseline y sin problemas: pedir confirmacion
@@ -7070,7 +7070,7 @@ private fun SimpleTreeView(
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(
-                            text = "Duplicando ubicacion",
+                            text = "Duplicando ubicación",
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.primary
                         )

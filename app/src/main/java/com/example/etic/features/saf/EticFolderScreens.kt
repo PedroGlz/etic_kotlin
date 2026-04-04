@@ -122,7 +122,7 @@ fun EticFolderShortcutScreen(
 
     if (folderType != EticFolderType.ClientImages && inspectionNumber.isBlank()) {
         Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("No hay inspeccion activa.")
+            Text("No hay inspección activa.")
         }
         return
     }

@@ -66,7 +66,7 @@ suspend fun importInspectionDatabase(
 
             InspectionImportResult(
                 success = true,
-                message = "Inspeccion importada correctamente."
+                message = "Inspección importada correctamente."
             )
         } catch (e: Exception) {
             InspectionImportResult(

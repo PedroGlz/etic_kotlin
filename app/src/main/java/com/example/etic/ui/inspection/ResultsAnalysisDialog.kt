@@ -937,9 +937,9 @@ fun ResultsAnalysisDialog(
                     if (optionsForTarget.isEmpty()) {
                         Text(
                             if (target.imageSlot == 3) {
-                                "No hay imagenes disponibles en IMG_CLIENTES."
+                                "No hay imágenes disponibles en IMG_CLIENTES."
                             } else {
-                                "No hay imagenes disponibles en la inspeccion."
+                                "No hay imágenes disponibles en la inspección."
                             },
                             style = MaterialTheme.typography.bodyMedium
                         )
