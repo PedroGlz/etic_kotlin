@@ -600,13 +600,11 @@ class ProblemasPdfGenerator {
             }
             val infoY = y + h + mm(2f)
             val safeDate = date.ifBlank { "--/--/----" }
-            val safeTime = time.ifBlank { "--:-- --" }
+            val safeTime = time.ifBlank { "--:--" }
             val lineH = mm(4f)
             val fileW = w * (41f / 102f)
             val dateW = w * (33f / 102f)
-            canvas.drawRect(RectF(x, infoY, x + fileW, infoY + lineH), linePaint)
-            canvas.drawRect(RectF(x + fileW, infoY, x + fileW + dateW, infoY + lineH), linePaint)
-            canvas.drawRect(RectF(x + fileW + dateW, infoY, x + w, infoY + lineH), linePaint)
+            canvas.drawRect(RectF(x, infoY, x + w, infoY + lineH), linePaint)
             canvas.drawText("Archivo: $fileName", x + mm(1f), infoY + lineH - mm(0.8f), textPaint)
             canvas.drawText("Fecha: $safeDate", x + fileW + mm(1f), infoY + lineH - mm(0.8f), textPaint)
             canvas.drawText("Hora: $safeTime", x + fileW + dateW + mm(1f), infoY + lineH - mm(0.8f), textPaint)

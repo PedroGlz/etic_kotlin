@@ -11,6 +11,7 @@ import com.example.etic.reports.pdf.ProblemasPdfGenerator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import kotlin.math.max
 import kotlin.math.roundToInt
@@ -104,6 +105,37 @@ class GenerateProblemasPdfUseCase(
                     LocalDate.parse(datePart).format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
                 }.getOrElse {
                     if (normalized.length >= 10) normalized.substring(normalized.length - 10) else normalized
+                }
+            }
+
+            fun formatRecordDateTime(rawValue: String?): Pair<String, String> {
+                val normalized = rawValue?.replace("T", " ")?.trim().orEmpty()
+                if (normalized.isBlank()) return "" to ""
+
+                val parsed = sequenceOf(
+                    "yyyy-MM-dd HH:mm:ss",
+                    "yyyy-MM-dd HH:mm",
+                    "yyyy-MM-dd"
+                ).mapNotNull { pattern ->
+                    runCatching {
+                        when (pattern) {
+                            "yyyy-MM-dd" -> LocalDate.parse(normalized.take(10))
+                                .atStartOfDay()
+                            else -> LocalDateTime.parse(
+                                normalized.take(pattern.length),
+                                DateTimeFormatter.ofPattern(pattern)
+                            )
+                        }
+                    }.getOrNull()
+                }.firstOrNull()
+
+                return if (parsed != null) {
+                    parsed.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) to
+                        parsed.format(DateTimeFormatter.ofPattern("HH:mm"))
+                } else {
+                    val date = normalized.take(10).takeIf { it.length == 10 }?.let { formatDate(it) }.orEmpty()
+                    val time = Regex("""(\d{2}:\d{2})""").find(normalized)?.value.orEmpty()
+                    date to time
                 }
             }
 
@@ -257,6 +289,7 @@ class GenerateProblemasPdfUseCase(
                 )
             } else {
                 problemas.map { problem ->
+                    val recordDateTime = formatRecordDateTime(problem.fechaCreacion ?: problem.fechaMod)
                     val ubicacion = problem.idUbicacion?.let { ubicacionById[it] }
                     val equipo = problem.idEquipo?.let { equipoById[it] }
                     val tipo = problem.idTipoInspeccion?.let { tipoInspeccionById[it]?.tipoInspeccion }.orEmpty()
@@ -384,11 +417,11 @@ class GenerateProblemasPdfUseCase(
                         codigoBarras = ubicacion?.codigoBarras.orEmpty(),
                         ruta = problem.ruta ?: ubicacion?.ruta.orEmpty(),
                         irFileName = problem.irFile.orEmpty(),
-                        irFileDate = problem.irFileDate.orEmpty(),
-                        irFileTime = problem.irFileTime.orEmpty(),
+                        irFileDate = recordDateTime.first,
+                        irFileTime = recordDateTime.second,
                         photoFileName = problem.photoFile.orEmpty(),
-                        photoFileDate = problem.photoFileDate.orEmpty(),
-                        photoFileTime = problem.photoFileTime.orEmpty(),
+                        photoFileDate = recordDateTime.first,
+                        photoFileTime = recordDateTime.second,
                         irBitmap = findImage(imageFolder, problem.irFile),
                         photoBitmap = findImage(imageFolder, problem.photoFile),
                         graphPoints = graphPoints

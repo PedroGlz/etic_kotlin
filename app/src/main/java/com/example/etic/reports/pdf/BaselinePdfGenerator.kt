@@ -311,13 +311,11 @@ class BaselinePdfGenerator {
                 val w = mm(wMm)
                 val rowH = mm(4f)
                 val safeDate = date.ifBlank { "--/--/----" }
-                val safeTime = time.ifBlank { "--:-- --" }
+                val safeTime = time.ifBlank { "--:--" }
                 val safeFileName = fileName.ifBlank { "-" }
                 val fileW = w * (41f / 90f)
                 val dateW = w * (27f / 90f)
-                c.drawRect(RectF(x, y, x + fileW, y + rowH), linePaint)
-                c.drawRect(RectF(x + fileW, y, x + fileW + dateW, y + rowH), linePaint)
-                c.drawRect(RectF(x + fileW + dateW, y, x + w, y + rowH), linePaint)
+                c.drawRect(RectF(x, y, x + w, y + rowH), linePaint)
                 c.drawText("Archivo: $safeFileName", x + mm(1f), y + rowH - mm(0.8f), textPaint)
                 c.drawText("Fecha: $safeDate", x + fileW + mm(1f), y + rowH - mm(0.8f), textPaint)
                 c.drawText("Hora: $safeTime", x + fileW + dateW + mm(1f), y + rowH - mm(0.8f), textPaint)

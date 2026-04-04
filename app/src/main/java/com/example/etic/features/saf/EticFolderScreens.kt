@@ -52,7 +52,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.documentfile.provider.DocumentFile
 import coil.compose.AsyncImage
+import com.example.etic.core.saf.ReportsRefreshBus
 import com.example.etic.core.saf.SafEticManager
+import androidx.compose.runtime.collectAsState
 import kotlinx.coroutines.launch
 
 enum class EticFolderType(val label: String) {
@@ -110,6 +112,7 @@ fun EticFolderShortcutScreen(
 ) {
     val context = LocalContext.current
     var refreshTick by remember { mutableStateOf(0) }
+    val reportsRefreshTick by ReportsRefreshBus.tick.collectAsState()
     var renameTarget by remember { mutableStateOf<DocumentFile?>(null) }
     var deleteTarget by remember { mutableStateOf<DocumentFile?>(null) }
     var newName by remember { mutableStateOf("") }
@@ -132,7 +135,8 @@ fun EticFolderShortcutScreen(
         rootTreeUri,
         inspectionNumber,
         folderType,
-        refreshTick
+        refreshTick,
+        reportsRefreshTick
     ) {
         val dir = when (folderType) {
             EticFolderType.ClientImages -> manager.getClientesDir(context, rootTreeUri)

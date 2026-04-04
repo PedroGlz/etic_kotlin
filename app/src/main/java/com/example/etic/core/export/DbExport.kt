@@ -61,7 +61,7 @@ suspend fun exportRoomDbToDownloads(
 
             ExportResult(
                 success = true,
-                message = "$destinationMessage | journal_mode=${journalMode.ifBlank { "desconocido" }}"
+                message = destinationMessage
             )
         } catch (e: SecurityException) {
             ExportResult(false, "Permiso denegado: ${e.message}")
@@ -197,7 +197,7 @@ private fun saveSnapshotToDownloads(
                 out.fd.sync()
             }
         }
-        "Guardado en ${output.absolutePath}"
+        "Guardado en Descargas como $fileName"
     }
 }
 

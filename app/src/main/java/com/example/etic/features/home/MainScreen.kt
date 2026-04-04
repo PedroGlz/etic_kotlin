@@ -1,6 +1,7 @@
 ﻿package com.example.etic.features.home
 
 import android.graphics.Bitmap
+import android.content.Intent
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -121,8 +122,10 @@ import com.example.etic.reports.SaveResultadosAnalisisDraftUseCase
 import com.example.etic.data.local.queries.CurrentInspectionInfo
 import com.example.etic.ui.theme.FontSizeOption
 import android.net.Uri
+import androidx.documentfile.provider.DocumentFile
 import kotlin.math.max
 import com.example.etic.core.saf.EticImageStore
+import com.example.etic.core.saf.ReportsRefreshBus
 import com.example.etic.ui.inspection.ResultsAnalysisDialog
 
 private enum class HomeSection {
@@ -131,6 +134,20 @@ private enum class HomeSection {
     FolderClientImages,
     FolderImages,
     FolderReports
+}
+
+private enum class PendingFolderAction {
+    None,
+    ImportSetup,
+    InventarioPdf,
+    ProblemasPdf,
+    AislamientoTermicoPdf,
+    BaselinePdf,
+    ListaProblemasAbiertosPdf,
+    ListaProblemasCerradosPdf,
+    GraficaAnomaliasPdf,
+    ListaProblemasExcel,
+    ResultadosAnalisis
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -197,6 +214,9 @@ fun MainScreen(
     var currentUserSnapshot by remember { mutableStateOf<com.example.etic.core.current.CurrentUserInfo?>(null) }
     var inspectionStatusOptions by remember { mutableStateOf<List<EstatusInspeccion>>(emptyList()) }
     var selectedInspectionStatusId by rememberSaveable { mutableStateOf<String?>(null) }
+    var pendingFolderAction by rememberSaveable { mutableStateOf(PendingFolderAction.None) }
+    var pendingInitBarcodeAfterImages by rememberSaveable { mutableStateOf(false) }
+    var requestFolderAccess by remember { mutableStateOf<(() -> Unit)?>(null) }
 
     fun inspectionStatusDescription(statusId: String?): String? =
         when (statusId) {
@@ -282,6 +302,97 @@ fun MainScreen(
         else safManager.getImagesDir(appContext, currentRootUri, inspectionNumber)?.uri
     }
 
+    suspend fun ensureInspectionFoldersReady(inspectionNumber: String?): Boolean {
+        val rootUri = rootTreeUri ?: return false
+        if (inspectionNumber.isNullOrBlank()) return false
+        return withContext(Dispatchers.IO) {
+            val inspectionsRoot = safManager.ensureEticFolders(appContext, rootUri)
+            val created = safManager.ensureInspectionFolders(appContext, rootUri, inspectionNumber)
+            inspectionsRoot != null && created.first != null && created.second != null
+        }
+    }
+
+    fun openInitBarcodeDialogForCurrentInspection() {
+        initBarcodeValue = ""
+        val currentInspectionForBarcode = currentInspectionSnapshot
+        if (currentInspectionForBarcode?.idInspeccion.isNullOrBlank()) {
+            Toast.makeText(appContext, "No hay inspección activa.", Toast.LENGTH_SHORT).show()
+            return
+        }
+        scope.launch {
+            val value = withContext(Dispatchers.IO) {
+                runCatching {
+                    inspeccionDao.getById(currentInspectionForBarcode?.idInspeccion.orEmpty())
+                        ?.codigoBarrasInicial
+                }.getOrNull()
+            }
+            initBarcodeValue = value.orEmpty()
+            showInitBarcodeDialog = true
+        }
+    }
+
+    fun openInventoryReportDialog(insp: CurrentInspectionInfo) {
+        showInventoryReportDialog = true
+        if (inventoryOptions.isEmpty() && !isLoadingInventoryOptions) {
+            isLoadingInventoryOptions = true
+            val rootId = insp.idSitio?.let { "root:$it" } ?: "root:site"
+            val rootTitle = insp.nombreSitio ?: "Sitio"
+            scope.launch {
+                val roots = inspectionRepo.loadTree(rootId, rootTitle, insp.idInspeccion)
+                val children = roots.firstOrNull()?.children.orEmpty()
+                inventoryOptions = children
+                inventorySelection = children.associate { it.id to false }
+                isLoadingInventoryOptions = false
+            }
+        }
+    }
+
+    fun startPostImportSetup() {
+        showInitImagesDialog = true
+        pendingInitBarcodeAfterImages = true
+    }
+
+    suspend fun ensureFolderAccessAndStructure(
+        inspectionNumber: String?,
+        actionIfMissingRoot: PendingFolderAction
+    ): Boolean {
+        if (inspectionNumber.isNullOrBlank()) return false
+        if (rootTreeUri == null) {
+            pendingFolderAction = actionIfMissingRoot
+            requestFolderAccess?.invoke()
+            return false
+        }
+        val ready = ensureInspectionFoldersReady(inspectionNumber)
+        if (!ready) {
+            Toast.makeText(appContext, "No se pudo preparar la carpeta de la inspección.", Toast.LENGTH_LONG).show()
+        }
+        return ready
+    }
+
+    fun fileNameFromUri(uriString: String): String {
+        val uri = runCatching { Uri.parse(uriString) }.getOrNull()
+        val name = uri?.let { parsed ->
+            DocumentFile.fromSingleUri(appContext, parsed)?.name
+        }.orEmpty()
+        return name.ifBlank {
+            uri?.lastPathSegment?.substringAfterLast('/')?.substringAfterLast(':').orEmpty().ifBlank { "archivo" }
+        }
+    }
+
+    fun reportSavedMessage(kind: String, uriString: String): String {
+        val fileName = fileNameFromUri(uriString)
+        return "$kind guardado en Archivos como $fileName"
+    }
+
+    fun reportErrorMessage(kind: String, error: Throwable): String {
+        val detail = error.message?.trim().orEmpty()
+        return if (detail.isBlank()) {
+            "No se pudo generar $kind."
+        } else {
+            "No se pudo generar $kind. $detail"
+        }
+    }
+
     fun openResultsAnalysisDialog(insp: CurrentInspectionInfo) {
         if (isGeneratingReport || isLoadingResultsAnalysisDialog) return
         val noInspeccion = insp.noInspeccion?.toString()
@@ -290,6 +401,9 @@ fun MainScreen(
             return
         }
         scope.launch {
+            if (!ensureFolderAccessAndStructure(noInspeccion, PendingFolderAction.ResultadosAnalisis)) {
+                return@launch
+            }
             isLoadingResultsAnalysisDialog = true
             try {
                 val rootId = insp.idSitio?.let { "root:$it" } ?: "root:site"
@@ -425,12 +539,17 @@ fun MainScreen(
                 )
                 result.fold(
                     onSuccess = { uriString ->
-                        Toast.makeText(appContext, "Reporte generado: $uriString", Toast.LENGTH_LONG).show()
+                        ReportsRefreshBus.notifyChanged()
+                        Toast.makeText(
+                            appContext,
+                            reportSavedMessage("el resultado de análisis", uriString),
+                            Toast.LENGTH_LONG
+                        ).show()
                     },
                     onFailure = { e ->
                         Toast.makeText(
                             appContext,
-                            "Error al generar resultado de análisis: ${e.message ?: "desconocido"}",
+                            reportErrorMessage("el resultado de análisis", e),
                             Toast.LENGTH_LONG
                         ).show()
                     }
@@ -450,6 +569,9 @@ fun MainScreen(
             return
         }
         scope.launch {
+            if (!ensureFolderAccessAndStructure(noInspeccion, PendingFolderAction.InventarioPdf)) {
+                return@launch
+            }
             isGeneratingReport = true
             drawerState.close()
             val folderProvider = ReportesFolderProvider(appContext) { inspectionNumber ->
@@ -468,12 +590,13 @@ fun MainScreen(
                 )
                 result.fold(
                     onSuccess = { uriString ->
-                        Toast.makeText(appContext, "PDF generado: $uriString", Toast.LENGTH_LONG).show()
+                        ReportsRefreshBus.notifyChanged()
+                        Toast.makeText(appContext, reportSavedMessage("el reporte de inventario", uriString), Toast.LENGTH_LONG).show()
                     },
                     onFailure = { e ->
                         Toast.makeText(
                             appContext,
-                            "Error al generar PDF: ${e.message ?: "desconocido"}",
+                            reportErrorMessage("el reporte de inventario", e),
                             Toast.LENGTH_LONG
                         ).show()
                     }
@@ -493,6 +616,9 @@ fun MainScreen(
             return
         }
         scope.launch {
+            if (!ensureFolderAccessAndStructure(noInspeccion, PendingFolderAction.ProblemasPdf)) {
+                return@launch
+            }
             isGeneratingReport = true
             drawerState.close()
             val folderProvider = ReportesFolderProvider(appContext) { inspectionNumber ->
@@ -523,12 +649,13 @@ fun MainScreen(
                 )
                 result.fold(
                     onSuccess = { uriString ->
-                        Toast.makeText(appContext, "PDF generado: $uriString", Toast.LENGTH_LONG).show()
+                        ReportsRefreshBus.notifyChanged()
+                        Toast.makeText(appContext, reportSavedMessage("el reporte de problemas", uriString), Toast.LENGTH_LONG).show()
                     },
                     onFailure = { e ->
                         Toast.makeText(
                             appContext,
-                            "Error al generar PDF: ${e.message ?: "desconocido"}",
+                            reportErrorMessage("el reporte de problemas", e),
                             Toast.LENGTH_LONG
                         ).show()
                     }
@@ -548,6 +675,9 @@ fun MainScreen(
             return
         }
         scope.launch {
+            if (!ensureFolderAccessAndStructure(noInspeccion, PendingFolderAction.AislamientoTermicoPdf)) {
+                return@launch
+            }
             isGeneratingReport = true
             drawerState.close()
             val folderProvider = ReportesFolderProvider(appContext) { inspectionNumber ->
@@ -580,12 +710,13 @@ fun MainScreen(
                 )
                 result.fold(
                     onSuccess = { uriString ->
-                        Toast.makeText(appContext, "PDF generado: $uriString", Toast.LENGTH_LONG).show()
+                        ReportsRefreshBus.notifyChanged()
+                        Toast.makeText(appContext, reportSavedMessage("el reporte de aislamiento térmico", uriString), Toast.LENGTH_LONG).show()
                     },
                     onFailure = { e ->
                         Toast.makeText(
                             appContext,
-                            "Error al generar PDF: ${e.message ?: "desconocido"}",
+                            reportErrorMessage("el reporte de aislamiento térmico", e),
                             Toast.LENGTH_LONG
                         ).show()
                     }
@@ -605,6 +736,9 @@ fun MainScreen(
             return
         }
         scope.launch {
+            if (!ensureFolderAccessAndStructure(noInspeccion, PendingFolderAction.BaselinePdf)) {
+                return@launch
+            }
             isGeneratingReport = true
             drawerState.close()
             val folderProvider = ReportesFolderProvider(appContext) { inspectionNumber ->
@@ -633,12 +767,13 @@ fun MainScreen(
                 )
                 result.fold(
                     onSuccess = { uriString ->
-                        Toast.makeText(appContext, "PDF generado: $uriString", Toast.LENGTH_LONG).show()
+                        ReportsRefreshBus.notifyChanged()
+                        Toast.makeText(appContext, reportSavedMessage("el reporte de baseline", uriString), Toast.LENGTH_LONG).show()
                     },
                     onFailure = { e ->
                         Toast.makeText(
                             appContext,
-                            "Error al generar PDF: ${e.message ?: "desconocido"}",
+                            reportErrorMessage("el reporte de baseline", e),
                             Toast.LENGTH_LONG
                         ).show()
                     }
@@ -661,6 +796,13 @@ fun MainScreen(
             return
         }
         scope.launch {
+            val pendingAction = when (tipo) {
+                GenerateProblemListPdfUseCase.ProblemListType.ABIERTOS -> PendingFolderAction.ListaProblemasAbiertosPdf
+                GenerateProblemListPdfUseCase.ProblemListType.CERRADOS -> PendingFolderAction.ListaProblemasCerradosPdf
+            }
+            if (!ensureFolderAccessAndStructure(noInspeccion, pendingAction)) {
+                return@launch
+            }
             isGeneratingReport = true
             drawerState.close()
             val folderProvider = ReportesFolderProvider(appContext) { inspectionNumber ->
@@ -678,12 +820,13 @@ fun MainScreen(
                 )
                 result.fold(
                     onSuccess = { uriString ->
-                        Toast.makeText(appContext, "PDF generado: $uriString", Toast.LENGTH_LONG).show()
+                        ReportsRefreshBus.notifyChanged()
+                        Toast.makeText(appContext, reportSavedMessage("la lista de problemas", uriString), Toast.LENGTH_LONG).show()
                     },
                     onFailure = { e ->
                         Toast.makeText(
                             appContext,
-                            "Error al generar PDF: ${e.message ?: "desconocido"}",
+                            reportErrorMessage("la lista de problemas", e),
                             Toast.LENGTH_LONG
                         ).show()
                     }
@@ -703,6 +846,9 @@ fun MainScreen(
             return
         }
         scope.launch {
+            if (!ensureFolderAccessAndStructure(noInspeccion, PendingFolderAction.GraficaAnomaliasPdf)) {
+                return@launch
+            }
             isGeneratingReport = true
             drawerState.close()
             val folderProvider = ReportesFolderProvider(appContext) { inspectionNumber ->
@@ -719,12 +865,13 @@ fun MainScreen(
                 )
                 result.fold(
                     onSuccess = { uriString ->
-                        Toast.makeText(appContext, "PDF generado: $uriString", Toast.LENGTH_LONG).show()
+                        ReportsRefreshBus.notifyChanged()
+                        Toast.makeText(appContext, reportSavedMessage("la gráfica de anomalías", uriString), Toast.LENGTH_LONG).show()
                     },
                     onFailure = { e ->
                         Toast.makeText(
                             appContext,
-                            "Error al generar PDF: ${e.message ?: "desconocido"}",
+                            reportErrorMessage("la gráfica de anomalías", e),
                             Toast.LENGTH_LONG
                         ).show()
                     }
@@ -744,6 +891,9 @@ fun MainScreen(
             return
         }
         scope.launch {
+            if (!ensureFolderAccessAndStructure(noInspeccion, PendingFolderAction.ListaProblemasExcel)) {
+                return@launch
+            }
             isGeneratingReport = true
             drawerState.close()
             val folderProvider = ReportesFolderProvider(appContext) { inspectionNumber ->
@@ -758,12 +908,13 @@ fun MainScreen(
                 )
                 result.fold(
                     onSuccess = { uriString ->
-                        Toast.makeText(appContext, "Excel generado: $uriString", Toast.LENGTH_LONG).show()
+                        ReportsRefreshBus.notifyChanged()
+                        Toast.makeText(appContext, reportSavedMessage("el archivo de Excel", uriString), Toast.LENGTH_LONG).show()
                     },
                     onFailure = { e ->
                         Toast.makeText(
                             appContext,
-                            "Error al generar Excel: ${e.message ?: "desconocido"}",
+                            reportErrorMessage("el archivo de Excel", e),
                             Toast.LENGTH_LONG
                         ).show()
                     }
@@ -781,19 +932,7 @@ fun MainScreen(
                 if (insp == null) {
                     Toast.makeText(appContext, "No hay inspección activa.", Toast.LENGTH_SHORT).show()
                 } else {
-                    showInventoryReportDialog = true
-                    if (inventoryOptions.isEmpty() && !isLoadingInventoryOptions) {
-                        isLoadingInventoryOptions = true
-                        val rootId = insp.idSitio?.let { "root:$it" } ?: "root:site"
-                        val rootTitle = insp.nombreSitio ?: "Sitio"
-                        scope.launch {
-                            val roots = inspectionRepo.loadTree(rootId, rootTitle, insp.idInspeccion)
-                            val children = roots.firstOrNull()?.children.orEmpty()
-                            inventoryOptions = children
-                            inventorySelection = children.associate { it.id to false }
-                            isLoadingInventoryOptions = false
-                        }
-                    }
+                    openInventoryReportDialog(insp)
                 }
             }
             ReportAction.ProblemasPdf -> {
@@ -883,10 +1022,72 @@ fun MainScreen(
             isImportingInspection = false
             if (result.success) {
                 section = HomeSection.Inspection
+                val importedInspectionNumber = currentInspectionSnapshot?.noInspeccion?.toString()
+                if (rootTreeUri == null) {
+                    pendingFolderAction = PendingFolderAction.ImportSetup
+                    requestFolderAccess?.invoke()
+                } else {
+                    scope.launch {
+                        val ready = ensureInspectionFoldersReady(importedInspectionNumber)
+                        if (ready) {
+                            startPostImportSetup()
+                        } else {
+                            Toast.makeText(appContext, "No se pudo preparar la carpeta de la inspección.", Toast.LENGTH_LONG).show()
+                        }
+                    }
+                }
             }
             Toast.makeText(appContext, result.message, Toast.LENGTH_LONG).show()
         }
     }
+
+    val folderTreeLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocumentTree()
+    ) { uri ->
+        if (uri == null) {
+            pendingFolderAction = PendingFolderAction.None
+            return@rememberLauncherForActivityResult
+        }
+        scope.launch {
+            val flags = Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+            runCatching { appContext.contentResolver.takePersistableUriPermission(uri, flags) }
+            eticPrefs.setRootTreeUri(uri)
+            val inspectionNumber = currentInspectionSnapshot?.noInspeccion?.toString()
+            val ready = withContext(Dispatchers.IO) {
+                safManager.ensureEticFolders(appContext, uri)
+                if (!inspectionNumber.isNullOrBlank()) {
+                    val pair = safManager.ensureInspectionFolders(appContext, uri, inspectionNumber)
+                    pair.first != null && pair.second != null
+                } else {
+                    true
+                }
+            }
+            if (!ready) {
+                Toast.makeText(appContext, "No se pudo preparar la carpeta de la inspección.", Toast.LENGTH_LONG).show()
+                pendingFolderAction = PendingFolderAction.None
+                return@launch
+            }
+            when (pendingFolderAction) {
+                PendingFolderAction.ImportSetup -> startPostImportSetup()
+                PendingFolderAction.InventarioPdf -> currentInspectionSnapshot?.let { openInventoryReportDialog(it) }
+                PendingFolderAction.ProblemasPdf -> currentInspectionSnapshot?.let { generateProblemasPdf(it) }
+                PendingFolderAction.AislamientoTermicoPdf -> currentInspectionSnapshot?.let { generateAislamientoTermicoPdf(it) }
+                PendingFolderAction.BaselinePdf -> currentInspectionSnapshot?.let { generateBaselinePdf(it) }
+                PendingFolderAction.ListaProblemasAbiertosPdf -> currentInspectionSnapshot?.let {
+                    generateListaProblemasPdf(it, GenerateProblemListPdfUseCase.ProblemListType.ABIERTOS)
+                }
+                PendingFolderAction.ListaProblemasCerradosPdf -> currentInspectionSnapshot?.let {
+                    generateListaProblemasPdf(it, GenerateProblemListPdfUseCase.ProblemListType.CERRADOS)
+                }
+                PendingFolderAction.GraficaAnomaliasPdf -> currentInspectionSnapshot?.let { generateGraficaAnomaliasPdf(it) }
+                PendingFolderAction.ListaProblemasExcel -> currentInspectionSnapshot?.let { generateListaProblemasExcel(it) }
+                PendingFolderAction.ResultadosAnalisis -> currentInspectionSnapshot?.let { openResultsAnalysisDialog(it) }
+                PendingFolderAction.None -> Unit
+            }
+            pendingFolderAction = PendingFolderAction.None
+        }
+    }
+    requestFolderAccess = { folderTreeLauncher.launch(null) }
 
     ModalNavigationDrawer(
         drawerState = drawerState,
@@ -1150,6 +1351,14 @@ fun MainScreen(
                         }
                     }
                 }
+
+                LaunchedEffect(showInitImagesDialog, pendingInitBarcodeAfterImages) {
+                    if (!showInitImagesDialog && pendingInitBarcodeAfterImages) {
+                        pendingInitBarcodeAfterImages = false
+                        openInitBarcodeDialogForCurrentInspection()
+                    }
+                }
+
                 fun saveCameraBitmap(prefix: String, bmp: Bitmap): String? {
                     return EticImageStore.saveBitmap(
                         context = appContext,

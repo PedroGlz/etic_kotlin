@@ -9,9 +9,8 @@ import com.example.etic.data.local.entities.LineaBase
 import com.example.etic.reports.pdf.BaselinePdfGenerator
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.time.Instant
 import java.time.LocalDate
-import java.time.ZoneId
+import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
 class GenerateBaselinePdfUseCase(
@@ -72,6 +71,37 @@ class GenerateBaselinePdfUseCase(
                 }.getOrDefault(d)
             }
 
+            fun formatRecordDateTime(rawValue: String?): Pair<String, String> {
+                val normalized = rawValue?.replace("T", " ")?.trim().orEmpty()
+                if (normalized.isBlank()) return "" to ""
+
+                val parsed = sequenceOf(
+                    "yyyy-MM-dd HH:mm:ss",
+                    "yyyy-MM-dd HH:mm",
+                    "yyyy-MM-dd"
+                ).mapNotNull { pattern ->
+                    runCatching {
+                        when (pattern) {
+                            "yyyy-MM-dd" -> LocalDate.parse(normalized.take(10))
+                                .atStartOfDay()
+                            else -> LocalDateTime.parse(
+                                normalized.take(pattern.length),
+                                DateTimeFormatter.ofPattern(pattern)
+                            )
+                        }
+                    }.getOrNull()
+                }.firstOrNull()
+
+                return if (parsed != null) {
+                    parsed.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) to
+                        parsed.format(DateTimeFormatter.ofPattern("HH:mm"))
+                } else {
+                    val date = normalized.take(10).takeIf { it.length == 10 }?.let { formatDate(it) }.orEmpty()
+                    val time = Regex("""(\d{2}:\d{2})""").find(normalized)?.value.orEmpty()
+                    date to time
+                }
+            }
+
             fun formatTemp(v: Double?): String = if (v == null) "" else "${"%.1f".format(v)}°C"
 
             val usuarioActual = if (!currentUserId.isNullOrBlank()) {
@@ -119,26 +149,19 @@ class GenerateBaselinePdfUseCase(
                 }
             }
 
-            data class ImgInfo(val bmp: android.graphics.Bitmap?, val fecha: String, val hora: String)
+            data class ImgInfo(val bmp: android.graphics.Bitmap?)
             fun loadImage(inspNo: String, fileName: String?): ImgInfo {
-                if (fileName.isNullOrBlank()) return ImgInfo(null, "", "")
-                val folderDoc = getFolderByInspectionNo(inspNo) ?: return ImgInfo(null, "", "")
+                if (fileName.isNullOrBlank()) return ImgInfo(null)
+                val folderDoc = getFolderByInspectionNo(inspNo) ?: return ImgInfo(null)
                 val fileDoc = folderDoc.findFile(fileName)
                     ?: folderDoc.listFiles().firstOrNull { it.name.equals(fileName, ignoreCase = true) }
-                    ?: return ImgInfo(null, "", "")
+                    ?: return ImgInfo(null)
 
                 val bmp = runCatching {
                     context.contentResolver.openInputStream(fileDoc.uri)?.use { BitmapFactory.decodeStream(it) }
                 }.getOrNull()
 
-                val millis = fileDoc.lastModified()
-                val dateTime = if (millis > 0L) {
-                    val dt = Instant.ofEpochMilli(millis).atZone(ZoneId.systemDefault()).toLocalDateTime()
-                    dt.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")) to
-                        dt.format(DateTimeFormatter.ofPattern("HH:mm"))
-                } else "" to ""
-
-                return ImgInfo(bmp, dateTime.first, dateTime.second)
+                return ImgInfo(bmp)
             }
 
             fun inspectionNoOf(lb: LineaBase): Int? =
@@ -159,6 +182,7 @@ class GenerateBaselinePdfUseCase(
                 val fabricante = ubic?.fabricante.orEmpty()
                 val ruta = row.ruta ?: ubic?.ruta.orEmpty()
                 val inspNo = inspectionNoOf(row)?.toString().orEmpty()
+                val recordDateTime = formatRecordDateTime(row.fechaCreacion ?: row.fechaMod)
 
                 val ir = loadImage(inspNo, row.archivoIr)
                 val id = loadImage(inspNo, row.archivoId)
@@ -206,10 +230,10 @@ class GenerateBaselinePdfUseCase(
                     archivoId = row.archivoId.orEmpty(),
                     irBitmap = ir.bmp,
                     idBitmap = id.bmp,
-                    irFecha = ir.fecha,
-                    irHora = ir.hora,
-                    idFecha = id.fecha,
-                    idHora = id.hora,
+                    irFecha = recordDateTime.first,
+                    irHora = recordDateTime.second,
+                    idFecha = recordDateTime.first,
+                    idHora = recordDateTime.second,
                     historyRows = historyRows,
                     graphPoints = graphPoints
                 )
