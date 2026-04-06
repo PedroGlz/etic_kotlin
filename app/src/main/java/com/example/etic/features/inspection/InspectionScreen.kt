@@ -2983,7 +2983,6 @@ private fun CurrentInspectionSplitView(
                         val isEditingMechanicalProblem = editingProblem != null && editingMechanicalProblemId != null
                         val problema = if (isEditingMechanicalProblem) {
                             editingProblem!!.copy(
-                                numeroProblema = numero,
                                 idInspeccionDet = detId,
                                 problemTemperature = componentTemp,
                                 referenceTemperature = referenceTemp,
@@ -3262,7 +3261,6 @@ private fun CurrentInspectionSplitView(
                         val isEditingProblem = editingProblem != null && editingAislamientoTermicoProblemId != null
                         val problema = if (isEditingProblem) {
                             editingProblem!!.copy(
-                                numeroProblema = numero,
                                 idInspeccionDet = detId,
                                 problemTemperature = componentTemp,
                                 referenceTemperature = referenceTemp,
