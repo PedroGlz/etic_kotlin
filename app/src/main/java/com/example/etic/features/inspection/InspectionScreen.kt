@@ -126,6 +126,7 @@ import com.example.etic.features.inspection.ui.components.DropdownSelector
 import com.example.etic.features.inspection.ui.components.LabeledInputField
 import com.example.etic.features.inspection.ui.state.rememberLocationFormState
 import com.example.etic.features.components.ImageInputButtonGroup
+import com.example.etic.features.components.InspectionImageBrowserDialog
 import com.example.etic.features.inspection.logic.VisualProblemEditor
 import com.example.etic.features.inspection.tree.Baseline
 import com.example.etic.features.inspection.tree.Problem
@@ -620,6 +621,7 @@ private fun CurrentInspectionSplitView(
             var isVisualObservationAuto by rememberSaveable { mutableStateOf(false) }
             var pendingThermalImage by rememberSaveable { mutableStateOf("") }
             var pendingDigitalImage by rememberSaveable { mutableStateOf("") }
+            var problemImageBrowserTarget by remember { mutableStateOf<String?>(null) }
             var isSavingVisualProblem by remember { mutableStateOf(false) }
             var isSavingElectricProblem by remember { mutableStateOf(false) }
             var isSavingMechanicalProblem by remember { mutableStateOf(false) }
@@ -737,7 +739,7 @@ private fun CurrentInspectionSplitView(
                 }
             }
 
-            fun openInspectionImagesFolder() {
+            fun openInspectionImagesFolder(targetField: String) {
                 val inspectionNumber = inspectionNumero?.takeIf { it.isNotBlank() }
                 if (rootTreeUri == null || inspectionNumber == null) {
                     Toast.makeText(
@@ -747,15 +749,7 @@ private fun CurrentInspectionSplitView(
                     ).show()
                     return
                 }
-                val folderUri = safManager.getImagesDir(ctx, rootTreeUri, inspectionNumber)?.uri
-                if (folderUri == null) {
-                    Toast.makeText(ctx, "No se pudo abrir la carpeta Imágenes.", Toast.LENGTH_SHORT).show()
-                    return
-                }
-                runCatching { ctx.startActivity(safManager.openFolderIntent(folderUri)) }
-                    .onFailure {
-                        Toast.makeText(ctx, "No se pudo abrir la carpeta.", Toast.LENGTH_SHORT).show()
-                    }
+                problemImageBrowserTarget = targetField
             }
 
             LaunchedEffect(showEditUbDialog) {
@@ -3987,8 +3981,8 @@ private fun CurrentInspectionSplitView(
                     onDigitalSequenceDown = { pendingDigitalImage = adjustImageSequence(pendingDigitalImage, -1) },
                     onThermalPickInitial = { loadInitialImageFromInspection(true) { pendingThermalImage = it } },
                     onDigitalPickInitial = { loadInitialImageFromInspection(false) { pendingDigitalImage = it } },
-                    onThermalFolder = { openInspectionImagesFolder() },
-                    onDigitalFolder = { openInspectionImagesFolder() },
+                    onThermalFolder = { openInspectionImagesFolder("IR") },
+                    onDigitalFolder = { openInspectionImagesFolder("ID") },
                     onThermalCamera = { thermalCameraLauncher.launch(null) },
                     onDigitalCamera = { digitalCameraLauncher.launch(null) },
                     onCronicoClick = {
@@ -4370,8 +4364,8 @@ private fun CurrentInspectionSplitView(
                     onDigitalSequenceDown = { pendingDigitalImage = adjustImageSequence(pendingDigitalImage, -1) },
                     onThermalPickInitial = { loadInitialImageFromInspection(true) { pendingThermalImage = it } },
                     onDigitalPickInitial = { loadInitialImageFromInspection(false) { pendingDigitalImage = it } },
-                    onThermalFolder = { openInspectionImagesFolder() },
-                    onDigitalFolder = { openInspectionImagesFolder() },
+                    onThermalFolder = { openInspectionImagesFolder("IR") },
+                    onDigitalFolder = { openInspectionImagesFolder("ID") },
                     onThermalCamera = { thermalCameraLauncher.launch(null) },
                     onDigitalCamera = { digitalCameraLauncher.launch(null) },
                     onCronicoClick = {
@@ -4439,8 +4433,8 @@ private fun CurrentInspectionSplitView(
                     onDigitalSequenceDown = { pendingDigitalImage = adjustImageSequence(pendingDigitalImage, -1) },
                     onThermalPickInitial = { loadInitialImageFromInspection(true) { pendingThermalImage = it } },
                     onDigitalPickInitial = { loadInitialImageFromInspection(false) { pendingDigitalImage = it } },
-                    onThermalFolder = { openInspectionImagesFolder() },
-                    onDigitalFolder = { openInspectionImagesFolder() },
+                    onThermalFolder = { openInspectionImagesFolder("IR") },
+                    onDigitalFolder = { openInspectionImagesFolder("ID") },
                     onThermalCamera = { thermalCameraLauncher.launch(null) },
                     onDigitalCamera = { digitalCameraLauncher.launch(null) },
                     onCronicoClick = {
@@ -4508,8 +4502,8 @@ private fun CurrentInspectionSplitView(
                     onDigitalSequenceDown = { pendingDigitalImage = adjustImageSequence(pendingDigitalImage, -1) },
                     onThermalPickInitial = { loadInitialImageFromInspection(true) { pendingThermalImage = it } },
                     onDigitalPickInitial = { loadInitialImageFromInspection(false) { pendingDigitalImage = it } },
-                    onThermalFolder = { openInspectionImagesFolder() },
-                    onDigitalFolder = { openInspectionImagesFolder() },
+                    onThermalFolder = { openInspectionImagesFolder("IR") },
+                    onDigitalFolder = { openInspectionImagesFolder("ID") },
                     onThermalCamera = { thermalCameraLauncher.launch(null) },
                     onDigitalCamera = { digitalCameraLauncher.launch(null) },
                     onCronicoClick = {
@@ -4553,6 +4547,25 @@ private fun CurrentInspectionSplitView(
                     continueEnabled = !isSavingAislamientoTermicoProblem,
                     initialFormData = aislamientoTermicoProblemInitialData,
                     dialogKey = aislamientoTermicoProblemFormKey
+                )
+            }
+
+            if (problemImageBrowserTarget != null) {
+                InspectionImageBrowserDialog(
+                    title = "Seleccionar imagen de inspección",
+                    rootTreeUri = rootTreeUri,
+                    inspectionNumber = inspectionNumero,
+                    initialSelection = if (problemImageBrowserTarget == "IR") pendingThermalImage else pendingDigitalImage,
+                    useClientFolder = false,
+                    onDismiss = { problemImageBrowserTarget = null },
+                    onSelect = { imageName ->
+                        if (problemImageBrowserTarget == "IR") {
+                            pendingThermalImage = imageName
+                        } else {
+                            pendingDigitalImage = imageName
+                        }
+                        problemImageBrowserTarget = null
+                    }
                 )
             }
 
@@ -5675,6 +5688,7 @@ private fun CurrentInspectionSplitView(
                                                     var imgId by remember { mutableStateOf("") }
                                                     var irPreview by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
                                                     var idPreview by remember { mutableStateOf<android.graphics.Bitmap?>(null) }
+                                                    var baselineImageBrowserTarget by remember { mutableStateOf<String?>(null) }
 
                                                     fun resetBaselineFormState() {
                                                         mta = ""
@@ -5948,7 +5962,7 @@ private fun CurrentInspectionSplitView(
                                                                             onMoveUp = { imgIr = adjustImageSequence(imgIr, +1) },
                                                                             onMoveDown = { imgIr = adjustImageSequence(imgIr, -1) },
                                                                             onDotsClick = { loadInitialImageFromInspection(true) { imgIr = it } },
-                                                                            onFolderClick = { openInspectionImagesFolder() },
+                                                                            onFolderClick = { baselineImageBrowserTarget = "IR" },
                                                                             onCameraClick = { irCameraLauncher.launch(null) }
                                                                         )
                                                                         Spacer(Modifier.height(4.dp))
@@ -5994,7 +6008,7 @@ private fun CurrentInspectionSplitView(
                                                                             onMoveUp = { imgId = adjustImageSequence(imgId, +1) },
                                                                             onMoveDown = { imgId = adjustImageSequence(imgId, -1) },
                                                                             onDotsClick = { loadInitialImageFromInspection(false) { imgId = it } },
-                                                                            onFolderClick = { openInspectionImagesFolder() },
+                                                                            onFolderClick = { baselineImageBrowserTarget = "ID" },
                                                                             onCameraClick = { idCameraLauncher.launch(null) }
                                                                         )
                                                                         Spacer(Modifier.height(4.dp))
@@ -6156,6 +6170,26 @@ private fun CurrentInspectionSplitView(
                                                                 }
                                                             }
                                                         }
+                                                    }
+                                                    if (baselineImageBrowserTarget != null) {
+                                                        InspectionImageBrowserDialog(
+                                                            title = "Seleccionar imagen de inspección",
+                                                            rootTreeUri = rootTreeUri,
+                                                            inspectionNumber = inspectionNumero,
+                                                            initialSelection = if (baselineImageBrowserTarget == "IR") imgIr else imgId,
+                                                            useClientFolder = false,
+                                                            onDismiss = { baselineImageBrowserTarget = null },
+                                                            onSelect = { imageName ->
+                                                                if (baselineImageBrowserTarget == "IR") {
+                                                                    imgIr = imageName
+                                                                    irPreview = null
+                                                                } else {
+                                                                    imgId = imageName
+                                                                    idPreview = null
+                                                                }
+                                                                baselineImageBrowserTarget = null
+                                                            }
+                                                        )
                                                     }
                                                     }
                                                 }
@@ -8075,3 +8109,8 @@ private fun buildTreeFromVista(rows: List<com.example.etic.data.local.views.Vist
 
     return roots
 }
+
+
+
+
+

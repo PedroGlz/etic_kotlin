@@ -78,6 +78,7 @@ import androidx.compose.ui.window.DialogWindowProvider
 import com.example.etic.core.saf.EticImageStore
 import com.example.etic.core.saf.SafEticManager
 import com.example.etic.features.components.ImageInputButtonGroup
+import com.example.etic.features.components.InspectionImageBrowserDialog
 import com.example.etic.features.inspection.tree.TreeNode
 import com.example.etic.features.inspection.ui.problem.ProblemDialogDraggableHeader
 import com.example.etic.reports.ResultadosAnalisisContacto
@@ -240,6 +241,7 @@ fun ResultsAnalysisDialog(
     var currentStep by remember { mutableStateOf(0) }
     var maxReachedStep by remember { mutableStateOf(0) }
     var imagePickerTarget by remember { mutableStateOf<ImagePickerTarget?>(null) }
+    var imageBrowserTarget by remember { mutableStateOf<ImagePickerTarget?>(null) }
     var activeImportTarget by remember { mutableStateOf<ImagePickerTarget?>(null) }
 
     LaunchedEffect(availableImages) {
@@ -438,7 +440,11 @@ fun ResultsAnalysisDialog(
     }
 
     fun openImagesFolder(target: ImagePickerTarget) {
-        if (rootTreeUri == null || inspectionNumber.isNullOrBlank()) {
+        if (rootTreeUri == null) {
+            Toast.makeText(context, "No hay acceso a las carpetas ETIC.", Toast.LENGTH_SHORT).show()
+            return
+        }
+        if (target.imageSlot != 3 && inspectionNumber.isNullOrBlank()) {
             Toast.makeText(
                 context,
                 "No hay acceso a la carpeta Imágenes de la inspección.",
@@ -446,23 +452,7 @@ fun ResultsAnalysisDialog(
             ).show()
             return
         }
-        val folderUri = when (target.imageSlot) {
-            3 -> safManager.getClientesDir(context, rootTreeUri)?.uri
-            else -> safManager.getImagesDir(context, rootTreeUri, inspectionNumber)?.uri
-        }
-        if (folderUri == null) {
-            val message = if (target.imageSlot == 3) {
-                "No se pudo abrir la carpeta IMG_CLIENTES."
-            } else {
-                "No se pudo abrir la carpeta Imágenes."
-            }
-            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-            return
-        }
-        runCatching { context.startActivity(safManager.openFolderIntent(folderUri)) }
-            .onFailure {
-                Toast.makeText(context, "No se pudo abrir la carpeta.", Toast.LENGTH_SHORT).show()
-            }
+        imageBrowserTarget = target
     }
 
     fun beginImageCapture(target: ImagePickerTarget) {
@@ -925,7 +915,28 @@ fun ResultsAnalysisDialog(
         }
     }
 
-        imagePickerTarget?.let { target ->
+    imageBrowserTarget?.let { target ->
+        InspectionImageBrowserDialog(
+            title = if (target.imageSlot == 3) "Seleccionar imagen de cliente" else "Seleccionar imagen de inspección",
+            rootTreeUri = rootTreeUri,
+            inspectionNumber = inspectionNumber,
+            initialSelection = when {
+                target.recommendationIndex != null && target.imageSlot == 1 -> recomendaciones.getOrNull(target.recommendationIndex)?.imagen1.orEmpty()
+                target.recommendationIndex != null && target.imageSlot == 2 -> recomendaciones.getOrNull(target.recommendationIndex)?.imagen2.orEmpty()
+                target.imageSlot == 1 -> nombreImgPortada
+                target.imageSlot == 2 -> nombreImgPortada2
+                else -> nombreImgPortada3
+            },
+            useClientFolder = target.imageSlot == 3,
+            onDismiss = { imageBrowserTarget = null },
+            onSelect = { imageName ->
+                updateImageValue(target, imageName)
+                imageBrowserTarget = null
+            }
+        )
+    }
+
+    imagePickerTarget?.let { target ->
         Dialog(
             onDismissRequest = { imagePickerTarget = null },
             properties = DialogProperties(usePlatformDefaultWidth = true)

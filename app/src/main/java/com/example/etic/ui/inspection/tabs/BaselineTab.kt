@@ -42,6 +42,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.etic.features.components.ImageInputButtonGroup
+import com.example.etic.features.components.InspectionImageBrowserDialog
 import com.example.etic.data.local.DbProvider
 import com.example.etic.data.repository.InspectionUiRepository
 import com.example.etic.core.current.LocalCurrentInspection
@@ -133,6 +134,7 @@ fun BaselineTableFromDatabase(
     var imgId by remember { mutableStateOf("") }
     var irPreview by remember { mutableStateOf<Bitmap?>(null) }
     var idPreview by remember { mutableStateOf<Bitmap?>(null) }
+    var imageBrowserField by remember { mutableStateOf<String?>(null) }
 
     fun resetBaselineFormState() {
         mta = ""
@@ -448,7 +450,7 @@ fun BaselineTableFromDatabase(
                 }
             }
 
-            fun openInspectionImagesFolder() {
+            fun openInspectionImagesFolder(targetField: String) {
                 val inspectionNumber = currentInspection?.noInspeccion?.toString()
                 if (rootTreeUri == null || inspectionNumber.isNullOrBlank()) {
                     android.widget.Toast.makeText(
@@ -458,23 +460,7 @@ fun BaselineTableFromDatabase(
                     ).show()
                     return
                 }
-                val folderUri = safManager.getImagesDir(ctx, rootTreeUri, inspectionNumber)?.uri
-                if (folderUri == null) {
-                    android.widget.Toast.makeText(
-                        ctx,
-                        "No se pudo abrir la carpeta Imágenes.",
-                        android.widget.Toast.LENGTH_SHORT
-                    ).show()
-                    return
-                }
-                runCatching { ctx.startActivity(safManager.openFolderIntent(folderUri)) }
-                    .onFailure {
-                        android.widget.Toast.makeText(
-                            ctx,
-                            "No se pudo abrir la carpeta.",
-                            android.widget.Toast.LENGTH_SHORT
-                        ).show()
-                    }
+                imageBrowserField = targetField
             }
 
             val ubId = baselineEditEntity?.idUbicacion
@@ -603,7 +589,7 @@ fun BaselineTableFromDatabase(
                                     onMoveUp = { imgIr = adjustImageSequence(imgIr, +1, "IR") },
                                     onMoveDown = { imgIr = adjustImageSequence(imgIr, -1, "IR") },
                                     onDotsClick = { imgIr = nextImageName(imgIr, "IR") },
-                                    onFolderClick = { openInspectionImagesFolder() },
+                                    onFolderClick = { openInspectionImagesFolder("IR") },
                                     onCameraClick = { irCameraLauncher.launch(null) }
                                 )
                                 Spacer(Modifier.height(4.dp))
@@ -649,7 +635,7 @@ fun BaselineTableFromDatabase(
                                     onMoveUp = { imgId = adjustImageSequence(imgId, +1, "ID") },
                                     onMoveDown = { imgId = adjustImageSequence(imgId, -1, "ID") },
                                     onDotsClick = { imgId = nextImageName(imgId, "ID") },
-                                    onFolderClick = { openInspectionImagesFolder() },
+                                    onFolderClick = { openInspectionImagesFolder("ID") },
                                     onCameraClick = { idCameraLauncher.launch(null) }
                                 )
                                 Spacer(Modifier.height(4.dp))
@@ -744,6 +730,27 @@ fun BaselineTableFromDatabase(
                 }
                 }
             }
+
+            if (showBaselineDialog && imageBrowserField != null) {
+                InspectionImageBrowserDialog(
+                    title = "Seleccionar imagen de inspección",
+                    rootTreeUri = rootTreeUri,
+                    inspectionNumber = currentInspection?.noInspeccion?.toString(),
+                    initialSelection = if (imageBrowserField == "IR") imgIr else imgId,
+                    useClientFolder = false,
+                    onDismiss = { imageBrowserField = null },
+                    onSelect = { imageName ->
+                        if (imageBrowserField == "IR") {
+                            imgIr = imageName
+                            irPreview = null
+                        } else {
+                            imgId = imageName
+                            idPreview = null
+                        }
+                        imageBrowserField = null
+                    }
+                )
+            }
         }
     }
 }
@@ -814,3 +821,8 @@ private fun BaselineInputField(
         }
     }
 }
+
+
+
+
+
