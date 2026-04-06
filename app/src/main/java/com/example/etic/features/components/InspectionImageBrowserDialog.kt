@@ -13,16 +13,16 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material3.Button
@@ -42,7 +42,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -85,12 +87,6 @@ fun InspectionImageBrowserDialog(
                 ?: ""
         )
     }
-    val selectedFile = remember(selectedName, imageFiles) {
-        imageFiles.firstOrNull { it.name.equals(selectedName, ignoreCase = true) }
-    }
-    val previewBitmap by produceState<Bitmap?>(initialValue = null, selectedFile) {
-        value = loadBitmapFromDocument(context, selectedFile)
-    }
 
     LaunchedEffect(imageFiles, selectedName) {
         if (imageFiles.isNotEmpty() && selectedName.isBlank()) {
@@ -104,8 +100,8 @@ fun InspectionImageBrowserDialog(
     ) {
         Card(
             modifier = Modifier
-                .fillMaxWidth(0.82f)
-                .fillMaxHeight(0.84f),
+                .fillMaxWidth(0.86f)
+                .fillMaxHeight(0.86f),
             shape = RoundedCornerShape(14.dp),
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
         ) {
@@ -118,128 +114,29 @@ fun InspectionImageBrowserDialog(
                 Text(title, style = MaterialTheme.typography.titleMedium)
                 if (folder == null) {
                     Text(
-                        text = "No hay acceso a la carpeta de imágenes.",
+                        text = "No hay acceso a la carpeta de imagenes.",
                         style = MaterialTheme.typography.bodyMedium
                     )
                 } else if (imageFiles.isEmpty()) {
                     Text(
-                        text = "No hay imágenes disponibles en esta carpeta.",
+                        text = "No hay imagenes disponibles en esta carpeta.",
                         style = MaterialTheme.typography.bodyMedium
                     )
                 } else {
-                    Row(
+                    LazyVerticalGrid(
                         modifier = Modifier
                             .fillMaxWidth()
                             .weight(1f),
+                        columns = GridCells.Adaptive(minSize = 170.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        Column(
-                            modifier = Modifier
-                                .weight(1.35f)
-                                .fillMaxHeight()
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .weight(1f)
-                                    .border(
-                                        width = 1.dp,
-                                        color = MaterialTheme.colorScheme.outline,
-                                        shape = RoundedCornerShape(10.dp)
-                                    )
-                                    .background(
-                                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f),
-                                        shape = RoundedCornerShape(10.dp)
-                                    ),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                if (previewBitmap != null) {
-                                    Image(
-                                        bitmap = previewBitmap!!.asImageBitmap(),
-                                        contentDescription = selectedName,
-                                        modifier = Modifier.fillMaxWidth()
-                                    )
-                                } else {
-                                    Column(
-                                        horizontalAlignment = Alignment.CenterHorizontally,
-                                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                                    ) {
-                                        Icon(
-                                            Icons.Outlined.Image,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(48.dp),
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                        Text(
-                                            text = "No se pudo cargar la vista previa.",
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                }
-                            }
-                            Spacer(Modifier.height(8.dp))
-                            Text(
-                                text = selectedName,
-                                style = MaterialTheme.typography.bodyMedium,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
+                        items(imageFiles, key = { it.uri.toString() }) { file ->
+                            ImageGridItem(
+                                file = file,
+                                selected = file.name.orEmpty().equals(selectedName, ignoreCase = true),
+                                onClick = { selectedName = file.name.orEmpty() }
                             )
-                        }
-                        Column(
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxHeight()
-                                .border(
-                                    width = 1.dp,
-                                    color = MaterialTheme.colorScheme.outline,
-                                    shape = RoundedCornerShape(10.dp)
-                                )
-                                .padding(8.dp)
-                                .verticalScroll(rememberScrollState()),
-                            verticalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            imageFiles.forEach { file ->
-                                val fileName = file.name.orEmpty()
-                                val selected = fileName.equals(selectedName, ignoreCase = true)
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .background(
-                                            color = if (selected) {
-                                                MaterialTheme.colorScheme.primaryContainer
-                                            } else {
-                                                MaterialTheme.colorScheme.surface
-                                            },
-                                            shape = RoundedCornerShape(8.dp)
-                                        )
-                                        .clickable { selectedName = fileName }
-                                        .padding(horizontal = 10.dp, vertical = 8.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(
-                                        Icons.Outlined.Image,
-                                        contentDescription = null,
-                                        tint = if (selected) {
-                                            MaterialTheme.colorScheme.onPrimaryContainer
-                                        } else {
-                                            MaterialTheme.colorScheme.onSurfaceVariant
-                                        }
-                                    )
-                                    Spacer(Modifier.width(8.dp))
-                                    Text(
-                                        text = fileName,
-                                        modifier = Modifier.weight(1f),
-                                        maxLines = 1,
-                                        overflow = TextOverflow.Ellipsis,
-                                        color = if (selected) {
-                                            MaterialTheme.colorScheme.onPrimaryContainer
-                                        } else {
-                                            MaterialTheme.colorScheme.onSurface
-                                        }
-                                    )
-                                }
-                            }
                         }
                     }
                 }
@@ -260,6 +157,75 @@ fun InspectionImageBrowserDialog(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun ImageGridItem(
+    file: DocumentFile,
+    selected: Boolean,
+    onClick: () -> Unit
+) {
+    val context = LocalContext.current
+    val fileName = file.name.orEmpty()
+    val thumbnail by produceState<Bitmap?>(initialValue = null, file) {
+        value = loadBitmapFromDocument(context, file)
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .border(
+                width = if (selected) 2.dp else 1.dp,
+                color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+                shape = RoundedCornerShape(12.dp)
+            )
+            .background(
+                color = if (selected) {
+                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
+                } else {
+                    MaterialTheme.colorScheme.surface
+                },
+                shape = RoundedCornerShape(12.dp)
+            )
+            .clickable(onClick = onClick)
+            .padding(10.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(1.18f)
+                .background(
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f),
+                    shape = RoundedCornerShape(10.dp)
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            if (thumbnail != null) {
+                Image(
+                    bitmap = thumbnail!!.asImageBitmap(),
+                    contentDescription = fileName,
+                    modifier = Modifier.fillMaxWidth(),
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Icon(
+                    Icons.Outlined.Image,
+                    contentDescription = null,
+                    modifier = Modifier.size(42.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+        Text(
+            text = fileName,
+            style = MaterialTheme.typography.bodySmall,
+            modifier = Modifier.fillMaxWidth(),
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center
+        )
     }
 }
 
