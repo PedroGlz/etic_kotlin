@@ -142,6 +142,7 @@ fun MechanicalProblemDialog(
     equipmentRoute: String,
     failureOptions: List<Pair<String, String>>,
     causeOptions: List<Pair<String, String>>,
+    recommendationOptions: List<Pair<String, String>>,
     phaseOptions: List<Pair<String, String>>,
     environmentOptions: List<Pair<String, String>>,
     manufacturerOptions: List<Pair<String, String>>,
@@ -239,6 +240,12 @@ fun MechanicalProblemDialog(
                         causeOptions.firstOrNull { it.first == initial.causeId }?.second.orEmpty()
                     )
                 }
+                var recommendationId by rememberSaveable { mutableStateOf(initial.recommendationId) }
+                var recommendationInput by rememberSaveable {
+                    mutableStateOf(
+                        recommendationOptions.firstOrNull { it.first == initial.recommendationId }?.second.orEmpty()
+                    )
+                }
                 var componentTemperature by rememberSaveable { mutableStateOf(initial.componentTemperature) }
                 var componentPhaseId by rememberSaveable { mutableStateOf(initial.componentPhaseId) }
                 var componentRms by rememberSaveable { mutableStateOf(initial.componentRms) }
@@ -301,6 +308,9 @@ fun MechanicalProblemDialog(
                     failureLabel?.let { add(it) }
                     phaseLabel?.let { add(it) }
                     equipmentName.takeUnless { it.isBlank() }?.let { add(it) }
+                    recommendationOptions.firstOrNull { it.first == recommendationId }?.second?.takeIf { it.isNotBlank() }
+                        ?.let { add(it) }
+                        ?: recommendationInput.takeIf { it.isNotBlank() }?.let { add(it) }
                 }.joinToString(", ")
 
             fun mergeAutoComment(currentAuto: String, currentComment: String, oldAuto: String): String {
@@ -379,6 +389,8 @@ fun MechanicalProblemDialog(
                         failureText = failureInput.trim(),
                         causeId = causeId?.takeIf { it.isNotBlank() },
                         causeText = causeInput.trim(),
+                        recommendationId = recommendationId?.takeIf { it.isNotBlank() },
+                        recommendationText = recommendationInput.trim(),
                         componentTemperature = componentTemperature,
                         componentPhaseId = null,
                         componentRms = componentRms,
@@ -751,6 +763,17 @@ fun MechanicalProblemDialog(
                                             modifier = Modifier.fillMaxWidth()
                                         )
                                     }
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(text = "Recomendacion", style = MaterialTheme.typography.labelSmall)
+                                        FilterableSelectorNoLabel(
+                                            options = recommendationOptions,
+                                            selectedId = recommendationId,
+                                            selectedText = recommendationInput,
+                                            onSelected = { recommendationId = it },
+                                            onTextChanged = { text -> recommendationInput = text },
+                                            modifier = Modifier.fillMaxWidth()
+                                        )
+                                    }
                                 }
 
                                 Spacer(Modifier.height(6.dp))
@@ -839,6 +862,8 @@ data class MechanicalProblemFormData(
     val failureText: String = "",
     val causeId: String? = null,
     val causeText: String = "",
+    val recommendationId: String? = null,
+    val recommendationText: String = "",
     val componentTemperature: String = "",
     val componentPhaseId: String? = null,
     val componentRms: String = "",

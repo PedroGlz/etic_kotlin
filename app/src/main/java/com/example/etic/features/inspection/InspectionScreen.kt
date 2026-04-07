@@ -1051,6 +1051,7 @@ private fun CurrentInspectionSplitView(
                 ElectricProblemFormData(
                     failureId = entity.idFalla,
                     causeId = entity.idCausaRaiz,
+                    recommendationId = entity.idRecomendacion,
                     componentTemperature = entity.problemTemperature?.toString() ?: "",
                     componentPhaseId = entity.problemPhase,
                     componentRms = entity.problemRms?.toString() ?: "",
@@ -1079,6 +1080,7 @@ private fun CurrentInspectionSplitView(
                 MechanicalProblemFormData(
                     failureId = entity.idFalla,
                     causeId = entity.idCausaRaiz,
+                    recommendationId = entity.idRecomendacion,
                     componentTemperature = entity.problemTemperature?.toString() ?: "",
                     componentPhaseId = null,
                     componentRms = entity.problemRms?.toString() ?: "",
@@ -1108,6 +1110,7 @@ private fun CurrentInspectionSplitView(
                 AislamientoTermicoProblemFormData(
                     failureId = entity.idFalla,
                     causeId = entity.idCausaRaiz,
+                    recommendationId = entity.idRecomendacion,
                     componentTemperature = entity.problemTemperature?.toString() ?: "",
                     componentPhaseId = null,
                     componentRms = entity.problemRms?.toString() ?: "",
@@ -1141,6 +1144,7 @@ private fun CurrentInspectionSplitView(
                     val environmentChecked = (entity.environmentCheck ?: "").equals("on", ignoreCase = true)
                     val windSpeedChecked = (entity.windSpeedCheck ?: "").equals("on", ignoreCase = true)
                     base.copy(
+                        recommendationId = entity.idRecomendacion,
                         emissivityChecked = emissivityChecked,
                         emissivity = if (emissivityChecked) entity.emissivity?.toString() ?: "" else "",
                         indirectTempChecked = indirectTempChecked,
@@ -1179,6 +1183,7 @@ private fun CurrentInspectionSplitView(
                     val environmentChecked = (entity.environmentCheck ?: "").equals("on", ignoreCase = true)
                     val windSpeedChecked = (entity.windSpeedCheck ?: "").equals("on", ignoreCase = true)
                     base.copy(
+                        recommendationId = entity.idRecomendacion,
                         emissivityChecked = emissivityChecked,
                         emissivity = if (emissivityChecked) entity.emissivity?.toString() ?: "" else "",
                         indirectTempChecked = indirectTempChecked,
@@ -1217,6 +1222,7 @@ private fun CurrentInspectionSplitView(
                     val environmentChecked = (entity.environmentCheck ?: "").equals("on", ignoreCase = true)
                     val windSpeedChecked = (entity.windSpeedCheck ?: "").equals("on", ignoreCase = true)
                     base.copy(
+                        recommendationId = entity.idRecomendacion,
                         emissivityChecked = emissivityChecked,
                         emissivity = if (emissivityChecked) entity.emissivity?.toString() ?: "" else "",
                         indirectTempChecked = indirectTempChecked,
@@ -2122,6 +2128,7 @@ private fun CurrentInspectionSplitView(
                                     circuitVoltage = formData.circuitVoltage.takeIf { it.isNotBlank() },
                                     idFalla = formData.failureId,
                                     idCausaRaiz = formData.causeId,
+                                    idRecomendacion = formData.recommendationId,
                                     componentComment = finalComment,
                                     estatusProblema = if (draft.closed) "Cerrado" else "Abierto",
                                     cerradoEnInspeccion = if (draft.closed) inspection.idInspeccion
@@ -2171,6 +2178,7 @@ private fun CurrentInspectionSplitView(
                                     circuitVoltage = formData.circuitVoltage.takeIf { it.isNotBlank() },
                                     idFalla = formData.failureId,
                                     idCausaRaiz = formData.causeId,
+                                    idRecomendacion = formData.recommendationId,
                                     componentComment = finalComment,
                                     estatusProblema = if (draft.closed) "Cerrado" else "Abierto",
                                     cerradoEnInspeccion = if (draft.closed) inspection.idInspeccion
@@ -2222,6 +2230,7 @@ private fun CurrentInspectionSplitView(
                                     circuitVoltage = formData.circuitVoltage.takeIf { it.isNotBlank() },
                                     idFalla = formData.failureId,
                                     idCausaRaiz = formData.causeId,
+                                    idRecomendacion = formData.recommendationId,
                                     componentComment = finalComment,
                                     estatusProblema = if (draft.closed) "Cerrado" else "Abierto",
                                     cerradoEnInspeccion = if (draft.closed) inspection.idInspeccion
@@ -2596,14 +2605,15 @@ private fun CurrentInspectionSplitView(
                                 inputText = formData.failureText,
                                 tipoInspeccionId = typeId
                             )
+                            val resolvedCauseId = ensureCausaPrincipalId(
+                                existingId = formData.causeId,
+                                inputText = formData.causeText,
+                                tipoInspeccionId = typeId,
+                                fallaId = resolvedFailureId
+                            )
                             val resolvedFormData = formData.copy(
                                 failureId = resolvedFailureId,
-                                causeId = ensureCausaPrincipalId(
-                                    existingId = formData.causeId,
-                                    inputText = formData.causeText,
-                                    tipoInspeccionId = typeId,
-                                    fallaId = resolvedFailureId
-                                ),
+                                causeId = resolvedCauseId,
                                 componentPhaseId = ensureFaseId(
                                     existingId = formData.componentPhaseId,
                                     inputText = formData.componentPhaseText
@@ -2620,6 +2630,12 @@ private fun CurrentInspectionSplitView(
                                     existingId = formData.manufacturerId,
                                     inputText = formData.manufacturerText,
                                     tipoInspeccionId = typeId
+                                ),
+                                recommendationId = ensureRecomendacionId(
+                                    existingId = formData.recommendationId,
+                                    inputText = formData.recommendationText,
+                                    tipoInspeccionId = typeId,
+                                    causaRaizId = resolvedCauseId
                                 )
                             )
                             val draft = ProblemDraft.ElectricDraft(
@@ -2671,6 +2687,12 @@ private fun CurrentInspectionSplitView(
                             existingId = formData.manufacturerId,
                             inputText = formData.manufacturerText,
                             tipoInspeccionId = typeId
+                        )
+                        val resolvedRecommendationId = ensureRecomendacionId(
+                            existingId = formData.recommendationId,
+                            inputText = formData.recommendationText,
+                            tipoInspeccionId = typeId,
+                            causaRaizId = resolvedCauseId
                         )
 
                         val componentTemp = formData.componentTemperature.toDoubleOrNull()
@@ -2737,6 +2759,8 @@ private fun CurrentInspectionSplitView(
                                 ratedLoad = formData.ratedLoad.takeIf { it.isNotBlank() },
                                 circuitVoltage = formData.circuitVoltage.takeIf { it.isNotBlank() },
                                 idFalla = resolvedFailureId,
+                                idCausaRaiz = resolvedCauseId,
+                                idRecomendacion = resolvedRecommendationId,
                                 componentComment = finalComment,
                                 estatusProblema = if (electricProblemClosed) "Cerrado" else "Abierto",
                                 cerradoEnInspeccion = if (electricProblemClosed) inspection.idInspeccion else editingElectricProblem.cerradoEnInspeccion,
@@ -2781,6 +2805,7 @@ private fun CurrentInspectionSplitView(
                                 circuitVoltage = formData.circuitVoltage.takeIf { it.isNotBlank() },
                                 idFalla = resolvedFailureId,
                                 idCausaRaiz = resolvedCauseId,
+                                idRecomendacion = resolvedRecommendationId,
                                 componentComment = finalComment,
                                 estatusProblema = "Abierto",
                                 aumentoTemperatura = difference,
@@ -2819,8 +2844,24 @@ private fun CurrentInspectionSplitView(
                                     .map { it.idFalla to (it.falla ?: it.idFalla) }
                                     .sortedBy { it.second.lowercase(Locale.getDefault()) }
                             }
+                            val refreshedCauses = withContext(Dispatchers.IO) {
+                                runCatching { causaPrincipalDao.getByTipoInspeccion(typeId) }.getOrElse { emptyList() }
+                                    .map { it.idCausaRaiz to (it.causaRaiz ?: it.idCausaRaiz) }
+                                    .sortedBy { it.second.lowercase(Locale.getDefault()) }
+                            }
+                            val refreshedRecommendations = withContext(Dispatchers.IO) {
+                                runCatching { recomendacionDao.getByTipoInspeccion(typeId) }.getOrElse { emptyList() }
+                                    .map { it.idRecomendacion to (it.recomendacion ?: it.idRecomendacion) }
+                                    .sortedBy { it.second.lowercase(Locale.getDefault()) }
+                            }
                             hazardOptionsByType = hazardOptionsByType.toMutableMap().apply {
                                 this[typeId] = refreshedFallas
+                            }
+                            causeOptionsByType = causeOptionsByType.toMutableMap().apply {
+                                this[typeId] = refreshedCauses
+                            }
+                            recommendationOptionsByType = recommendationOptionsByType.toMutableMap().apply {
+                                this[typeId] = refreshedRecommendations
                             }
 
                             if (detRow != null) {
@@ -2889,18 +2930,25 @@ private fun CurrentInspectionSplitView(
                                 inputText = formData.failureText,
                                 tipoInspeccionId = typeId
                             )
+                            val resolvedCauseId = ensureCausaPrincipalId(
+                                existingId = formData.causeId,
+                                inputText = formData.causeText,
+                                tipoInspeccionId = typeId,
+                                fallaId = resolvedFailureId
+                            )
                             val resolvedFormData = formData.copy(
                                 failureId = resolvedFailureId,
-                                causeId = ensureCausaPrincipalId(
-                                    existingId = formData.causeId,
-                                    inputText = formData.causeText,
-                                    tipoInspeccionId = typeId,
-                                    fallaId = resolvedFailureId
-                                ),
+                                causeId = resolvedCauseId,
                                 manufacturerId = ensureFabricanteId(
                                     existingId = formData.manufacturerId,
                                     inputText = formData.manufacturerText,
                                     tipoInspeccionId = typeId
+                                ),
+                                recommendationId = ensureRecomendacionId(
+                                    existingId = formData.recommendationId,
+                                    inputText = formData.recommendationText,
+                                    tipoInspeccionId = typeId,
+                                    causaRaizId = resolvedCauseId
                                 )
                             )
                             val draft = ProblemDraft.MechanicalDraft(
@@ -2940,6 +2988,12 @@ private fun CurrentInspectionSplitView(
                             existingId = formData.manufacturerId,
                             inputText = formData.manufacturerText,
                             tipoInspeccionId = typeId
+                        )
+                        val resolvedRecommendationId = ensureRecomendacionId(
+                            existingId = formData.recommendationId,
+                            inputText = formData.recommendationText,
+                            tipoInspeccionId = typeId,
+                            causaRaizId = resolvedCauseId
                         )
 
                         val componentTemp = formData.componentTemperature.toDoubleOrNull()
@@ -3008,6 +3062,7 @@ private fun CurrentInspectionSplitView(
                                 circuitVoltage = formData.circuitVoltage.takeIf { it.isNotBlank() },
                                 idFalla = resolvedFailureId,
                                 idCausaRaiz = resolvedCauseId,
+                                idRecomendacion = resolvedRecommendationId,
                                 componentComment = finalComment,
                                 estatusProblema = if (mechanicalProblemClosed) "Cerrado" else "Abierto",
                                 cerradoEnInspeccion = if (mechanicalProblemClosed) inspection.idInspeccion else editingProblem.cerradoEnInspeccion,
@@ -3056,6 +3111,7 @@ private fun CurrentInspectionSplitView(
                                 circuitVoltage = formData.circuitVoltage.takeIf { it.isNotBlank() },
                                 idFalla = resolvedFailureId,
                                 idCausaRaiz = resolvedCauseId,
+                                idRecomendacion = resolvedRecommendationId,
                                 componentComment = finalComment,
                                 estatusProblema = "Abierto",
                                 aumentoTemperatura = difference,
@@ -3094,11 +3150,19 @@ private fun CurrentInspectionSplitView(
                                     .map { it.idCausaRaiz to (it.causaRaiz ?: it.idCausaRaiz) }
                                     .sortedBy { it.second.lowercase(Locale.getDefault()) }
                             }
+                            val refreshedRecommendations = withContext(Dispatchers.IO) {
+                                runCatching { recomendacionDao.getByTipoInspeccion(typeId) }.getOrElse { emptyList() }
+                                    .map { it.idRecomendacion to (it.recomendacion ?: it.idRecomendacion) }
+                                    .sortedBy { it.second.lowercase(Locale.getDefault()) }
+                            }
                             hazardOptionsByType = hazardOptionsByType.toMutableMap().apply {
                                 this[typeId] = refreshedFallas
                             }
                             causeOptionsByType = causeOptionsByType.toMutableMap().apply {
                                 this[typeId] = refreshedCauses
+                            }
+                            recommendationOptionsByType = recommendationOptionsByType.toMutableMap().apply {
+                                this[typeId] = refreshedRecommendations
                             }
 
                             if (detRow != null) {
@@ -3167,18 +3231,25 @@ private fun CurrentInspectionSplitView(
                                 inputText = formData.failureText,
                                 tipoInspeccionId = typeId
                             )
+                            val resolvedCauseId = ensureCausaPrincipalId(
+                                existingId = formData.causeId,
+                                inputText = formData.causeText,
+                                tipoInspeccionId = typeId,
+                                fallaId = resolvedFailureId
+                            )
                             val resolvedFormData = formData.copy(
                                 failureId = resolvedFailureId,
-                                causeId = ensureCausaPrincipalId(
-                                    existingId = formData.causeId,
-                                    inputText = formData.causeText,
-                                    tipoInspeccionId = typeId,
-                                    fallaId = resolvedFailureId
-                                ),
+                                causeId = resolvedCauseId,
                                 manufacturerId = ensureFabricanteId(
                                     existingId = formData.manufacturerId,
                                     inputText = formData.manufacturerText,
                                     tipoInspeccionId = typeId
+                                ),
+                                recommendationId = ensureRecomendacionId(
+                                    existingId = formData.recommendationId,
+                                    inputText = formData.recommendationText,
+                                    tipoInspeccionId = typeId,
+                                    causaRaizId = resolvedCauseId
                                 )
                             )
                             val draft = ProblemDraft.AislamientoTermicoDraft(
@@ -3218,6 +3289,12 @@ private fun CurrentInspectionSplitView(
                             existingId = formData.manufacturerId,
                             inputText = formData.manufacturerText,
                             tipoInspeccionId = typeId
+                        )
+                        val resolvedRecommendationId = ensureRecomendacionId(
+                            existingId = formData.recommendationId,
+                            inputText = formData.recommendationText,
+                            tipoInspeccionId = typeId,
+                            causaRaizId = resolvedCauseId
                         )
 
                         val componentTemp = formData.componentTemperature.toDoubleOrNull()
@@ -3286,6 +3363,7 @@ private fun CurrentInspectionSplitView(
                                 circuitVoltage = formData.circuitVoltage.takeIf { it.isNotBlank() },
                                 idFalla = resolvedFailureId,
                                 idCausaRaiz = resolvedCauseId,
+                                idRecomendacion = resolvedRecommendationId,
                                 componentComment = finalComment,
                                 estatusProblema = if (aislamientoTermicoProblemClosed) "Cerrado" else "Abierto",
                                 cerradoEnInspeccion = if (aislamientoTermicoProblemClosed) inspection.idInspeccion else editingProblem.cerradoEnInspeccion,
@@ -3334,6 +3412,7 @@ private fun CurrentInspectionSplitView(
                                 circuitVoltage = formData.circuitVoltage.takeIf { it.isNotBlank() },
                                 idFalla = resolvedFailureId,
                                 idCausaRaiz = resolvedCauseId,
+                                idRecomendacion = resolvedRecommendationId,
                                 componentComment = finalComment,
                                 estatusProblema = "Abierto",
                                 aumentoTemperatura = difference,
@@ -3372,11 +3451,19 @@ private fun CurrentInspectionSplitView(
                                     .map { it.idCausaRaiz to (it.causaRaiz ?: it.idCausaRaiz) }
                                     .sortedBy { it.second.lowercase(Locale.getDefault()) }
                             }
+                            val refreshedRecommendations = withContext(Dispatchers.IO) {
+                                runCatching { recomendacionDao.getByTipoInspeccion(typeId) }.getOrElse { emptyList() }
+                                    .map { it.idRecomendacion to (it.recomendacion ?: it.idRecomendacion) }
+                                    .sortedBy { it.second.lowercase(Locale.getDefault()) }
+                            }
                             hazardOptionsByType = hazardOptionsByType.toMutableMap().apply {
                                 this[typeId] = refreshedFallas
                             }
                             causeOptionsByType = causeOptionsByType.toMutableMap().apply {
                                 this[typeId] = refreshedCauses
+                            }
+                            recommendationOptionsByType = recommendationOptionsByType.toMutableMap().apply {
+                                this[typeId] = refreshedRecommendations
                             }
 
                             if (detRow != null) {
@@ -4336,10 +4423,46 @@ private fun CurrentInspectionSplitView(
                 .sortedBy { it.fabricante?.lowercase(Locale.getDefault()) ?: "" }
                 .map { it.idFabricante to (it.fabricante ?: it.idFabricante) }
             val electricCauseOptions = ELECTRIC_PROBLEM_TYPE_ID?.let { causeOptionsByType[it].orEmpty() }.orEmpty()
+            val electricRecommendationOptions = ELECTRIC_PROBLEM_TYPE_ID?.let { recommendationOptionsByType[it].orEmpty() }.orEmpty()
             val mechanicalHazardOptions = MECHANICAL_PROBLEM_TYPE_ID?.let { hazardOptionsByType[it].orEmpty() }.orEmpty()
             val mechanicalCauseOptions = MECHANICAL_PROBLEM_TYPE_ID?.let { causeOptionsByType[it].orEmpty() }.orEmpty()
+            val mechanicalRecommendationOptions = MECHANICAL_PROBLEM_TYPE_ID?.let { recommendationOptionsByType[it].orEmpty() }.orEmpty()
             val aislamientoHazardOptions = AISLAMIENTO_TERMICO_PROBLEM_TYPE_ID?.let { hazardOptionsByType[it].orEmpty() }.orEmpty()
             val aislamientoCauseOptions = AISLAMIENTO_TERMICO_PROBLEM_TYPE_ID?.let { causeOptionsByType[it].orEmpty() }.orEmpty()
+            val aislamientoRecommendationOptions = AISLAMIENTO_TERMICO_PROBLEM_TYPE_ID?.let { recommendationOptionsByType[it].orEmpty() }.orEmpty()
+            val electricRecommendationOptionsForDialog = remember(
+                electricRecommendationOptions,
+                electricProblemInitialData?.recommendationId,
+                electricProblemInitialData?.recommendationText
+            ) {
+                withPendingOption(
+                    options = electricRecommendationOptions,
+                    pendingId = electricProblemInitialData?.recommendationId,
+                    pendingLabel = electricProblemInitialData?.recommendationText
+                )
+            }
+            val mechanicalRecommendationOptionsForDialog = remember(
+                mechanicalRecommendationOptions,
+                mechanicalProblemInitialData?.recommendationId,
+                mechanicalProblemInitialData?.recommendationText
+            ) {
+                withPendingOption(
+                    options = mechanicalRecommendationOptions,
+                    pendingId = mechanicalProblemInitialData?.recommendationId,
+                    pendingLabel = mechanicalProblemInitialData?.recommendationText
+                )
+            }
+            val aislamientoRecommendationOptionsForDialog = remember(
+                aislamientoRecommendationOptions,
+                aislamientoTermicoProblemInitialData?.recommendationId,
+                aislamientoTermicoProblemInitialData?.recommendationText
+            ) {
+                withPendingOption(
+                    options = aislamientoRecommendationOptions,
+                    pendingId = aislamientoTermicoProblemInitialData?.recommendationId,
+                    pendingLabel = aislamientoTermicoProblemInitialData?.recommendationText
+                )
+            }
             if (showElectricProblemDialog && pendingProblemEquipmentName != null) {
                 ElectricProblemDialog(
                     inspectionNumber = pendingInspectionNumber,
@@ -4349,6 +4472,7 @@ private fun CurrentInspectionSplitView(
                     equipmentRoute = pendingProblemRoute ?: "-",
                     failureOptions = electricHazardOptions,
                     causeOptions = electricCauseOptions,
+                    recommendationOptions = electricRecommendationOptionsForDialog,
                     phaseOptions = electricPhaseOptions,
                     environmentOptions = electricEnvironmentOptions,
                     manufacturerOptions = manufacturerOptionsPairs,
@@ -4418,6 +4542,7 @@ private fun CurrentInspectionSplitView(
                     equipmentRoute = pendingProblemRoute ?: "-",
                     failureOptions = mechanicalHazardOptions,
                     causeOptions = mechanicalCauseOptions,
+                    recommendationOptions = mechanicalRecommendationOptionsForDialog,
                     phaseOptions = electricPhaseOptions,
                     environmentOptions = electricEnvironmentOptions,
                     manufacturerOptions = manufacturerOptionsPairs,
@@ -4487,6 +4612,7 @@ private fun CurrentInspectionSplitView(
                     equipmentRoute = pendingProblemRoute ?: "-",
                     failureOptions = aislamientoHazardOptions,
                     causeOptions = aislamientoCauseOptions,
+                    recommendationOptions = aislamientoRecommendationOptionsForDialog,
                     phaseOptions = electricPhaseOptions,
                     environmentOptions = electricEnvironmentOptions,
                     manufacturerOptions = manufacturerOptionsPairs,

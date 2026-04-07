@@ -142,6 +142,7 @@ fun ElectricProblemDialog(
     equipmentRoute: String,
     failureOptions: List<Pair<String, String>>,
     causeOptions: List<Pair<String, String>>,
+    recommendationOptions: List<Pair<String, String>>,
     phaseOptions: List<Pair<String, String>>,
     environmentOptions: List<Pair<String, String>>,
     manufacturerOptions: List<Pair<String, String>>,
@@ -242,6 +243,12 @@ fun ElectricProblemDialog(
                         causeOptions.firstOrNull { it.first == initial.causeId }?.second.orEmpty()
                     )
                 }
+                var recommendationId by rememberSaveable { mutableStateOf(initial.recommendationId) }
+                var recommendationInput by rememberSaveable {
+                    mutableStateOf(
+                        recommendationOptions.firstOrNull { it.first == initial.recommendationId }?.second.orEmpty()
+                    )
+                }
                 var componentTemperature by rememberSaveable { mutableStateOf(initial.componentTemperature) }
                 var componentPhaseId by rememberSaveable { mutableStateOf(initial.componentPhaseId) }
                 var componentPhaseInput by rememberSaveable {
@@ -314,11 +321,15 @@ fun ElectricProblemDialog(
 
             val causeLabel =
                 causeOptions.firstOrNull { it.first == causeId }?.second?.takeIf { it.isNotBlank() } ?: causeInput.takeUnless { it.isBlank() }
+            val recommendationLabel =
+                recommendationOptions.firstOrNull { it.first == recommendationId }?.second?.takeIf { it.isNotBlank() }
+                    ?: recommendationInput.takeUnless { it.isBlank() }
             val autoCommentText = buildList {
                 failureLabel?.let { add(it) }
                 phaseLabel?.let { add(it) }
                 causeLabel?.let { add(it) }
                 equipmentName.takeUnless { it.isBlank() }?.let { add(it) }
+                recommendationLabel?.let { add(it) }
             }.joinToString(", ")
 
             fun mergeAutoComment(currentAuto: String, currentComment: String, oldAuto: String): String {
@@ -396,6 +407,8 @@ fun ElectricProblemDialog(
                     failureText = failureInput.trim(),
                     causeId = causeId?.takeIf { it.isNotBlank() },
                     causeText = causeInput.trim(),
+                    recommendationId = recommendationId?.takeIf { it.isNotBlank() },
+                    recommendationText = recommendationInput.trim(),
                     componentTemperature = componentTemperature,
                     componentPhaseId = componentPhaseId,
                     componentPhaseText = componentPhaseInput.trim(),
@@ -884,6 +897,17 @@ fun ElectricProblemDialog(
                                         modifier = Modifier.fillMaxWidth()
                                     )
                                 }
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(text = "Recomendacion", style = MaterialTheme.typography.labelSmall)
+                                    FilterableSelectorNoLabel(
+                                        options = recommendationOptions,
+                                        selectedId = recommendationId,
+                                        selectedText = recommendationInput,
+                                        onSelected = { recommendationId = it },
+                                        onTextChanged = { text -> recommendationInput = text },
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                }
                             }
 
                             Spacer(Modifier.height(6.dp))
@@ -970,6 +994,8 @@ data class ElectricProblemFormData(
     val failureText: String = "",
     val causeId: String? = null,
     val causeText: String = "",
+    val recommendationId: String? = null,
+    val recommendationText: String = "",
     val componentTemperature: String = "",
     val componentPhaseId: String? = null,
     val componentPhaseText: String = "",
