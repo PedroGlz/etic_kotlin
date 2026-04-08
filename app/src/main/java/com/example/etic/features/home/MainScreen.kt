@@ -451,7 +451,10 @@ fun MainScreen(
                 ).getOrElse { defaultDraft }
                 val previousInspectionDate = runCatching {
                     val previousNo = inspeccionDao.getById(insp.idInspeccion)?.noInspeccionAnt ?: return@runCatching ""
-                    inspeccionDao.getAll().firstOrNull { it.noInspeccion == previousNo }?.fechaInicio.orEmpty()
+                    val previousInspection = inspeccionDao.getAll().firstOrNull { it.noInspeccion == previousNo }
+                    previousInspection?.fechaFin?.take(10)
+                        ?.ifBlank { null }
+                        ?: previousInspection?.fechaInicio.orEmpty()
                 }.getOrNull().orEmpty()
 
                 resultsAnalysisDraft = loadedDraft.copy(
@@ -485,6 +488,11 @@ fun MainScreen(
                     resultsAnalysisDraft = resultsAnalysisDraft?.copy(
                         fechaInicio = start,
                         fechaFin = end.ifBlank { start }
+                    )
+                }
+                if (resultsAnalysisDraft?.fechaAnterior.isNullOrBlank()) {
+                    resultsAnalysisDraft = resultsAnalysisDraft?.copy(
+                        fechaAnterior = previousInspectionDate
                     )
                 }
 

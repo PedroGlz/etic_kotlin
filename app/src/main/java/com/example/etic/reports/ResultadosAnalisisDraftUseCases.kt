@@ -16,6 +16,7 @@ class LoadResultadosAnalisisDraftUseCase(private val context: Context) {
                 loadedDraft
                     ?.copy(
                         siteId = loadedDraft.siteId ?: siteId,
+                        fechaAnterior = loadedDraft.fechaAnterior.ifBlank { defaultDraft.fechaAnterior },
                         contactos = if (loadedDraft.contactos.any { contacto ->
                                 contacto.nombre.isNotBlank() || contacto.puesto.isNotBlank()
                             }

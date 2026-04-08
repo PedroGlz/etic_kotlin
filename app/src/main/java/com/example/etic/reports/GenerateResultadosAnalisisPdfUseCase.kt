@@ -113,7 +113,10 @@ class GenerateResultadosAnalisisPdfUseCase(
 
             val previousInspectionDate = runCatching {
                 val previousNo = inspeccion.noInspeccionAnt ?: return@runCatching null
-                inspeccionDao.getAll().firstOrNull { it.noInspeccion == previousNo }?.fechaInicio
+                val previousInspection = inspeccionDao.getAll().firstOrNull { it.noInspeccion == previousNo }
+                previousInspection?.fechaFin?.take(10)
+                    ?.ifBlank { null }
+                    ?: previousInspection?.fechaInicio
             }.getOrNull()
 
             val allProblems = problemaDao.getByInspeccionActivos(inspeccionId)

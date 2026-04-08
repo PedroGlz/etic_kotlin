@@ -87,6 +87,7 @@ import com.example.etic.reports.ResultadosAnalisisProblemOption
 import com.example.etic.reports.ResultadosAnalisisRecomendacion
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import java.util.Locale
 import kotlin.math.max
 import kotlin.math.roundToInt
 
@@ -97,6 +98,15 @@ private fun getWindowFromContext(context: Context): Window? {
         currentContext = currentContext.baseContext
     }
     return if (currentContext is Activity) currentContext.window else null
+}
+
+private fun getActivityFromContext(context: Context): Activity? {
+    var currentContext = context
+    while (currentContext is ContextWrapper) {
+        if (currentContext is Activity) return currentContext
+        currentContext = currentContext.baseContext
+    }
+    return currentContext as? Activity
 }
 
 private fun resolveDialogWindow(context: Context, anchorView: View): Window? {
@@ -165,6 +175,7 @@ fun ResultsAnalysisDialog(
 
     val context = LocalContext.current
     val dateFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy")
+    val monthYearFormatter = DateTimeFormatter.ofPattern("MMMM yyyy", Locale("es", "MX"))
     val safManager = remember { SafEticManager() }
     fun normalizeDate(value: String?, formatter: DateTimeFormatter): String {
         val raw = value.orEmpty().trim()
@@ -175,23 +186,32 @@ fun ResultsAnalysisDialog(
             ?: runCatching { LocalDate.parse(raw, formatter) }.getOrNull()
         return parsed?.format(formatter).orEmpty()
     }
+    fun formatMonthYear(value: String): String {
+        val normalized = normalizeDate(value, dateFormatter)
+        if (normalized.isBlank()) return ""
+        val parsed = runCatching { LocalDate.parse(normalized, dateFormatter) }.getOrNull()
+            ?: return normalized
+        return parsed.format(monthYearFormatter).replaceFirstChar {
+            if (it.isLowerCase()) it.titlecase(Locale("es", "MX")) else it.toString()
+        }
+    }
 
     val offset = remember { mutableStateOf(Offset.Zero) }
     val availableImageOptions = remember { mutableStateListOf<String>() }
     val availableClientImageOptions = remember { mutableStateListOf<String>() }
     val today = LocalDate.now()
-    var fechaInicio by remember {
+    var fechaInicio by remember(initialDraft.fechaInicio) {
         mutableStateOf(
             normalizeDate(initialDraft.fechaInicio, dateFormatter).ifBlank { today.format(dateFormatter) }
         )
     }
-    var fechaFin by remember {
+    var fechaFin by remember(initialDraft.fechaFin, initialDraft.fechaInicio) {
         mutableStateOf(
             normalizeDate(initialDraft.fechaFin, dateFormatter)
                 .ifBlank { normalizeDate(initialDraft.fechaInicio, dateFormatter).ifBlank { today.format(dateFormatter) } }
         )
     }
-    var fechaAnterior by remember {
+    var fechaAnterior by remember(initialDraft.fechaAnterior) {
         mutableStateOf(normalizeDate(initialDraft.fechaAnterior, dateFormatter))
     }
     var nombreImgPortada by remember { mutableStateOf(initialDraft.nombreImgPortada) }
@@ -361,19 +381,35 @@ fun ResultsAnalysisDialog(
         }
     }
 
-    fun openDatePicker(currentValue: String, onSelected: (String) -> Unit) {
+    fun openDatePicker(
+        currentValue: String,
+        monthYearOnly: Boolean = false,
+        onSelected: (String) -> Unit
+    ) {
+        val activity = getActivityFromContext(context)
+        if (activity == null || activity.isFinishing || activity.isDestroyed) {
+            Toast.makeText(context, "No se pudo abrir el selector de fecha.", Toast.LENGTH_SHORT).show()
+            return
+        }
         val normalized = normalizeDate(currentValue, dateFormatter)
         val base = runCatching { LocalDate.parse(normalized, dateFormatter) }.getOrNull()
             ?: LocalDate.now()
-        DatePickerDialog(
-            context,
+        val dialog = DatePickerDialog(
+            activity,
             { _, year, month, dayOfMonth ->
-                onSelected("%02d/%02d/%04d".format(dayOfMonth, month + 1, year))
+                val selectedValue = if (monthYearOnly) {
+                    "01/%02d/%04d".format(month + 1, year)
+                } else {
+                    "%02d/%02d/%04d".format(dayOfMonth, month + 1, year)
+                }
+                onSelected(selectedValue)
             },
             base.year,
             base.monthValue - 1,
             base.dayOfMonth
-        ).show()
+        )
+        dialog.datePicker.calendarViewShown = true
+        dialog.show()
     }
 
     fun updateImageValue(target: ImagePickerTarget, imageName: String) {
@@ -561,8 +597,13 @@ fun ResultsAnalysisDialog(
                                             DateField(
                                                 modifier = Modifier.weight(1f),
                                                 label = "Fecha anterior",
-                                                value = fechaAnterior,
-                                                onClick = { openDatePicker(fechaAnterior) { fechaAnterior = it } }
+                                                value = formatMonthYear(fechaAnterior),
+                                                onClick = {
+                                                    openDatePicker(
+                                                        currentValue = fechaAnterior,
+                                                        monthYearOnly = true
+                                                    ) { fechaAnterior = it }
+                                                }
                                             )
                                         }
                                         Row(
