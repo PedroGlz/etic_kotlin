@@ -36,7 +36,12 @@ class GenerateResultadosAnalisisUseCase(
             currentUserName = currentUserName
         ).getOrElse { return Result.failure(it) }
 
-        val grafica = GenerateAnomaliasChartPdfUseCase(context, folderProvider).run(
+        val grafica = GenerateAnomaliasChartPdfUseCase(
+            context,
+            folderProvider,
+            getInspeccionImagenesTreeUri,
+            getClientesImagenesTreeUri
+        ).run(
             noInspeccion = noInspeccion,
             inspeccionId = inspeccionId,
             currentUserId = currentUserId,

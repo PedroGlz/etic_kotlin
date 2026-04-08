@@ -505,8 +505,7 @@ class ResultadosAnalisisPdfGenerator {
         data.logo?.let { drawBitmapInBox(it, 25f, 25f, 53f, 24f) }
         data.isoLogo?.let { drawBitmapInBox(it, 18f, 9f, 20f) }
 
-        // portada3 ahora se usa como logo del cliente, arriba a la derecha.
-        data.portada3?.let { drawBitmapRight(it, 195f, 25f, 53f, 24f) }
+        data.logoCliente?.let { drawBitmapRight(it, 195f, 23f, 53f, 24f) }
 
         drawSingleLine("F-PRS-02 - Resultados de análisis de riesgos", 110f, 68f, titlePaint, Paint.Align.CENTER)
         drawSingleLine(

@@ -863,7 +863,12 @@ fun MainScreen(
                 val rootUri = rootTreeUri ?: return@ReportesFolderProvider null
                 safManager.getReportsDir(appContext, rootUri, inspectionNumber)?.uri
             }
-            val useCase = GenerateAnomaliasChartPdfUseCase(appContext, folderProvider)
+            val useCase = GenerateAnomaliasChartPdfUseCase(
+                appContext,
+                folderProvider,
+                buildImagesProvider(),
+                { _: String -> rootTreeUri?.let { safManager.getClientesDir(appContext, it)?.uri } }
+            )
             try {
                 val result = useCase.run(
                     noInspeccion = noInspeccion,

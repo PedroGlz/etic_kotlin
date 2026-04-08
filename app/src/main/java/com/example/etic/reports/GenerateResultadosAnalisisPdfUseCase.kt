@@ -271,10 +271,9 @@ class GenerateResultadosAnalisisPdfUseCase(
             val logoBmp = logoId?.let { BitmapFactory.decodeResource(res, it) }
             val isoLogoId = res.getIdentifier("iso_img", "drawable", pkg).takeIf { it != 0 }
             val isoLogoBmp = isoLogoId?.let { BitmapFactory.decodeResource(res, it) }
-            val clienteLogo = inspeccion.idCliente
-                ?.let { clienteDao.getByIdActivo(it) }
-                ?.imagenCliente
-                ?.let { loadImageByName(it, imageFolder) }
+            val clienteLogo = draft.nombreImgPortada3.takeIf { it.isNotBlank() }?.let { imageName ->
+                loadImageByName(imageName, clienteImageFolder)
+            }
 
             val recomendaciones = draft.recomendaciones.map {
                 ResultadosAnalisisPdfRecommendationEntry(

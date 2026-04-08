@@ -20,7 +20,8 @@ class AnomaliasChartPdfGenerator {
         header: ReportHeaderData,
         bars: List<AnomaliaBarData>,
         cronicos: Int,
-        logo: Bitmap? = null
+        logo: Bitmap? = null,
+        clientLogo: Bitmap? = null
     ) {
         val doc = PdfDocument()
         val pageWidth = 1754
@@ -87,6 +88,24 @@ class AnomaliasChartPdfGenerator {
             c.drawBitmap(bmp, mm(11f), mm(10f), null)
         }
 
+        fun drawClientLogo() {
+            if (clientLogo == null) return
+            val targetW = mm(38f)
+            val scale = min(targetW / clientLogo.width, 1f)
+            val bmp = if (scale < 1f) {
+                Bitmap.createScaledBitmap(
+                    clientLogo,
+                    max(1, (clientLogo.width * scale).toInt()),
+                    max(1, (clientLogo.height * scale).toInt()),
+                    true
+                )
+            } else {
+                clientLogo
+            }
+            val drawX = mm(287f) - bmp.width
+            c.drawBitmap(bmp, drawX, mm(10f), null)
+        }
+
         fun drawRightText(text: String, rightX: Float, y: Float, paint: TextPaint) {
             c.drawText(text, rightX - paint.measureText(text), y, paint)
         }
@@ -103,6 +122,7 @@ class AnomaliasChartPdfGenerator {
         }
 
         drawLogo()
+        drawClientLogo()
         val centeredTitlePaint = TextPaint(titlePaint).apply {
             textAlign = Paint.Align.CENTER
         }

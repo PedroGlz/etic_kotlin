@@ -3,6 +3,7 @@ package com.example.etic.reports
 import android.content.Context
 import android.graphics.BitmapFactory
 import android.graphics.Color
+import androidx.documentfile.provider.DocumentFile
 import com.example.etic.data.local.DbProvider
 import com.example.etic.reports.pdf.AnomaliasChartPdfGenerator
 import kotlinx.coroutines.Dispatchers
@@ -13,6 +14,8 @@ import java.time.format.DateTimeFormatter
 class GenerateAnomaliasChartPdfUseCase(
     private val context: Context,
     private val folderProvider: ReportesFolderProvider,
+    private val getInspeccionImagenesTreeUri: (inspectionNumber: String) -> android.net.Uri? = { null },
+    private val getClientesImagenesTreeUri: (inspectionNumber: String) -> android.net.Uri? = { null },
     private val pdfGenerator: AnomaliasChartPdfGenerator = AnomaliasChartPdfGenerator()
 ) {
     suspend fun run(
@@ -122,6 +125,25 @@ class GenerateAnomaliasChartPdfUseCase(
                 fechaReporte = now
             )
 
+            val imageFolder = getInspeccionImagenesTreeUri(noInspeccion)?.let { treeUri ->
+                DocumentFile.fromTreeUri(context, treeUri) ?: DocumentFile.fromSingleUri(context, treeUri)
+            }
+            val clienteImageFolder = getClientesImagenesTreeUri(noInspeccion)?.let { treeUri ->
+                DocumentFile.fromTreeUri(context, treeUri) ?: DocumentFile.fromSingleUri(context, treeUri)
+            }
+
+            fun loadImageByName(imageName: String?, folder: DocumentFile?): android.graphics.Bitmap? {
+                val normalized = imageName?.trim().orEmpty()
+                if (normalized.isBlank()) return null
+                val file = folder?.findFile(normalized)
+                    ?: folder?.listFiles()?.firstOrNull { it.name.equals(normalized, true) }
+                return runCatching {
+                    file?.let {
+                        context.contentResolver.openInputStream(it.uri)?.use(BitmapFactory::decodeStream)
+                    }
+                }.getOrNull()
+            }
+
             val folder = folderProvider.getReportesFolder(noInspeccion)
                 ?: return@withContext Result.failure(IllegalStateException("No hay acceso a carpeta Reportes (SAF)."))
             val file = folderProvider.createPdfFile(
@@ -135,9 +157,17 @@ class GenerateAnomaliasChartPdfUseCase(
                 ?: res.getIdentifier("etic_logo", "drawable", pkg).takeIf { it != 0 }
                 ?: res.getIdentifier("etic_logo_login", "drawable", pkg).takeIf { it != 0 }
             val logoBmp = logoId?.let { BitmapFactory.decodeResource(res, it) }
+            val latestDraft = DatosReporteStore.loadLatestByInspection(context, inspeccionId).getOrNull()
+            val clientLogoBmp = latestDraft?.nombreImgPortada3
+                ?.takeIf { it.isNotBlank() }
+                ?.let { loadImageByName(it, clienteImageFolder) }
+                ?: inspeccion.idCliente
+                    ?.let { clienteDao.getByIdActivo(it) }
+                    ?.imagenCliente
+                    ?.let { loadImageByName(it, clienteImageFolder) }
 
             context.contentResolver.openOutputStream(file.uri)?.use { out ->
-                pdfGenerator.generate(out, header, bars, cronicos, logoBmp)
+                pdfGenerator.generate(out, header, bars, cronicos, logoBmp, clientLogoBmp)
             } ?: return@withContext Result.failure(IllegalStateException("No se pudo abrir OutputStream."))
 
             Result.success(file.uri.toString())
