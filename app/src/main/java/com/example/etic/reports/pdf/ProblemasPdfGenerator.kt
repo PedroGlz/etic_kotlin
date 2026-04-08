@@ -154,9 +154,7 @@ class ProblemasPdfGenerator {
             canvas.drawText("Nivel de certificación: ${header.nivel}", leftX, y, textPaint); y += mm(4f)
             canvas.drawText("Fecha de reporte: ${pageData.fechaReporte}", leftX, y, textPaint); y += mm(4f)
             canvas.drawText("No. inspección anterior: ${header.inspeccionAnterior}", leftX, y, textPaint); y += mm(4f)
-            canvas.drawText("Fecha: ${header.fechaAnterior}", leftX, y, textPaint); y += mm(4f)
-            canvas.drawText("No. inspección actual: ${header.inspeccionActual}", leftX, y, textPaint); y += mm(4f)
-            canvas.drawText("Fecha: ${header.fechaActual}", leftX, y, textPaint)
+            canvas.drawText("No. inspección actual: ${header.inspeccionActual}", leftX, y, textPaint)
         }
 
         fun drawLabeledValue(
@@ -243,19 +241,9 @@ class ProblemasPdfGenerator {
                 ly += rowH
                 canvas.drawText("Fecha de reporte: ${pageData.fechaReporte}", x + mm(2f), ly, textPaint)
                 ly += rowH
-                canvas.drawText(
-                    "No. inspección anterior: ${header.inspeccionAnterior} Fecha: ${header.fechaAnterior}",
-                    x + mm(2f),
-                    ly,
-                    textPaint
-                )
+                canvas.drawText("No. inspección anterior: ${header.inspeccionAnterior}", x + mm(2f), ly, textPaint)
                 ly += rowH
-                canvas.drawText(
-                    "No. inspección actual: ${header.inspeccionActual} Fecha: ${header.fechaActual}",
-                    x + mm(2f),
-                    ly,
-                    textPaint
-                )
+                canvas.drawText("No. inspección actual: ${header.inspeccionActual}", x + mm(2f), ly, textPaint)
             } else {
                 val elementoAnomalia = pageData.faseProblema.ifBlank { pageData.componente }
                 val elementoReferencia = pageData.faseReferencia.ifBlank { pageData.componente }
@@ -682,3 +670,5 @@ class ProblemasPdfGenerator {
         document.close()
     }
 }
+
+

@@ -137,14 +137,8 @@ class InventarioPdfGenerator {
             c.drawText("No. Inspección Anterior:", x, y0, boldPaint)
             c.drawText(header.inspeccionAnterior, x + mm(30f), y0, textPaint)
             y0 += lineHeight
-            c.drawText("Fecha:", x, y0, boldPaint)
-            c.drawText(header.fechaAnterior, x + mm(9f), y0, textPaint)
-            y0 += lineHeight
             c.drawText("No. Inspección Actual:", x, y0, boldPaint)
             c.drawText(header.inspeccionActual, x + mm(28f), y0, textPaint)
-            y0 += lineHeight
-            c.drawText("Fecha:", x, y0, boldPaint)
-            c.drawText(header.fechaActual, x + mm(9f), y0, textPaint)
 
             fun drawBoxWithContent(
                 xMm: Float,
@@ -296,3 +290,5 @@ class InventarioPdfGenerator {
         doc.close()
     }
 }
+
+

@@ -160,20 +160,8 @@ class ProblemListPdfGenerator {
             c.drawText("Nivel Certificación: ${header.nivel}", mm(10f), y, textPaint)
 
             drawRightText(c, "Fecha Reporte: ${header.fechaReporte}", headerRightX, mm(31f), textPaint)
-            drawRightText(
-                c,
-                "No. Inspección Anterior: ${header.inspeccionAnterior}  Fecha: ${header.fechaAnterior}",
-                headerRightX,
-                mm(35f),
-                textPaint
-            )
-            drawRightText(
-                c,
-                "No. Inspección Actual: ${header.inspeccionActual}  Fecha: ${header.fechaActual}",
-                headerRightX,
-                mm(39f),
-                textPaint
-            )
+            drawRightText(c, "No. Inspección Anterior: ${header.inspeccionAnterior}", headerRightX, mm(35f), textPaint)
+            drawRightText(c, "No. Inspección Actual: ${header.inspeccionActual}", headerRightX, mm(39f), textPaint)
         }
 
         fun drawFooter(c: Canvas) {
@@ -276,3 +264,5 @@ class ProblemListPdfGenerator {
         doc.close()
     }
 }
+
+

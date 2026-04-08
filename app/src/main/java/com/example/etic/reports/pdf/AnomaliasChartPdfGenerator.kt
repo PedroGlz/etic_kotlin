@@ -128,18 +128,8 @@ class AnomaliasChartPdfGenerator {
 
         val rightX = mm(287f)
         drawRightText("Fecha Reporte: ${header.fechaReporte}", rightX, mm(31f), textPaint)
-        drawRightText(
-            "No. inspección anterior: ${header.inspeccionAnterior}  Fecha: ${header.fechaAnterior}",
-            rightX,
-            mm(35f),
-            textPaint
-        )
-        drawRightText(
-            "No. inspección actual: ${header.inspeccionActual}  Fecha: ${header.fechaActual}",
-            rightX,
-            mm(39f),
-            textPaint
-        )
+        drawRightText("No. inspección anterior: ${header.inspeccionAnterior}", rightX, mm(35f), textPaint)
+        drawRightText("No. inspección actual: ${header.inspeccionActual}", rightX, mm(39f), textPaint)
 
         val chartX = mm(10f)
         val chartY = mm(47f)
@@ -207,3 +197,5 @@ class AnomaliasChartPdfGenerator {
         doc.close()
     }
 }
+
+

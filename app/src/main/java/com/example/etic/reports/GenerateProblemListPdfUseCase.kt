@@ -45,6 +45,13 @@ class GenerateProblemListPdfUseCase(
                     it.estatusProblema.equals("Cerrado", true) && it.cerradoEnInspeccion == inspeccionId
                 }
             }
+            if (filtered.isEmpty()) {
+                val message = when (listType) {
+                    ProblemListType.ABIERTOS -> "No hay problemas abiertos para generar la lista."
+                    ProblemListType.CERRADOS -> "No hay problemas cerrados en la inspección actual para generar la lista."
+                }
+                return@withContext Result.failure(IllegalStateException(message))
+            }
 
             val tipoById = tipoInspeccionDao.getAll().associateBy { it.idTipoInspeccion }
             val sevById = severidadDao.getAll().associateBy { it.idSeveridad }

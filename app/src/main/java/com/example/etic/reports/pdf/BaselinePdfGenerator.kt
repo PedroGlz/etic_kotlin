@@ -249,11 +249,8 @@ class BaselinePdfGenerator {
             c.drawText("Analista termógrafo: ${header.analista}", mm(10f), y, textPaint); y += mm(4f)
             c.drawText("Nivel de certificación: ${header.nivel}", mm(10f), y, textPaint); y += mm(4f)
             c.drawText("Fecha de reporte: ${header.fechaReporte}", mm(10f), y, textPaint)
-
             c.drawText("No. inspección anterior: ${header.inspeccionAnterior}", mm(95f), mm(31f), textPaint)
-            c.drawText("Fecha: ${header.fechaAnterior}", mm(95f), mm(35f), textPaint)
-            c.drawText("No. inspección actual: ${header.inspeccionActual}", mm(95f), mm(39f), textPaint)
-            c.drawText("Fecha: ${header.fechaActual}", mm(95f), mm(43f), textPaint)
+            c.drawText("No. inspección actual: ${header.inspeccionActual}", mm(95f), mm(35f), textPaint)
 
             c.drawRect(RectF(mm(175f), mm(27f), mm(247f), mm(45f)), linePaint)
             c.drawText("Información del equipo", mm(176f), mm(30f), boldPaint)
@@ -359,3 +356,5 @@ class BaselinePdfGenerator {
         doc.close()
     }
 }
+
+
