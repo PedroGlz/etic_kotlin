@@ -119,6 +119,7 @@ import com.example.etic.features.inspection.data.CloneUbicacionTreeRequest
 import com.example.etic.features.inspection.data.UbicacionSaveContext
 import com.example.etic.features.inspection.ui.components.FILTER_FIELD_ROW_SPACING
 import com.example.etic.features.inspection.ui.components.FilterDropdownField
+import com.example.etic.features.inspection.ui.components.FilterLabelPosition
 import com.example.etic.features.inspection.ui.components.FilterableSelector
 import com.example.etic.features.inspection.ui.components.InspectionHeader
 import com.example.etic.features.inspection.ui.components.NewLocationDialog
@@ -7542,6 +7543,7 @@ private fun ListTabs(
                         options = PROBLEM_TYPE_FILTER_OPTIONS.map { it.first as String? to it.second },
                         selectedId = typeFilterId,
                         enabled = isInteractive,
+                        labelPosition = FilterLabelPosition.Start,
                         onSelected = { typeFilterId = it ?: "" }
                     )
 
@@ -7550,6 +7552,7 @@ private fun ListTabs(
                         options = PROBLEM_STATUS_FILTER_OPTIONS.map { it.first as String? to it.second },
                         selectedId = statusFilterId,
                         enabled = isInteractive,
+                        labelPosition = FilterLabelPosition.Start,
                         onSelected = { statusFilterId = it ?: PROBLEM_STATUS_ALL }
                     )
                 }

@@ -38,7 +38,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
-enum class FilterLabelPosition { Top, Start, None }
+enum class FilterLabelPosition { Top, Start, End, None }
 
 internal val FILTER_FIELD_HEIGHT = 40.dp
 internal val FILTER_FIELD_RADIUS = 4.dp
@@ -112,6 +112,24 @@ fun FilterFieldContainer(
                 Box(modifier = Modifier.weight(1f)) {
                     fieldContent()
                 }
+            }
+        }
+        FilterLabelPosition.End -> {
+            Row(
+                modifier = modifier.widthIn(min = minWidth, max = maxWidth),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(modifier = Modifier.weight(1f)) {
+                    fieldContent()
+                }
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.labelSmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Clip,
+                    modifier = Modifier.widthIn(min = labelWidth)
+                )
             }
         }
         FilterLabelPosition.None -> {
