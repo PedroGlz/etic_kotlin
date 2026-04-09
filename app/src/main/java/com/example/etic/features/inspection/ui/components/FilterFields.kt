@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -37,7 +38,7 @@ import androidx.compose.ui.unit.dp
 
 enum class FilterLabelPosition { Top, Start, None }
 
-internal val FILTER_FIELD_HEIGHT = 28.dp
+internal val FILTER_FIELD_HEIGHT = 36.dp
 internal val FILTER_FIELD_RADIUS = 4.dp
 internal val FILTER_FIELD_BORDER = 1.dp
 internal val FILTER_FIELD_HORIZONTAL_PADDING = 6.dp
@@ -84,7 +85,12 @@ fun FilterFieldContainer(
                 modifier = modifier.widthIn(min = minWidth, max = maxWidth),
                 verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
-                Text(text = label, style = MaterialTheme.typography.labelSmall)
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.labelSmall,
+                    maxLines = 1,
+                    overflow = TextOverflow.Clip
+                )
                 fieldContent()
             }
         }
@@ -97,7 +103,9 @@ fun FilterFieldContainer(
                 Text(
                     text = label,
                     style = MaterialTheme.typography.labelSmall,
-                    modifier = Modifier.width(labelWidth)
+                    maxLines = 1,
+                    overflow = TextOverflow.Clip,
+                    modifier = Modifier.widthIn(min = labelWidth)
                 )
                 Box(modifier = Modifier.weight(1f)) {
                     fieldContent()
@@ -151,7 +159,7 @@ fun FilterDropdownField(
                     style = MaterialTheme.typography.bodySmall,
                     modifier = Modifier.weight(1f),
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Clip
                 )
                 Text(
                     text = "v",

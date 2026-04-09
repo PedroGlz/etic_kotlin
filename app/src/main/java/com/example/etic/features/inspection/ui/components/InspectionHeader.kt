@@ -57,16 +57,16 @@ fun InspectionHeader(
         verticalAlignment = Alignment.CenterVertically
     ) {
         FilterTextField(
-            label = "Cod. barras",
+            label = stringResource(R.string.label_codigo_barras),
             value = barcode,
             onValueChange = onBarcodeChange,
             onSearch = onSearch,
             enabled = isEnabled,
             placeholder = stringResource(R.string.label_codigo_barras),
-            minWidth = 170.dp,
-            maxWidth = 210.dp,
+            minWidth = 380.dp,
+            maxWidth = 420.dp,
             labelPosition = FilterLabelPosition.Start,
-            labelWidth = 56.dp
+            labelWidth = 125.dp
         )
         Spacer(Modifier.width(HEADER_ACTION_SPACING))
         FilterDropdownField(
@@ -77,11 +77,11 @@ fun InspectionHeader(
                 val selected = statusOptions.firstOrNull { it.idStatusInspeccionDet == id }
                 onStatusSelected(selected)
             },
-            minWidth = 145.dp,
-            maxWidth = 170.dp,
+            minWidth = 320.dp,
+            maxWidth = 360.dp,
             enabled = isEnabled,
             labelPosition = FilterLabelPosition.Start,
-            labelWidth = 42.dp
+            labelWidth = 65.dp
         )
         Spacer(Modifier.width(HEADER_ACTION_SPACING))
         Button(
