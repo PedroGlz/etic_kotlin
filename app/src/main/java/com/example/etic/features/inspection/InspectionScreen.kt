@@ -5818,7 +5818,7 @@ private fun CurrentInspectionSplitView(
                                                         mta = ""
                                                         tempMax = ""
                                                         tempAmb = ""
-                                                        notas = ""
+                                                        notas = "OK"
                                                         imgIr = ""
                                                         imgId = ""
                                                         irPreview = null
@@ -8163,7 +8163,11 @@ private fun BaselineDialogField(
                     singleLine = singleLine,
                     keyboardOptions = keyboardOptions,
                     textStyle = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurface),
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = if (singleLine) {
+                        Modifier.fillMaxWidth()
+                    } else {
+                        Modifier.fillMaxSize()
+                    }
                 )
             }
         }

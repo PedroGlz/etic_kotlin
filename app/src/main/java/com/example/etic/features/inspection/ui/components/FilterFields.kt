@@ -35,6 +35,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
+enum class FilterLabelPosition { Top, Start, None }
+
 internal val FILTER_FIELD_HEIGHT = 28.dp
 internal val FILTER_FIELD_RADIUS = 4.dp
 internal val FILTER_FIELD_BORDER = 1.dp
@@ -48,13 +50,11 @@ fun FilterFieldContainer(
     modifier: Modifier = Modifier,
     minWidth: Dp = 150.dp,
     maxWidth: Dp = 220.dp,
+    labelPosition: FilterLabelPosition = FilterLabelPosition.Top,
+    labelWidth: Dp = 90.dp,
     content: @Composable RowScope.() -> Unit
 ) {
-    Column(
-        modifier = modifier.widthIn(min = minWidth, max = maxWidth),
-        verticalArrangement = Arrangement.spacedBy(2.dp)
-    ) {
-        Text(text = label, style = MaterialTheme.typography.labelSmall)
+    val fieldContent: @Composable () -> Unit = {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -77,6 +77,39 @@ fun FilterFieldContainer(
             )
         }
     }
+
+    when (labelPosition) {
+        FilterLabelPosition.Top -> {
+            Column(
+                modifier = modifier.widthIn(min = minWidth, max = maxWidth),
+                verticalArrangement = Arrangement.spacedBy(2.dp)
+            ) {
+                Text(text = label, style = MaterialTheme.typography.labelSmall)
+                fieldContent()
+            }
+        }
+        FilterLabelPosition.Start -> {
+            Row(
+                modifier = modifier.widthIn(min = minWidth, max = maxWidth),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.labelSmall,
+                    modifier = Modifier.width(labelWidth)
+                )
+                Box(modifier = Modifier.weight(1f)) {
+                    fieldContent()
+                }
+            }
+        }
+        FilterLabelPosition.None -> {
+            Box(modifier = modifier.widthIn(min = minWidth, max = maxWidth)) {
+                fieldContent()
+            }
+        }
+    }
 }
 
 @Composable
@@ -89,16 +122,21 @@ fun FilterDropdownField(
     minWidth: Dp = 150.dp,
     maxWidth: Dp = 220.dp,
     placeholder: String = "Seleccionar",
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    labelPosition: FilterLabelPosition = FilterLabelPosition.Top,
+    labelWidth: Dp = 90.dp
 ) {
     val (expanded, setExpanded) = remember { mutableStateOf(false) }
     val selectedLabel = options.firstOrNull { it.first == selectedId }?.second.orEmpty()
 
-    Column(modifier = modifier) {
+    Box(modifier = modifier.widthIn(min = minWidth, max = maxWidth)) {
         FilterFieldContainer(
             label = label,
+            modifier = Modifier,
             minWidth = minWidth,
-            maxWidth = maxWidth
+            maxWidth = maxWidth,
+            labelPosition = labelPosition,
+            labelWidth = labelWidth
         ) {
             Row(
                 modifier = Modifier
@@ -153,13 +191,17 @@ fun FilterTextField(
     maxWidth: Dp = 320.dp,
     placeholder: String = "Buscar",
     searchIconTint: Color = MaterialTheme.colorScheme.onSurfaceVariant,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    labelPosition: FilterLabelPosition = FilterLabelPosition.Top,
+    labelWidth: Dp = 90.dp
 ) {
     FilterFieldContainer(
         label = label,
         modifier = modifier,
         minWidth = minWidth,
-        maxWidth = maxWidth
+        maxWidth = maxWidth,
+        labelPosition = labelPosition,
+        labelWidth = labelWidth
     ) {
         BasicTextField(
             value = value,
