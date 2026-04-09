@@ -42,9 +42,14 @@ fun InspectionHeader(
 ) {
     val statusItems = remember(statusOptions) {
         buildList {
-            add(null to "Todos")
             statusOptions.forEach { opt ->
-                val label = opt.estatusInspeccionDet ?: opt.idStatusInspeccionDet
+                val shortLabel = opt.estatusInspeccionDet ?: opt.idStatusInspeccionDet
+                val description = opt.descEstatusDet?.takeIf { it.isNotBlank() }
+                val label = if (description != null && !shortLabel.isNullOrBlank()) {
+                    "$shortLabel - $description"
+                } else {
+                    shortLabel
+                }
                 add(opt.idStatusInspeccionDet to label)
             }
         }
@@ -63,9 +68,9 @@ fun InspectionHeader(
             onSearch = onSearch,
             enabled = isEnabled,
             placeholder = stringResource(R.string.label_codigo_barras),
-            minWidth = 380.dp,
-            maxWidth = 420.dp,
-            labelPosition = FilterLabelPosition.Start,
+            minWidth = 240.dp,
+            maxWidth = 240.dp,
+            labelPosition = FilterLabelPosition.None,
             labelWidth = 125.dp
         )
         Spacer(Modifier.width(HEADER_ACTION_SPACING))
@@ -77,10 +82,11 @@ fun InspectionHeader(
                 val selected = statusOptions.firstOrNull { it.idStatusInspeccionDet == id }
                 onStatusSelected(selected)
             },
-            minWidth = 320.dp,
-            maxWidth = 360.dp,
+            minWidth = 210.dp,
+            maxWidth = 230.dp,
+            placeholder = stringResource(R.string.label_estatus),
             enabled = isEnabled,
-            labelPosition = FilterLabelPosition.Start,
+            labelPosition = FilterLabelPosition.None,
             labelWidth = 65.dp
         )
         Spacer(Modifier.width(HEADER_ACTION_SPACING))

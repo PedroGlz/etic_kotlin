@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.widthIn
@@ -18,6 +19,7 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -38,11 +40,11 @@ import androidx.compose.ui.unit.dp
 
 enum class FilterLabelPosition { Top, Start, None }
 
-internal val FILTER_FIELD_HEIGHT = 36.dp
+internal val FILTER_FIELD_HEIGHT = 40.dp
 internal val FILTER_FIELD_RADIUS = 4.dp
 internal val FILTER_FIELD_BORDER = 1.dp
-internal val FILTER_FIELD_HORIZONTAL_PADDING = 6.dp
-internal val FILTER_FIELD_VERTICAL_PADDING = 4.dp
+internal val FILTER_FIELD_HORIZONTAL_PADDING = 4.dp
+internal val FILTER_FIELD_VERTICAL_PADDING = 2.dp
 internal val FILTER_FIELD_ROW_SPACING = 8.dp
 
 @Composable
@@ -161,10 +163,11 @@ fun FilterDropdownField(
                     maxLines = 1,
                     overflow = TextOverflow.Clip
                 )
-                Text(
-                    text = "v",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                Icon(
+                    imageVector = Icons.Filled.KeyboardArrowDown,
+                    contentDescription = "Desplegar",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(30.dp)
                 )
             }
         }
@@ -249,8 +252,8 @@ fun FilterTextField(
                 contentDescription = "Buscar",
                 tint = searchIconTint,
                 modifier = Modifier
-                    .width(20.dp)
-                    .height(20.dp)
+                    .width(26.dp)
+                    .height(26.dp)
             )
         }
     }
