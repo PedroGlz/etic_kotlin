@@ -26,6 +26,7 @@ import com.example.etic.R
 import com.example.etic.data.local.entities.EstatusInspeccionDet
 
 private val HEADER_ACTION_SPACING: Dp = 8.dp
+private val HEADER_BUTTON_HEIGHT: Dp = 40.dp
 
 @Composable
 fun InspectionHeader(
@@ -95,6 +96,7 @@ fun InspectionHeader(
             enabled = isEnabled,
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1F7A8C)),
             shape = RoundedCornerShape(4.dp),
+            modifier = Modifier.height(HEADER_BUTTON_HEIGHT),
             contentPadding = PaddingValues(
                 horizontal = 10.dp,
                 vertical = 0.dp
@@ -109,6 +111,7 @@ fun InspectionHeader(
             enabled = isEnabled,
             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),
             shape = RoundedCornerShape(4.dp),
+            modifier = Modifier.height(HEADER_BUTTON_HEIGHT),
             contentPadding = PaddingValues(
                 horizontal = 10.dp,
                 vertical = 0.dp
