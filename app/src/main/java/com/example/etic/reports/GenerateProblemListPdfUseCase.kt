@@ -72,7 +72,10 @@ class GenerateProblemListPdfUseCase(
                 }.getOrDefault(value)
             }
 
-            fun formatTemp(v: Double?): String = if (v == null) "" else "${"%.1f".format(v)}°C"
+            fun formatTemp(v: Double?): String {
+                if (v == null || !v.isFinite()) return "-"
+                return "${"%.1f".format(v)}°C"
+            }
 
             fun typeAndNo(p: Problema): String {
                 val type = p.idTipoInspeccion?.let { tipoById[it]?.tipoInspeccion }
